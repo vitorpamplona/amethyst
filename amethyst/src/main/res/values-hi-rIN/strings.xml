@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">अपक्रम संदेश परखने में अपक्रम</string>
     <string name="following">" का अनुचरण"</string>
     <string name="followers">" अनुचर"</string>
+    <string name="number_following">"%1$s का अनुचरण"</string>
+    <string name="number_followers">"%1$s अनुचर"</string>
     <string name="profile">परिचय</string>
     <string name="security_filters">सुरक्षा छलनियाँ</string>
     <string name="log_out">निर्गमनांकन</string>
@@ -96,9 +98,9 @@
     <string name="my_awesome_group">मेरा बढिया झुण्ड</string>
     <string name="picture_url">चित्र जालपता</string>
     <string name="description">विवरण</string>
-    <string name="about_us">"हमारा परिचय.. "</string>
+    <string name="about_us">"हमारा परिचय…"</string>
     <string name="what_s_on_your_mind">आपके मन में क्या है?</string>
-    <string name="write_a_message">सन्देश लिखें ...</string>
+    <string name="write_a_message">सन्देश लिखें …</string>
     <string name="post">पत्र प्रकाशन</string>
     <string name="save">अभिलेखन करें</string>
     <string name="create">बनाएँ</string>
@@ -155,6 +157,7 @@
     <string name="gallery">चित्रालय</string>
     <string name="follows">"का अनुचरण"</string>
     <string name="reports">"सूचनाएँ"</string>
+    <string name="number_reports">"%1$s सूचनाएँ"</string>
     <string name="more_options">अधिक विकल्प</string>
     <string name="relays">" पुनःप्रसारक"</string>
     <string name="website">जालस्थान</string>
@@ -213,6 +216,13 @@
     <string name="unfollow">अनुचरण ना करें</string>
     <string name="channel_created">प्रणाली बनायी गयी</string>
     <string name="channel_information_changed_to">"प्रणाली जानकारी परिवर्तित की गयी"</string>
+    <string name="ephemeral_relay_chat">नश्वर चर्चा</string>
+    <string name="relay_chat">पुनःप्रसारक चर्चा</string>
+    <string name="relay_chat_title">पुनःप्रसारक चर्चाएँ</string>
+    <string name="relay_chat_explainer">पुनःप्रसारक चर्चाएँ आवासी पुनःप्रसारक द्वारा नियन्त्रित चर्चा समुदाएँ हैं।
+        वे नोस्टर पर सभी के लिए दृश्य हैं तथा उनमें सभी भाग ले सकते हैं।
+        वे उत्कृष्ट हैं खुले समुदायों के लिए विशिष्ट विषयों पर। इनमें से कुछ समुदाएँ अस्थायी हैं।
+    तथा इसीलिए समय के साथ चर्चा सन्देश अदृश्य हो जाते हैं</string>
     <string name="public_chat">सार्वजनिक चर्चा</string>
     <string name="public_chat_title">सार्वजनिक चर्चा उपतथ्य</string>
     <string name="public_chat_explainer">सार्वजनिक चर्चाएँ सबके लिए दृश्यमान हैं नोस्टर पर तथा सभी
@@ -290,7 +300,7 @@
     <string name="quick_action_unfollow">अनुचरण ना करें</string>
     <string name="quick_action_follow">अनुचरण करें</string>
     <string name="quick_action_request_deletion_gallery_title">चित्रालय से मिटाएँ</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">इस अभिलेख को चित्रालय से हटाएँ। तत्पश्चात कभी भी आप इसे पुनः जोड सकते हैं</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">इस अभिलेख को आपके चित्रालय से हटाएँ।</string>
     <string name="quick_action_request_deletion_alert_title">हटाने की याचना</string>
     <string name="quick_action_request_deletion_alert_body">अमेथिस्ट अनुरोध करेगा कि आपका टीका मिटा दिया जाए उन पुनःप्रसारकों से जिनके साथ आप अब जुडे हुए हैं। कोई आश्वासन नहीं कि आपका टीका सर्वदा के लिए मिटा दिया जाएगा उन पुनःप्रसारकों से, अथवा अन्य पुनःप्रसारकों में से जहाँ यह रखा गया हो।</string>
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
@@ -486,9 +496,18 @@
     <string name="content_warning_hide_all_sensitive_content">संवेदनशील विषयवस्तु सर्वदा छिपाएँ</string>
     <string name="content_warning_show_all_sensitive_content">संवेदनशील विषयवस्तु सर्वदा दिखाएँ</string>
     <string name="content_warning_see_warnings">विषयवस्तु चेतावनियाँ सर्वदा दिखाएँ</string>
+    <string name="content_warning_hide_all_sensitive_content_option">छिपाएँ</string>
+    <string name="content_warning_show_all_sensitive_content_option">दिखाएँ</string>
+    <string name="content_warning_see_warnings_option">चेतावनी दें</string>
     <string name="recommended_apps">अनुशंसित : </string>
     <string name="filter_spam_from_strangers">अपरिचित जन के भेजे गये कचरालेखों को छलनी द्वारा हटाएँ</string>
     <string name="warn_when_posts_have_reports_from_your_follows">चेतावनी दें जब पत्र सूचित किये गये हों आपके द्वारा अनुचरित व्यक्तियों से</string>
+    <string name="filter_spam_from_strangers_title">कचरालेख छलनी</string>
+    <string name="filter_spam_from_strangers_explainer">अज्ञात लोगों से पत्र छिपाएँ जो निरन्तर 5 अथवा अधिक बार यथावत समान थे</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">सूचनाएँ प्राप्त होने पर चेतावनी दें</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र 5 अथवा अधिक बार सूचित हो आपके द्वारा अनुचरित लेखाओं से</string>
+    <string name="show_sensitive_content_title">संवेदनशील विषयवस्तु दिखाएँ</string>
+    <string name="show_sensitive_content_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र के लेखक ने उसे संवेदनशील चिह्नित किया</string>
     <string name="new_reaction_symbol">नया प्रतिक्रिया चिह्न</string>
     <string name="no_reaction_type_setup_long_press_to_change">इस उपयोगकर्ता के लिए कोई प्रतिक्रिया प्रकार पूर्व चयनित नहीं। हृदयचिह्न घुण्डी पर दीर्घतः दबाएँ परिवर्तन करने के लिए</string>
     <string name="zapraiser">ज्सापोपार्जन योजना</string>
@@ -540,10 +559,12 @@
     <string name="are_you_sure_you_want_to_log_out">निर्गमनांकन करने पर आपकी सारी स्थानीय जानकारी मिट जाएगी। सुनिश्चित करें कि आपके निजी कुंचिकाएँ सुरक्षित रखें हैं अपनी लेखा नहीं खोना चाहते हैं तो। क्या आप आगे बढना चाहते हैं?</string>
     <string name="followed_tags">अनुचरित विषयसूचक</string>
     <string name="relay_setup">पुनःप्रसारक</string>
-    <string name="discover_content">लेख आविष्करण</string>
+    <string name="discover_follows">अनुचरण पोटलियाँ</string>
+    <string name="discover_reads">पठितव्य</string>
+    <string name="discover_content_v2">सूचनावली विधियाँ</string>
     <string name="discover_marketplace">पण्यक्षेत्र</string>
-    <string name="discover_live">तत्क्षणप्रसार</string>
-    <string name="discover_community">समुदाय</string>
+    <string name="discover_live_v2">तत्क्षणप्रसार</string>
+    <string name="discover_community_v2">समुदाय</string>
     <string name="discover_chat">चर्चाएँ</string>
     <string name="community_approved_posts">अनुमति प्राप्त पत्र</string>
     <string name="groups_no_descriptor">इस झुण्ड का कोई विवरण नहीं नियम नहीं। इसके अधिपति से बात करें इनहें जोडने के लिए</string>
@@ -551,6 +572,7 @@
     <string name="add_sensitive_content_label">संवेदनशील विषयवस्तु</string>
     <string name="add_sensitive_content_description">इसे दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है</string>
     <string name="preferences">क्रमक आद्यताएँ</string>
+    <string name="user_preferences">उपयोगकर्ता आद्यताएँ</string>
     <string name="settings">स्थापना विकल्प</string>
     <string name="connectivity_type_always">सर्वदा</string>
     <string name="connectivity_type_wifi_only">केवल वै॰फै॰</string>
@@ -595,6 +617,8 @@
     <string name="geohash_explainer">आपका भूगोलिक स्थान विभेदक जोडता है पत्र में। जनता जान जाएगी कि आप वर्तमान स्थान से ५ कि॰मे॰ (३ मी॰) की दूरी के अन्दर हैं</string>
     <string name="geohash_exclusive">स्थल विशेष पत्र</string>
     <string name="geohash_exclusive_explainer">स्थल के अनुचर ही देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
+    <string name="hashtag_exclusive">विषयसूचक विशेष पत्र</string>
+    <string name="hashtag_exclusive_explainer">केवल विषयसूचक के अनुचर इसे देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
     <string name="loading_location">स्थान प्राप्त किया जा रहा है</string>
     <string name="lack_location_permissions">स्थान प्राप्त करने की अनुमति नहीं</string>
     <string name="add_sensitive_content_explainer">आपके विषयवस्तु दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है। यह आदर्श है किसी कार्यालय अनुचित विषयवस्तु के लिए अथवा जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
@@ -603,6 +627,7 @@
     <string name="new_feature_nip17_activate">सक्रिय करें</string>
     <string name="messages_create_public_chat">सार्वजनिक</string>
     <string name="messages_create_public_private_chat_description">नया निजी अथवा सार्वजनिक झुण्ड</string>
+    <string name="messages_relay_based">पुनःप्रसारक</string>
     <string name="messages_new_message">निजी</string>
     <string name="messages_new_message_to">के लिए</string>
     <string name="messages_new_message_subject">विषय</string>
@@ -795,6 +820,8 @@
     <string name="new_post">नया पत्र प्रकाशन</string>
     <string name="new_short">नये छोटे : चित्र अथवा चलचित्र</string>
     <string name="new_community_note">नया सामुदायिक टीका</string>
+    <string name="new_product">नया उत्पाद</string>
+    <string name="new_exclusive_geo_note">नया स्थान विशेष पत्र</string>
     <string name="open_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को खोलें</string>
     <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को अवरोधित करें</string>
     <string name="reply_description">उत्तर</string>
@@ -944,4 +971,10 @@
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
     <string name="temporary_account">यन्त्र ताला लगने पर निर्गमनांकन करें</string>
     <string name="private_message">निजी सन्देश</string>
+    <string name="group_relay">चर्चा पुनःप्रसारक</string>
+    <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
+    <string name="share_image">चित्र बाँटें…</string>
+    <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
+    <string name="dont_translate_from">अनुवाद ना करें</string>
+    <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>
 </resources>

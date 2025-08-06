@@ -353,8 +353,6 @@
     <string name="live_stream_is_offline">Трансляция выключена</string>
     <string name="live_stream_has_ended">Трансляция закончена</string>
     <string name="discover_marketplace">Рынок</string>
-    <string name="discover_live">Стримы</string>
-    <string name="discover_community">Сообщества</string>
     <string name="discover_chat">Чаты</string>
     <string name="groups_no_descriptor">У этой группы нет описания или правил. Поговорите с владельцем, чтобы добавить их</string>
     <string name="community_no_descriptor">У этого сообщества нет описания. Поговорите с владельцем, чтобы добавить</string>

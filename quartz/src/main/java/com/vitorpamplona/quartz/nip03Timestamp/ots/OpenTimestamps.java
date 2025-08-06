@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -63,7 +64,7 @@ public class OpenTimestamps {
             return "No ots file";
         }
 
-        String fileHash = Utils.bytesToHex(detachedTimestampFile.timestamp.msg).toLowerCase();
+        String fileHash = Utils.bytesToHex(detachedTimestampFile.timestamp.msg).toLowerCase(Locale.ROOT);
         String hashOp = ((OpCrypto) detachedTimestampFile.fileHashOp)._TAG_NAME();
 
         String firstLine = "File " + hashOp + " hash: " + fileHash + '\n';
@@ -82,7 +83,7 @@ public class OpenTimestamps {
             return "No timestamp";
         }
 
-        String fileHash = Utils.bytesToHex(timestamp.msg).toLowerCase();
+        String fileHash = Utils.bytesToHex(timestamp.msg).toLowerCase(Locale.ROOT);
         String firstLine = "Hash: " + fileHash + '\n';
 
         return firstLine + "Timestamp:\n" + timestamp.strTree(0);
@@ -270,7 +271,7 @@ public class OpenTimestamps {
 
     public HashMap<VerifyResult.Chains, VerifyResult> verify(DetachedTimestampFile ots, byte[] diggest) throws Exception {
         if (!Arrays.equals(ots.fileDigest(), diggest)) {
-            Log.e("OpenTimestamp", "Expected digest " + Hex.encode(ots.fileDigest()).toLowerCase());
+            Log.e("OpenTimestamp", "Expected digest " + Hex.encode(ots.fileDigest()).toLowerCase(Locale.ROOT));
             Log.e("OpenTimestamp", "File does not match original!");
             throw new Exception("File does not match original!");
         }

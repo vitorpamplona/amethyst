@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class AuthCmd(
@@ -36,7 +36,7 @@ class AuthCmd(
         @JvmStatic
         fun parse(msgArray: JsonNode): AuthCmd =
             AuthCmd(
-                EventMapper.fromJson(msgArray.get(1)) as RelayAuthEvent,
+                JsonMapper.fromJson(msgArray.get(1)) as RelayAuthEvent,
             )
     }
 }

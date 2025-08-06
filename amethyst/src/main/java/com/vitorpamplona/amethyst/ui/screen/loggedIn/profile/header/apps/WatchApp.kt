@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,8 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
@@ -45,9 +46,10 @@ import kotlinx.coroutines.withContext
 @Composable
 fun WatchApp(
     baseApp: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val appState by baseApp.live().metadata.observeAsState()
+    val appState by observeNote(baseApp, accountViewModel)
 
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
     var appName by remember(baseApp) { mutableStateOf<String?>(null) }

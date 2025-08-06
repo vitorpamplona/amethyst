@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,22 +29,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
 @Composable
@@ -60,7 +57,7 @@ fun RenderLongFormContent(
 }
 
 @Composable
-private fun LongFormHeader(
+fun LongFormHeader(
     noteEvent: LongTextNoteEvent,
     note: Note,
     accountViewModel: AccountViewModel,
@@ -72,37 +69,21 @@ private fun LongFormHeader(
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
         }
 
-    Column(
-        modifier =
-            Modifier
-                .padding(top = Size5dp)
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.subtleBorder,
-                    QuoteBorder,
-                ),
-    ) {
-        val automaticallyShowUrlPreview =
-            remember { accountViewModel.settings.showImages.value }
-
-        if (automaticallyShowUrlPreview) {
-            image?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription =
-                        stringRes(
-                            R.string.preview_card_image_for,
-                            it,
-                        ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } ?: run {
-                DefaultImageHeader(note, accountViewModel)
-            }
+    Column(MaterialTheme.colorScheme.replyModifier) {
+        image?.let {
+            MyAsyncImage(
+                imageUrl = it,
+                contentDescription = stringRes(R.string.preview_card_image_for, it),
+                contentScale = ContentScale.FillWidth,
+                mainImageModifier = Modifier.fillMaxWidth(),
+                loadedImageModifier = Modifier,
+                accountViewModel = accountViewModel,
+                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
+                onError = { DefaultImageHeader(note, accountViewModel) },
+            )
+        } ?: run {
+            DefaultImageHeader(note, accountViewModel, Modifier.fillMaxWidth())
         }
-
         title?.let {
             Text(
                 text = it,

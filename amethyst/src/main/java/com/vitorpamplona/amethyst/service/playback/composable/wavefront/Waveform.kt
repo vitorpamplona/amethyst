@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -38,15 +38,15 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
-import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
 
 @Composable
 fun Waveform(
-    waveform: WaveformTag,
+    waveform: WaveformData,
     mediaControllerState: MediaControllerState,
     modifier: Modifier,
 ) {
@@ -56,21 +56,25 @@ fun Waveform(
 
     val restartFlow = remember { mutableIntStateOf(0) }
 
+    val myController = mediaControllerState.controller
+
     // Keeps the screen on while playing and viewing videos.
-    DisposableEffect(key1 = mediaControllerState.controller) {
-        val listener =
-            object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    // doesn't consider the mutex because the screen can turn off if the video
-                    // being played in the mutex is not visible.
-                    if (isPlaying) {
-                        restartFlow.intValue += 1
+    if (myController != null) {
+        DisposableEffect(key1 = myController) {
+            val listener =
+                object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        // doesn't consider the mutex because the screen can turn off if the video
+                        // being played in the mutex is not visible.
+                        if (isPlaying) {
+                            restartFlow.intValue += 1
+                        }
                     }
                 }
-            }
 
-        mediaControllerState.controller?.addListener(listener)
-        onDispose { mediaControllerState.controller?.removeListener(listener) }
+            myController.addListener(listener)
+            onDispose { myController.removeListener(listener) }
+        }
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {
@@ -90,7 +94,7 @@ private fun pollCurrentDuration(controller: MediaController) =
 
 @Composable
 fun DrawWaveform(
-    waveform: WaveformTag,
+    waveform: WaveformData,
     waveformProgress: MutableFloatState,
     modifier: Modifier,
 ) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,10 +42,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -100,13 +100,12 @@ private fun RenderShortRepositoryHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent = noteState?.note?.event as? GitRepositoryEvent ?: return
+    val noteEvent by observeNoteEvent<GitRepositoryEvent>(baseNote, accountViewModel)
 
     Column(
         modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
     ) {
-        val title = remember(noteEvent) { noteEvent.name() ?: noteEvent.dTag() }
+        val title = noteEvent?.name() ?: baseNote.dTag()
         Text(
             text = stringRes(id = R.string.git_repository, title),
             style = MaterialTheme.typography.titleLarge,
@@ -115,7 +114,7 @@ private fun RenderShortRepositoryHeader(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        noteEvent.description()?.let {
+        noteEvent?.description()?.let {
             Spacer(modifier = DoubleVertSpacer)
             Text(
                 text = it,
@@ -200,6 +199,7 @@ private fun RenderGitPatchEvent(
                     event = noteEvent,
                     content = eventContent,
                     callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
                     nav = nav,
                 )
             }
@@ -302,7 +302,7 @@ private fun RenderGitIssueEvent(
             }
 
             if (note.event?.hasHashtags() == true) {
-                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
+                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
             }
         }
     }

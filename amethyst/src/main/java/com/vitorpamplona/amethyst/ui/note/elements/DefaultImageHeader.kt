@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,24 +22,24 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.SimpleHeaderImage
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 
@@ -47,10 +47,28 @@ import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 fun DefaultImageHeader(
     note: Note,
     accountViewModel: AccountViewModel,
+    modifier: Modifier = SimpleHeaderImage,
 ) {
-    WatchAuthor(baseNote = note) {
+    WatchAuthor(baseNote = note, accountViewModel) {
         Box {
-            BannerImage(it)
+            BannerImage(it, modifier, accountViewModel)
+
+            Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
+                BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
+            }
+        }
+    }
+}
+
+@Composable
+fun DefaultImageHeaderBackground(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = SimpleHeaderImage,
+) {
+    WatchAuthor(baseNote = note, accountViewModel) {
+        Box {
+            BannerImage(it, modifier.blur(Size16dp), accountViewModel)
 
             Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
                 BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
@@ -62,27 +80,55 @@ fun DefaultImageHeader(
 @Composable
 fun BannerImage(
     author: User,
-    imageModifier: Modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
 ) {
-    val currentInfo by author.live().userMetadataInfo.observeAsState()
-    currentInfo?.banner?.let {
-        AsyncImage(
-            model = it,
+    val banner by observeUserBanner(author, accountViewModel)
+
+    BannerImage(banner, modifier, accountViewModel)
+}
+
+@Composable
+fun BannerImage(
+    banner: String?,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    if (!banner.isNullOrBlank()) {
+        MyAsyncImage(
+            imageUrl = banner,
             contentDescription =
                 stringRes(
                     R.string.preview_card_image_for,
-                    it,
+                    banner,
                 ),
             contentScale = ContentScale.Crop,
-            modifier = imageModifier,
-            placeholder = painterResource(R.drawable.profile_banner),
+            mainImageModifier = Modifier,
+            loadedImageModifier = modifier,
+            accountViewModel = accountViewModel,
+            onLoadingBackground = {
+                Image(
+                    painter = painterRes(R.drawable.profile_banner, 4),
+                    contentDescription = stringRes(R.string.profile_banner),
+                    contentScale = ContentScale.Crop,
+                    modifier = modifier,
+                )
+            },
+            onError = {
+                Image(
+                    painter = painterRes(R.drawable.profile_banner, 4),
+                    contentDescription = stringRes(R.string.profile_banner),
+                    contentScale = ContentScale.Crop,
+                    modifier = modifier,
+                )
+            },
         )
-    } ?: run {
+    } else {
         Image(
-            painter = painterResource(R.drawable.profile_banner),
+            painter = painterRes(R.drawable.profile_banner, 5),
             contentDescription = stringRes(R.string.profile_banner),
             contentScale = ContentScale.Crop,
-            modifier = imageModifier,
+            modifier = modifier,
         )
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
 interface WebsocketBuilder {
     fun build(
-        url: String,
+        url: NormalizedRelayUrl,
         out: WebSocketListener,
     ): WebSocket
 }

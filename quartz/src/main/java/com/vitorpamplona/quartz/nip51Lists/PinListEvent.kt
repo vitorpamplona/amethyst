@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -42,17 +42,16 @@ class PinListEvent(
         const val KIND = 33888
         const val ALT = "Pinned Posts"
 
-        fun create(
+        suspend fun create(
             pins: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (PinListEvent) -> Unit,
-        ) {
+        ): PinListEvent {
             val tags = mutableListOf<Array<String>>()
             pins.forEach { tags.add(arrayOf("pin", it)) }
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), "")
         }
     }
 }

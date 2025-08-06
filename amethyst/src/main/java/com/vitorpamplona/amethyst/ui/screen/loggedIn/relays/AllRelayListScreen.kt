@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,13 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,31 +32,31 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.BroadcastRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.renderBroadcastItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kind3.Kind3RelayListViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kind3.renderKind3Items
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kind3.renderKind3ProposalItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.renderLocalItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.PrivateOutboxRelayListViewModel
@@ -67,115 +64,139 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.renderPrivateO
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.Nip65RelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65HomeItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65NotifItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.proxy.ProxyRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.proxy.renderProxyItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.ammolite.relays.Constants
 
 @Composable
 fun AllRelayListScreen(
-    relayToAdd: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    MappedAllRelayListView(relayToAdd ?: "", accountViewModel, nav)
+    val dmViewModel: DMRelayListViewModel = viewModel()
+    val nip65ViewModel: Nip65RelayListViewModel = viewModel()
+    val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
+    val searchViewModel: SearchRelayListViewModel = viewModel()
+    val blockedViewModel: BlockedRelayListViewModel = viewModel()
+    val trustedViewModel: TrustedRelayListViewModel = viewModel()
+    val localViewModel: LocalRelayListViewModel = viewModel()
+    val connectedViewModel: ConnectedRelayListViewModel = viewModel()
+    val broadcastViewModel: BroadcastRelayListViewModel = viewModel()
+    val indexerViewModel: IndexerRelayListViewModel = viewModel()
+    val proxyViewModel: ProxyRelayListViewModel = viewModel()
+
+    dmViewModel.init(accountViewModel)
+    nip65ViewModel.init(accountViewModel)
+    searchViewModel.init(accountViewModel)
+    localViewModel.init(accountViewModel)
+    privateOutboxViewModel.init(accountViewModel)
+    connectedViewModel.init(accountViewModel)
+    blockedViewModel.init(accountViewModel)
+    trustedViewModel.init(accountViewModel)
+    broadcastViewModel.init(accountViewModel)
+    indexerViewModel.init(accountViewModel)
+    proxyViewModel.init(accountViewModel)
+
+    LaunchedEffect(accountViewModel) {
+        dmViewModel.load()
+        nip65ViewModel.load()
+        searchViewModel.load()
+        localViewModel.load()
+        privateOutboxViewModel.load()
+        connectedViewModel.load()
+        blockedViewModel.load()
+        trustedViewModel.load()
+        broadcastViewModel.load()
+        indexerViewModel.load()
+        proxyViewModel.load()
+    }
+
+    MappedAllRelayListView(
+        dmViewModel,
+        nip65ViewModel,
+        searchViewModel,
+        localViewModel,
+        privateOutboxViewModel,
+        connectedViewModel,
+        blockedViewModel,
+        trustedViewModel,
+        broadcastViewModel,
+        indexerViewModel,
+        proxyViewModel,
+        accountViewModel,
+        nav,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MappedAllRelayListView(
-    relayToAdd: String = "",
+    dmViewModel: DMRelayListViewModel,
+    nip65ViewModel: Nip65RelayListViewModel,
+    searchViewModel: SearchRelayListViewModel,
+    localViewModel: LocalRelayListViewModel,
+    privateOutboxViewModel: PrivateOutboxRelayListViewModel,
+    connectedViewModel: ConnectedRelayListViewModel,
+    blockedViewModel: BlockedRelayListViewModel,
+    trustedViewModel: TrustedRelayListViewModel,
+    broadcastViewModel: BroadcastRelayListViewModel,
+    indexerViewModel: IndexerRelayListViewModel,
+    proxyViewModel: ProxyRelayListViewModel,
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
-    val kind3ViewModel: Kind3RelayListViewModel = viewModel()
-    val kind3FeedState by kind3ViewModel.relays.collectAsStateWithLifecycle()
-    val kind3Proposals by kind3ViewModel.proposedRelays.collectAsStateWithLifecycle()
-
-    val dmViewModel: DMRelayListViewModel = viewModel()
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
-
-    val nip65ViewModel: Nip65RelayListViewModel = viewModel()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
-
-    val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
     val privateOutboxFeedState by privateOutboxViewModel.relays.collectAsStateWithLifecycle()
-
-    val searchViewModel: SearchRelayListViewModel = viewModel()
     val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
-
-    val localViewModel: LocalRelayListViewModel = viewModel()
+    val blockedFeedState by blockedViewModel.relays.collectAsStateWithLifecycle()
+    val trustedFeedState by trustedViewModel.relays.collectAsStateWithLifecycle()
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        kind3ViewModel.load(accountViewModel.account)
-        dmViewModel.load(accountViewModel.account)
-        nip65ViewModel.load(accountViewModel.account)
-        searchViewModel.load(accountViewModel.account)
-        localViewModel.load(accountViewModel.account)
-        privateOutboxViewModel.load(accountViewModel.account)
-    }
+    val connectedRelays by connectedViewModel.relays.collectAsStateWithLifecycle()
+    val broadcastRelays by broadcastViewModel.relays.collectAsStateWithLifecycle()
+    val indexerRelays by indexerViewModel.relays.collectAsStateWithLifecycle()
+    val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Spacer(modifier = MinHorzSpacer)
-
-                        Text(
-                            text = stringRes(R.string.relay_settings),
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                        )
-
-                        SaveButton(
-                            onPost = {
-                                kind3ViewModel.create()
-                                dmViewModel.create()
-                                nip65ViewModel.create()
-                                searchViewModel.create()
-                                localViewModel.create()
-                                privateOutboxViewModel.create()
-                                newNav.popBack()
-                            },
-                            true,
-                        )
-                    }
+            SavingTopBar(
+                titleRes = R.string.relay_settings,
+                onCancel = {
+                    dmViewModel.clear()
+                    nip65ViewModel.clear()
+                    searchViewModel.clear()
+                    localViewModel.clear()
+                    privateOutboxViewModel.clear()
+                    trustedViewModel.clear()
+                    blockedViewModel.clear()
+                    broadcastViewModel.clear()
+                    indexerViewModel.clear()
+                    proxyViewModel.clear()
+                    newNav.popBack()
                 },
-                navigationIcon = {
-                    Row {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                kind3ViewModel.clear()
-                                dmViewModel.clear()
-                                nip65ViewModel.clear()
-                                searchViewModel.clear()
-                                localViewModel.clear()
-                                privateOutboxViewModel.clear()
-                                newNav.popBack()
-                            },
-                        )
-                    }
+                onPost = {
+                    dmViewModel.create()
+                    nip65ViewModel.create()
+                    searchViewModel.create()
+                    localViewModel.create()
+                    privateOutboxViewModel.create()
+                    trustedViewModel.create()
+                    blockedViewModel.create()
+                    broadcastViewModel.create()
+                    indexerViewModel.create()
+                    proxyViewModel.create()
+                    newNav.popBack()
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->
@@ -196,7 +217,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.public_home_section),
                     stringRes(R.string.public_home_section_explainer),
-                    Modifier.padding(bottom = 8.dp),
+                    SettingsCategoryFirstModifier,
                 )
             }
             renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
@@ -205,6 +226,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.public_notif_section),
                     stringRes(R.string.public_notif_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
             renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
@@ -213,6 +235,7 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     stringRes(R.string.private_inbox_section),
                     stringRes(R.string.private_inbox_section_explainer),
+                    SettingsCategorySpacingModifier,
                     action = {
                         ResetDMRelays(dmViewModel)
                     },
@@ -224,18 +247,48 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.private_outbox_section),
                     stringRes(R.string.private_outbox_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
             renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
 
             item {
+                SettingsCategory(
+                    stringRes(R.string.proxy_section),
+                    stringRes(R.string.proxy_section_explainer),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderProxyItems(proxyRelays, proxyViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.broadcast_section),
+                    stringRes(R.string.broadcast_section_explainer),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategoryWithButton(
+                    stringRes(R.string.indexer_section),
+                    stringRes(R.string.indexer_section_explainer),
+                    SettingsCategorySpacingModifier,
+                ) {
+                    ResetIndexerRelays(indexerViewModel)
+                }
+            }
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, newNav)
+
+            item {
                 SettingsCategoryWithButton(
                     stringRes(R.string.search_section),
                     stringRes(R.string.search_section_explainer),
-                    action = {
-                        ResetSearchRelays(searchViewModel)
-                    },
-                )
+                    SettingsCategorySpacingModifier,
+                ) {
+                    ResetSearchRelays(searchViewModel)
+                }
             }
             renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
 
@@ -243,44 +296,38 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.local_section),
                     stringRes(R.string.local_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
 
             item {
-                SettingsCategoryWithButton(
-                    stringRes(R.string.kind_3_section),
-                    stringRes(R.string.kind_3_section_description),
-                    action = {
-                        ResetKind3Relays(kind3ViewModel)
-                    },
+                SettingsCategory(
+                    stringRes(R.string.trusted_section),
+                    stringRes(R.string.trusted_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
-            renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, newNav, relayToAdd)
+            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, newNav)
 
-            if (kind3Proposals.isNotEmpty()) {
-                item {
-                    SettingsCategory(
-                        stringRes(R.string.kind_3_recommended_section),
-                        stringRes(R.string.kind_3_recommended_section_description),
-                    )
-                }
-                renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, newNav)
+            item {
+                SettingsCategory(
+                    stringRes(R.string.blocked_section),
+                    stringRes(R.string.blocked_section_explainer),
+                    SettingsCategorySpacingModifier,
+                )
             }
-        }
-    }
-}
+            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, newNav)
 
-@Composable
-fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
-    OutlinedButton(
-        onClick = {
-            postViewModel.deleteAll()
-            postViewModel.addAll(Constants.defaultRelays)
-            postViewModel.loadRelayDocuments()
-        },
-    ) {
-        Text(stringRes(R.string.default_relays))
+            item {
+                SettingsCategory(
+                    stringRes(R.string.connected_section),
+                    stringRes(R.string.connected_section_description),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
+        }
     }
 }
 
@@ -290,6 +337,23 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
         onClick = {
             postViewModel.deleteAll()
             DefaultSearchRelayList.forEach {
+                postViewModel.addRelay(
+                    relaySetupInfoBuilder(it),
+                )
+            }
+            postViewModel.loadRelayDocuments()
+        },
+    ) {
+        Text(stringRes(R.string.default_relays))
+    }
+}
+
+@Composable
+fun ResetIndexerRelays(postViewModel: IndexerRelayListViewModel) {
+    OutlinedButton(
+        onClick = {
+            postViewModel.deleteAll()
+            DefaultIndexerRelayList.forEach {
                 postViewModel.addRelay(
                     relaySetupInfoBuilder(it),
                 )
@@ -320,7 +384,7 @@ fun ResetDMRelays(postViewModel: DMRelayListViewModel) {
 fun SettingsCategory(
     title: String,
     description: String? = null,
-    modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+    modifier: Modifier,
 ) {
     Column(modifier) {
         Text(
@@ -342,8 +406,8 @@ fun SettingsCategory(
 fun SettingsCategoryWithButton(
     title: String,
     description: String? = null,
+    modifier: Modifier,
     action: @Composable () -> Unit,
-    modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
 ) {
     Row(modifier, horizontalArrangement = RowColSpacing) {
         Column(modifier = Modifier.weight(1f)) {

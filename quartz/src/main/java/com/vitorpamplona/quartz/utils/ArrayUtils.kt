@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,6 +39,8 @@ fun Array<String>.startsWith(startsWith: Array<String>): Boolean {
     }
     return true
 }
+
+fun Array<String>.startsWithAny(startsWithList: List<Array<String>>): Boolean = startsWithList.any { startsWith(it) }
 
 public inline fun <T, R> Array<out T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {
     for (index in this.indices.reversed()) {

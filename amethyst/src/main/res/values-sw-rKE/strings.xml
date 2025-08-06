@@ -371,8 +371,6 @@
     <string name="are_you_sure_you_want_to_log_out">Kutoka kunaondoa taarifa zako za eneo la kuhifadhia data. Hakikisha una nakala za funguo zako binafsi ili kuepuka kupoteza akaunti yako. Je, unataka kuendelea?</string>
     <string name="followed_tags">Mada Zinazofuatwa</string>
     <string name="relay_setup">Usanidi wa Relays</string>
-    <string name="discover_live">Moja kwa Moja</string>
-    <string name="discover_community">Jumuiya</string>
     <string name="discover_chat">Mazungumzo</string>
     <string name="community_approved_posts">Machapisho Yaliyoidhinishwa</string>
     <string name="groups_no_descriptor">Kikundi hiki hakitumii maelezo au kanuni. Ongea na mmiliki ili aongeze.</string>

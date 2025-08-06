@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,19 +44,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
@@ -92,7 +94,7 @@ fun RenderLiveActivityEventPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsume(event, null, false)
             baseNote = LocalCache.getOrCreateNote("19406ad34ce3c653d62eb73c1816ac27dcf473c2ccdccf5af7d90d2633c62561")
         }
     }
@@ -130,7 +132,7 @@ fun RenderLiveActivityEventInner(
 ) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
-    val eventUpdates by baseNote.live().metadata.observeAsState()
+    val eventUpdates by observeNote(baseNote, accountViewModel)
 
     val media = remember(eventUpdates) { noteEvent.streaming() }
     val cover = remember(eventUpdates) { noteEvent.image() }
@@ -161,19 +163,22 @@ fun RenderLiveActivityEventInner(
 
         CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
-                StatusTag.STATUS.LIVE.code -> {
+                StatusTag.STATUS.LIVE -> {
                     media?.let { CrossfadeCheckIfVideoIsOnline(it, accountViewModel) { LiveFlag() } }
                 }
 
-                StatusTag.STATUS.PLANNED.code -> {
+                StatusTag.STATUS.PLANNED -> {
                     ScheduledFlag(starts)
                 }
+
+                StatusTag.STATUS.ENDED -> {}
+                null -> {}
             }
         }
     }
 
     media?.let { media ->
-        if (status == StatusTag.STATUS.LIVE.code) {
+        if (status == StatusTag.STATUS.LIVE) {
             CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
                 if (isOnline) {
                     Row(
@@ -208,7 +213,7 @@ fun RenderLiveActivityEventInner(
                 }
             }
         } else {
-            if (status == StatusTag.STATUS.ENDED.code || (status == StatusTag.STATUS.PLANNED.code && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
+            if (status == StatusTag.STATUS.ENDED || (status == StatusTag.STATUS.PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -220,9 +225,22 @@ fun RenderLiveActivityEventInner(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            AsyncImage(model = it, contentDescription = null, modifier = MaterialTheme.colorScheme.imageModifier)
+                            MyAsyncImage(
+                                imageUrl = it,
+                                contentDescription =
+                                    stringRes(
+                                        R.string.preview_card_image_for,
+                                        it,
+                                    ),
+                                contentScale = ContentScale.FillWidth,
+                                mainImageModifier = Modifier.fillMaxWidth(),
+                                loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                                accountViewModel = accountViewModel,
+                                onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                                onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                            )
                         }
-                    } ?: run { DisplayAuthorBanner(baseNote) }
+                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
 
                     Text(
                         text = stringRes(id = R.string.live_stream_has_ended),
@@ -262,7 +280,10 @@ fun RenderLiveActivityEventInner(
             Spacer(StdHorzSpacer)
             it.first.role?.let {
                 Text(
-                    text = it.capitalize(Locale.ROOT),
+                    text =
+                        it.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                        },
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
                 )

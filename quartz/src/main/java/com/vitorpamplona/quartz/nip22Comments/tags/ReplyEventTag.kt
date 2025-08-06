@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -34,7 +36,7 @@ import com.vitorpamplona.quartz.utils.ensure
 class ReplyEventTag(
     val ref: EventReference,
 ) {
-    constructor(eventId: String, relayHint: String?, pubkey: String?) : this(EventReference(eventId, relayHint, pubkey))
+    constructor(eventId: String, relayHint: NormalizedRelayUrl?, pubkey: String?) : this(EventReference(eventId, pubkey, relayHint))
 
     fun toTagArray() = assemble(ref)
 
@@ -61,7 +63,7 @@ class ReplyEventTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ReplyEventTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+            return ReplyEventTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }, tag.getOrNull(3))
         }
 
         @JvmStatic
@@ -87,15 +89,19 @@ class ReplyEventTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return EventIdHint(tag[1], tag[2])
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(relayHint != null) { return null }
+
+            return EventIdHint(tag[1], relayHint)
         }
 
         @JvmStatic
         fun assemble(
             eventId: HexKey,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
             pubkey: String?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relay, pubkey)
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay?.url, pubkey)
 
         @JvmStatic
         fun assemble(ref: EventReference) = assemble(ref.eventId, ref.relayHint, ref.author)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.logging
 
+import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
@@ -164,6 +165,8 @@ class StackSampler(
 
     companion object {
         const val SEPARATOR: String = "\r\n"
+
+        @SuppressLint("SimpleDateFormat")
         val TIME_FORMATTER: SimpleDateFormat = SimpleDateFormat("MM-dd HH:mm:ss.SSS")
     }
 }

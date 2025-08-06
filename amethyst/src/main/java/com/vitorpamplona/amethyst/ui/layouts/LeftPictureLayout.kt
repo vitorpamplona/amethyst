@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -36,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,6 +44,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.LikeIcon
 import com.vitorpamplona.amethyst.ui.note.TextCount
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -65,7 +65,7 @@ fun LeftPictureLayoutPreviewCard() {
     LeftPictureLayout(
         onImage = {
             Image(
-                painter = painterResource(R.drawable.github),
+                painter = painterRes(R.drawable.github, 3),
                 contentDescription = stringRes(id = R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxSize().clip(QuoteBorder),

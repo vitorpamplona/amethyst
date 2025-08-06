@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,6 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.tts.TextToSpeechHelper
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -53,7 +54,7 @@ fun NoteUsernameDisplay(
     textColor: Color = Color.Unspecified,
     accountViewModel: AccountViewModel,
 ) {
-    WatchAuthor(baseNote) {
+    WatchAuthor(baseNote, accountViewModel) {
         UsernameDisplay(it, weight, textColor = textColor, accountViewModel = accountViewModel)
     }
 }
@@ -61,15 +62,15 @@ fun NoteUsernameDisplay(
 @Composable
 fun WatchAuthor(
     baseNote: Note,
+    accountViewModel: AccountViewModel,
     inner: @Composable (User) -> Unit,
 ) {
     val noteAuthor = baseNote.author
     if (noteAuthor != null) {
         inner(noteAuthor)
     } else {
-        val authorState by baseNote.live().metadata.observeAsState()
-
-        authorState?.note?.author?.let {
+        val authorState by observeNote(baseNote, accountViewModel)
+        authorState.note.author?.let {
             inner(it)
         }
     }
@@ -86,9 +87,8 @@ fun WatchAuthorWithBlank(
     if (noteAuthor != null) {
         inner(noteAuthor)
     } else {
-        val authorState by baseNote.live().metadata.observeAsState()
-
-        CrossfadeIfEnabled(targetState = authorState?.note?.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
+        val authorState by observeNote(baseNote, accountViewModel)
+        CrossfadeIfEnabled(targetState = authorState.note.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
             inner(newAuthor)
         }
     }
@@ -102,7 +102,7 @@ fun UsernameDisplay(
     textColor: Color = Color.Unspecified,
     accountViewModel: AccountViewModel,
 ) {
-    val userMetadata by baseUser.live().userMetadataInfo.observeAsState(baseUser.info)
+    val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
         val name = it?.bestName()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
-import android.R.attr.description
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -33,9 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,34 +52,40 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource.channel
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BlankNote
-import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
+import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 
 @Composable
@@ -94,7 +97,7 @@ fun ChatroomHeaderCompose(
     if (baseNote.event != null) {
         ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
     } else {
-        val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
+        val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
         if (hasEvent) {
             ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
         } else {
@@ -109,82 +112,71 @@ fun ChatroomComposeChannelOrUser(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (baseNote.event is DraftEvent) {
-        ObserveDraftEvent(baseNote, accountViewModel) {
-            val channelHex by remember(it) { derivedStateOf { it.channelHex() } }
-
-            if (channelHex != null) {
-                ChatroomChannel(channelHex!!, it, accountViewModel, nav)
-            } else {
-                ChatroomPrivateMessages(it, accountViewModel, nav)
-            }
+    val baseNoteEvent = baseNote.event
+    if (baseNoteEvent is DraftEvent) {
+        ObserveDraftEvent(baseNote, accountViewModel) { innerNote ->
+            ChatroomEntry(innerNote, accountViewModel, nav)
         }
     } else {
-        val channelHex by remember(baseNote) { derivedStateOf { baseNote.channelHex() } }
-
-        if (channelHex != null) {
-            ChatroomChannel(channelHex!!, baseNote, accountViewModel, nav)
-        } else {
-            ChatroomPrivateMessages(baseNote, accountViewModel, nav)
-        }
+        ChatroomEntry(baseNote, accountViewModel, nav)
     }
 }
 
 @Composable
-private fun ChatroomPrivateMessages(
-    baseNote: Note,
+private fun ChatroomEntry(
+    lastMessage: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userRoom by
-        remember(baseNote) {
-            derivedStateOf {
-                (baseNote.event as? ChatroomKeyable)?.chatroomKey(accountViewModel.userProfile().pubkeyHex)
+    val baseNoteEvent = lastMessage.event
+    when (baseNoteEvent) {
+        is ChannelMessageEvent ->
+            baseNoteEvent.channelId()?.let {
+                LoadPublicChatChannel(it, accountViewModel) { channel ->
+                    ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
+                }
+            }
+        is ChannelMetadataEvent ->
+            baseNoteEvent.channelId()?.let {
+                LoadPublicChatChannel(it, accountViewModel) { channel ->
+                    ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
+                }
+            }
+        is ChannelCreateEvent ->
+            LoadPublicChatChannel(baseNoteEvent.id, accountViewModel) { channel ->
+                ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
+            }
+        is ChatroomKeyable -> {
+            val room = baseNoteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex)
+            UserRoomCompose(room, lastMessage, accountViewModel, nav)
+        }
+        is EphemeralChatEvent -> {
+            baseNoteEvent.roomId()?.let {
+                LoadEphemeralChatChannel(it, accountViewModel) { channel ->
+                    ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
+                }
             }
         }
-
-    CrossfadeIfEnabled(targetState = userRoom, label = "ChatroomPrivateMessages", accountViewModel = accountViewModel) { room ->
-        if (room != null) {
-            UserRoomCompose(baseNote, room, accountViewModel, nav)
-        } else {
-            BlankNote()
-        }
-    }
-}
-
-@Composable
-private fun ChatroomChannel(
-    channelHex: HexKey,
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    LoadChannel(baseChannelHex = channelHex, accountViewModel) { channel ->
-        ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
+        else -> BlankNote()
     }
 }
 
 @Composable
 private fun ChannelRoomCompose(
-    note: Note,
-    channel: Channel,
+    lastMessage: Note,
+    channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val authorState by note.author!!
-        .live()
-        .metadata
-        .observeAsState()
-    val authorName = remember(note, authorState) { authorState?.user?.toBestDisplayName() }
+    val authorName by observeUserName(lastMessage.author!!, accountViewModel)
+    val channelState by observeChannel(channel, accountViewModel)
 
-    val channelState by channel.live.observeAsState()
+    val channel = channelState?.channel as? PublicChatChannel ?: return
 
-    val channelPicture = channelState?.channel?.profilePicture() ?: channel.profilePicture()
-    val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()
+    val channelPicture = channel.profilePicture()
+    val channelName = channel.toBestDisplayName()
 
-    val noteEvent = note.event
-
-    val route = Route.Channel(channel.idHex)
+    val noteEvent = lastMessage.event
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
@@ -200,22 +192,55 @@ private fun ChannelRoomCompose(
     ChannelName(
         channelIdHex = channel.idHex,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, modifier) },
-        channelLastTime = note.createdAt(),
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.public_chat, modifier) },
+        channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-        onClick = { nav.nav(route) },
+        onClick = { nav.nav(routeFor(channel)) },
+    )
+}
+
+@Composable
+private fun ChannelRoomCompose(
+    lastMessage: Note,
+    channel: EphemeralChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authorName by observeUserName(lastMessage.author!!, accountViewModel)
+    val channelState by observeChannel(channel, accountViewModel)
+
+    val channel = channelState?.channel as? EphemeralChatChannel ?: return
+
+    val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
+
+    val noteEvent = lastMessage.event
+    val description = noteEvent?.content?.take(200)
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("Channel/${channel.roomId.toKey()}").collectAsStateWithLifecycle()
+
+    ChannelName(
+        channelIdHex = channel.roomId.toKey(),
+        channelPicture = relayInfo.icon,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), R.string.ephemeral_relay_chat, modifier) },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = "$authorName: $description",
+        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        onClick = { nav.nav(routeFor(channel)) },
     )
 }
 
 @Composable
 private fun ChannelTitleWithLabelInfo(
     channelName: String,
+    label: Int,
     modifier: Modifier,
 ) {
-    val label = stringRes(id = R.string.public_chat)
+    val label = stringRes(id = label)
     val placeHolderColor = MaterialTheme.colorScheme.placeholderText
     val channelNameAndBoostInfo =
         remember(channelName) {
@@ -251,8 +276,8 @@ private fun ChannelTitleWithLabelInfo(
 
 @Composable
 private fun UserRoomCompose(
-    note: Note,
     room: ChatroomKey,
+    lastMessage: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -266,10 +291,10 @@ private fun UserRoomCompose(
         },
         firstRow = {
             RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
-            TimeAgo(note.createdAt())
+            TimeAgo(lastMessage.createdAt())
         },
         secondRow = {
-            LoadDecryptedContentOrNull(note, accountViewModel) { content ->
+            LoadDecryptedContentOrNull(lastMessage, accountViewModel) { content ->
                 if (content != null) {
                     Text(
                         content,
@@ -291,11 +316,11 @@ private fun UserRoomCompose(
             }
 
             val lastReadTime by accountViewModel.account.loadLastReadFlow("Room/${room.hashCode()}").collectAsStateWithLifecycle()
-            if ((note.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
+            if ((lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
                 NewItemsBubble()
             }
         },
-        onClick = { nav.nav(Route.Room(room.hashCode())) },
+        onClick = { nav.nav(Route.Room(room)) },
     )
 }
 

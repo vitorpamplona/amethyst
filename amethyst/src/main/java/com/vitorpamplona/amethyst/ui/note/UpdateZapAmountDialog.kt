@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -60,7 +60,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,165 +70,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
-import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-@Stable
-class UpdateZapAmountViewModel : ViewModel() {
-    var account: Account? = null
-
-    var nextAmount by mutableStateOf(TextFieldValue(""))
-    var amountSet by mutableStateOf(listOf<Long>())
-    var walletConnectRelay by mutableStateOf(TextFieldValue(""))
-    var walletConnectPubkey by mutableStateOf(TextFieldValue(""))
-    var walletConnectSecret by mutableStateOf(TextFieldValue(""))
-    var selectedZapType by mutableStateOf(LnZapEvent.ZapType.PRIVATE)
-
-    fun copyFromClipboard(text: String) {
-        if (text.isBlank()) {
-            return
-        }
-        updateNIP47(text)
-    }
-
-    fun load(myAccount: Account) {
-        this.account = myAccount
-        this.amountSet = myAccount.settings.syncedSettings.zaps.zapAmountChoices.value
-        this.selectedZapType = myAccount.settings.syncedSettings.zaps.defaultZapType.value
-
-        this.walletConnectPubkey =
-            myAccount.settings.zapPaymentRequest
-                ?.pubKeyHex
-                ?.let { TextFieldValue(it) } ?: TextFieldValue("")
-        this.walletConnectRelay =
-            myAccount.settings.zapPaymentRequest
-                ?.relayUri
-                ?.let { TextFieldValue(it) } ?: TextFieldValue("")
-        this.walletConnectSecret =
-            myAccount.settings.zapPaymentRequest
-                ?.secret
-                ?.let { TextFieldValue(it) } ?: TextFieldValue("")
-    }
-
-    fun toListOfAmounts(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
-
-    fun addAmount() {
-        val newValue = nextAmount.text.trim().toLongOrNull()
-        if (newValue != null) {
-            amountSet = amountSet + newValue
-        }
-
-        nextAmount = TextFieldValue("")
-    }
-
-    fun removeAmount(amount: Long) {
-        amountSet = amountSet - amount
-    }
-
-    fun sendPost() {
-        val nip47Update =
-            if (walletConnectRelay.text.isNotBlank() && walletConnectPubkey.text.isNotBlank()) {
-                val pubkeyHex =
-                    try {
-                        decodePublicKey(walletConnectPubkey.text.trim()).toHexKey()
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        null
-                    }
-
-                val relayUrl = walletConnectRelay.text.ifBlank { null }?.let { RelayUrlFormatter.normalize(it) }
-                val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
-
-                if (pubkeyHex != null && relayUrl != null) {
-                    Nip47WalletConnect.Nip47URI(
-                        pubkeyHex,
-                        relayUrl,
-                        privKeyHex,
-                    )
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            account?.updateZapAmounts(amountSet, selectedZapType, nip47Update)
-
-            nextAmount = TextFieldValue("")
-        }
-    }
-
-    fun cancel() {
-        nextAmount = TextFieldValue("")
-    }
-
-    fun hasChanged(): Boolean =
-        (
-            selectedZapType !=
-                account
-                    ?.settings
-                    ?.syncedSettings
-                    ?.zaps
-                    ?.defaultZapType
-                    ?.value ||
-                amountSet !=
-                account
-                    ?.settings
-                    ?.syncedSettings
-                    ?.zaps
-                    ?.zapAmountChoices
-                    ?.value ||
-                walletConnectPubkey.text != (account?.settings?.zapPaymentRequest?.pubKeyHex ?: "") ||
-                walletConnectRelay.text != (account?.settings?.zapPaymentRequest?.relayUri ?: "") ||
-                walletConnectSecret.text != (account?.settings?.zapPaymentRequest?.secret ?: "")
-        )
-
-    fun updateNIP47(uri: String) {
-        val contact = Nip47WalletConnect.parse(uri)
-        if (contact != null) {
-            walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
-            walletConnectRelay = TextFieldValue(contact.relayUri ?: "")
-            walletConnectSecret = TextFieldValue(contact.secret ?: "")
-        }
-    }
-}
 
 @Composable
 fun UpdateZapAmountDialog(
@@ -238,7 +106,11 @@ fun UpdateZapAmountDialog(
     accountViewModel: AccountViewModel,
 ) {
     val postViewModel: UpdateZapAmountViewModel = viewModel()
-    postViewModel.load(accountViewModel.account)
+    postViewModel.init(accountViewModel)
+
+    LaunchedEffect(accountViewModel, postViewModel) {
+        postViewModel.load()
+    }
     UpdateZapAmountDialog(postViewModel, onClose, nip47uri, accountViewModel)
 }
 
@@ -431,8 +303,7 @@ fun UpdateZapAmountContent(
         ) {
             TextSpinner(
                 label = stringRes(id = R.string.zap_type_explainer),
-                placeholder =
-                    zapTypes.filter { it.first == accountViewModel.defaultZapType() }.first().second,
+                placeholder = zapTypes.firstOrNull { it.first == accountViewModel.defaultZapType() }?.second ?: zapTypes.firstOrNull()?.second ?: "",
                 options = zapOptions,
                 onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
                 modifier = Modifier.weight(1f).padding(end = 5.dp),
@@ -462,9 +333,9 @@ fun UpdateZapAmountContent(
                 },
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.alby),
+                    painter = painterRes(R.drawable.alby, 1),
                     contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
-                    modifier = Modifier.size(24.dp),
+                    modifier = Size24Modifier,
                     tint = Color.Unspecified,
                 )
             }
@@ -477,14 +348,14 @@ fun UpdateZapAmountContent(
                 Icon(
                     Icons.Outlined.ContentPaste,
                     contentDescription = stringRes(id = R.string.paste_from_clipboard),
-                    modifier = Modifier.size(24.dp),
+                    modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
 
             IconButton(onClick = { qrScanning = true }) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_qrcode),
+                    painter = painterRes(R.drawable.ic_qrcode, 3),
                     contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

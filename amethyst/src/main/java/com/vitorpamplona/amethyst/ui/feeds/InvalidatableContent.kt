@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 
 interface InvalidatableContent {
     fun invalidateData(ignoreIfDoing: Boolean = false)
 
-    val isRefreshing: MutableState<Boolean>
+    val isRefreshing: State<Boolean>
 }

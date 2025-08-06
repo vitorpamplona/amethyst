@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
 object FilterSerializer {
     fun toJsonObject(
@@ -80,7 +80,7 @@ object FilterSerializer {
         limit: Int? = null,
         search: String? = null,
     ): String =
-        EventMapper.mapper.writeValueAsString(
+        JsonMapper.mapper.writeValueAsString(
             toJsonObject(
                 ids,
                 authors,

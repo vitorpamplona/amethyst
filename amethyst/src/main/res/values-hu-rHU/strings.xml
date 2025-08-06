@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy ki tudja követni az embereket, akiket követ</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy egy szót vagy mondat el tudjon rejteni</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy egy szót vagy mondat meg tudjon jeleníteni</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. A beállítások módosításához jelentkezzen be egy privát kulccsal</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be egy privát kulccsal, hogy tudjon tartalmakat feltölteni</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be egy privát kulccsal, hogy aláírhassa az eseményeket</string>
+    <string name="unauthorized_exception">Jogosulatlan visszafejtés</string>
+    <string name="unauthorized_exception_description">Az aláíró nem engedélyezte a művelet végrehajtásához szükséges visszafejtést. Aktiválja az NIP-44 visszafejtést az aláíró alkalmazásban, és próbálja meg újra</string>
+    <string name="signer_not_found_exception">Nem található az aláíró</string>
+    <string name="signer_not_found_exception_description">Az aláíró alkalmazás el lett távolítva? Ellenőrizze, hogy az aláíró telepítve van-e és rendelkezik-e ezzel a fiókkal. Jelentkezzen ki és jelentkezzen be újra, ha az aláíró alkalmazás megváltozott.</string>
     <string name="zaps">Zap</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megtolás</string>
@@ -71,6 +78,8 @@
     <string name="error_parsing_error_message">Hiba a hibaüzenet elemzésekor</string>
     <string name="following">" Követett"</string>
     <string name="followers">" Követő"</string>
+    <string name="number_following">"%1$s követett"</string>
+    <string name="number_followers">"%1$s követő"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Biztonsági szűrők</string>
     <string name="log_out">Kijelentkezés</string>
@@ -96,6 +105,7 @@
     <string name="my_awesome_group">A nagyszerű csoportom</string>
     <string name="picture_url">Kép webcíme</string>
     <string name="description">Leírás</string>
+    <string name="no_description">Nem található leírás</string>
     <string name="about_us">"Névjegy… "</string>
     <string name="what_s_on_your_mind">Mi jár a fejében?</string>
     <string name="write_a_message">Üzenet írása…</string>
@@ -137,6 +147,10 @@
     <string name="video_saved_to_the_gallery">Videó elmentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült elmenteni a videót</string>
     <string name="upload_image">Kép feltöltése</string>
+    <string name="take_a_picture">Kép készítése</string>
+    <string name="record_a_message">Hangüzenet rögzítése</string>
+    <string name="record_a_message_title">Hangüzenet rögzítése</string>
+    <string name="record_a_message_description">Hangüzenet rögzítéséhez kattintson és tartsa lenyomva a gombot</string>
     <string name="uploading">Feltöltés…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>
     <string name="reply_here">"Válasz írása… "</string>
@@ -155,6 +169,7 @@
     <string name="gallery">Galéria</string>
     <string name="follows">"Követett"</string>
     <string name="reports">"Bejelentés"</string>
+    <string name="number_reports">"%1$s jelentés"</string>
     <string name="more_options">További beállítások</string>
     <string name="relays">" Átjátszó"</string>
     <string name="website">Weboldal</string>
@@ -213,14 +228,23 @@
     <string name="unfollow">Követés megszüntetése</string>
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult:"</string>
+    <string name="ephemeral_relay_chat">Eltűnő csevegés</string>
+    <string name="relay_chat">Átjátszócsevegés</string>
+    <string name="relay_chat_title">Átjátszócsevegések</string>
+    <string name="relay_chat_explainer">Az átjátszócsevegések olyan csevegőcsoportok, amelyeket az otthoni átjátszó irányít.
+        Ezek mindenki számára láthatóak a Nostr-on, és bárki részt vehet rajtuk.
+        Remekül alkalmasak nyitott közösségek kialakítására bizonyos témák körül. Néhány ilyen csoport
+    rövid élettartamú, ezért a csevegési üzenetek idővel eltűnnek</string>
     <string name="public_chat">Nyilvános csevegés</string>
     <string name="public_chat_title">Nyilvános csevegés metaadatai</string>
     <string name="public_chat_explainer">A nyilvános csevegések mindenki számára láthatóak a Nostr-on, és bárki
         részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára.
         A moderálás az átjátszókon lévő hozzászólások törlésével szabályozható</string>
     <string name="public_chat_relays_title">Átjátszók</string>
-    <string name="public_chat_relays_explainer">Adjon hozzá 1-3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
+    <string name="public_chat_relays_explainer">Adjon hozzá 1–3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
         A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
+    <string name="paid_relay">Fizetős átjátszó</string>
+    <string name="tor_relay">Tor kényszerítése kapcsolódáskor</string>
     <string name="posts_received">fogadott bejegyzések</string>
     <string name="remove">Eltávolítás</string>
     <string name="translations_auto">Automatikus</string>
@@ -265,6 +289,7 @@
     <string name="biometric_error">Hiba</string>
     <string name="badge_created_by">"Létrehozta: %1$s"</string>
     <string name="badge_award_image_for">"Kitűző %1$s számára"</string>
+    <string name="badge_award_image">Kitűző képe</string>
     <string name="new_badge_award_notif">Ön egy új kitűzőt kapott</string>
     <string name="award_granted_to">Kitűzőben részesült</string>
     <string name="copied_note_text_to_clipboard">Bejegyzés szövege a vágólapra másolva</string>
@@ -290,7 +315,7 @@
     <string name="quick_action_unfollow">Követés megszüntetése</string>
     <string name="quick_action_follow">Követés</string>
     <string name="quick_action_request_deletion_gallery_title">Törlés a galériából</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Távolítsa el ezt a médiát a galériából, később újra hozzáadhatja</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Távolítsa el ezt a médiát a galériából.</string>
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy a bejegyzését töröljék azokról az átjátszókról, amelyekhez jelenleg csatlakozik. Nem garantálható, hogy a bejegyzése véglegesen törlődik ezekről az átjátszókról, vagy más átjátszókról, ahol esetleg tárolva van.</string>
     <string name="quick_action_block_dialog_btn">Letiltás</string>
@@ -412,6 +437,7 @@
     <string name="no">Nem</string>
     <string name="follow_list_selection">Követési lista</string>
     <string name="follow_list_kind3follows">Követettek bejegyzései</string>
+    <string name="follow_list_kind3follows_proxy">Követés proxyn keresztül</string>
     <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
@@ -486,9 +512,18 @@
     <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
     <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
     <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Elrejtés</string>
+    <string name="content_warning_show_all_sensitive_content_option">Megjelenítés</string>
+    <string name="content_warning_see_warnings_option">Figyelmeztetés</string>
     <string name="recommended_apps">Ajánlott alkalmazások: </string>
     <string name="filter_spam_from_strangers">Az idegenektől érkező kéretlen tartalmak szűrése</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen amikor a bejegyzések jelentve vannak azok által akiket követek</string>
+    <string name="filter_spam_from_strangers_title">Kéretlen tartalomszűrő</string>
+    <string name="filter_spam_from_strangers_explainer">Elrejti az ismeretlen felhasználók hozzászólásait, amelyek pontosan ugyanazok voltak 5 vagy több alkalommal</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzéseket az Ön által követett felhasználók 5 vagy annál többször jelentették</string>
+    <string name="show_sensitive_content_title">Érzékeny tartalom megjelenítése</string>
+    <string name="show_sensitive_content_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzés szerzője érzékenynek jelölte a hozzászólást</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
     <string name="zapraiser">Zap-gyűjtés</string>
@@ -540,10 +575,12 @@
     <string name="are_you_sure_you_want_to_log_out">A kijelentkezéssel törlődik az összes helyben tárolt adat. Győződjön meg arról, hogy a privát kulcsokról biztonsági mentést készített, hogy elkerülje fiókja elvesztését. Szeretné folytatni?</string>
     <string name="followed_tags">Követett címke</string>
     <string name="relay_setup">Átjátszók</string>
-    <string name="discover_content">Bejegyzések felfedezése</string>
+    <string name="discover_follows">Követett csomagok</string>
+    <string name="discover_reads">Olvasmányok</string>
+    <string name="discover_content_v2">Hírforrás-algoritmus</string>
     <string name="discover_marketplace">Piac</string>
-    <string name="discover_live">Élő</string>
-    <string name="discover_community">Közösség</string>
+    <string name="discover_live_v2">Élő közvetítések</string>
+    <string name="discover_community_v2">Közösségek</string>
     <string name="discover_chat">Csevegések</string>
     <string name="community_approved_posts">Elfogadott bejegyzések</string>
     <string name="groups_no_descriptor">Ennek a csoportnak nincs leírása vagy szabályai. Kérje meg a tulajdonosát, hogy adjon hozzá egyet</string>
@@ -551,6 +588,7 @@
     <string name="add_sensitive_content_label">Érzékeny tartalom</string>
     <string name="add_sensitive_content_description">Érzékeny tartalom-figyelmeztetés hozzáadása a tartalom megjelenítése előtt</string>
     <string name="preferences">Alkalmazás-beállítások</string>
+    <string name="user_preferences">Felhasználói beállítások</string>
     <string name="settings">Beállítások</string>
     <string name="connectivity_type_always">Mindig</string>
     <string name="connectivity_type_wifi_only">Csak Wi-Fi-n</string>
@@ -595,6 +633,8 @@
     <string name="geohash_explainer">Hozzáadja a helyének geohash-sét a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
+    <string name="hashtag_exclusive">Hashtag-exkluzív bejegyzés</string>
+    <string name="hashtag_exclusive_explainer">Csak a hashtag követői fogják látni, de az Ön általános követői viszont nem.</string>
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
@@ -603,6 +643,7 @@
     <string name="new_feature_nip17_activate">Aktiválás</string>
     <string name="messages_create_public_chat">Nyílvános</string>
     <string name="messages_create_public_private_chat_description">Új nyilvános vagy privát csoport</string>
+    <string name="messages_relay_based">Átjátszó</string>
     <string name="messages_new_message">Privát</string>
     <string name="messages_new_message_to">Neki:</string>
     <string name="messages_new_message_subject">Tárgy</string>
@@ -668,6 +709,7 @@
     <string name="wallet_number">Pénztárca: %1$s</string>
     <string name="error_opening_external_signer">Hiba az aláíró-alkalmazás megnyitásakor</string>
     <string name="error_opening_external_signer_description">Az aláíró alkalmazás nem található. Ellenőrizze, hogy az alkalmazás nincs-e eltávolítva</string>
+    <string name="sign_request_rejected2">Aláírási kérés elutasítva</string>
     <string name="sign_request_rejected">Aláíró-alkalmazás elutasítva</string>
     <string name="sign_request_rejected_description">Győződjön meg arról, hogy ezt a tranzakciót az aláíró-alkalmazás hitelesítette-e</string>
     <string name="no_wallet_found_with_error">Nem található pénztárca a Lighning-számla kifizetéséhez (Hiba: %1$s). A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
@@ -795,6 +837,8 @@
     <string name="new_post">Új bejegyzés</string>
     <string name="new_short">Új rövidek: képek vagy videók</string>
     <string name="new_community_note">Új közösségi bejegyzés</string>
+    <string name="new_product">Új termék</string>
+    <string name="new_exclusive_geo_note">Új hely-exkluzív bejegyzés </string>
     <string name="open_all_reactions_to_this_post">A bejegyzésre adott összes reakció kibontása</string>
     <string name="close_all_reactions_to_this_post">A bejegyzésre adott összes reakció összecsukása</string>
     <string name="reply_description">Válasz</string>
@@ -849,12 +893,29 @@
     <string name="private_outbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy olyan eseményeket tároljanak, amelyeket senki más nem láthat, például a piszkozatait és/vagy az alkalmazásbeállításait. Ideális esetben ezek az átjátszók vagy helyi szintűek, vagy hitelesítést igényelnek az egyes felhasználói tartalmak letöltése előtt.</string>
     <string name="kind_3_section">Általános átjátszók</string>
     <string name="kind_3_section_description">Az Amethyst ezeket az átjátszókat a bejegyzések letöltésére használja.</string>
+    <string name="connected_section">Kapcsolódott átjátszók</string>
+    <string name="connected_section_description">Jelenlegi használatban lévő átjátszók listája</string>
     <string name="kind_3_recommended_section">Ajánlott átjátszók</string>
     <string name="kind_3_recommended_section_description">Adja hozzá a következő átjátszókat az általános átjátszók listájához, hogy megkapja a felsorolt felhasználók hozzászólásait.</string>
     <string name="search_section">Keresési átjátszók</string>
     <string name="search_section_explainer">A tartalom vagy felhasználók keresésekor használandó átjátszók listája. A címkézés és a keresés nem fog működni, ha nem áll rendelkezésre semmilyen beállítás. Győződjön meg arról, hogy alkalmazzák a NIP-50-et.</string>
     <string name="local_section">Helyi átjátszók</string>
     <string name="local_section_explainer">A készüléken futó átjátszók listája.</string>
+    <string name="trusted_relays_title">Megbízható átjátszók</string>
+    <string name="trusted_section">Megbízható átjátszók</string>
+    <string name="trusted_section_explainer">Az átjátszóknak, amelyekben megbízik, nincs szükségük Tor kapcsolatra a következőhöz:</string>
+    <string name="proxy_relays_title">Proxyzott átjátszók</string>
+    <string name="proxy_section">Proxyzott átjátszók</string>
+    <string name="proxy_section_explainer">Összesítő átjátszók, amelyeket az alkalmazásnak használnia kell a hírfolyamok letöltéséhez, például filter.nostr.wine. Ez helyettesíti a kimeneti modellt, és az alkalmazás csak a listákban szereplő átjátszókhoz fog csatlakozni.</string>
+    <string name="broadcast_relays_title">Műsorszóró átjátszók</string>
+    <string name="broadcast_section">Műsorszóró átjátszók</string>
+    <string name="broadcast_section_explainer">Olyan átjátszók, amelyek arra specializálódtak, hogy továbbítsák a bejegyzéseket az összes többi átjátszónak, mint például a sendit.nosflare.com. Az Amethyst hozzáadja ezt az átjátszót az összes új eseményhez, amelyet Ön készített</string>
+    <string name="indexer_relays_title">Indexelő átjátszók</string>
+    <string name="indexer_section">Indexelő átjátszók</string>
+    <string name="indexer_section_explainer">Olyan átjátszók, amelyek mindenki metaadatainak és átjátszólistáinak tárolására specializálódtak, mint például a purplepag.es. Az Amethyst ezeket az átjátszókat használja arra, hogy megtalálja azokat a felhasználókat, akik nem szerepelnek az Ön listáin.</string>
+    <string name="blocked_relays_title">Letiltott átjátszók</string>
+    <string name="blocked_section">Letiltott átjátszók</string>
+    <string name="blocked_section_explainer">Az Amethyst soha nem fog csatlakozni ezekhez az átjátszókhoz</string>
     <string name="zap_the_devs_title">Zap a fejlesztőknek!</string>
     <string name="zap_the_devs_description">Az Ön adománya segít nekünk abban, hogy változtassunk a dolgokon. Minden satoshi számít!</string>
     <string name="donate_now">Adományozás most</string>
@@ -944,4 +1005,11 @@
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="private_message">Privát üzenet</string>
+    <string name="public_message">Nyílvános üzenet</string>
+    <string name="group_relay">Csevegési átjátszó</string>
+    <string name="group_relay_explanation">Az átjátszó, amelyhez a csevegés összes felhasználója csatlakozik</string>
+    <string name="share_image">Kép megosztása…</string>
+    <string name="search_by_hashtag">Hashtag keresése: #%1$s</string>
+    <string name="dont_translate_from">Innentől NE fordítsa le</string>
+    <string name="dont_translate_from_description">Az itt látható nyelvek nem lesznek lefordítva. Az eltávolításához és az újbóli fordításhoz válasszon ki egy nyelvet.</string>
 </resources>

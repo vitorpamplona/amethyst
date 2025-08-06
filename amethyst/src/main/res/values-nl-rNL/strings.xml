@@ -96,8 +96,9 @@
     <string name="my_awesome_group">Mijn geweldige groep</string>
     <string name="picture_url">Afbeelding URL</string>
     <string name="description">Omschrijving</string>
-    <string name="about_us">"Over ons.. "</string>
+    <string name="about_us">"Over ons…"</string>
     <string name="what_s_on_your_mind">Waar denk je aan?</string>
+    <string name="write_a_message">Schrijf een bericht…</string>
     <string name="post">Verzenden</string>
     <string name="save">Opslaan</string>
     <string name="create">Maken</string>
@@ -205,6 +206,7 @@
     <string name="with_description_of">met beschrijving van</string>
     <string name="and_picture">en afbeelding</string>
     <string name="changed_chat_name_to">heeft chatnaam veranderd naar</string>
+    <string name="changed_chat_profile_to">Nieuw chatprofiel:</string>
     <string name="description_to">omschrijving naar</string>
     <string name="and_picture_to">en afbeelding naar</string>
     <string name="leave">Verlaten</string>
@@ -212,6 +214,13 @@
     <string name="channel_created">Kanaal gemaakt</string>
     <string name="channel_information_changed_to">"Kanaalinformatie veranderd naar"</string>
     <string name="public_chat">Publieke chat</string>
+    <string name="public_chat_title">Publieke chat metadata</string>
+    <string name="public_chat_explainer">Publieke chats zijn zichtbaar voor iedereen op Nostr en iedereen
+        kan eraan deelnemen. Ze zijn top voor open communities over specifieke onderwerpen.
+        Moderatie kan worden gecontroleerd door berichten te verwijderen op de relays</string>
+    <string name="public_chat_relays_title">Relays</string>
+    <string name="public_chat_relays_explainer">Voeg een 1–3 relays toe die deze groep hosten.
+        Nostr clients gebruiken deze instelling om te weten waar berichten van moeten worden gedownload en waarnaar uw berichten worden verzonden.</string>
     <string name="posts_received">berichten ontvangen</string>
     <string name="remove">verwijderen</string>
     <string name="translations_auto">Automatisch</string>
@@ -281,7 +290,6 @@
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het terug zien in je feed.</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
@@ -300,7 +308,7 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokkeer & verberg gebruiker]]></string>
     <string name="report_dialog_report_btn">Misbruik melden</string>
     <string name="report_dialog_reminder_public">Alle geplaatste rapporteringen zijn openbaar.</string>
-    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering...</string>
+    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering…</string>
     <string name="report_dialog_additional_reason_label">Extra context</string>
     <string name="report_dialog_select_reason_label">Reden</string>
     <string name="report_dialog_select_reason_placeholder">Selecteer een reden…</string>
@@ -333,7 +341,7 @@
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
-    <string name="poll_consensus_threshold_percent">(0-100)%</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Sluit na</string>
     <string name="poll_closing_time_days">dagen</string>
     <string name="poll_unable_to_vote">Kan niet stemmen</string>
@@ -519,6 +527,7 @@
     <string name="cashu_redeem_to_zap">Stuur naar Zap wallet</string>
     <string name="cashu_redeem_to_cashu">Openen in Cashu wallet</string>
     <string name="cashu_copy_token">Token kopiëren</string>
+    <string name="quick_actions_open_in_another_app">Openen in een andere app</string>
     <string name="no_lightning_address_set">Geen Lightning-adres ingesteld</string>
     <string name="copied_token_to_clipboard">Token gekopieerd naar klembord</string>
     <string name="live_stream_live_tag">LIVE</string>
@@ -530,10 +539,7 @@
     <string name="are_you_sure_you_want_to_log_out">Uitloggen verwijdert al je lokale informatie. Zorg ervoor dat je een back-up hebt van je geheime sleutels om te voorkomen dat je je account kwijtraakt. Wilt u doorgaan?</string>
     <string name="followed_tags">Gevolgde tags</string>
     <string name="relay_setup">Relays</string>
-    <string name="discover_content">Note ontdekking</string>
     <string name="discover_marketplace">Marktplaats</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Community</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Goedgekeurde berichten</string>
     <string name="groups_no_descriptor">Deze groep heeft geen beschrijving of regels. Praat met de eigenaar om er een toe te voegen</string>
@@ -598,6 +604,8 @@
     <string name="messages_new_message_subject">Onderwerp</string>
     <string name="messages_new_message_subject_caption">Onderwerp van conversatie</string>
     <string name="messages_new_message_to_caption">"\@User1, @User2, @User3"</string>
+    <string name="messages_cant_upload_title">Kan niet uploaden</string>
+    <string name="messages_cant_upload_explainer">Voeg eerst de bestemming van het bericht toe</string>
     <string name="messages_group_descriptor">Leden van deze groep</string>
     <string name="messages_new_subject_message">Uitleg aan leden</string>
     <string name="messages_new_subject_message_placeholder">De naam veranderen voor de nieuwe doelen.</string>
@@ -863,8 +871,9 @@
     <string name="edit_post">Bericht wijzigen</string>
     <string name="proposal_to_edit">Voorstel om een bericht te verbeteren</string>
     <string name="message_to_author">Samenvatting van wijzigingen</string>
-    <string name="message_to_author_placeholder">Snelle oplossingen...</string>
+    <string name="message_to_author_placeholder">Snelle oplossingen…</string>
     <string name="accept_the_suggestion">Accepteer de suggestie</string>
+    <string name="enter_picture_in_picture">Start video in een popup</string>
     <string name="accessibility_download_for_offline">Downloaden</string>
     <string name="accessibility_lyrics_on">Songteksten aan</string>
     <string name="accessibility_lyrics_off">Songteksten uit</string>
@@ -930,4 +939,5 @@
     <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
     <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
     <string name="temporary_account">Afmelden bij apparaatvergrendeling</string>
+    <string name="private_message">Privébericht</string>
 </resources>

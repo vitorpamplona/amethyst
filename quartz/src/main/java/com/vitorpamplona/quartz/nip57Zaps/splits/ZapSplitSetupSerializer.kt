@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,13 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
+
 class ZapSplitSetupSerializer {
     companion object {
         @JvmStatic
         fun toTagArray(zapSplit: BaseZapSplitSetup): Array<String> =
             when (zapSplit) {
                 is ZapSplitSetupLnAddress -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.lnAddress)
-                is ZapSplitSetup -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay ?: "", zapSplit.weight.toString())
+                is ZapSplitSetup -> arrayOfNotNull(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay?.url, zapSplit.weight.toString())
             }
     }
 }

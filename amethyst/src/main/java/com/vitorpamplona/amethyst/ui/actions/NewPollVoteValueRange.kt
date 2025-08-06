@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,12 +39,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
-fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
+fun NewPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
     val colorInValid =
         OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.error,
@@ -64,7 +66,7 @@ fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
             onValueChange = { pollViewModel.updateMinZapAmountForPoll(it) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
-            colors = if (pollViewModel.isValidvalueMinimum.value) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidValueMinimum.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringRes(R.string.poll_zap_value_min),
@@ -86,7 +88,7 @@ fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
             onValueChange = { pollViewModel.updateMaxZapAmountForPoll(it) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
-            colors = if (pollViewModel.isValidvalueMaximum.value) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidValueMaximum.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringRes(R.string.poll_zap_value_max),
@@ -114,12 +116,13 @@ fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
     }
 }
 
+@SuppressLint("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun NewPollVoteValueRangePreview() {
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        NewPollVoteValueRange(NewPostViewModel())
+        NewPollVoteValueRange(ShortNotePostViewModel())
     }
 }

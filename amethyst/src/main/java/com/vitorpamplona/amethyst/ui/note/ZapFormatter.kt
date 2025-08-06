@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -66,12 +66,12 @@ fun showAmount(amount: BigDecimal?): String {
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= TenGiga -> dfGBig.get().format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneGiga -> dfGSmall.get().format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenMega -> dfMBig.get().format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfMSmall.get().format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenKilo -> dfK.get().format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
-        else -> dfN.get().format(amount)
+        amount >= TenGiga -> dfGBig.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneGiga -> dfGSmall.get()!!.format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenMega -> dfMBig.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfMSmall.get()!!.format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= TenKilo -> dfK.get()!!.format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
+        else -> dfN.get()!!.format(amount)
     }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,39 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
-fun NewNoteButton(
-    nav: INav,
-    enableGeolocation: Boolean = false,
-) {
+fun NewNoteButton(nav: INav) {
     FloatingActionButton(
         onClick = {
-            nav.nav(Route.NewPost(enableGeolocation = enableGeolocation))
+            nav.nav(Route.NewPost())
         },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_compose),
+            painter = painterRes(R.drawable.ic_compose, 4),
             contentDescription = stringRes(R.string.new_post),
-            modifier = Modifier.size(26.dp),
+            modifier = Size26Modifier,
             tint = Color.White,
         )
     }

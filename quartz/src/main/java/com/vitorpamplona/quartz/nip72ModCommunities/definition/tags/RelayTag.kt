@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,11 +21,13 @@
 package com.vitorpamplona.quartz.nip72ModCommunities.definition.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 class RelayTag(
-    val url: String,
+    val url: NormalizedRelayUrl,
     val marker: String? = null,
 ) {
     fun toTagArray() = assemble(url, marker)
@@ -38,13 +40,27 @@ class RelayTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return RelayTag(tag[1], tag.getOrNull(2))
+
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1]) ?: return null
+
+            return RelayTag(relay, tag.getOrNull(2))
+        }
+
+        @JvmStatic
+        fun parseUrls(tag: Array<String>): NormalizedRelayUrl? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1]) ?: return null
+
+            return relay
         }
 
         @JvmStatic
         fun assemble(
-            url: String,
+            relay: NormalizedRelayUrl,
             marker: String? = null,
-        ) = arrayOfNotNull(TAG_NAME, url, marker)
+        ) = arrayOfNotNull(TAG_NAME, relay.url, marker)
     }
 }

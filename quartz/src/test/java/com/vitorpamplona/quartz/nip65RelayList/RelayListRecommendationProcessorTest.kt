@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,29 +20,32 @@
  */
 package com.vitorpamplona.quartz.nip65RelayList
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 
 class RelayListRecommendationProcessorTest {
+    fun norm(str: String) = RelayUrlNormalizer.normalizeOrNull(str)!!
+
     val userList =
         mutableMapOf(
-            "User1" to mutableSetOf("wss://relay1.com", "wss://relay2.com", "wss://relay3.com"),
-            "User2" to mutableSetOf("wss://relay4.com", "wss://relay5.com", "wss://relay6.com"),
-            "User3" to mutableSetOf("wss://relay1.com", "wss://relay4.com", "wss://relay6.com"),
-            "User4" to mutableSetOf("wss://relay2.com", "wss://relay1.com", "wss://relay4.com"),
+            "User1" to mutableSetOf(norm("wss://relay1.com"), norm("wss://relay2.com"), norm("wss://relay3.com")),
+            "User2" to mutableSetOf(norm("wss://relay4.com"), norm("wss://relay5.com"), norm("wss://relay6.com")),
+            "User3" to mutableSetOf(norm("wss://relay1.com"), norm("wss://relay4.com"), norm("wss://relay6.com")),
+            "User4" to mutableSetOf(norm("wss://relay2.com"), norm("wss://relay1.com"), norm("wss://relay4.com")),
         )
 
     @Test
     fun testTranspose() {
         assertEquals(
             mapOf(
-                "wss://relay1.com" to listOf("User1", "User3", "User4"),
-                "wss://relay2.com" to listOf("User1", "User4"),
-                "wss://relay3.com" to listOf("User1"),
-                "wss://relay4.com" to listOf("User2", "User3", "User4"),
-                "wss://relay5.com" to listOf("User2"),
-                "wss://relay6.com" to listOf("User2", "User3"),
+                norm("wss://relay1.com") to listOf("User1", "User3", "User4"),
+                norm("wss://relay2.com") to listOf("User1", "User4"),
+                norm("wss://relay3.com") to listOf("User1"),
+                norm("wss://relay4.com") to listOf("User2", "User3", "User4"),
+                norm("wss://relay5.com") to listOf("User2"),
+                norm("wss://relay6.com") to listOf("User2", "User3"),
             ).toString(),
             RelayListRecommendationProcessor.transpose(userList).toString(),
         )
@@ -54,7 +57,7 @@ class RelayListRecommendationProcessorTest {
 
         val rec1 = recommendations[0]
 
-        assertEquals("wss://relay1.com", rec1.url)
+        assertEquals("wss://relay1.com/", rec1.relay.url)
         assertEquals(true, rec1.requiredToNotMissEvents)
         assertTrue("User1" in rec1.users)
         assertTrue("User2" !in rec1.users)
@@ -63,7 +66,7 @@ class RelayListRecommendationProcessorTest {
 
         val rec2 = recommendations[1]
 
-        assertEquals("wss://relay4.com", rec2.url)
+        assertEquals("wss://relay4.com/", rec2.relay.url)
         assertEquals(true, rec2.requiredToNotMissEvents)
         assertTrue("User1" !in rec2.users)
         assertTrue("User2" in rec2.users)
@@ -72,7 +75,7 @@ class RelayListRecommendationProcessorTest {
 
         val rec3 = recommendations[2]
 
-        assertEquals("wss://relay2.com", rec3.url)
+        assertEquals("wss://relay2.com/", rec3.relay.url)
         assertEquals(false, rec3.requiredToNotMissEvents)
         assertTrue("User1" in rec3.users)
         assertTrue("User2" !in rec3.users)
@@ -81,7 +84,7 @@ class RelayListRecommendationProcessorTest {
 
         val rec4 = recommendations[3]
 
-        assertEquals("wss://relay5.com", rec4.url)
+        assertEquals("wss://relay5.com/", rec4.relay.url)
         assertEquals(false, rec4.requiredToNotMissEvents)
         assertTrue("User1" !in rec4.users)
         assertTrue("User2" in rec4.users)

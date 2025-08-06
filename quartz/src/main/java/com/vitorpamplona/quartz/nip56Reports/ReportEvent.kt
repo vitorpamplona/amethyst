@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,9 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip56Reports.tags.DefaultReportTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAddressTag
@@ -74,28 +72,6 @@ class ReportEvent(
     companion object {
         const val KIND = 1984
         const val ALT_PREFIX = "Report for "
-
-        fun create(
-            reportedPost: Event,
-            type: ReportType,
-            signer: NostrSigner,
-            content: String = "",
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ReportEvent) -> Unit,
-        ) {
-            val reportPostTag = arrayOf("e", reportedPost.id, type.name.lowercase())
-            val reportAuthorTag = arrayOf("p", reportedPost.pubKey, type.name.lowercase())
-
-            var tags: Array<Array<String>> = arrayOf(reportPostTag, reportAuthorTag)
-
-            if (reportedPost is AddressableEvent) {
-                tags += listOf(arrayOf("a", reportedPost.aTag().toTag()))
-            }
-
-            tags += listOf(AltTag.assemble("Report for ${type.name}"))
-
-            signer.sign(createdAt, KIND, tags, content, onReady)
-        }
 
         fun build(
             reportedPost: Event,

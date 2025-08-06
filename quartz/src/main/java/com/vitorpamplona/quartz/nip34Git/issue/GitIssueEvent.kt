@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,6 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -34,8 +37,15 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -49,12 +59,53 @@ class GitIssueEvent(
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     EventHintProvider,
-    AddressHintProvider {
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = "Subject: " + subject() + "\n" + content
 
-    override fun eventHints() = tags.mapNotNull(QTag::parseEventAsHint)
+    override fun eventHints(): List<EventIdHint> {
+        val qHints = tags.mapNotNull(QTag::parseEventAsHint)
+        val nip19Hints = citedNIP19().eventHints()
 
-    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+        return qHints + nip19Hints
+    }
+
+    override fun linkedEventIds(): List<HexKey> {
+        val qHints = tags.mapNotNull(QTag::parseEventId)
+        val nip19Hints = citedNIP19().eventIds()
+
+        return qHints + nip19Hints
+    }
+
+    override fun addressHints(): List<AddressHint> {
+        val aHints = tags.mapNotNull(ATag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
+        val nip19Hints = citedNIP19().addressHints()
+
+        return aHints + qHints + nip19Hints
+    }
+
+    override fun linkedAddressIds(): List<String> {
+        val aHints = tags.mapNotNull(ATag::parseAddressId)
+        val qHints = tags.mapNotNull(QTag::parseAddressId)
+        val nip19Hints = citedNIP19().addressIds()
+
+        return aHints + qHints + nip19Hints
+    }
+
+    override fun pubKeyHints(): List<PubKeyHint> {
+        val pHints = tags.mapNotNull(PTag::parseAsHint)
+        val nip19Hints = citedNIP19().pubKeyHints()
+
+        return pHints + nip19Hints
+    }
+
+    override fun linkedPubKeys(): List<HexKey> {
+        val pHints = tags.mapNotNull(PTag::parseKey)
+        val nip19Hints = citedNIP19().pubKeys()
+
+        return pHints + nip19Hints
+    }
 
     fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 

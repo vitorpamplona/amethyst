@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -31,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,14 +40,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -60,8 +61,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -77,46 +78,16 @@ fun LongLiveActivityChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by baseChannel.live.observeAsState()
+    val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
+    val activity = channel.info ?: return
+    val callbackUri = remember(channel) { channel.toNostrUri() }
 
-    Row(
-        lineModifier,
-    ) {
-        val summary = remember(channelState) { channel.summary()?.ifBlank { null } }
-
-        Column(
-            Modifier.weight(1f),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val defaultBackground = MaterialTheme.colorScheme.background
-                val background = remember { mutableStateOf(defaultBackground) }
-
-                val tags = remember(channelState) { baseChannel.info?.tags?.toImmutableListOfLists() ?: EmptyTagList }
-
-                TranslatableRichTextViewer(
-                    content = summary ?: stringRes(id = R.string.groups_no_descriptor),
-                    canPreview = false,
-                    quotesLeft = 1,
-                    tags = tags,
-                    backgroundColor = background,
-                    id = baseChannel.idHex,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            if (summary != null) {
-                baseChannel.info?.let {
-                    if (it.hasHashtags()) {
-                        DisplayUncitedHashtags(it, summary, nav)
-                    }
-                }
-            }
-        }
+    Row(lineModifier) {
+        RenderSummary(activity, callbackUri, accountViewModel, nav)
     }
 
-    LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
+    LoadAddressableNote(channel.address, accountViewModel) { loadingNote ->
         loadingNote?.let { note ->
             Row(
                 lineModifier,
@@ -129,7 +100,7 @@ fun LongLiveActivityChannelHeader(
                     modifier = Modifier.width(75.dp),
                 )
                 Spacer(DoubleHorzSpacer)
-                NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
+                NoteAuthorPicture(note, Size25dp, accountViewModel = accountViewModel, nav = nav)
                 Spacer(DoubleHorzSpacer)
                 NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
@@ -181,7 +152,10 @@ fun LongLiveActivityChannelHeader(
         ) {
             it.first.role?.let { it1 ->
                 Text(
-                    text = it1.capitalize(Locale.ROOT),
+                    text =
+                        it1.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                        },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(55.dp),
@@ -191,6 +165,39 @@ fun LongLiveActivityChannelHeader(
             ClickableUserPicture(it.second, Size25dp, accountViewModel)
             Spacer(DoubleHorzSpacer)
             UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun RowScope.RenderSummary(
+    activity: LiveActivitiesEvent,
+    callbackUri: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val summary = activity.summary() ?: stringRes(id = R.string.groups_no_descriptor)
+
+    Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val defaultBackground = MaterialTheme.colorScheme.background
+            val background = remember { mutableStateOf(defaultBackground) }
+
+            TranslatableRichTextViewer(
+                content = summary,
+                canPreview = false,
+                quotesLeft = 1,
+                tags = activity.tags.toImmutableListOfLists(),
+                backgroundColor = background,
+                id = activity.id,
+                callbackUri = callbackUri,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        if (activity.hasHashtags()) {
+            DisplayUncitedHashtags(activity, summary, callbackUri, accountViewModel, nav)
         }
     }
 }

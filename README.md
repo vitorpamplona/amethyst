@@ -17,6 +17,7 @@ Join the social network you control.
 [![JitPack version](https://jitpack.io/v/vitorpamplona/amethyst.svg)](https://jitpack.io/#vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/vitorpamplona/amethyst)
 
 ## Download and Install
 
@@ -61,7 +62,7 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [x] Bech Encoding support (NIP-19)
 - [x] Command Results (NIP-20)
 - [x] URI Support (NIP-21)
-- [x] Long-form Content (NIP-23)
+- [x] Long-form Content (NIP-23) (view only)
 - [x] User Profile Fields / Relay list (NIP-24)
 - [x] Reactions (NIP-25)
 - [ ] Delegated Event Signing (NIP-26, Will not implement)
@@ -134,7 +135,8 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] Signed Filters (NIP-xx/Draft)
 - [ ] Key Migration (NIP-xx/Draft)
 - [ ] Time-based Sync (NIP-xx/Draft)
-- [ ] Image/Video Capture in the app
+- [x] Image Capture in the app
+- [ ] Video Capture in the app
 - [ ] Local Database
 - [ ] Workspaces
 - [ ] Infinity Scroll
@@ -173,7 +175,7 @@ Lastly, the user's account information (private key/pub key) is stored in the An
 ## Setup
 
 Make sure to have the following pre-requisites installed:
-1. Java 17+
+1. Java 21+
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 

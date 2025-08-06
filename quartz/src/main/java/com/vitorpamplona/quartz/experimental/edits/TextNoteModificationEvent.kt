@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,15 +45,14 @@ class TextNoteModificationEvent(
         const val KIND = 1010
         const val ALT = "Content Change Event"
 
-        fun create(
+        suspend fun create(
             content: String,
             eventId: HexKey,
             notify: HexKey?,
             summary: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (TextNoteModificationEvent) -> Unit,
-        ) {
+        ): TextNoteModificationEvent {
             val tags = mutableListOf(arrayOf("e", eventId))
 
             notify?.let {
@@ -66,7 +65,7 @@ class TextNoteModificationEvent(
 
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
     }
 }

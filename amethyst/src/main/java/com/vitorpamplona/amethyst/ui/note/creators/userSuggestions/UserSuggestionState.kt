@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,43 +22,74 @@ package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 
 class UserSuggestionState(
     val accountViewModel: AccountViewModel,
 ) {
-    var search = MutableStateFlow("")
-    var results =
-        search
-            .debounce(500)
+    val invalidations = MutableStateFlow<Int>(0)
+    val currentWord = MutableStateFlow("")
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(""), accountViewModel.account)
+
+    @OptIn(FlowPreview::class)
+    val searchTerm =
+        currentWord
+            .debounce(300)
             .distinctUntilChanged()
-            .map { word ->
-                if (word.startsWith("@") && word.length > 2) {
-                    val prefix = word.removePrefix("@")
-                    NostrSearchEventOrUserDataSource.search(prefix)
+            .map(::userSearchTermOrNull)
+            .onEach(::updateDataSource)
+
+    @OptIn(FlowPreview::class)
+    val results =
+        combine(searchTerm, invalidations.debounce(100)) { prefix, version ->
+            if (prefix != null) {
+                logTime("UserSuggestionState Search $prefix version $version") {
                     accountViewModel.findUsersStartingWithSync(prefix)
-                } else {
-                    NostrSearchEventOrUserDataSource.clear()
-                    search.tryEmit("")
-                    emptyList()
                 }
-            }.flowOn(Dispatchers.IO)
+            } else {
+                emptyList()
+            }
+        }.flowOn(Dispatchers.Default)
 
     fun reset() {
-        NostrSearchEventOrUserDataSource.clear()
-        search.tryEmit("")
+        currentWord.tryEmit("")
     }
 
     fun processCurrentWord(word: String) {
-        search.tryEmit(word)
+        currentWord.tryEmit(word)
+    }
+
+    fun invalidateData() {
+        // force new query
+        invalidations.update { it + 1 }
+    }
+
+    fun userSearchTermOrNull(currentWord: String): String? =
+        if (currentWord.startsWith("@") && currentWord.length > 2) {
+            currentWord.removePrefix("@")
+        } else {
+            null
+        }
+
+    fun updateDataSource(searchTerm: String?) {
+        if (searchTerm != null) {
+            searchDataSourceState.searchQuery.tryEmit(searchTerm)
+        } else {
+            searchDataSourceState.searchQuery.tryEmit("")
+        }
     }
 
     fun replaceCurrentWord(

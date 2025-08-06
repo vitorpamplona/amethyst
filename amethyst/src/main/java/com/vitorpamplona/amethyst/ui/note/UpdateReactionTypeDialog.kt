@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -51,11 +51,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,46 +71,47 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class UpdateReactionTypeViewModel : ViewModel() {
-    var account: Account? = null
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
     var nextChoice by mutableStateOf(TextFieldValue(""))
     var reactionSet by mutableStateOf(listOf<String>())
 
-    fun load(myAccount: Account) {
-        this.account = myAccount
-        this.reactionSet = myAccount.settings.syncedSettings.reactions.reactionChoices.value
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
+
+    fun load() {
+        this.reactionSet = account.settings.syncedSettings.reactions.reactionChoices.value
     }
 
     fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
@@ -138,8 +138,7 @@ class UpdateReactionTypeViewModel : ViewModel() {
     }
 
     fun sendPost() {
-        viewModelScope.launch(Dispatchers.IO) {
-            account?.changeReactionTypes(reactionSet)
+        accountViewModel.changeReactionTypes(reactionSet) {
             nextChoice = TextFieldValue("")
         }
     }
@@ -148,14 +147,7 @@ class UpdateReactionTypeViewModel : ViewModel() {
         nextChoice = TextFieldValue("")
     }
 
-    fun hasChanged(): Boolean =
-        reactionSet !=
-            account
-                ?.settings
-                ?.syncedSettings
-                ?.reactions
-                ?.reactionChoices
-                ?.value
+    fun hasChanged(): Boolean = reactionSet != account.settings.syncedSettings.reactions.reactionChoices.value
 }
 
 @Composable
@@ -165,7 +157,11 @@ fun UpdateReactionTypeDialog(
     nav: INav,
 ) {
     val postViewModel: UpdateReactionTypeViewModel = viewModel()
-    postViewModel.load(accountViewModel.account)
+    postViewModel.init(accountViewModel)
+
+    LaunchedEffect(postViewModel, accountViewModel) {
+        postViewModel.load()
+    }
 
     UpdateReactionTypeDialog(postViewModel, onClose, accountViewModel, nav)
 }
@@ -191,28 +187,15 @@ fun UpdateReactionTypeDialog(
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    actions = {
-                        SaveButton(
-                            onPost = {
-                                postViewModel.sendPost()
-                                onClose()
-                            },
-                            isActive = postViewModel.hasChanged(),
-                        )
-                        Spacer(modifier = StdHorzSpacer)
+                SavingTopBar(
+                    isActive = postViewModel::hasChanged,
+                    onCancel = {
+                        postViewModel.cancel()
+                        onClose()
                     },
-                    title = {},
-                    navigationIcon = {
-                        Row {
-                            Spacer(modifier = StdHorzSpacer)
-                            CloseButton(
-                                onPress = {
-                                    postViewModel.cancel()
-                                    onClose()
-                                },
-                            )
-                        }
+                    onPost = {
+                        postViewModel.sendPost()
+                        onClose()
                     },
                 )
             },
@@ -383,21 +366,13 @@ private fun EmojiSelector(
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by
-                usersEmojiList
-                    .live()
-                    .metadata
-                    .map { (it.note.event as? EmojiPackSelectionEvent)?.emojiPackIds()?.toImmutableList() }
-                    .distinctUntilChanged()
-                    .observeAsState(
-                        (usersEmojiList.event as? EmojiPackSelectionEvent)
-                            ?.emojiPackIds()
-                            ?.toImmutableList(),
-                    )
+            val collections by observeNoteEventAndMap(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
+                event.emojiPacks().toImmutableList()
+            }
 
             collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
         }
@@ -406,7 +381,7 @@ private fun EmojiSelector(
 
 @Composable
 fun EmojiCollectionGallery(
-    emojiCollections: ImmutableList<String>,
+    emojiCollections: ImmutableList<Address>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
@@ -439,7 +414,7 @@ private fun WatchAndRenderNote(
 
     Column(
         Modifier.fillMaxWidth().clickable {
-            scope.launch { routeFor(emojiPack, accountViewModel.userProfile())?.let { nav.nav(it) } }
+            scope.launch { routeFor(emojiPack, accountViewModel.account)?.let { nav.nav(it) } }
         },
     ) {
         RenderEmojiPack(

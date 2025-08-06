@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,11 +24,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.painterResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.theme.IncognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.incognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
@@ -37,17 +37,17 @@ import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 fun IncognitoBadge(baseNote: Note) {
     if (baseNote.event is NIP17Group) {
         Icon(
-            painter = painterResource(id = R.drawable.incognito),
+            painter = painterRes(resourceId = R.drawable.incognito, 1),
             null,
-            modifier = incognitoIconModifier,
+            modifier = IncognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         Spacer(modifier = StdHorzSpacer)
     } else if (baseNote.event is PrivateDmEvent) {
         Icon(
-            painter = painterResource(id = R.drawable.incognito_off),
+            painter = painterRes(resourceId = R.drawable.incognito_off, 1),
             null,
-            modifier = incognitoIconModifier,
+            modifier = IncognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,
         )
         Spacer(modifier = StdHorzSpacer)

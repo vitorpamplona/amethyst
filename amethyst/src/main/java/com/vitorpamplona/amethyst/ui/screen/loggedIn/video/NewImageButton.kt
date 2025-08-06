@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,7 +45,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -54,9 +53,11 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -178,7 +179,7 @@ fun NewImageButton(
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = stringRes(id = R.string.new_short),
-                    modifier = Modifier.size(26.dp),
+                    modifier = Size26Modifier,
                     tint = Color.White,
                 )
             }
@@ -189,9 +190,9 @@ fun NewImageButton(
                 exit = fadeOut(),
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_compose),
+                    painter = painterRes(R.drawable.ic_compose, 5),
                     contentDescription = stringRes(id = R.string.new_short),
-                    modifier = Modifier.size(26.dp),
+                    modifier = Size26Modifier,
                     tint = Color.White,
                 )
             }

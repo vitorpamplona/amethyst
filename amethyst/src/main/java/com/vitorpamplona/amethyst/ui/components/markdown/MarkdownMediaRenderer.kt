@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -39,11 +38,12 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
@@ -75,14 +75,14 @@ class MarkdownMediaRenderer(
         uri: String,
     ): Boolean =
         if (canPreview && uri.startsWith("http")) {
-            if (title.isNullOrBlank() || title == uri) {
-                true
-            } else {
-                false
-            }
+            title.isNullOrBlank() || title == uri
         } else {
             false
         }
+
+    override fun shouldSanitizeUriLabel(): Boolean = true
+
+    override fun sanitizeUriLabel(label: String): String = label.filterNot { it == '#' || it == '@' }
 
     override fun renderImage(
         title: String?,
@@ -171,7 +171,7 @@ class MarkdownMediaRenderer(
             when (val entity = loadedLink.nip19.entity) {
                 is NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
                 is NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
-                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NAddress -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
@@ -189,7 +189,7 @@ class MarkdownMediaRenderer(
         richTextStringBuilder: RichTextString.Builder,
     ) {
         val tagWithoutHash = tag.removePrefix("#")
-        renderAsCompleteLink(tag, "nostr:nashtag?id=$tagWithoutHash", richTextStringBuilder)
+        renderAsCompleteLink(tag, "nostr:hashtag?id=$tagWithoutHash", richTextStringBuilder)
 
         val hashtagIcon: HashtagIcon? = checkForHashtagWithIcon(tagWithoutHash)
         if (hashtagIcon != null) {
@@ -231,7 +231,7 @@ class MarkdownMediaRenderer(
     ) {
         renderInvisible(richTextStringBuilder) {
             // Preloads note if not loaded yet.
-            baseNote.live().metadata.observeAsState()
+            EventFinderFilterAssemblerSubscription(baseNote, accountViewModel)
         }
     }
 

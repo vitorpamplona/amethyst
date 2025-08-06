@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,19 +31,19 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
+import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.torSettings
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -52,16 +52,19 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
@@ -84,25 +87,29 @@ class AccountStateViewModel : ViewModel() {
 
     private var collectorJob: Job? = null
 
-    fun tryLoginExistingAccountAsync() {
+    fun loginWithDefaultAccountIfLoggedOff() {
         // pulls account from storage.
         if (_accountContent.value !is AccountState.LoggedIn) {
             viewModelScope.launch {
-                tryLoginExistingAccount()
+                loginWithDefaultAccount()
             }
         }
     }
 
-    private suspend fun tryLoginExistingAccount(route: Route? = null) =
-        withContext(Dispatchers.IO) {
-            LocalPreferences.loadCurrentAccountFromEncryptedStorage()
-        }?.let { startUI(it, route) } ?: run { requestLoginUI() }
+    private suspend fun loginWithDefaultAccount(route: Route? = null) {
+        val accountSettings =
+            withContext(Dispatchers.IO) {
+                LocalPreferences.loadCurrentAccountFromEncryptedStorage()
+            }
 
-    private suspend fun requestLoginUI() {
-        _accountContent.update { AccountState.LoggedOff }
-
-        viewModelScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseAndLogOff() }
+        if (accountSettings != null) {
+            startUI(accountSettings, route)
+        } else {
+            requestLoginUI()
+        }
     }
+
+    private suspend fun requestLoginUI() = _accountContent.update { AccountState.LoggedOff }
 
     suspend fun loginAndStartUI(
         key: String,
@@ -117,7 +124,7 @@ class AccountStateViewModel : ViewModel() {
                 is NSec -> null
                 is NPub -> parsed.hex.hexToByteArray()
                 is NProfile -> parsed.hex.hexToByteArray()
-                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> null
+                is NNote -> null
                 is NEvent -> null
                 is NEmbed -> null
                 is NRelay -> null
@@ -168,7 +175,7 @@ class AccountStateViewModel : ViewModel() {
                 )
             }
 
-        LocalPreferences.updatePrefsForLogin(account)
+        LocalPreferences.setDefaultAccount(account)
 
         startUI(account)
     }
@@ -234,7 +241,7 @@ class AccountStateViewModel : ViewModel() {
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 Nip05NostrAddressVerifier().verifyNip05(
                     key,
-                    okttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
                     onSuccess = { publicKey ->
                         loginSync(Hex.decode(publicKey).toNpub(), torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
                     },
@@ -270,6 +277,9 @@ class AccountStateViewModel : ViewModel() {
         onError: (String) -> Unit,
     ) {
         try {
+            if (_accountContent.value is AccountState.LoggedIn) {
+                prepareLogoutOrSwitch()
+            }
             loginAndStartUI(key, torSettings, transientAccount, loginWithExternalSigner, packageName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -283,46 +293,56 @@ class AccountStateViewModel : ViewModel() {
         name: String? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (_accountContent.value is AccountState.LoggedIn) {
+                prepareLogoutOrSwitch()
+            }
+
             _accountContent.update { AccountState.Loading }
 
-            val keyPair = KeyPair()
-            val tempSigner = NostrSignerSync(keyPair)
+            val accountSettings = createNewAccount(torSettings, name)
 
-            val accountSettings =
-                AccountSettings(
-                    keyPair = keyPair,
-                    transientAccount = false,
-                    backupUserMetadata = tempSigner.sign(MetadataEvent.newUser(name)),
-                    backupContactList =
-                        ContactListEvent.createFromScratch(
-                            followUsers = listOf(ContactTag(keyPair.pubKey.toHexKey(), null, null)),
-                            followEvents = DefaultChannels.toList(),
-                            relayUse =
-                                Constants.defaultRelays.associate {
-                                    it.url to ReadWrite(it.read, it.write)
-                                },
-                            signer = tempSigner,
-                        ),
-                    backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
-                    backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
-                    backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList, tempSigner),
-                    torSettings = TorSettingsFlow.build(torSettings),
-                )
-
-            // saves to local preferences
-            LocalPreferences.updatePrefsForLogin(accountSettings)
+            LocalPreferences.setDefaultAccount(accountSettings)
 
             startUI(accountSettings)
 
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
-                accountSettings.backupUserMetadata?.let { Amethyst.instance.client.send(it) }
-                accountSettings.backupContactList?.let { Amethyst.instance.client.send(it) }
-                accountSettings.backupNIP65RelayList?.let { Amethyst.instance.client.send(it) }
-                accountSettings.backupDMRelayList?.let { Amethyst.instance.client.send(it) }
-                accountSettings.backupSearchRelayList?.let { Amethyst.instance.client.send(it) }
+
+                val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
+
+                accountSettings.backupUserMetadata?.let { Amethyst.instance.client.send(it, toPost) }
+                accountSettings.backupContactList?.let { Amethyst.instance.client.send(it, toPost) }
+                accountSettings.backupNIP65RelayList?.let { Amethyst.instance.client.send(it, toPost) }
+                accountSettings.backupDMRelayList?.let { Amethyst.instance.client.send(it, toPost) }
+                accountSettings.backupSearchRelayList?.let { Amethyst.instance.client.send(it, toPost) }
             }
         }
+    }
+
+    fun createNewAccount(
+        torSettings: TorSettings,
+        name: String? = null,
+    ): AccountSettings {
+        val keyPair = KeyPair()
+        val tempSigner = NostrSignerSync(keyPair)
+
+        return AccountSettings(
+            keyPair = keyPair,
+            transientAccount = false,
+            backupUserMetadata = tempSigner.sign(MetadataEvent.newUser(name)),
+            backupContactList =
+                ContactListEvent.createFromScratch(
+                    followUsers = listOf(ContactTag(keyPair.pubKey.toHexKey(), null, null)),
+                    relayUse = emptyMap(),
+                    signer = tempSigner,
+                ),
+            backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
+            backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
+            backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
+            backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
+            torSettings = TorSettingsFlow.build(torSettings),
+        )
     }
 
     fun switchUser(accountInfo: AccountInfo) {
@@ -331,7 +351,7 @@ class AccountStateViewModel : ViewModel() {
         }
     }
 
-    suspend fun switchUserSync(
+    suspend fun checkAndSwitchUserSync(
         npub: String,
         route: Route,
     ): Boolean {
@@ -345,34 +365,33 @@ class AccountStateViewModel : ViewModel() {
         return false
     }
 
-    suspend fun switchUserSync(
+    private suspend fun switchUserSync(
         accountInfo: AccountInfo,
         route: Route? = null,
     ) {
         prepareLogoutOrSwitch()
         LocalPreferences.switchToAccount(accountInfo)
-        tryLoginExistingAccount(route)
+        loginWithDefaultAccount(route)
     }
 
-    fun currentAccount() =
+    fun currentAccountNPub() =
         when (val state = _accountContent.value) {
             is AccountState.LoggedIn ->
                 state.accountSettings.keyPair.pubKey
                     .toNpub()
-
             else -> null
         }
 
     fun logOff(accountInfo: AccountInfo) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (accountInfo.npub == currentAccount()) {
+            if (accountInfo.npub == currentAccountNPub()) {
                 // log off and relogin with the 0 account
                 prepareLogoutOrSwitch()
-                LocalPreferences.updatePrefsForLogout(accountInfo)
-                tryLoginExistingAccount()
+                LocalPreferences.deleteAccount(accountInfo)
+                loginWithDefaultAccount()
             } else {
-                // delete without login off
-                LocalPreferences.updatePrefsForLogout(accountInfo)
+                // delete without switching logins
+                LocalPreferences.deleteAccount(accountInfo)
             }
         }
     }

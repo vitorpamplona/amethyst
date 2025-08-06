@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -43,7 +43,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -69,14 +68,15 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.authorRouteFor
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
@@ -134,7 +134,7 @@ fun MultiSetCompose(
                 .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
-                        scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } }
+                        scope.launch { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } }
                     },
                     onLongClick = { popupExpanded.value = true },
                 ).padding(
@@ -597,7 +597,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     author: User,
     accountViewModel: AccountViewModel,
 ) {
-    WatchUserMetadata(author) { baseUserPicture ->
+    WatchUserMetadata(author, accountViewModel) { baseUserPicture ->
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
@@ -621,9 +621,10 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
 @Composable
 private fun WatchUserMetadata(
     author: User,
+    accountViewModel: AccountViewModel,
     onNewMetadata: @Composable (String?) -> Unit,
 ) {
-    val userProfile by author.live().profilePictureChanges.observeAsState(author.profilePicture())
+    val userProfile by observeUserPicture(author, accountViewModel)
 
     onNewMetadata(userProfile)
 }

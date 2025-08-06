@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,36 +26,29 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent.Companion.ALT_DESCRIPTION
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent.Companion.KIND
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class DraftBuilder {
     companion object {
-        fun <T : Event> encryptAndSign(
+        suspend fun <T : Event> encryptAndSign(
             dTag: String,
             draft: T,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
-            signer.nip44Encrypt(draft.toJson(), signer.pubKey) { encryptedContent ->
-                val template =
-                    eventTemplate<DraftEvent>(KIND, encryptedContent, createdAt) {
-                        alt(ALT_DESCRIPTION)
-                        dTag(dTag)
-                        kind(draft.kind)
+        ): DraftEvent {
+            val encryptedContent = signer.nip44Encrypt(draft.toJson(), signer.pubKey)
+            val template =
+                eventTemplate<DraftEvent>(DraftEvent.KIND, encryptedContent, createdAt) {
+                    alt(DraftEvent.ALT_DESCRIPTION)
+                    dTag(dTag)
+                    kind(draft.kind)
 
-                        if (draft is ExposeInDraft) {
-                            addAll(draft.exposeInDraft())
-                        }
+                    if (draft is ExposeInDraft) {
+                        addAll(draft.exposeInDraft())
                     }
-
-                signer.sign(template) {
-                    it.addToCache(signer.pubKey, draft)
-                    onReady(it)
                 }
-            }
+
+            return signer.sign(template)
         }
     }
 }

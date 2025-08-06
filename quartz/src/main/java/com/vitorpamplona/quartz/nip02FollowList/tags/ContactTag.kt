@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -36,12 +38,12 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class ContactTag(
     val pubKey: HexKey,
 ) {
-    var relayUri: String? = null
+    var relayUri: NormalizedRelayUrl? = null
     var petname: String? = null
 
     constructor(
         pubKey: HexKey,
-        relayHint: String?,
+        relayHint: NormalizedRelayUrl?,
         petname: String?,
     ) : this(pubKey) {
         this.relayUri = relayHint
@@ -51,7 +53,7 @@ data class ContactTag(
     fun countMemory(): Long =
         3 * pointerSizeInBytes +
             pubKey.bytesUsedInMemory() +
-            (relayUri?.bytesUsedInMemory() ?: 0) +
+            (relayUri?.url?.bytesUsedInMemory() ?: 0) +
             (petname?.bytesUsedInMemory() ?: 0)
 
     fun toTagArray() = assemble(pubKey, relayUri, petname)
@@ -67,7 +69,10 @@ data class ContactTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ContactTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+            return ContactTag(tag[1], hint, tag.getOrNull(3))
         }
 
         @JvmStatic
@@ -75,8 +80,11 @@ data class ContactTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
+
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
             return try {
-                ContactTag(decodePublicKey(tag[1]).toHexKey(), tag.getOrNull(2), tag.getOrNull(3))
+                ContactTag(decodePublicKey(tag[1]).toHexKey(), hint, tag.getOrNull(3))
             } catch (e: Exception) {
                 Log.w("ContactTag", "Can't parse contact list p-tag ${tag.joinToString(", ")}", e)
                 null
@@ -110,14 +118,18 @@ data class ContactTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return PubKeyHint(tag[1], tag[2])
+
+            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(hint != null) { return null }
+
+            return PubKeyHint(tag[1], hint)
         }
 
         @JvmStatic
         fun assemble(
             pubkey: HexKey,
-            relayUri: String? = null,
+            relayUri: NormalizedRelayUrl? = null,
             petname: String? = null,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, relayUri, petname)
+        ) = arrayOfNotNull(TAG_NAME, pubkey, relayUri?.url, petname)
     }
 }

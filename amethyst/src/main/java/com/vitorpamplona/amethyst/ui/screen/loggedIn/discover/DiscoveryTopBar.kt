@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,25 +23,47 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.navigation.FollowListWithoutRoutes
-import com.vitorpamplona.amethyst.ui.navigation.GenericMainTopBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
+import com.vitorpamplona.amethyst.ui.screen.FollowListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun DiscoveryTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    GenericMainTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav) {
         val list by accountViewModel.account.settings.defaultDiscoveryFollowList
             .collectAsStateWithLifecycle()
 
-        FollowListWithoutRoutes(
+        FollowList(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
-        ) { listName ->
-            accountViewModel.account.settings.changeDefaultDiscoveryFollowList(listName.code)
-        }
+            accountViewModel = accountViewModel,
+            onChange = accountViewModel.account.settings::changeDefaultDiscoveryFollowList,
+        )
     }
+}
+
+@Composable
+private fun FollowList(
+    followListsModel: FollowListState,
+    listName: String,
+    accountViewModel: AccountViewModel,
+    onChange: (FeedDefinition) -> Unit,
+) {
+    val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
+
+    FeedFilterSpinner(
+        placeholderCode = listName,
+        explainer = stringRes(R.string.select_list_to_filter),
+        options = allLists,
+        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
+        accountViewModel = accountViewModel,
+    )
 }

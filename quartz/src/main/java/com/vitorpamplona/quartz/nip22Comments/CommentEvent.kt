@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,8 +29,19 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAuthorTag
@@ -43,7 +54,9 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
@@ -59,12 +72,59 @@ class CommentEvent(
     RootScope,
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
-    override fun pubKeyHints() = tags.mapNotNull(RootAuthorTag::parseAsHint) + tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
 
-    override fun eventHints() = tags.mapNotNull(RootEventTag::parseAsHint) + tags.mapNotNull(ReplyEventTag::parseAsHint)
+    override fun pubKeyHints(): List<PubKeyHint> {
+        val pHints =
+            tags.mapNotNull(RootAuthorTag::parseAsHint) +
+                tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+        val nip19Hints = citedNIP19().pubKeyHints()
 
-    override fun addressHints() = tags.mapNotNull(RootAddressTag::parseAsHint) + tags.mapNotNull(ReplyAddressTag::parseAsHint)
+        return pHints + nip19Hints
+    }
+
+    override fun linkedPubKeys(): List<HexKey> {
+        val pHints =
+            tags.mapNotNull(RootAuthorTag::parseKey) +
+                tags.mapNotNull(ReplyAuthorTag::parseKey)
+        val nip19Hints = citedNIP19().pubKeys()
+
+        return pHints + nip19Hints
+    }
+
+    override fun eventHints(): List<EventIdHint> {
+        val eHints = tags.mapNotNull(RootEventTag::parseAsHint) + tags.mapNotNull(ReplyEventTag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseEventAsHint)
+        val nip19Hints = citedNIP19().eventHints()
+
+        return eHints + qHints + nip19Hints
+    }
+
+    override fun linkedEventIds(): List<HexKey> {
+        val eHints = tags.mapNotNull(RootEventTag::parseKey) + tags.mapNotNull(ReplyEventTag::parseKey)
+        val qHints = tags.mapNotNull(QTag::parseEventId)
+        val nip19Hints = citedNIP19().eventIds()
+
+        return eHints + qHints + nip19Hints
+    }
+
+    override fun addressHints(): List<AddressHint> {
+        val aHints = tags.mapNotNull(RootAddressTag::parseAsHint) + tags.mapNotNull(ReplyAddressTag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
+        val nip19Hints = citedNIP19().addressHints()
+
+        return aHints + qHints + nip19Hints
+    }
+
+    override fun linkedAddressIds(): List<String> {
+        val aHints = tags.mapNotNull(RootAddressTag::parseAddressId) + tags.mapNotNull(ReplyAddressTag::parseAddressId)
+        val qHints = tags.mapNotNull(QTag::parseAddressId)
+        val nip19Hints = citedNIP19().addressIds()
+
+        return aHints + qHints + nip19Hints
+    }
 
     fun rootAuthor() = tags.firstNotNullOfOrNull(RootAuthorTag::parse)
 
@@ -74,6 +134,14 @@ class CommentEvent(
 
     fun replyAuthors() = tags.filter(ReplyAuthorTag::match)
 
+    fun rootAuthorKeys() = tags.mapNotNull(RootAuthorTag::parseKey)
+
+    fun replyAuthorKeys() = tags.mapNotNull(ReplyAuthorTag::parseKey)
+
+    fun rootAuthorHints() = tags.mapNotNull(RootAuthorTag::parseAsHint)
+
+    fun replyAuthorHints() = tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+
     fun rootScopes() = tags.filter { RootIdentifierTag.match(it) || RootAddressTag.match(it) || RootEventTag.match(it) }
 
     fun rootKinds() = tags.filter(RootKindTag::match)
@@ -82,19 +150,29 @@ class CommentEvent(
 
     fun directKinds() = tags.filter(ReplyKindTag::match)
 
-    fun isGeohashTag(tag: Array<String>) = tag.size > 1 && (tag[0] == "i" || tag[0] == "I") && tag[1].startsWith("geo:")
+    /** root and reply scope search */
+    fun isTaggedScope(scopeId: String) = tags.any { RootIdentifierTag.isTagged(it, scopeId) || ReplyIdentifierTag.isTagged(it, scopeId) }
 
-    private fun getGeoHashList() = tags.filter { isGeohashTag(it) }
+    fun isTaggedScopes(scopeIds: Set<String>) = tags.any { RootIdentifierTag.isTagged(it, scopeIds) || ReplyIdentifierTag.isTagged(it, scopeIds) }
 
-    fun hasGeohashes() = tags.any { isGeohashTag(it) }
+    fun isTaggedScope(
+        value: String,
+        match: (String, String) -> Boolean,
+    ) = tags.any { RootIdentifierTag.isTagged(it, value, match) || ReplyIdentifierTag.isTagged(it, value, match) }
 
-    fun geohashes() = getGeoHashList().map { it[1].drop(4).lowercase() }
+    fun firstTaggedScopeIn(scopeIds: Set<String>) = tags.firstNotNullOfOrNull { RootIdentifierTag.matchOrNull(it, scopeIds) ?: ReplyIdentifierTag.matchOrNull(it, scopeIds) }
 
-    fun getGeoHash(): String? = geohashes().maxByOrNull { it.length }
+    fun isScoped(scopeTest: (String) -> Boolean) = tags.any { RootIdentifierTag.isTagged(it, scopeTest) || ReplyIdentifierTag.isTagged(it, scopeTest) }
 
-    fun isTaggedGeoHash(hashtag: String) = tags.any { isGeohashTag(it) && it[1].endsWith(hashtag, true) }
+    fun hasRootScopeKind(kind: String) = tags.any { RootKindTag.isKind(it, kind) }
 
-    fun isTaggedGeoHashes(hashtags: Set<String>) = geohashes().any { it in hashtags }
+    fun hasReplyScopeKind(kind: String) = tags.any { ReplyKindTag.isKind(it, kind) }
+
+    fun hasScopeKind(kind: String) = tags.any { RootKindTag.isKind(it, kind) || ReplyKindTag.isKind(it, kind) }
+
+    fun scopeValues(parser: (String) -> String?) = tags.mapNotNull { RootIdentifierTag.parse(it)?.let { parser(it) } }
+
+    fun firstScopeValue(parser: (String) -> String?) = tags.firstNotNullOfOrNull { RootIdentifierTag.parse(it)?.let { parser(it) } }
 
     override fun markedReplyTos(): List<HexKey> =
         tags.mapNotNull(ReplyEventTag::parseKey) +
@@ -154,10 +232,18 @@ class CommentEvent(
         ) = eventTemplate(KIND, msg, createdAt) {
             alt(ALT + extId.toScope())
 
-            rootExternalIdentity(extId)
+            if (extId is GeohashId) {
+                GeoHashTag.geoMipMap(extId.geohash).forEach { rootExternalIdentity(GeohashId(it, extId.hint)) }
+            } else {
+                rootExternalIdentity(extId)
+            }
             rootKind(extId)
 
-            replyExternalIdentity(extId)
+            if (extId is GeohashId) {
+                GeoHashTag.geoMipMap(extId.geohash).forEach { replyExternalIdentity(GeohashId(it, extId.hint)) }
+            } else {
+                replyExternalIdentity(extId)
+            }
             replyKind(extId)
 
             initializer()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,30 +21,30 @@
 package com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
-class RelayListTag(
-    val relayUrls: List<String>,
-) {
+class RelayListTag {
     companion object {
         const val TAG_NAME = "relays"
 
         @JvmStatic
-        fun parse(tag: Array<String>): RelayListTag? {
+        fun parse(tag: Array<String>): List<NormalizedRelayUrl>? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             val relays =
                 tag.mapIndexedNotNull { index, s ->
-                    if (index == 0) null else s
+                    if (index == 0) null else RelayUrlNormalizer.normalizeOrNull(s)
                 }
-            return RelayListTag(relays)
+
+            if (relays.isEmpty()) return null
+
+            return relays
         }
 
         @JvmStatic
-        fun assemble(urls: List<String>) = arrayOf(TAG_NAME) + urls.toTypedArray()
-
-        @JvmStatic
-        fun assemble(tag: RelayListTag) = assemble(tag.relayUrls)
+        fun assemble(urls: List<NormalizedRelayUrl>) = arrayOf(TAG_NAME) + urls.map { it.url }.toTypedArray()
     }
 }

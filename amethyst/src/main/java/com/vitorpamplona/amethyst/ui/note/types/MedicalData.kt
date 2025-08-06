@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.model.Resource
 import com.vitorpamplona.amethyst.model.VisionPrescription
 import com.vitorpamplona.amethyst.model.findReferenceInDb
 import com.vitorpamplona.amethyst.model.parseResourceBundleOrNull
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -65,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.util.Locale
 import kotlin.math.abs
 
 @Preview
@@ -257,7 +258,9 @@ fun RenderEyeGlassesPrescription(
         }
         visionPrescription.status?.let {
             Text(
-                text = "Status: ${it.capitalize()}",
+                text = "Status: ${it.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                }}",
                 modifier = Modifier.padding(4.dp).fillMaxWidth(),
             )
         }
@@ -358,7 +361,10 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = data.eye?.capitalize() ?: "Unknown",
+            text =
+                data.eye?.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                } ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
@@ -514,7 +520,10 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = data.eye?.capitalize() ?: "Unknown",
+            text =
+                data.eye?.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                } ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)

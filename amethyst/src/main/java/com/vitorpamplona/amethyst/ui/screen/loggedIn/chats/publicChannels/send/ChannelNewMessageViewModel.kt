@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -37,18 +37,17 @@ import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
-import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
@@ -58,13 +57,16 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -102,13 +104,16 @@ open class ChannelNewMessageViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
-                sendDraft()
+                // don't save the first
+                if (it > 0) {
+                    sendDraftSync()
+                }
             }
         }
     }
 
-    var accountViewModel: AccountViewModel? = null
-    var account: Account? = null
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
     var channel: Channel? = null
 
     val replyTo = mutableStateOf<Note?>(null)
@@ -147,11 +152,11 @@ open class ChannelNewMessageViewModel :
     var wantsZapraiser by mutableStateOf(false)
     var zapRaiserAmount by mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
 
-    fun hasLnAddress(): Boolean = account?.userProfile()?.info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
 
-    fun user(): User? = account?.userProfile()
+    fun user(): User? = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -165,10 +170,7 @@ open class ChannelNewMessageViewModel :
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM)
 
-        this.uploadState =
-            ChatFileUploadState(
-                account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0],
-            )
+        this.uploadState = ChatFileUploadState(account.settings.defaultFileServer)
     }
 
     open fun load(channel: Channel) {
@@ -191,14 +193,12 @@ open class ChannelNewMessageViewModel :
 
         if (noteEvent is DraftEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel?.createTempDraftNote(noteEvent) { innerNote ->
-                    if (innerNote != null) {
-                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                        if (oldTag != null) {
-                            draftTag.set(oldTag)
-                        }
-                        loadFromDraft(innerNote)
+                accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
                     }
+                    loadFromDraft(innerNote)
                 }
             }
         }
@@ -239,14 +239,14 @@ open class ChannelNewMessageViewModel :
         if (draftEvent as? ChannelMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                accountViewModel?.checkGetOrCreateNote(replyId) {
+                accountViewModel.checkGetOrCreateNote(replyId) {
                     replyTo.value = it
                 }
             }
         } else if (draftEvent as? LiveActivitiesChatMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                accountViewModel?.checkGetOrCreateNote(replyId) {
+                accountViewModel.checkGetOrCreateNote(replyId) {
                     replyTo.value = it
                 }
             }
@@ -268,26 +268,18 @@ open class ChannelNewMessageViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val channelRelays = channel?.relays() ?: emptyList()
+        val channelRelays = channel?.relays() ?: emptySet()
 
-        accountViewModel?.account?.signAndSendPrivately(template, channelRelays)
-
-        accountViewModel?.deleteDraft(draftTag.current)
-
+        val version = draftTag.current
         cancel()
-    }
 
-    fun sendDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendDraftSync()
-        }
+        accountViewModel.account.signAndSendPrivately(template, channelRelays)
+        accountViewModel.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {
-        val accountViewModel = accountViewModel ?: return
-
         if (message.text.isBlank()) {
-            account?.deleteDraft(draftTag.current)
+            account.deleteDraft(draftTag.current)
         } else {
             val template = createTemplate() ?: return
             accountViewModel.account.createAndSendDraft(draftTag.current, template)
@@ -302,9 +294,21 @@ open class ChannelNewMessageViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         onceUploaded: () -> Unit,
+    ) = try {
+        uploadUnsafe(onError, context, onceUploaded)
+    } catch (_: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
-            val myAccount = account ?: return@launch
             val uploadState = uploadState ?: return@launch
 
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
@@ -313,32 +317,30 @@ open class ChannelNewMessageViewModel :
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     uploadState.caption,
                     uploadState.contentWarningReason,
                     MediaCompressor.intToCompressorQuality(uploadState.mediaQualitySlider),
                     uploadState.selectedServer,
-                    myAccount,
+                    account,
                     context,
                 )
 
             if (results.allGood) {
-                results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, uploadState.caption, uploadState.contentWarningReason) { nip95 ->
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                results.successful.forEach { upload ->
+                    if (upload.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                        val nip95 = account.createNip95(upload.result.bytes, headerInfo = upload.result.fileHeader, uploadState.caption, uploadState.contentWarningReason)
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                message = message.insertUrlAtCursor(it.toNostrUri())
-                            }
-
-                            urlPreview = findUrlInMessage()
+                        note?.let {
+                            message = message.insertUrlAtCursor(it.toNostrUri())
                         }
-                    } else if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        iMetaAttachments.add(it.result, uploadState.caption, uploadState.contentWarningReason)
 
-                        message = message.insertUrlAtCursor(it.result.url)
+                        urlPreview = findUrlInMessage()
+                    } else if (upload.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        iMetaAttachments.add(upload.result, uploadState.caption, uploadState.contentWarningReason)
+
+                        message = message.insertUrlAtCursor(upload.result.url)
                         urlPreview = findUrlInMessage()
                     }
                 }
@@ -358,21 +360,18 @@ open class ChannelNewMessageViewModel :
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         val channel = channel ?: return null
-        val accountViewModel = accountViewModel ?: return null
-
         val tagger =
             NewMessageTagger(
                 message = message.text,
                 pTags = listOfNotNull(replyTo.value?.author),
                 eTags = listOfNotNull(replyTo.value),
-                channelHex = channel.idHex,
                 dao = accountViewModel,
             )
         tagger.run()
 
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(message.text, accountViewModel.account.myEmojis.value)
+        val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
 
         val channelRelays = channel.relays()
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
@@ -434,7 +433,7 @@ open class ChannelNewMessageViewModel :
                     imetas(usedAttachments)
                 }
             } else if (activity != null) {
-                val hint = EventHintBundle(activity, channelRelays.firstOrNull() ?: replyingToEvent?.relay)
+                val hint = EventHintBundle(activity, channelRelays.firstOrNull())
 
                 LiveActivitiesChatMessageEvent.message(tagger.message, hint) {
                     hashtags(findHashtags(tagger.message))
@@ -454,6 +453,19 @@ open class ChannelNewMessageViewModel :
                     imetas(usedAttachments)
                 }
             }
+        } else if (channel is EphemeralChatChannel) {
+            EphemeralChatEvent.build(
+                tagger.message,
+                channel.roomId.relayUrl,
+                channel.roomId.id,
+            ) {
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
         } else {
             null
         }
@@ -461,15 +473,17 @@ open class ChannelNewMessageViewModel :
 
     fun findEmoji(
         message: String,
-        myEmojiSet: List<Account.EmojiMedia>?,
+        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.url.url) }
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
         }
     }
 
     open fun cancel() {
+        draftTag.rotate()
+
         message = TextFieldValue("")
 
         replyTo.value = null
@@ -494,16 +508,6 @@ open class ChannelNewMessageViewModel :
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
-
-        draftTag.rotate()
-
-        NostrSearchEventOrUserDataSource.clear()
-    }
-
-    fun deleteDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel?.deleteDraft(draftTag.current)
-        }
     }
 
     open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
@@ -554,7 +558,7 @@ open class ChannelNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmoji(item: Account.EmojiMedia) {
+    open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
         message = message.replaceCurrentWord(wordToInsert)
 
@@ -563,14 +567,15 @@ open class ChannelNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
-        val wordToInsert = item.url.url + " "
+    open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
+        val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(
-                item.url.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
-            )
+            iMetaAttachments.downloadAndPrepare(item.link.url) {
+                Amethyst.instance.okHttpClients.getHttpClient(
+                    accountViewModel.account.privacyState.shouldUseTorForImageDownload(item.link.url),
+                )
+            }
         }
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -617,7 +622,7 @@ open class ChannelNewMessageViewModel :
 
     fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.items.any { it.key == taggedUser }) {

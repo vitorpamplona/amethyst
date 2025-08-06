@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -50,7 +50,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,7 +65,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import coil3.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -267,7 +265,7 @@ private fun DialogContent(
                                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                                 writeStoragePermissionState.status.isGranted
                             ) {
-                                scope.launch {
+                                scope.launch(Dispatchers.IO) {
                                     saveMediaToGallery(myContent, localContext, accountViewModel)
                                 }
                                 scope.launch {
@@ -297,7 +295,7 @@ private fun DialogContent(
     }
 }
 
-private fun saveMediaToGallery(
+private suspend fun saveMediaToGallery(
     content: BaseMediaContent,
     localContext: Context,
     accountViewModel: AccountViewModel,
@@ -340,43 +338,6 @@ private fun saveMediaToGallery(
                 },
             )
         }
-    }
-}
-
-@Composable
-fun InlineCarrousel(
-    allImages: ImmutableList<String>,
-    imageUrl: String,
-) {
-    val pagerState: PagerState = rememberPagerState { allImages.size }
-
-    LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
-        launch {
-            val page = allImages.indexOf(imageUrl)
-            if (page > -1) {
-                pagerState.scrollToPage(page)
-            }
-        }
-    }
-
-    if (allImages.size > 1) {
-        SlidingCarousel(
-            pagerState = pagerState,
-        ) { index ->
-            AsyncImage(
-                model = allImages[index],
-                contentDescription = null,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    } else {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import android.R.attr.maxLines
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,10 +37,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.buildLinkString
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
@@ -49,11 +50,19 @@ fun DisplayFollowingHashtagsInPost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userFollowState by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
+    val userFollowState by accountViewModel.account.allFollows.flow
+        .collectAsStateWithLifecycle()
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {
-        val newFirstTag = baseNote.event?.firstIsTaggedHashes(userFollowState.hashtags)
+        val noteEvent = baseNote.event
+
+        val newFirstTag =
+            if (noteEvent is CommentEvent) {
+                noteEvent.firstTaggedScopeIn(userFollowState.hashtagScopes)?.let { HashtagId.parse(it) } ?: noteEvent.firstIsTaggedHashes(userFollowState.hashtags)
+            } else {
+                noteEvent?.firstIsTaggedHashes(userFollowState.hashtags)
+            }
 
         if (firstTag != newFirstTag) {
             firstTag = newFirstTag
@@ -62,7 +71,7 @@ fun DisplayFollowingHashtagsInPost(
 
     firstTag?.let {
         Column(verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, nav) }
+            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, accountViewModel, nav) }
         }
     }
 }
@@ -70,6 +79,7 @@ fun DisplayFollowingHashtagsInPost(
 @Composable
 private fun DisplayTagList(
     firstTag: String,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Text(

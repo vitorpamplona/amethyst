@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -53,9 +53,11 @@ class FeedContentState(
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    private var lastFeedKey: String? = null
+    private var lastFeedKey: Any? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
+    val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
 
     fun sendToTop() {
         if (scrolltoTopPending) return
@@ -71,6 +73,17 @@ class FeedContentState(
     private fun refresh() {
         viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
+
+    fun visibleNotes(): List<Note> {
+        val currentState = _feedContent.value
+        return if (currentState is FeedState.Loaded) {
+            currentState.feed.value.list
+        } else {
+            emptyList()
+        }
+    }
+
+    fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
     fun refreshSuspended() {
         checkNotInMainThread()
@@ -94,6 +107,13 @@ class FeedContentState(
     }
 
     private fun updateFeed(notes: ImmutableList<Note>) {
+        if (notes.size >= localFilter.limit()) {
+            val lastNomeTime = notes.lastOrNull { it.event != null }?.createdAt()
+            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNomeTime)
+            }
+        }
+
         val currentState = _feedContent.value
         if (notes.isEmpty()) {
             _feedContent.tryEmit(FeedState.Empty)
@@ -106,15 +126,18 @@ class FeedContentState(
         }
     }
 
+    fun deleteFromFeed(deletedNotes: Set<Note>) {
+        val feed = _feedContent.value
+        if (feed is FeedState.Loaded) {
+            updateFeed((feed.feed.value.list - deletedNotes).toImmutableList())
+        }
+    }
+
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
-                val deletionEvents: List<DeletionEvent> =
-                    newItems.mapNotNull {
-                        val noteEvent = it.event
-                        if (noteEvent is DeletionEvent) noteEvent else null
-                    }
+                val deletionEvents: List<DeletionEvent> = newItems.mapNotNull { it.event as? DeletionEvent }
 
                 val oldList =
                     if (deletionEvents.isEmpty()) {

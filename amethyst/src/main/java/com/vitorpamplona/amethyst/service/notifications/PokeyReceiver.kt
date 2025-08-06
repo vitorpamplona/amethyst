@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,9 +27,7 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.provider.LiveFolders.INTENT
 import android.util.Log
-import androidx.core.content.ContextCompat.registerReceiver
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.launch

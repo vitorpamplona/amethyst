@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.name
-import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.UUID
 
@@ -40,7 +40,7 @@ class EmojiPackEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 30030
         const val ALT_DESCRIPTION = "Emoji pack"

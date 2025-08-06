@@ -1,5 +1,7 @@
 package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
+import androidx.annotation.NonNull;
+
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpCrypto;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpKECCAK256;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpRIPEMD160;
@@ -11,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
 public class Hash {
 
@@ -121,13 +124,13 @@ public class Hash {
      * @return The generated com.vitorpamplona.quartz.ots.OpCrypto object.
      */
     public static OpCrypto getOp(String label) {
-        if (label.toLowerCase().equals(new OpSHA1()._TAG_NAME())) {
+        if (label.toLowerCase(Locale.ROOT).equals(new OpSHA1()._TAG_NAME())) {
             return new OpSHA1();
-        } else if (label.toLowerCase().equals(new OpSHA256()._TAG_NAME())) {
+        } else if (label.toLowerCase(Locale.ROOT).equals(new OpSHA256()._TAG_NAME())) {
             return new OpSHA256();
-        } else if (label.toLowerCase().equals(new OpRIPEMD160()._TAG_NAME())) {
+        } else if (label.toLowerCase(Locale.ROOT).equals(new OpRIPEMD160()._TAG_NAME())) {
             return new OpRIPEMD160();
-        } else if (label.toLowerCase().equals(new OpKECCAK256()._TAG_NAME())) {
+        } else if (label.toLowerCase(Locale.ROOT).equals(new OpKECCAK256()._TAG_NAME())) {
             return new OpKECCAK256();
         }
 
@@ -187,6 +190,7 @@ public class Hash {
      *
      * @return The output.
      */
+    @NonNull
     @Override
     public String toString() {
         String output = "com.vitorpamplona.quartz.ots.Hash\n";

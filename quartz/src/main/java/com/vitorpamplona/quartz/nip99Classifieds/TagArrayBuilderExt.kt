@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -36,7 +36,7 @@ fun TagArrayBuilder<ClassifiedsEvent>.summary(summary: String) = addUnique(Summa
 
 fun TagArrayBuilder<ClassifiedsEvent>.location(location: String) = addUnique(LocationTag.assemble(location))
 
-fun TagArrayBuilder<ClassifiedsEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
+fun TagArrayBuilder<ClassifiedsEvent>.image(imageUrl: String) = add(ImageTag.assemble(imageUrl))
 
 fun TagArrayBuilder<ClassifiedsEvent>.images(imageUrls: List<String>) = addAll(imageUrls.map { ImageTag.assemble(it) })
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,10 +23,11 @@ package com.vitorpamplona.quartz.nip01Core.tags.people
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun <T : Event> TagArrayBuilder<T>.pTag(
     pubkey: HexKey,
-    relayHint: String? = null,
+    relayHint: NormalizedRelayUrl? = null,
 ) = add(PTag.assemble(pubkey, relayHint))
 
 fun <T : Event> TagArrayBuilder<T>.pTagIds(tag: Set<HexKey>) = addAll(tag.map { PTag.assemble(it, null) })

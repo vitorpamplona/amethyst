@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,19 +25,20 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.AmethystClickableIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.WatchAccountForListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.WatchLifecycleAndRefreshDataSource
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
@@ -51,18 +52,17 @@ fun MessagesSinglePane(
 ) {
     val pagerState = rememberPagerState { 2 }
 
-    val markKnownAsRead = remember { mutableStateOf(false) }
-    val markNewAsRead = remember { mutableStateOf(false) }
+    WatchLifecycleAndUpdateModel(knownFeedContentState)
+    WatchLifecycleAndUpdateModel(newFeedContentState)
 
-    WatchAccountForListScreen(knownFeedContentState, newFeedContentState, accountViewModel)
-    WatchLifecycleAndRefreshDataSource(accountViewModel)
+    ChatroomListFilterAssemblerSubscription(accountViewModel)
 
     val tabs by
-        remember(knownFeedContentState, markKnownAsRead) {
+        remember(knownFeedContentState) {
             derivedStateOf {
                 listOf(
-                    MessagesTabItem(R.string.known, knownFeedContentState, markKnownAsRead),
-                    MessagesTabItem(R.string.new_requests, newFeedContentState, markNewAsRead),
+                    MessagesTabItem(R.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
+                    MessagesTabItem(R.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
                 )
             }
         }
@@ -71,12 +71,12 @@ fun MessagesSinglePane(
         isInvertedLayout = false,
         topBar = {
             Column {
-                MainTopBar(accountViewModel, nav)
+                UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
                 MessagesTabHeader(
                     pagerState,
                     tabs,
-                    { markKnownAsRead.value = true },
-                    { markNewAsRead.value = true },
+                    { accountViewModel.markAllChatNotesAsRead(knownFeedContentState.visibleNotes()) },
+                    { accountViewModel.markAllChatNotesAsRead(newFeedContentState.visibleNotes()) },
                 )
             }
         },

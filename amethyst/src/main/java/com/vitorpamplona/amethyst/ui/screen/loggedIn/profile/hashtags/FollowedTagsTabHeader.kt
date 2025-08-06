@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,23 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserTagFollowCount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun FollowedTagsTabHeader(baseUser: User) {
-    val userState by baseUser.live().follows.observeAsState()
-
-    val usertags by remember(baseUser) {
-        derivedStateOf {
-            userState?.user?.latestContactList?.countFollowTags() ?: 0
-        }
-    }
+fun FollowedTagsTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val usertags by observeUserTagFollowCount(baseUser, accountViewModel)
 
     Text(text = "$usertags ${stringRes(R.string.followed_tags)}")
 }

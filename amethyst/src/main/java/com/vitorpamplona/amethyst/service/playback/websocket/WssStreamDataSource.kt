@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.websocket
 
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.core.net.toUri
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
@@ -64,7 +65,7 @@ class WssStreamDataSource(
 
     override fun getUri(): Uri? {
         webSocketClient?.request()?.url?.let {
-            return Uri.parse(it.toString())
+            return it.toString().toUri()
         }
 
         return null

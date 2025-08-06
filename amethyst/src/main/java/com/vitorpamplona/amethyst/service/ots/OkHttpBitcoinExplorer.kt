@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.ots
 
 import android.util.Log
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
@@ -51,7 +50,6 @@ class OkHttpBitcoinExplorer(
         val request =
             Request
                 .Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .header("Accept", "application/json")
                 .url(url)
                 .get()
@@ -95,7 +93,6 @@ class OkHttpBitcoinExplorer(
         val request =
             Request
                 .Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(url)
                 .get()
                 .build()

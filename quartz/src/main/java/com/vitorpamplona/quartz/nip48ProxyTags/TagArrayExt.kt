@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,12 +21,11 @@
 package com.vitorpamplona.quartz.nip48ProxyTags
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 
-fun TagArray.proxies() = this.mapValues(ProxyTag.TAG_NAME)
+fun TagArray.proxies() = this.mapNotNull(ProxyTag::parse)
 
-fun TagArray.firstProxy() = this.firstTagValue(ProxyTag.TAG_NAME)
+fun TagArray.firstProxy() = this.fastFirstNotNullOfOrNull(ProxyTag::parse)
 
-fun TagArray.hasProxy() = this.hasTagWithContent(ProxyTag.TAG_NAME)
+fun TagArray.hasProxy() = this.fastAny(ProxyTag::isTagged)

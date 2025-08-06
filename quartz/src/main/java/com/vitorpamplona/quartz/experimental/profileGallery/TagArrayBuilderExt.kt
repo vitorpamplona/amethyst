@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.experimental.profileGallery
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -68,5 +69,5 @@ fun TagArrayBuilder<ProfileGalleryEntryEvent>.service(service: String) = add(Ser
 
 fun TagArrayBuilder<ProfileGalleryEntryEvent>.fromEvent(
     event: HexKey,
-    relayHint: String?,
+    relayHint: NormalizedRelayUrl?,
 ) = add(ETag.assemble(event, relayHint, null))

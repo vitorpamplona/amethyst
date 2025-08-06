@@ -93,7 +93,7 @@
     <string name="image_saved_to_the_gallery">படம் காட்சியகத்தில் சேமிக்கப்பட்டது</string>
     <string name="failed_to_save_the_image">படத்தைச் சேமிக்க இயலவில்லை</string>
     <string name="upload_image">படத்தைப் பதிவேற்று</string>
-    <string name="uploading">பதிவேற்றுகிறது....</string>
+    <string name="uploading">பதிவேற்றுகிறது….</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">பயனர் ஸாட்கள் பெறுவதற்கு லைட்னிங் முகவரி அமைக்கவில்லை</string>
     <string name="reply_here">"இங்கு பதிலளிக்கவும்.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">குறிப்பு ID ஐ கிளிப்போர்டில் பிரதி எடுக்கும்</string>
@@ -292,11 +292,11 @@
     <string name="follow_list_kind3follows">எல்லா பின்பற்றப் படுவோர்</string>
     <string name="follow_list_global">முழுதளாவிய</string>
     <string name="connect_through_your_orbot_setup_markdown">## Tor மூலம் Orbot உடன் இணைக்க
-	\n\n1. [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android) இன்ஸ்டால் செய்க 
-	\n2. Orbot-ஐ தொடங்குங்கள் 
+	\n\n1. [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android) இன்ஸ்டால் செய்க
+	\n2. Orbot-ஐ தொடங்குங்கள்
 	\n3. Orbot-இல் Socks போர்ட்டை செக் செய்க. இயல்புநிலையில் அது 9050
-	\n4. வேண்டுமானால் Orbot-இல் போர்ட்டை மாற்றுங்கள் 
-	\n5. இந்த திரையில் Socks போர்டை கட்டமைக்க 
+	\n4. வேண்டுமானால் Orbot-இல் போர்ட்டை மாற்றுங்கள்
+	\n5. இந்த திரையில் Socks போர்டை கட்டமைக்க
 	\n6. ஆக்டிவேட் பொத்தானை அழுத்தி Orbot-ஐ proxy-ஆக பயன்படுத்துங்கள் </string>
     <string name="orbot_socks_port">Orbot Socks போர்ட்</string>
     <string name="invalid_port_number">செல்லாத போர்ட் நம்பர்</string>
@@ -365,8 +365,6 @@
     <string name="are_you_sure_you_want_to_log_out">வெளியேறுவதல் உங்கள் அனைத்து விவரங்களையும் நீக்கிவிடும். வெளியேறும் முன் உங்கள் கணக்கைத் தொலையாமல் இருக்க ரகசியசாவியை பத்திரமாக பிரதி செய்து சேமிக்கப்பட்டுள்ளதா என்று சரிபார்க்கவும். வெளியேற வேண்டுமா?</string>
     <string name="followed_tags">பின்பற்றப்படும் சிட்டைகள்</string>
     <string name="relay_setup">ரிலேகள்</string>
-    <string name="discover_live">நேரலை</string>
-    <string name="discover_community">சமூகம்</string>
     <string name="discover_chat">அரட்டை</string>
     <string name="community_approved_posts">அங்கீகரிக்கப்பட்ட குறிப்பு</string>
     <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும் </string>

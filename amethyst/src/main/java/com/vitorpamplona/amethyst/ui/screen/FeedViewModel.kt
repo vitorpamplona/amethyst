@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,27 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import android.util.Log
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
-import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.CommunityFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
@@ -49,23 +33,10 @@ import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrListFeedViewModel
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 class NostrChannelFeedViewModel(
@@ -264,21 +235,25 @@ abstract class FeedViewModel(
 
     override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
 
-    private var collectorJob: Job? = null
-
     init {
         Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    feedState.updateFeedWith(newNotes)
-                }
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                feedState.updateFeedWith(newNotes)
             }
+        }
+
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Delete from feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                feedState.deleteFromFeed(newNotes)
+            }
+        }
     }
 
     override fun onCleared() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        collectorJob?.cancel()
         super.onCleared()
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCon
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 
 @Composable
 @OptIn(UnstableApi::class)
@@ -50,7 +49,7 @@ fun RenderVideoPlayer(
     thumbData: VideoThumb?,
     showControls: Boolean = true,
     contentScale: ContentScale,
-    waveform: WaveformTag? = null,
+    waveform: WaveformData? = null,
     borderModifier: Modifier,
     videoModifier: Modifier,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,

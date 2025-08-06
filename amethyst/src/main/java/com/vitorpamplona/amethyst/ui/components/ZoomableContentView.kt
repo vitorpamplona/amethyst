@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -34,12 +36,14 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -48,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,7 +61,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -83,16 +87,14 @@ import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
-import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
-import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
-import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
@@ -107,6 +109,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -119,13 +122,6 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
-
-    val activity = LocalView.current.context.getActivity()
-    val currentWindowSize = currentWindowAdaptiveInfo().windowSizeClass
-
-    val isLandscapeMode = DeviceUtils.isLandscapeMetric(LocalContext.current)
-    val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
-    val isOrientationLocked = DeviceUtils.screenOrientationIsLocked(LocalContext.current)
 
     when (content) {
         is MediaUrlImage ->
@@ -155,9 +151,6 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
-                            // if (!isFoldableOrLarge && !isOrientationLocked) {
-                            //    DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
-                            // }
                         },
                         accountViewModel = accountViewModel,
                     )
@@ -198,7 +191,6 @@ fun ZoomableContentView(
             images,
             onDismiss = {
                 dialogOpen = false
-                // if (!isFoldableOrLarge && !isOrientationLocked) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
             },
             accountViewModel,
         )
@@ -625,6 +617,38 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
 }
 
 @Composable
+fun DisplayUrlWithLoadingSymbol(url: String) {
+    val uri = LocalUriHandler.current
+
+    val primary = MaterialTheme.colorScheme.primary
+    val annotatedTermsString =
+        remember {
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = primary)) {
+                    pushStringAnnotation("routeToImage", "")
+                    append("$url ")
+                    pop()
+                }
+            }
+        }
+
+    val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
+
+    Row(
+        modifier = Modifier.width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier = pressIndicator.weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineLoadingIcon()
+    }
+}
+
+@Composable
 private fun InlineLoadingIcon() = LoadingAnimation()
 
 @Composable
@@ -662,6 +686,7 @@ fun ShareImageAction(
             hash = content.hash,
             mimeType = content.mimeType,
             onDismiss = onDismiss,
+            content = content,
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
@@ -674,6 +699,7 @@ fun ShareImageAction(
             hash = null,
             mimeType = content.mimeType,
             onDismiss = onDismiss,
+            content = content,
         )
     }
 }
@@ -690,7 +716,10 @@ fun ShareImageAction(
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,
+    content: BaseMediaContent? = null,
 ) {
+    val scope = rememberCoroutineScope()
+
     DropdownMenu(
         expanded = popupExpanded.value,
         onDismissRequest = onDismiss,
@@ -733,10 +762,49 @@ fun ShareImageAction(
                 },
             )
         }
+
+        content?.let {
+            if (content is MediaUrlImage) {
+                val context = LocalContext.current
+                videoUri?.let {
+                    if (videoUri.isNotEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.share_image)) },
+                            onClick = {
+                                scope.launch { shareImageFile(context, videoUri, mimeType) }
+                                onDismiss()
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
-private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
+private suspend fun shareImageFile(
+    context: Context,
+    videoUri: String,
+    mimeType: String?,
+) {
+    // Get sharable URI and file extension
+    val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
+
+    // Determine mime type, use provided or derive from extension
+    val determinedMimeType = mimeType ?: "image/$fileExtension"
+
+    // Create share intent
+    val shareIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = determinedMimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+    context.startActivity(Intent.createChooser(shareIntent, null))
+}
+
+private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
     Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
@@ -771,7 +839,12 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
                 openDialogMsg.value = stringRes(localContext, R.string.hash_verification_passed)
             },
         ) {
-            HashCheckIcon(Size30dp)
+            Icon(
+                painter = painterRes(R.drawable.original, 1),
+                contentDescription = stringRes(id = R.string.hash_verification_passed),
+                modifier = Size30Modifier,
+                tint = Color.Unspecified,
+            )
         }
     } else {
         IconButton(
@@ -780,7 +853,12 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
                 openDialogMsg.value = stringRes(localContext, R.string.hash_verification_failed)
             },
         ) {
-            HashCheckFailedIcon(Size30dp)
+            Icon(
+                imageVector = Icons.Default.Report,
+                contentDescription = stringRes(id = R.string.hash_verification_failed),
+                modifier = Size30Modifier,
+                tint = Color.Red,
+            )
         }
     }
 }

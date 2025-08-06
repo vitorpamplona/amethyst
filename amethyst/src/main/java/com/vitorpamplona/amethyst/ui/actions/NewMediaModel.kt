@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,14 +39,11 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
 
 @Stable
 open class NewMediaModel : ViewModel() {
@@ -82,13 +79,24 @@ open class NewMediaModel : ViewModel() {
 
     fun upload(
         context: Context,
-        relayList: List<RelaySetupInfo>,
+        onSucess: () -> Unit,
+        onError: (String, String) -> Unit,
+    ) = try {
+        uploadUnsafe(context, onSucess, onError)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        context: Context,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch {
             val myAccount = account ?: return@launch
-            if (relayList.isEmpty()) return@launch
             val serverToUse = selectedServer ?: return@launch
 
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -97,7 +105,6 @@ open class NewMediaModel : ViewModel() {
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     caption,
                     if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQualitySlider),
@@ -138,14 +145,8 @@ open class NewMediaModel : ViewModel() {
                     nip95s.map {
                         // upload each file as an individual nip95 event.
                         viewModelScope.launch(Dispatchers.IO) {
-                            withTimeoutOrNull(30000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    account?.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null) { nip95 ->
-                                        account?.consumeAndSendNip95(nip95.first, nip95.second, relayList)
-                                        continuation.resume(true)
-                                    }
-                                }
-                            }
+                            val nip95 = myAccount.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null)
+                            myAccount.consumeAndSendNip95(nip95.first, nip95.second)
                         }
                     }
 
@@ -153,21 +154,14 @@ open class NewMediaModel : ViewModel() {
                     videosAndOthers.map {
                         // upload each file as an individual nip95 event.
                         viewModelScope.launch(Dispatchers.IO) {
-                            withTimeoutOrNull(30000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    account?.sendHeader(
-                                        it.url,
-                                        it.magnet,
-                                        it.fileHeader,
-                                        caption,
-                                        if (sensitiveContent) "" else null,
-                                        it.uploadedHash,
-                                        relayList,
-                                    ) {
-                                        continuation.resume(true)
-                                    }
-                                }
-                            }
+                            account?.sendHeader(
+                                url = it.url,
+                                magnetUri = it.magnet,
+                                headerInfo = it.fileHeader,
+                                alt = caption,
+                                contentWarningReason = if (sensitiveContent) "" else null,
+                                originalHash = it.uploadedHash,
+                            )
                         }
                     }
 
@@ -175,18 +169,11 @@ open class NewMediaModel : ViewModel() {
                     if (imageUrls.isNotEmpty()) {
                         listOf(
                             viewModelScope.launch(Dispatchers.IO) {
-                                withTimeoutOrNull(30000) {
-                                    suspendCancellableCoroutine { continuation ->
-                                        account?.sendAllAsOnePictureEvent(
-                                            imageUrls,
-                                            caption,
-                                            if (sensitiveContent) "" else null,
-                                            relayList,
-                                        ) {
-                                            continuation.resume(true)
-                                        }
-                                    }
-                                }
+                                account?.sendAllAsOnePictureEvent(
+                                    urlHeaderInfo = imageUrls,
+                                    caption = caption,
+                                    contentWarningReason = if (sensitiveContent) "" else null,
+                                )
                             },
                         )
                     } else {

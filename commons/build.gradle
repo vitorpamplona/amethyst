@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace 'com.vitorpamplona.amethyst.commons'
-    compileSdk libs.versions.android.compileSdk.get().toInteger()
+    namespace = 'com.vitorpamplona.amethyst.commons'
+    compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk libs.versions.android.minSdk.get().toInteger()
-        targetSdk libs.versions.android.targetSdk.get().toInteger()
+        minSdk = libs.versions.android.minSdk.get().toInteger()
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -25,7 +25,7 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
     compileOptions {
@@ -34,7 +34,7 @@ android {
     }
 
     buildFeatures {
-        compose true
+        compose = true
     }
 }
 

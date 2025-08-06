@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.amethyst.ui.tor.TorType
 
 @Composable
 fun TorSettingsSetup(
@@ -45,8 +44,6 @@ fun TorSettingsSetup(
     onError: (String) -> Unit,
 ) {
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
-    var activeTor by remember { mutableStateOf(false) }
-
     val primary = MaterialTheme.colorScheme.primary
 
     Text(
@@ -63,7 +60,6 @@ fun TorSettingsSetup(
             torSettings = torSettings,
             onClose = { connectOrbotDialogOpen = false },
             onPost = { torSettings ->
-                activeTor = torSettings.torType != TorType.OFF
                 connectOrbotDialogOpen = false
                 onCheckedChange(torSettings)
             },

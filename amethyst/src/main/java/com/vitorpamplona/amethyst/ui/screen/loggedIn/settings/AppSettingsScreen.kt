@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -56,11 +56,11 @@ import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseGalleryType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.mockSharedPreferencesViewModel
@@ -119,12 +119,13 @@ fun getLanguageIndex(
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ): Int {
     val language = sharedPreferencesViewModel.sharedPrefs.language
-    var languageIndex = -1
-    if (language != null) {
-        languageIndex = languageEntries.values.toTypedArray().indexOf(language)
-    } else {
-        languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
-    }
+    var languageIndex: Int
+    languageIndex =
+        if (language != null) {
+            languageEntries.values.toTypedArray().indexOf(language)
+        } else {
+            languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
+        }
     if (languageIndex == -1) {
         languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
     }
@@ -365,7 +366,7 @@ fun SettingsRow(
                 text = stringRes(description),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }

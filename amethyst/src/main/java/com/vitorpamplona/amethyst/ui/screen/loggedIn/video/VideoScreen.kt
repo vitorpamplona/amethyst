@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,7 +24,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -40,7 +39,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,14 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.NostrVideoDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
@@ -69,12 +63,14 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -89,10 +85,11 @@ import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfFeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
@@ -125,22 +122,9 @@ fun VideoScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
+    WatchLifecycleAndUpdateModel(videoFeedContentState)
     WatchAccountForVideoScreen(videoFeedContentState = videoFeedContentState, accountViewModel = accountViewModel)
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Video Start")
-                    NostrVideoDataSource.start()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    VideoFilterAssemblerSubscription(accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -180,10 +164,11 @@ fun WatchAccountForVideoScreen(
     accountViewModel: AccountViewModel,
 ) {
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
-    val hiddenUsers = accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
+    val hiddenUsers =
+        accountViewModel.account.hiddenUsers.flow
+            .collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState, hiddenUsers) {
-        NostrVideoDataSource.resetFilters()
         videoFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
@@ -296,8 +281,7 @@ private fun RenderVideoOrPictureNote(
             val noteEvent = remember { note.event }
             if (noteEvent is PictureEvent) {
                 val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-
-                PictureDisplay(note, false, ContentScale.Fit, PaddingValues(5.dp), backgroundColor, accountViewModel, nav)
+                PictureDisplay(note, false, ContentScale.Fit, HalfFeedPadding, backgroundColor, accountViewModel, nav)
             } else if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
@@ -330,7 +314,7 @@ private fun RenderAuthorInformation(
     accountViewModel: AccountViewModel,
 ) {
     Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        NoteAuthorPicture(note, nav, accountViewModel, Size55dp)
+        NoteAuthorPicture(note, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
         Spacer(modifier = DoubleHorzSpacer)
 
@@ -437,7 +421,7 @@ fun ReactionsColumn(
         ) {
             routeFor(
                 baseNote,
-                accountViewModel.userProfile(),
+                accountViewModel.account,
             )?.let { nav.nav(it) }
         }
         BoostReaction(

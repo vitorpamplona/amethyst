@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,10 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -71,17 +70,9 @@ public fun RenderEmojiPack(
     accountViewModel: AccountViewModel,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
-    val noteEvent by
-        baseNote
-            .live()
-            .metadata
-            .map { it.note.event }
-            .distinctUntilChanged()
-            .observeAsState(baseNote.event)
+    val noteEvent by observeNoteEvent<EmojiPackEvent>(baseNote, accountViewModel)
 
-    if (noteEvent == null || noteEvent !is EmojiPackEvent) return
-
-    (noteEvent as? EmojiPackEvent)?.let {
+    noteEvent?.let {
         RenderEmojiPack(
             noteEvent = it,
             baseNote = baseNote,
@@ -184,24 +175,19 @@ private fun EmojiListOptions(
     emojiPackNote: Note,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
         accountViewModel,
     ) {
         it?.let { usersEmojiList ->
-            val hasAddedThis by
-                remember {
-                    usersEmojiList
-                        .live()
-                        .metadata
-                        .map { usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex) }
-                        .distinctUntilChanged()
-                }.observeAsState()
+            val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
+                usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
+            }
 
             CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions", accountViewModel = accountViewModel) {
                 if (it != true) {
-                    AddButton { accountViewModel.addEmojiPack(usersEmojiList, emojiPackNote) }
+                    AddButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.addEmojiPack(emojiPackNote) }
                 } else {
-                    RemoveButton { accountViewModel.removeEmojiPack(usersEmojiList, emojiPackNote) }
+                    RemoveButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.removeEmojiPack(emojiPackNote) }
                 }
             }
         }

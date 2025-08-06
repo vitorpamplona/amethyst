@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,8 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ZapUserSetCard
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -106,7 +106,7 @@ fun ZapUserSetCompose(
                     Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
                         Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user, accountViewModel = accountViewModel) }
 
-                        AboutDisplay(zapSetCard.user)
+                        AboutDisplay(zapSetCard.user, accountViewModel)
                     }
                 }
 

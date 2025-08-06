@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,33 +22,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserZapAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.math.BigDecimal
 
 @Composable
-fun ZapTabHeader(baseUser: User) {
-    val userState by baseUser.live().zaps.observeAsState()
-    var zapAmount by remember { mutableStateOf<BigDecimal?>(null) }
-
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.Default) {
-            val tempAmount = baseUser.zappedAmount()
-            if (zapAmount != tempAmount) {
-                zapAmount = tempAmount
-            }
-        }
-    }
+fun ZapTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val zapAmount by observeUserZapAmount(baseUser, accountViewModel)
 
     Text(text = "${showAmountInteger(zapAmount)} ${stringRes(id = R.string.zaps)}")
 }

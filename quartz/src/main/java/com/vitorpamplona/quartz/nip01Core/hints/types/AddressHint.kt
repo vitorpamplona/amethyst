@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints.types
 
-class AddressHint(
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
+data class AddressHint(
     val addressId: String,
-    var relay: String? = null,
+    val relay: NormalizedRelayUrl,
 ) : Hint {
     override fun id() = addressId.toByteArray(Charsets.UTF_8)
 }

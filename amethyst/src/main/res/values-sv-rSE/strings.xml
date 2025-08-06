@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Logga in med en privat nyckel för att kunna sluta följa</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna dölja ett ord eller en mening</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Du använder en offentlig nyckel, och offentliga nycklar är endast läsbara. Logga in med en privat nyckel för att kunna visa ett ord eller en mening</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Du använder en publik nyckel som är skrivskyddad. Logga in med en privat nyckel för att ändra inställningar</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Du använder en publik nyckel som är skrivskyddad. Logga in med en privat nyckel för att ladda upp</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Du använder en publik nyckel som är skrivskyddad. Logga in med en privat nyckel för att signera händelser</string>
+    <string name="unauthorized_exception">Otillåten dekryptering</string>
+    <string name="unauthorized_exception_description">Signatären har inte godkänt den dekryptering som krävs. Aktivera NIP-44-dekryptering i din signeringsapp och försök igen</string>
+    <string name="signer_not_found_exception">Signatör saknas</string>
+    <string name="signer_not_found_exception_description">Har signeringsappen avinstallerats? Kontrollera om den är installerad och innehåller det här kontot. Logga ut och in igen om den har ändrats.</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Antal visningar</string>
     <string name="boost">Boosta</string>
@@ -71,6 +78,8 @@
     <string name="error_parsing_error_message">Fel vid tolkning av felmeddelande</string>
     <string name="following">" Följer"</string>
     <string name="followers">" Följare"</string>
+    <string name="number_following">"%1$s Följande"</string>
+    <string name="number_followers">"%1$s Följare"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Säkerhetsfilter</string>
     <string name="log_out">Logga ut</string>
@@ -96,9 +105,10 @@
     <string name="my_awesome_group">Min fantastiska grupp</string>
     <string name="picture_url">Bild Url</string>
     <string name="description">Beskrivning</string>
+    <string name="no_description">Beskrivning saknas</string>
     <string name="about_us">"Om oss.. "</string>
     <string name="what_s_on_your_mind">Vad tänker du på?</string>
-    <string name="write_a_message">Skriv ett meddelande...</string>
+    <string name="write_a_message">Skriv ett meddelande…</string>
     <string name="post">Dela</string>
     <string name="save">Spara</string>
     <string name="create">Skapa</string>
@@ -137,6 +147,10 @@
     <string name="video_saved_to_the_gallery">Videon sparad i telefonens videogalleri</string>
     <string name="failed_to_save_the_video">Det gick inte att spara videon</string>
     <string name="upload_image">Ladda upp bilden</string>
+    <string name="take_a_picture">Ta en bild</string>
+    <string name="record_a_message">Spela in ett meddelande</string>
+    <string name="record_a_message_title">Spela in ett meddelande</string>
+    <string name="record_a_message_description">Tryck och håll in för att spela in ett meddelande</string>
     <string name="uploading">Laddar upp…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren har inte en Lightningadressinställning för att ta emot sats</string>
     <string name="reply_here">"svara här.. "</string>
@@ -155,6 +169,7 @@
     <string name="gallery">Galleri</string>
     <string name="follows">"Följer"</string>
     <string name="reports">"Rapporter"</string>
+    <string name="number_reports">"%1$s Rapporter"</string>
     <string name="more_options">Fler alternativ</string>
     <string name="relays">" Reläer"</string>
     <string name="website">Websida</string>
@@ -213,14 +228,23 @@
     <string name="unfollow">Sluta följa</string>
     <string name="channel_created">Kanal skapad</string>
     <string name="channel_information_changed_to">"Kanalinformation ändrad till"</string>
+    <string name="ephemeral_relay_chat">Försvinnande chatt</string>
+    <string name="relay_chat">Relä Chatt</string>
+    <string name="relay_chat_title">Relä Chattar</string>
+    <string name="relay_chat_explainer">Relä chattar är chattgrupper som kontrolleras av deras hem relä.
+        De är synliga för alla på Nostr och vem som helst kan delta på dem.
+        De är bra för öppna gemenskaper kring specifika ämnen. Några av dessa grupper är kortlivade
+    och därmed försvinner chattmeddelanden över tiden</string>
     <string name="public_chat">Publik Chat</string>
     <string name="public_chat_title">Metadata för offentlig chatt</string>
     <string name="public_chat_explainer">Offentliga chattar är synliga för alla på Nostr och alla
         kan delta på dem. De är bra för öppna samhällen kring specifika ämnen.
         Moderation kan kontrolleras genom att ta bort inlägg på reläerna</string>
     <string name="public_chat_relays_title">Reläer</string>
-    <string name="public_chat_relays_explainer">Infoga mellan 1-3 reläer som är värd för denna grupp.
+    <string name="public_chat_relays_explainer">Infoga mellan 1–3 reläer som är värd för denna grupp.
         Nostr klienter använder denna inställning för att veta var du kan ladda ner meddelanden från och skicka dina meddelanden till.</string>
+    <string name="paid_relay">Betald relä</string>
+    <string name="tor_relay">Tvinga Tor vid anslutning</string>
     <string name="posts_received">mottagna inlägg</string>
     <string name="remove">Ta bort</string>
     <string name="translations_auto">Automatiskt</string>
@@ -263,6 +287,7 @@
     <string name="biometric_error">Fel</string>
     <string name="badge_created_by">"Skapad av %1$s"</string>
     <string name="badge_award_image_for">"Tilldelad Badge för %1$s"</string>
+    <string name="badge_award_image">Bild på utmärkelse</string>
     <string name="new_badge_award_notif">Du har blivit tilldelad en ny Badge </string>
     <string name="award_granted_to">Badge utmärkelse tilldelas</string>
     <string name="copied_note_text_to_clipboard">Kopierade anteckningstext till urklipp</string>
@@ -288,7 +313,7 @@
     <string name="quick_action_unfollow">Sluta följa</string>
     <string name="quick_action_follow">Följ</string>
     <string name="quick_action_request_deletion_gallery_title">Ta bort från galleriet</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Ta bort detta media från ditt galleri, kan du lägga till det senare</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Ta bort detta media från ditt galleri.</string>
     <string name="quick_action_request_deletion_alert_title">Begär radering</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst kommer att begära att din anteckning tas bort från de reläer du för närvarande är ansluten till. Det finns ingen garanti för att din anteckning kommer att raderas permanent från dessa reläer eller från andra reläer där den kan lagras.</string>
     <string name="quick_action_block_dialog_btn">Blockera</string>
@@ -410,6 +435,7 @@
     <string name="no">Nej</string>
     <string name="follow_list_selection">Följ lista</string>
     <string name="follow_list_kind3follows">Alla följare</string>
+    <string name="follow_list_kind3follows_proxy">Följer via proxy</string>
     <string name="follow_list_aroundme">Runt mig</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Tyst listan</string>
@@ -483,9 +509,18 @@
     <string name="content_warning_hide_all_sensitive_content">Dölj alltid känsligt innehåll</string>
     <string name="content_warning_show_all_sensitive_content">Visa alltid känsligt innehåll</string>
     <string name="content_warning_see_warnings">Visa alltid innehållsvarningar</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Dölj</string>
+    <string name="content_warning_show_all_sensitive_content_option">Visa</string>
+    <string name="content_warning_see_warnings_option">Varna</string>
     <string name="recommended_apps">Rekommenderas: </string>
     <string name="filter_spam_from_strangers">Filtrera skräppost från främlingar</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Varna när inlägg har rapporter från dina följare</string>
+    <string name="filter_spam_from_strangers_title">Filtrera spam</string>
+    <string name="filter_spam_from_strangers_explainer">Döljer inlägg från främlingar som var exakt samma för 5 eller fler gånger</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Varna vid rapporter</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
+    <string name="show_sensitive_content_title">Visa känsligt innehåll</string>
+    <string name="show_sensitive_content_explainer">Visar ett varningsmeddelande när författaren till inlägget markerar det som känsligt</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
     <string name="zapraiser">Zap insamling</string>
@@ -537,10 +572,12 @@
     <string name="are_you_sure_you_want_to_log_out">Att logga ut raderar all din lokala information. Se till att ha dina privata nycklar säkerhetskopierade för att undvika att förlora ditt konto. Vill du fortsätta?</string>
     <string name="followed_tags">Följda taggar</string>
     <string name="relay_setup">Reläer</string>
-    <string name="discover_content">Upptäckt av anteckningar</string>
+    <string name="discover_follows">Följpaket</string>
+    <string name="discover_reads">Läsningar</string>
+    <string name="discover_content_v2">Feed algoritmer</string>
     <string name="discover_marketplace">Marknadsplats</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Gemenskap</string>
+    <string name="discover_live_v2">Live-streams</string>
+    <string name="discover_community_v2">Grupper</string>
     <string name="discover_chat">Chattar</string>
     <string name="community_approved_posts">Godkända Inlägg</string>
     <string name="groups_no_descriptor">Denna grupp har ingen beskrivning eller regler. Prata med ägaren för att lägga till en.</string>
@@ -548,6 +585,7 @@
     <string name="add_sensitive_content_label">Känsligt innehåll</string>
     <string name="add_sensitive_content_description">Lägger till varning för känsligt innehåll innan detta innehåll visas.</string>
     <string name="preferences">Appinställningar</string>
+    <string name="user_preferences">Användarinställningar</string>
     <string name="settings">Inställningar</string>
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
@@ -592,6 +630,8 @@
     <string name="geohash_explainer">Lägger till en Geohash av din plats i inlägget. Allmänheten kommer att veta att du befinner dig inom 5 km från nuvarande plats</string>
     <string name="geohash_exclusive">Plats-exklusivt inlägg</string>
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
+    <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
+    <string name="hashtag_exclusive_explainer">Endast anhängare av hashtaggen kommer att se den. Dina generella följare kommer inte att se den.</string>
     <string name="loading_location">Laddar position</string>
     <string name="lack_location_permissions">Inga platsbehörigheter</string>
     <string name="add_sensitive_content_explainer">Lägger till en varning för känsligt innehåll innan ditt innehåll visas. Detta är idealiskt för NSFW-innehåll (inte säkert för arbete) eller innehåll som vissa personer kan uppleva som stötande eller störande</string>
@@ -600,6 +640,7 @@
     <string name="new_feature_nip17_activate">Aktivera</string>
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_create_public_private_chat_description">Ny offentlig eller privat grupp</string>
+    <string name="messages_relay_based">Relä</string>
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">Till</string>
     <string name="messages_new_message_subject">Ämne</string>
@@ -665,6 +706,7 @@
     <string name="wallet_number">Plånbok %1$s</string>
     <string name="error_opening_external_signer">Fel vid öppning av signeringsapp</string>
     <string name="error_opening_external_signer_description">Signeringsprogrammet kunde inte hittas. Kontrollera att appen inte har avinstallerats</string>
+    <string name="sign_request_rejected2">Signeringsförfrågan avvisad</string>
     <string name="sign_request_rejected">Underteckningsbegäran avvisad</string>
     <string name="sign_request_rejected_description">Kontrollera att signeringsprogrammet har godkänt denna transaktion</string>
     <string name="no_wallet_found_with_error">Inga plånböcker hittades för att betala en blixtfaktura (Fel: %1$s). Installera en blixtpengaplånbok för att använda zaps</string>
@@ -792,6 +834,8 @@
     <string name="new_post">Nytt inlägg</string>
     <string name="new_short">Nya kort: bilder eller videor</string>
     <string name="new_community_note">Nytt Community-meddelande</string>
+    <string name="new_product">Ny produkt</string>
+    <string name="new_exclusive_geo_note">Nytt Geo-Exklusivt inlägg</string>
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
@@ -846,12 +890,29 @@
     <string name="private_outbox_section_explainer">Infoga mellan 1–3 reläer för att lagra händelser som ingen annan kan se, som dina Utkast och/eller appinställningar. Helst är dessa reläer antingen lokala eller kräver autentisering innan du laddar ner varje användares innehåll.</string>
     <string name="kind_3_section">Allmänna reläer</string>
     <string name="kind_3_section_description">Amethyst använder dessa reläer för att ladda ner inlägg åt dig.</string>
+    <string name="connected_section">Anslutna reläer</string>
+    <string name="connected_section_description">Aktuell lista över reläer som används</string>
     <string name="kind_3_recommended_section">Rekommenderade reläer</string>
     <string name="kind_3_recommended_section_description">Lägg till följande reläer till din Allmänna relälista för att ta emot inlägg från de listade användarna.</string>
     <string name="search_section">Sökreläer</string>
     <string name="search_section_explainer">Lista över reläer som används för sökning och taggning av användare. Taggning och sökning kommer inte att fungera om inga alternativ är tillgängliga.</string>
     <string name="local_section">Lokala reläer</string>
     <string name="local_section_explainer">Lista över reläer som körs i denna enhet.</string>
+    <string name="trusted_relays_title">Betrodda reläer</string>
+    <string name="trusted_section">Betrodda reläer</string>
+    <string name="trusted_section_explainer">Reläer du litar på och inte kräver Tor för</string>
+    <string name="proxy_relays_title">Proxyreläer</string>
+    <string name="proxy_section">Proxyreläer</string>
+    <string name="proxy_section_explainer">Aggregeringsreläer som används för att hämta flöden, t.ex. filter.nostr.wine</string>
+    <string name="broadcast_relays_title">Sändande reläer</string>
+    <string name="broadcast_section">Sändande reläer</string>
+    <string name="broadcast_section_explainer">Reläer som skickar dina anteckningar till alla andra reläer</string>
+    <string name="indexer_relays_title">Indexerande reläer</string>
+    <string name="indexer_section">Indexerande reläer</string>
+    <string name="indexer_section_explainer">Reläer som lagrar metadata och listor över reläer, t.ex. purplepag.es</string>
+    <string name="blocked_relays_title">Blockerade reläer</string>
+    <string name="blocked_section">Blockerade reläer</string>
+    <string name="blocked_section_explainer">Amethyst kommer aldrig att ansluta till dessa reläer</string>
     <string name="zap_the_devs_title">Zappa utvecklarna!</string>
     <string name="zap_the_devs_description">Din donation hjälper oss att göra skillnad. Varje sat räknas!</string>
     <string name="donate_now">Donera nu</string>
@@ -941,4 +1002,11 @@
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
     <string name="private_message">Privat meddelande</string>
+    <string name="public_message">Offentligt meddelande</string>
+    <string name="group_relay">Chatt Relä</string>
+    <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
+    <string name="share_image">Dela bild…</string>
+    <string name="search_by_hashtag">Sök hashtag: #%1$s</string>
+    <string name="dont_translate_from">Översätt inte från</string>
+    <string name="dont_translate_from_description">Språk som visas här kommer inte att översättas. Välj ett språk för att ta bort det och få det översatt igen.</string>
 </resources>

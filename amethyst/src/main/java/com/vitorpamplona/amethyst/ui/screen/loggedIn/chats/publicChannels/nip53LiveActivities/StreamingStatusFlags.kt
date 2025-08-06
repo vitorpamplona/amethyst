@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
+import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -92,11 +93,15 @@ fun OfflineFlag() {
 fun ScheduledFlag(starts: Long?) {
     val startsIn =
         starts?.let {
-            SimpleDateFormat
-                .getDateTimeInstance(
-                    DateFormat.SHORT,
-                    DateFormat.SHORT,
-                ).format(Date(starts * 1000))
+            if (it > TimeUtils.now()) {
+                SimpleDateFormat
+                    .getDateTimeInstance(
+                        DateFormat.SHORT,
+                        DateFormat.SHORT,
+                    ).format(Date(starts * 1000))
+            } else {
+                null
+            }
         }
 
     Text(

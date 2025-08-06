@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.os.Build
 import androidx.compose.runtime.Composable
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -28,7 +29,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.checkifItNeed
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-    checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel)
+    }
 }
 
 @Composable

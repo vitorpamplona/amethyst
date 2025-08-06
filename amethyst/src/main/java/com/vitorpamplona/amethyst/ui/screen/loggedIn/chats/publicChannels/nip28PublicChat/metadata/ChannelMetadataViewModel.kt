@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -51,9 +52,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
-import kotlin.collections.plus
 import kotlin.coroutines.cancellation.CancellationException
 
 class ChannelMetadataViewModel : ViewModel() {
@@ -87,7 +85,7 @@ class ChannelMetadataViewModel : ViewModel() {
             val relays =
                 channel.info.relays
                     ?.map { relaySetupInfoBuilder(it) }
-                    ?.distinctBy { it.url }
+                    ?.distinctBy { it.relay }
 
             _channelRelays.update { relays ?: emptyList() }
         }
@@ -105,21 +103,18 @@ class ChannelMetadataViewModel : ViewModel() {
                             channelName.value.text,
                             channelDescription.value.text,
                             channelPicture.value.text,
-                            channelRelays.value.map { it.url },
+                            channelRelays.value.map { it.relay },
                         )
 
-                    account.signAndSendPrivatelyOrBroadcast(
-                        template,
-                        relayList = { it.channelInfo().relays },
-                        onDone = {
-                            val channel = LocalCache.getOrCreateChannel(it.id) { PublicChatChannel(it) }
-                            // follows the channel
-                            account.follow(channel)
-                            if (channel is PublicChatChannel) {
-                                onDone(channel)
-                            }
-                        },
-                    )
+                    val signedResult =
+                        account.signAndSendPrivatelyOrBroadcast(
+                            template,
+                            relayList = { it.channelInfo().relays },
+                        )
+                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                    // follows the channel
+                    account.follow(channel)
+                    onDone(channel)
                 } else {
                     val event = channel.event
 
@@ -131,7 +126,7 @@ class ChannelMetadataViewModel : ViewModel() {
                                 channelName.value.text,
                                 channelDescription.value.text,
                                 channelPicture.value.text,
-                                channelRelays.value.map { it.url },
+                                channelRelays.value.map { it.relay },
                                 hint,
                             )
                         } else {
@@ -141,21 +136,18 @@ class ChannelMetadataViewModel : ViewModel() {
                                 channelName.value.text,
                                 channelDescription.value.text,
                                 channelPicture.value.text,
-                                channelRelays.value.map { it.url },
+                                channelRelays.value.map { it.relay },
                                 eTag,
                             )
                         }
 
-                    account.signAndSendPrivatelyOrBroadcast(
-                        template,
-                        relayList = { it.channelInfo().relays },
-                        onDone = {
-                            val channel = LocalCache.getOrCreateChannel(it.id) { PublicChatChannel(it) }
-                            if (channel is PublicChatChannel) {
-                                onDone(channel)
-                            }
-                        },
-                    )
+                    val signedResult =
+                        account.signAndSendPrivatelyOrBroadcast(
+                            template,
+                            relayList = { it.channelInfo().relays },
+                        )
+                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                    onDone(channel)
                 }
             }
 
@@ -164,7 +156,7 @@ class ChannelMetadataViewModel : ViewModel() {
     }
 
     fun addHomeRelay(relay: BasicRelaySetupInfo) {
-        if (_channelRelays.value.any { it.url == relay.url }) return
+        if (_channelRelays.value.any { it.relay == relay.relay }) return
 
         _channelRelays.update { it.plus(relay) }
     }
@@ -218,7 +210,7 @@ class ChannelMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -231,7 +223,7 @@ class ChannelMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )
@@ -244,6 +236,9 @@ class ChannelMetadataViewModel : ViewModel() {
                 onUploading(false)
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
             }
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            onUploading(false)
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onUploading(false)

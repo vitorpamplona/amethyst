@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -56,14 +56,14 @@ import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.screen.NostrDraftEventsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -74,10 +74,10 @@ fun DraftListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val draftFeedViewModel: NostrDraftEventsFeedViewModel =
+    val draftFeedViewModel: DraftEventsFeedViewModel =
         viewModel(
             key = "NostrDraftEventsFeedViewModel",
-            factory = NostrDraftEventsFeedViewModel.Factory(accountViewModel.account),
+            factory = DraftEventsFeedViewModel.Factory(accountViewModel.account),
         )
 
     RenderDraftListScreen(draftFeedViewModel, accountViewModel, nav)
@@ -85,7 +85,7 @@ fun DraftListScreen(
 
 @Composable
 private fun RenderDraftListScreen(
-    feedViewModel: NostrDraftEventsFeedViewModel,
+    feedViewModel: DraftEventsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -199,16 +199,9 @@ private fun DraftFeedLoaded(
             }
         }
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .animateItemPlacement(),
-            ) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 SwipeToDeleteContainer(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .animateContentSize(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
                     onStartToEnd = { accountViewModel.delete(item) },
                 ) {
                     NoteCompose(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,38 +22,21 @@ package com.vitorpamplona.quartz.nip01Core.tags.geohash
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.location.geohashedScope
 
-fun Event.hasGeohashes() =
-    if (this is CommentEvent) {
-        this.hasGeohashes()
-    } else {
-        tags.hasGeohashes()
-    }
+fun Event.hasGeohashes() = tags.hasGeohashes()
 
-fun Event.isTaggedGeoHashes(hashtags: Set<String>) =
-    if (this is CommentEvent) {
-        this.isTaggedGeoHashes(hashtags)
-    } else {
-        tags.isTaggedGeoHashes(hashtags)
-    }
+fun Event.isTaggedGeoHashes(hashtags: Set<String>) = tags.isTaggedGeoHashes(hashtags)
 
-fun Event.isTaggedGeoHash(hashtag: String) =
-    if (this is CommentEvent) {
-        this.isTaggedGeoHash(hashtag)
-    } else {
-        tags.isTaggedGeoHash(hashtag)
-    }
+fun Event.isTaggedGeoHash(hashtag: String) = tags.isTaggedGeoHash(hashtag)
 
-fun Event.geohashes() =
-    if (this is CommentEvent) {
-        geohashes()
-    } else {
-        tags.geohashes()
-    }
+fun Event.geohashes() = tags.geohashes()
 
-fun Event.getGeoHash(): String? =
+fun Event.getGeoHash(): String? = tags.getGeoHash()
+
+fun Event.geoHashOrScope() =
     if (this is CommentEvent) {
-        getGeoHash()
+        geohashedScope()
     } else {
         tags.getGeoHash()
     }

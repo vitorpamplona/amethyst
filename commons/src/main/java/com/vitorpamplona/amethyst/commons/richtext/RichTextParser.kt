@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -367,11 +367,11 @@ class RichTextParser {
 
         private fun removeQueryParamsForExtensionComparison(fullUrl: String): String =
             if (fullUrl.contains("?")) {
-                fullUrl.split("?")[0].lowercase()
+                fullUrl.split("?")[0]
             } else if (fullUrl.contains("#")) {
-                fullUrl.split("#")[0].lowercase()
+                fullUrl.split("#")[0]
             } else {
-                fullUrl.lowercase()
+                fullUrl
             }
 
         fun isImageOrVideoUrl(url: String): Boolean {

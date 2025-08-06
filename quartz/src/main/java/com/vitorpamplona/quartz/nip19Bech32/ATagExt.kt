@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip19Bech32
 
 import android.util.Log
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.utils.Hex
@@ -44,7 +46,10 @@ fun ATag.Companion.parseAtag(
     try {
         val parts = atag.split(":", limit = 3)
         Hex.decode(parts[1])
-        ATag(parts[0].toInt(), parts[1], parts[2], relay)
+
+        val relayHint = relay?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+        ATag(parts[0].toInt(), parts[1], parts[2], relayHint)
     } catch (t: Throwable) {
         Log.w("ATag", "Error parsing A Tag: $atag: ${t.message}")
         null
@@ -58,7 +63,7 @@ fun ATag.Companion.parseAtagUnckecked(atag: String): ATag? =
         null
     }
 
-fun ATag.toNAddr(overrideRelay: String? = relay): String = NAddress.create(kind, pubKeyHex, dTag, overrideRelay ?: relay)
+fun ATag.toNAddr(overrideRelay: NormalizedRelayUrl? = relay): String = NAddress.create(kind, pubKeyHex, dTag, overrideRelay ?: relay)
 
 fun ATag.Companion.parseNAddr(naddr: String) =
     NAddress.parse(naddr)?.let { result ->

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,14 +43,14 @@ data class PollOption(
     val option: Int,
     val descriptor: String,
     var zappedValue: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
-    var tally: MutableState<Float> = mutableStateOf(0f),
+    var tally: MutableState<Float> = mutableFloatStateOf(0f),
     var consensusThreadhold: MutableState<Boolean> = mutableStateOf(false),
     var zappedByLoggedIn: MutableState<Boolean> = mutableStateOf(false),
 )
 
 @Stable
 class PollNoteViewModel : ViewModel() {
-    private var account: Account? = null
+    private lateinit var account: Account
     private var pollNote: Note? = null
 
     private var pollEvent: PollNoteEvent? = null
@@ -68,12 +69,12 @@ class PollNoteViewModel : ViewModel() {
     var canZap = mutableStateOf(false)
     var tallies: List<PollOption> = emptyList()
 
-    fun load(
-        acc: Account,
-        note: Note?,
-    ) {
-        if (acc != account || pollNote != note) {
-            account = acc
+    fun init(acc: Account) {
+        account = acc
+    }
+
+    fun load(note: Note?) {
+        if (pollNote != note) {
             pollNote = note
             pollEvent = pollNote?.event as PollNoteEvent
             pollOptions = pollEvent?.pollOptions()
@@ -220,7 +221,10 @@ class PollNoteViewModel : ViewModel() {
     ): Boolean =
         pollNote!!.zaps.any {
             val zapEvent = it.value?.event as? LnZapEvent
-            val privateZapAuthor = (it.key.event as? LnZapRequestEvent)?.cachedPrivateZap()
+            val privateZapAuthor =
+                (it.key.event as? LnZapRequestEvent)?.let {
+                    account.privateZapsDecryptionCache.cachedPrivateZap(it)
+                }
             zapEvent?.zappedPollOption() == option &&
                 (it.key.author?.pubkeyHex == user.pubkeyHex || privateZapAuthor?.pubKey == user.pubkeyHex)
         }

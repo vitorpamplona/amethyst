@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,7 +39,7 @@ class DualHttpClientManager(
 ) {
     val factory = OkHttpClientFactory(keyCache)
 
-    private val defaultHttpClient: StateFlow<OkHttpClient> =
+    val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
             factory.buildHttpClient(proxy, mobile, userAgent)
         }.stateIn(
@@ -48,7 +48,7 @@ class DualHttpClientManager(
             factory.buildHttpClient(proxyPortProvider.value, isMobileDataProvider.value, userAgent),
         )
 
-    private val defaultHttpClientWithoutProxy: StateFlow<OkHttpClient> =
+    val defaultHttpClientWithoutProxy: StateFlow<OkHttpClient> =
         isMobileDataProvider
             .map { mobile ->
                 factory.buildHttpClient(mobile, userAgent)

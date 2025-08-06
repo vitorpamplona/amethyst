@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,9 +31,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivitiesChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -53,21 +54,24 @@ fun RenderLiveActivityChatMessage(
     val showChannelInfo =
         remember(noteEvent) {
             if (noteEvent is LiveActivitiesChatMessageEvent) {
-                noteEvent.activity()?.toTag()
+                noteEvent.activityAddress()
             } else {
                 null
             }
         }
 
     showChannelInfo?.let {
-        ChannelHeader(
-            channelHex = it,
-            showVideo = false,
-            sendToChannel = true,
-            modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        LoadLiveActivityChannel(it, accountViewModel) {
+            LiveActivitiesChannelHeader(
+                baseChannel = it,
+                showVideo = false,
+                showFlag = true,
+                sendToChannel = true,
+                modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
         Spacer(modifier = StdVertSpacer)
     }
 

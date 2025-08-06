@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,11 +24,11 @@ import android.util.Log
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
@@ -58,12 +58,12 @@ class MetadataEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun contactMetadataJson() = jacksonObjectMapper().readTree(content) as? ObjectNode
 
     fun contactMetaData() =
         try {
-            EventMapper.mapper.readValue(content, UserMetadata::class.java)
+            JsonMapper.mapper.readValue(content, UserMetadata::class.java)
         } catch (e: Exception) {
             Log.w("MetadataEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}")
             null

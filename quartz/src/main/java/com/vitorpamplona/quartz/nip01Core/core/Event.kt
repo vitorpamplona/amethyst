@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -32,14 +32,20 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 @Immutable
 open class Event(
     val id: HexKey,
-    @JsonProperty("pubkey") val pubKey: HexKey,
-    @JsonProperty("created_at") val createdAt: Long,
-    val kind: Int,
+    val pubKey: HexKey,
+    val createdAt: Long,
+    val kind: Kind,
     val tags: TagArray,
     val content: String,
     val sig: HexKey,
 ) : IEvent {
+    /**
+     * Set this to true if the .content is encrypted or encoded in a
+     * way that it should not be indexed for local search.
+     */
     open fun isContentEncoded() = false
+
+    open fun extraIndexableTagNames() = emptySet<String>()
 
     open fun countMemory(): Long =
         7 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
@@ -52,13 +58,16 @@ open class Event(
 
     fun toJson(): String = EventManualSerializer.toJson(id, pubKey, createdAt, kind, tags, content, sig)
 
-    /**
-     * For debug purposes only
-     */
-    fun toPrettyJson(): String = EventManualSerializer.toPrettyJson(id, pubKey, createdAt, kind, tags, content, sig)
-
     companion object {
-        fun fromJson(json: String): Event = EventMapper.fromJson(json)
+        fun fromJson(json: String): Event = JsonMapper.fromJson(json)
+
+        fun fromJsonOrNull(json: String) =
+            try {
+                fromJson(json)
+            } catch (e: Exception) {
+                Log.w("Event", "Unable to parse event JSON: $json", e)
+                null
+            }
 
         fun build(
             kind: Int,

@@ -33,6 +33,7 @@
     <string name="report_impersonation">ছদ্মবেশ ধারণের অভিযোগ করুন</string>
     <string name="report_explicit_content">খোলামেলা আধেয় হিসেবে অভিযোগ করুন</string>
     <string name="report_illegal_behaviour">বেআইনী আচরণের অভিযোগ করুন</string>
+    <string name="mod">মোড</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">প্রতিউত্তর দিতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">পোস্টগুলি বুস্ট করতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
     <string name="login_with_a_private_key_to_like_posts">পোস্টগুলি লাইক করতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
@@ -59,6 +60,8 @@
     <string name="payment_successful">সফলভাবে মূল্য পরিশোধিত হয়েছে</string>
     <string name="following">" অনুসরণ"</string>
     <string name="followers">" অনুসারী"</string>
+    <string name="number_following">"%1$s অনুসরণ"</string>
+    <string name="number_followers">""</string>
     <string name="profile">প্রোফাইল</string>
     <string name="security_filters">নিরাপত্তা-ফিল্টার</string>
     <string name="log_out">লগ আউট</string>
@@ -70,6 +73,8 @@
     <string name="thank_you_so_much">আপনাকে অনেক ধন্যবাদ!</string>
     <string name="amount_in_sats">স্যাটে মোট পরিমাণ</string>
     <string name="send_sats">স্যাট পাঠান</string>
+    <string name="secret_emoji_maker">সিক্রেট ইমোজি মেকার</string>
+    <string name="secret_visible_text_placeholder">😎</string>
     <string name="error_parsing_preview_for">"এই দুইয়ের পূর্বরূপ দেখানো যাচ্ছে না %1$s : %2$s"</string>
     <string name="preview_card_image_for">"%1$s এর জন্য কার্ড ইমেজের পূর্বরূপ দেখুন"</string>
     <string name="new_channel">নতুন চ্যানেল</string>
@@ -77,7 +82,7 @@
     <string name="my_awesome_group">আমার অসাধারণ দল</string>
     <string name="picture_url">ছবির Url</string>
     <string name="description">বিবরণ</string>
-    <string name="about_us">"আমাদের সম্পর্কে.. "</string>
+    <string name="about_us">"আমাদের সম্পর্কে…"</string>
     <string name="what_s_on_your_mind">নিজের কোনো ভাবনা প্রকাশ করতে চান?</string>
     <string name="post">পেশ করুন</string>
     <string name="save">সংরক্ষণ করুন</string>
@@ -416,8 +421,6 @@
     <string name="are_you_sure_you_want_to_log_out">লগ আউট করলে আপনার সমস্ত স্থানীয় তথ্য মুছে যাবে। অ্যাকাউন্ট সুরক্ষিত রাখতে আপনার ব্যক্তিগত চাবিটি নিরাপদে সংরক্ষিত আছে কিনা নিশ্চিত হোন। সামনে আগাতে চান?</string>
     <string name="followed_tags">অনুসৃত ট্যাগগুলি</string>
     <string name="relay_setup">রিলেগুলি</string>
-    <string name="discover_live">লাইভ</string>
-    <string name="discover_community">কম্যুনিটি</string>
     <string name="discover_chat">বার্তালাপগুলি</string>
     <string name="community_approved_posts">অনুমোদিত পোস্টগুলি</string>
     <string name="groups_no_descriptor">এই দলটির কোনো বিবরণ কিংবা নীতিমালা নেই। এগুলো যুক্ত করতে দলনেতার সাথে কথা বলুন</string>
@@ -513,7 +516,7 @@
     <string name="push_server_none">কোনটি নয়</string>
     <string name="send_the_seller_a_message">বিক্রেতাকে একটি বার্তা পাঠান</string>
     <string name="hi_seller_is_this_still_available">হাই %1$s, এটা কি এখনও পাওয়া যায়?</string>
-    <string name="hi_there_is_this_still_available">হাই %1$s, এটা কি এখনও পাওয়া যায়?</string>
+    <string name="hi_there_is_this_still_available">হাই, এটা কি এখনও পাওয়া যায়?</string>
     <string name="classifieds">একটি পণ্য বিক্রি করুন</string>
     <string name="classifieds_title">শিরোনাম</string>
     <string name="classifieds_title_placeholder">iPhone 13</string>

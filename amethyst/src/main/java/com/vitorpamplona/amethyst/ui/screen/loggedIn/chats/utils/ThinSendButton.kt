@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -42,7 +42,7 @@ fun ThinSendButton(
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.Send,
+            imageVector = Icons.AutoMirrored.Filled.Send,
             contentDescription = stringRes(id = R.string.accessibility_send),
             modifier = Size20Modifier,
         )

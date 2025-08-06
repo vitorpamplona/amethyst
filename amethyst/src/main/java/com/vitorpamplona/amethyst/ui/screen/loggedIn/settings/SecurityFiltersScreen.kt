@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,11 +34,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,7 +47,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,27 +63,34 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.WarningType
+import com.vitorpamplona.amethyst.model.parseWarningType
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
-import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenAccountsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 
 @Composable
@@ -91,19 +98,19 @@ fun SecurityFiltersScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val hiddenFeedViewModel: NostrHiddenAccountsFeedViewModel =
+    val hiddenFeedViewModel: HiddenAccountsFeedViewModel =
         viewModel(
-            factory = NostrHiddenAccountsFeedViewModel.Factory(accountViewModel.account),
+            factory = HiddenAccountsFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val hiddenWordsFeedViewModel: NostrHiddenWordsFeedViewModel =
+    val hiddenWordsFeedViewModel: HiddenWordsFeedViewModel =
         viewModel(
-            factory = NostrHiddenWordsFeedViewModel.Factory(accountViewModel.account),
+            factory = HiddenWordsFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val spammerFeedViewModel: NostrSpammerAccountsFeedViewModel =
+    val spammerFeedViewModel: SpammerAccountsFeedViewModel =
         viewModel(
-            factory = NostrSpammerAccountsFeedViewModel.Factory(accountViewModel.account),
+            factory = SpammerAccountsFeedViewModel.Factory(accountViewModel.account),
         )
 
     WatchAccountAndBlockList(accountViewModel = accountViewModel) {
@@ -124,9 +131,9 @@ fun SecurityFiltersScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SecurityFiltersScreen(
-    hiddenFeedViewModel: NostrHiddenAccountsFeedViewModel,
-    hiddenWordsViewModel: NostrHiddenWordsFeedViewModel,
-    spammerFeedViewModel: NostrSpammerAccountsFeedViewModel,
+    hiddenFeedViewModel: HiddenAccountsFeedViewModel,
+    hiddenWordsViewModel: HiddenWordsFeedViewModel,
+    spammerFeedViewModel: SpammerAccountsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -154,35 +161,17 @@ fun SecurityFiltersScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
+        Column(
+            Modifier
+                .padding(it)
+                .fillMaxHeight(),
+        ) {
             val pagerState = rememberPagerState { 3 }
             val coroutineScope = rememberCoroutineScope()
-            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
-            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers.value) }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = warnAboutReports,
-                    onCheckedChange = {
-                        warnAboutReports = it
-                        accountViewModel.updateOptOutOptions(warnAboutReports, filterSpam)
-                    },
-                )
+            HeaderOptions(accountViewModel)
 
-                Text(stringRes(R.string.warn_when_posts_have_reports_from_your_follows))
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = filterSpam,
-                    onCheckedChange = {
-                        filterSpam = it
-                        accountViewModel.updateOptOutOptions(warnAboutReports, filterSpam)
-                    },
-                )
-
-                Text(stringRes(R.string.filter_spam_from_strangers))
-            }
+            HorizontalDivider()
 
             ScrollableTabRow(
                 containerColor = MaterialTheme.colorScheme.background,
@@ -220,8 +209,71 @@ fun SecurityFiltersScreen(
 }
 
 @Composable
+private fun HeaderOptions(accountViewModel: AccountViewModel) {
+    Column(
+        Modifier
+            .padding(top = Size10dp, bottom = Size10dp, start = Size15dp, end = Size15dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = spacedBy(10.dp),
+    ) {
+        SettingsRow(
+            R.string.warn_when_posts_have_reports_from_your_follows_title,
+            R.string.warn_when_posts_have_reports_from_your_follows_explainer,
+        ) {
+            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
+
+            Switch(
+                checked = warnAboutReports,
+                onCheckedChange = {
+                    warnAboutReports = it
+                    accountViewModel.updateWarnReports(warnAboutReports)
+                },
+            )
+        }
+
+        SettingsRow(
+            R.string.filter_spam_from_strangers_title,
+            R.string.filter_spam_from_strangers_explainer,
+        ) {
+            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers.value) }
+
+            Switch(
+                checked = filterSpam,
+                onCheckedChange = {
+                    filterSpam = it
+                    accountViewModel.updateFilterSpam(filterSpam)
+                },
+            )
+        }
+
+        SettingsRow(
+            R.string.show_sensitive_content_title,
+            R.string.show_sensitive_content_explainer,
+        ) {
+            var sensitive by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.showSensitiveContent.value) }
+
+            val selectedItens =
+                persistentListOf(
+                    TitleExplainer(stringRes(WarningType.WARN.resourceId)),
+                    TitleExplainer(stringRes(WarningType.SHOW.resourceId)),
+                    TitleExplainer(stringRes(WarningType.HIDE.resourceId)),
+                )
+
+            TextSpinner(
+                label = "",
+                placeholder = selectedItens[parseWarningType(sensitive).screenCode].title,
+                options = selectedItens,
+                onSelect = {
+                    accountViewModel.updateShowSensitiveContent(parseWarningType(it).prefCode)
+                },
+            )
+        }
+    }
+}
+
+@Composable
 private fun HiddenWordsFeed(
-    hiddenWordsViewModel: NostrHiddenWordsFeedViewModel,
+    hiddenWordsViewModel: HiddenWordsFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
     RefresheableBox(hiddenWordsViewModel, false) {
@@ -283,8 +335,10 @@ fun WatchAccountAndBlockList(
     accountViewModel: AccountViewModel,
     invalidate: () -> Unit,
 ) {
-    val transientSpammers by accountViewModel.account.transientHiddenUsers.collectAsStateWithLifecycle()
-    val blockListState by accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
+    val transientSpammers by accountViewModel.account.hiddenUsers.transientHiddenUsers
+        .collectAsStateWithLifecycle()
+    val blockListState by accountViewModel.account.hiddenUsers.flow
+        .collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, transientSpammers, blockListState) {
         invalidate()
@@ -322,11 +376,7 @@ fun MutedWordActionOptions(
     word: String,
     accountViewModel: AccountViewModel,
 ) {
-    val isMutedWord by
-        accountViewModel.account.liveHiddenUsers
-            .map { word in it.hiddenWords }
-            .distinctUntilChanged()
-            .observeAsState()
+    val isMutedWord by observeAccountIsHiddenWord(accountViewModel.account, word)
 
     if (isMutedWord == true) {
         ShowWordButton {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -36,15 +36,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -61,10 +61,7 @@ fun BadgeCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by likeSetCard.note
-        .live()
-        .metadata
-        .observeAsState()
+    val noteState by observeNote(likeSetCard.note, accountViewModel)
     val note = noteState?.note
 
     val context = LocalContext.current.applicationContext
@@ -87,7 +84,7 @@ fun BadgeCompose(
                         onClick = {
                             routeFor(
                                 note,
-                                accountViewModel.userProfile(),
+                                accountViewModel.account,
                             )?.let { nav.nav(it) }
                         },
                     ),
@@ -132,7 +129,7 @@ fun BadgeCompose(
                     }
 
                     note.replyTo?.firstOrNull()?.let {
-                        BadgeDisplay(baseNote = it)
+                        BadgeDisplay(baseNote = it, accountViewModel)
                     }
                 }
             }

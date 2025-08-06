@@ -68,7 +68,7 @@
     <string name="my_awesome_group">Il mio fantastico gruppo</string>
     <string name="picture_url">Url foto</string>
     <string name="description">Descrizione</string>
-    <string name="about_us">"Su di noi... "</string>
+    <string name="about_us">"Su di noi…"</string>
     <string name="what_s_on_your_mind">A cosa stai pensando?</string>
     <string name="save">Salva</string>
     <string name="create">Crea</string>
@@ -361,8 +361,6 @@
     <string name="are_you_sure_you_want_to_log_out">La disconnessione elimina tutte le tue informazioni locali. Assicurati di avere le tue chiavi private salvate per evitare di perdere il tuo account. Vuoi continuare?</string>
     <string name="followed_tags">Tag Seguiti</string>
     <string name="relay_setup">Relè</string>
-    <string name="discover_live">In diretta</string>
-    <string name="discover_community">Comunità</string>
     <string name="discover_chat">Chat</string>
     <string name="community_approved_posts">Post approvati</string>
     <string name="groups_no_descriptor">Questo gruppo non ha una descrizione o regole. Parla con il proprietario per aggiungerne una</string>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import androidx.compose.runtime.Stable
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
@@ -113,8 +113,8 @@ class AppMetadata {
     fun toJson() = assemble(this)
 
     companion object {
-        fun assemble(data: AppMetadata) = EventMapper.mapper.writeValueAsString(data)
+        fun assemble(data: AppMetadata) = JsonMapper.mapper.writeValueAsString(data)
 
-        fun parse(content: String) = EventMapper.mapper.readValue(content, AppMetadata::class.java)
+        fun parse(content: String) = JsonMapper.mapper.readValue(content, AppMetadata::class.java)
     }
 }

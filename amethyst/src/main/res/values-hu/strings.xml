@@ -217,7 +217,7 @@
         részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára.
         A moderálás az átjátszókon lévő hozzászólások törlésével szabályozható</string>
     <string name="public_chat_relays_title">Átjátszók</string>
-    <string name="public_chat_relays_explainer">Adjon hozzá 1-3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
+    <string name="public_chat_relays_explainer">Adjon hozzá 1–3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
         A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
     <string name="posts_received">fogadott bejegyzések</string>
     <string name="remove">Eltávolítás</string>
@@ -288,7 +288,6 @@
     <string name="quick_action_unfollow">Követés megszüntetése</string>
     <string name="quick_action_follow">Követés</string>
     <string name="quick_action_request_deletion_gallery_title">Törlés a galériából</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Távolítsa el ezt a médiát a galériából, később újra hozzáadhatja</string>
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy a bejegyzését töröljék azokról az átjátszókról, amelyekhez jelenleg csatlakozik. Nem garantálható, hogy a bejegyzése véglegesen törlődik ezekről az átjátszókról, vagy más átjátszókról, ahol esetleg tárolva van.</string>
     <string name="quick_action_block_dialog_btn">Letiltás</string>
@@ -537,10 +536,7 @@
     <string name="are_you_sure_you_want_to_log_out">A kijelentkezéssel törlődik az összes helyben tárolt adat. Győződjön meg arról, hogy a privát kulcsokról biztonsági mentést készített, hogy elkerülje fiókja elvesztését. Szeretné folytatni?</string>
     <string name="followed_tags">Követett címke</string>
     <string name="relay_setup">Átjátszók</string>
-    <string name="discover_content">Bejegyzések felfedezése</string>
     <string name="discover_marketplace">Piac</string>
-    <string name="discover_live">Élő</string>
-    <string name="discover_community">Közösség</string>
     <string name="discover_chat">Csevegések</string>
     <string name="community_approved_posts">Elfogadott bejegyzések</string>
     <string name="groups_no_descriptor">Ennek a csoportnak nincs leírása vagy szabályai. Kérje meg a tulajdonosát, hogy adjon hozzá egyet</string>

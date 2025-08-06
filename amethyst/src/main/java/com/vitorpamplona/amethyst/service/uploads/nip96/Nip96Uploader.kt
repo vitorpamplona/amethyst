@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,7 +27,6 @@ import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -40,19 +39,19 @@ import com.vitorpamplona.quartz.nip96FileStorage.actions.PartialEvent
 import com.vitorpamplona.quartz.nip96FileStorage.actions.UploadResult
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.utils.RandomInstance
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.coroutines.executeAsync
 import okio.BufferedSink
 import okio.source
 import java.io.InputStream
-
-val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-
-fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
 class Nip96Uploader {
     suspend fun upload(
@@ -138,7 +137,7 @@ class Nip96Uploader {
     ): MediaUploadResult {
         checkNotInMainThread()
 
-        val fileName = randomChars()
+        val fileName = RandomInstance.randomChars(16)
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
         val client = okHttpClient(server.apiUrl)
@@ -171,53 +170,54 @@ class Nip96Uploader {
         httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", it.toAuthToken()) }
 
         requestBuilder
-            .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
             .url(server.apiUrl)
             .post(requestBody)
 
         val request = requestBuilder.build()
 
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                response.body.use { body ->
-                    val result = UploadResult.parse(body.string())
-                    if (!result.processingUrl.isNullOrBlank()) {
-                        return waitProcessing(result, server, okHttpClient, onProgress)
-                    } else if (result.status == "success") {
-                        val event = result.nip94Event
-                        if (event != null) {
-                            return convertToMediaResult(event)
+        return client.newCall(request).executeAsync().use { response ->
+            withContext(Dispatchers.IO) {
+                if (response.isSuccessful) {
+                    response.body.use { body ->
+                        val result = UploadResult.parse(body.string())
+                        if (!result.processingUrl.isNullOrBlank()) {
+                            waitProcessing(result, server, okHttpClient, onProgress)
+                        } else if (result.status == "success") {
+                            val event = result.nip94Event
+                            if (event != null) {
+                                convertToMediaResult(event)
+                            } else {
+                                throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
+                            }
                         } else {
                             throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
                         }
-                    } else {
-                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
                     }
-                }
-            } else {
-                val msg = response.body.string()
+                } else {
+                    val msg = response.body.string()
 
-                val errorMessage =
-                    try {
-                        val tree = jacksonObjectMapper().readTree(msg)
-                        val status = tree.get("status")?.asText()
-                        val message = tree.get("message")?.asText()
-                        if (status == "error" && message != null) {
-                            message
-                        } else {
+                    val errorMessage =
+                        try {
+                            val tree = jacksonObjectMapper().readTree(msg)
+                            val status = tree.get("status")?.asText()
+                            val message = tree.get("message")?.asText()
+                            if (status == "error" && message != null) {
+                                message
+                            } else {
+                                null
+                            }
+                        } catch (e: Exception) {
                             null
                         }
-                    } catch (e: Exception) {
-                        null
-                    }
 
-                val explanation = HttpStatusMessages.resourceIdFor(response.code)
-                if (errorMessage != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), errorMessage))
-                } else if (explanation != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), stringRes(context, explanation)))
-                } else {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), response.code.toString()))
+                    val explanation = HttpStatusMessages.resourceIdFor(response.code)
+                    if (errorMessage != null) {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), errorMessage))
+                    } else if (explanation != null) {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), stringRes(context, explanation)))
+                    } else {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), response.code.toString()))
+                    }
                 }
             }
         }
@@ -278,23 +278,22 @@ class Nip96Uploader {
 
         val request =
             requestBuilder
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(server.apiUrl.removeSuffix("/") + "/$hash.$extension")
                 .delete()
                 .build()
 
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                response.body.use { body ->
-                    val result = DeleteResult.parse(body.string())
-                    return result.status == "success"
-                }
-            } else {
-                val explanation = HttpStatusMessages.resourceIdFor(response.code)
-                if (explanation != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+        return client.newCall(request).executeAsync().use { response ->
+            withContext(Dispatchers.IO) {
+                if (response.isSuccessful) {
+                    val result = DeleteResult.parse(response.body.string())
+                    result.status == "success"
                 } else {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                    val explanation = HttpStatusMessages.resourceIdFor(response.code)
+                    if (explanation != null) {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+                    } else {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                    }
                 }
             }
         }
@@ -316,14 +315,15 @@ class Nip96Uploader {
             val request: Request =
                 Request
                     .Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .url(procUrl)
                     .build()
 
             val client = okHttpClient(procUrl)
-            client.newCall(request).execute().use {
-                if (it.isSuccessful) {
-                    it.body.use { currentResult = UploadResult.parse(it.string()) }
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    if (response.isSuccessful) {
+                        currentResult = UploadResult.parse(response.body.string())
+                    }
                 }
             }
 

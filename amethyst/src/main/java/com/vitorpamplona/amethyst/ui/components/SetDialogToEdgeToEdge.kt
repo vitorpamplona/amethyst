@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,27 +23,38 @@ package com.vitorpamplona.amethyst.ui.components
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import com.vitorpamplona.amethyst.ui.theme.isLight
 
 @Composable
 fun SetDialogToEdgeToEdge() {
     val activityWindow = getActivityWindow()
     val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
     val parentView = LocalView.current.parent as View
+    val isLight = MaterialTheme.colorScheme.isLight
+
     SideEffect {
         if (activityWindow != null && dialogWindow != null) {
             val attributes = WindowManager.LayoutParams()
             attributes.copyFrom(activityWindow.attributes)
             attributes.type = dialogWindow.attributes.type
             dialogWindow.attributes = attributes
+            dialogWindow.statusBarColor
             parentView.layoutParams =
                 FrameLayout.LayoutParams(
                     activityWindow.decorView.width,
                     activityWindow.decorView.height,
                 )
+
+            val insets = WindowCompat.getInsetsController(dialogWindow, parentView)
+
+            insets.isAppearanceLightNavigationBars = isLight
+            insets.isAppearanceLightStatusBars = isLight
         }
     }
 }

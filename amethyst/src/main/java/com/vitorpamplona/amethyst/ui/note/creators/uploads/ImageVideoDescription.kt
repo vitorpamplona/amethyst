@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -83,16 +83,34 @@ fun ImageVideoDescription(
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
+    ImageVideoDescription(uris, defaultServer, true, onAdd, onDelete, onCancel, accountViewModel)
+}
+
+@Composable
+fun ImageVideoDescription(
+    uris: MultiOrchestrator,
+    defaultServer: ServerName,
+    includeNIP95: Boolean,
+    onAdd: (String, ServerName, Boolean, Int) -> Unit,
+    onDelete: (SelectedMediaProcessing) -> Unit,
+    onCancel: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
     val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
 
-    val fileServers by accountViewModel.account.liveServerList.collectAsState()
+    val fileServers by accountViewModel.account.serverLists.liveServerList
+        .collectAsState()
 
     val fileServerOptions =
-        remember(fileServers) {
+        remember(fileServers, includeNIP95) {
             fileServers
-                .map {
+                .mapNotNull {
                     if (it.type == ServerType.NIP95) {
-                        TitleExplainer(it.name, nip95description)
+                        if (includeNIP95) {
+                            TitleExplainer(it.name, nip95description)
+                        } else {
+                            null
+                        }
                     } else {
                         TitleExplainer(it.name, it.baseUrl)
                     }

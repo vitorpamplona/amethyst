@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,54 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import android.util.Log
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import kotlin.time.measureTimedValue
+import com.vitorpamplona.amethyst.logTime
 
 abstract class FeedFilter<T> {
     fun loadTop(): List<T> {
-        checkNotInMainThread()
-
-        val (feed, elapsed) = measureTimedValue { feed() }
-
-        Log.d("Time", "${this.javaClass.simpleName} Full Feed in $elapsed with ${feed.size} objects")
+        val feed =
+            logTime(
+                debugMessage = { "${this.javaClass.simpleName} FeedFilter returning ${it.size} objects" },
+                block = ::feed,
+            )
         return feed.take(limit())
     }
 
-    open fun limit() = 1000
+    open fun limit() = 500
 
     /** Returns a string that serves as the key to invalidate the list if it changes. */
-    abstract fun feedKey(): String
+    abstract fun feedKey(): Any
 
     open fun showHiddenKey(): Boolean = false
 
     abstract fun feed(): List<T>
-}
-
-abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
-    abstract fun applyFilter(collection: Set<T>): Set<T>
-
-    abstract fun sort(collection: Set<T>): List<T>
-
-    open fun updateListWith(
-        oldList: List<T>,
-        newItems: Set<T>,
-    ): List<T> {
-        checkNotInMainThread()
-
-        val (feed, elapsed) =
-            measureTimedValue {
-                val newItemsToBeAdded = applyFilter(newItems)
-                if (newItemsToBeAdded.isNotEmpty()) {
-                    val newList = oldList.toSet() + newItemsToBeAdded
-                    sort(newList).take(limit())
-                } else {
-                    oldList
-                }
-            }
-
-        // Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size}
-        // objects")
-        return feed
-    }
 }

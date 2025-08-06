@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,9 +45,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -183,7 +184,7 @@ fun AudioHeader(
     nav: INav,
 ) {
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
-    val waveform = remember { noteEvent.wavefrom() }
+    val waveform = remember { noteEvent.wavefrom()?.let { WaveformData(it.wave) } }
     val content = remember { noteEvent.content.ifBlank { null } }
 
     val defaultBackground = MaterialTheme.colorScheme.background
@@ -236,7 +237,7 @@ fun AudioHeader(
 
             if (noteEvent.hasHashtags()) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    DisplayUncitedHashtags(noteEvent, callbackUri, nav)
+                    DisplayUncitedHashtags(noteEvent, callbackUri, accountViewModel, nav)
                 }
             }
         }

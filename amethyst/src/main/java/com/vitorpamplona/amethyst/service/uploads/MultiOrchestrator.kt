@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,8 +27,8 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
@@ -47,7 +47,6 @@ class MultiOrchestrator(
     fun first() = list.first()
 
     suspend fun upload(
-        scope: CoroutineScope,
         alt: String?,
         contentWarningReason: String?,
         mediaQuality: CompressorQuality,
@@ -55,29 +54,30 @@ class MultiOrchestrator(
         account: Account,
         context: Context,
     ): Result {
-        val jobs =
-            list.map { item ->
-                scope.launch(Dispatchers.IO) {
-                    item.orchestrator.upload(
-                        item.media.uri,
-                        item.media.mimeType,
-                        alt,
-                        contentWarningReason,
-                        mediaQuality,
-                        server,
-                        account,
-                        context,
-                    )
+        coroutineScope {
+            val jobs =
+                list.map { item ->
+                    launch(Dispatchers.IO) {
+                        item.orchestrator.upload(
+                            item.media.uri,
+                            item.media.mimeType,
+                            alt,
+                            contentWarningReason,
+                            mediaQuality,
+                            server,
+                            account,
+                            context,
+                        )
+                    }
                 }
-            }
 
-        jobs.joinAll()
+            jobs.joinAll()
+        }
 
         return computeFinalResults()
     }
 
     suspend fun uploadEncrypted(
-        scope: CoroutineScope,
         alt: String?,
         contentWarningReason: String?,
         mediaQuality: CompressorQuality,
@@ -86,24 +86,25 @@ class MultiOrchestrator(
         account: Account,
         context: Context,
     ): Result {
-        val jobs =
-            list.map { item ->
-                scope.launch(Dispatchers.IO) {
-                    item.orchestrator.uploadEncrypted(
-                        item.media.uri,
-                        item.media.mimeType,
-                        alt,
-                        contentWarningReason,
-                        mediaQuality,
-                        cipher,
-                        server,
-                        account,
-                        context,
-                    )
+        coroutineScope {
+            val jobs =
+                list.map { item ->
+                    launch(Dispatchers.IO) {
+                        item.orchestrator.uploadEncrypted(
+                            item.media.uri,
+                            item.media.mimeType,
+                            alt,
+                            contentWarningReason,
+                            mediaQuality,
+                            cipher,
+                            server,
+                            account,
+                            context,
+                        )
+                    }
                 }
-            }
-
-        jobs.joinAll()
+            jobs.joinAll()
+        }
 
         return computeFinalResults()
     }

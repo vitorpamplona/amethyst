@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,7 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,22 +41,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.NostrUserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -76,14 +76,12 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 @Composable
 fun DrawAdditionalInfo(
     baseUser: User,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val user = remember(userState) { userState?.user } ?: return
-    val tags = userState?.user?.info?.tags
-
+    val userState by observeUser(baseUser, accountViewModel)
+    val user = userState?.user ?: return
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -91,7 +89,7 @@ fun DrawAdditionalInfo(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
             CreateTextWithEmoji(
                 text = it,
-                tags = tags,
+                tags = user.info?.tags ?: EmptyTagList,
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp,
             )
@@ -148,7 +146,7 @@ fun DrawAdditionalInfo(
             onClick = { dialogOpen = true },
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_qrcode),
+                painter = painterRes(R.drawable.ic_qrcode, 1),
                 contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
@@ -188,9 +186,19 @@ fun DrawAdditionalInfo(
         }
     }
 
-    val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
-    val pubkeyHex = remember { baseUser.pubkeyHex }
-    DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
+    val lud16 =
+        remember(userState) {
+            userState
+                ?.user
+                ?.info
+                ?.lud16
+                ?.trim() ?: userState
+                ?.user
+                ?.info
+                ?.lud06
+                ?.trim()
+        }
+    DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
 
     val identities = user.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
@@ -198,7 +206,7 @@ fun DrawAdditionalInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
-                    painter = painterResource(id = getIdentityClaimIcon(identity)),
+                    painter = painterRes(resourceId = getIdentityClaimIcon(identity), getIdentityClaimIconReference(identity)),
                     contentDescription = stringRes(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp),
                 )
@@ -254,4 +262,13 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
         is MastodonIdentity -> R.string.mastodon
         is GitHubIdentity -> R.string.github
         else -> R.drawable.github
+    }
+
+fun getIdentityClaimIconReference(identity: IdentityClaimTag): Int =
+    when (identity) {
+        is TwitterIdentity -> 0
+        is TelegramIdentity -> 0
+        is MastodonIdentity -> 0
+        is GitHubIdentity -> 0
+        else -> 0
     }

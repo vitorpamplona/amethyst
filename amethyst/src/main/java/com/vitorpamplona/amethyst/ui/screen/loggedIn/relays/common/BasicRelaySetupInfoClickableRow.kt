@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,22 +27,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
-import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,7 +50,7 @@ fun BasicRelaySetupInfoClickableRow(
     item: BasicRelaySetupInfo,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
-    onDelete: (BasicRelaySetupInfo) -> Unit,
+    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
@@ -61,7 +61,7 @@ fun BasicRelaySetupInfoClickableRow(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
-                    clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                    clipboardManager.setText(AnnotatedString(item.relay.url))
                 },
             ),
     ) {
@@ -69,18 +69,15 @@ fun BasicRelaySetupInfoClickableRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,
         ) {
-            val iconUrlFromRelayInfoDoc =
-                remember(item) {
-                    Nip11CachedRetriever.getFromCache(item.url)?.icon
-                }
+            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, accountViewModel)
 
             RenderRelayIcon(
-                item.briefInfo.displayUrl,
-                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                iconUrlFromRelayInfoDoc.id ?: item.relay.displayUrl(),
+                iconUrlFromRelayInfoDoc.icon,
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,
-                MaterialTheme.colorScheme.largeRelayIconModifier,
+                LargeRelayIconModifier,
             )
 
             Spacer(modifier = HalfHorzPadding)

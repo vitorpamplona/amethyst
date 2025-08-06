@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,9 +36,10 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -69,6 +69,7 @@ fun ReplyInformationChannel(
         ReplyInformationChannel(
             replyTo,
             sortedMentions,
+            accountViewModel = accountViewModel,
             onUserTagClick = { nav.nav(routeFor(it)) },
         )
         Spacer(modifier = StdVertSpacer)
@@ -81,6 +82,7 @@ fun ReplyInformationChannel(
     replyTo: ImmutableList<Note>?,
     mentions: ImmutableList<User>?,
     prefix: String = "",
+    accountViewModel: AccountViewModel,
     onUserTagClick: (User) -> Unit,
 ) {
     FlowRow {
@@ -93,7 +95,7 @@ fun ReplyInformationChannel(
                 )
 
                 mentions.forEachIndexed { idx, user ->
-                    ReplyInfoMention(user, prefix, onUserTagClick)
+                    ReplyInfoMention(user, prefix, accountViewModel, onUserTagClick)
 
                     if (idx < mentions.size - 2) {
                         Text(
@@ -118,9 +120,10 @@ fun ReplyInformationChannel(
 private fun ReplyInfoMention(
     user: User,
     prefix: String,
+    accountViewModel: AccountViewModel,
     onUserTagClick: (User) -> Unit,
 ) {
-    val innerUserState by user.live().userMetadataInfo.observeAsState()
+    val innerUserState by observeUserInfo(user, accountViewModel)
 
     CreateClickableTextWithEmoji(
         clickablePart = "$prefix${innerUserState?.bestName()}",

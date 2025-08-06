@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -65,7 +65,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -93,27 +92,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReferences
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReposts
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -150,11 +154,11 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -201,7 +205,7 @@ private fun InnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
         one = {
-            WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
+            WatchReactionsZapsBoostsAndDisplayIfExists(baseNote, accountViewModel) {
                 RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
             }
         },
@@ -270,7 +274,7 @@ fun ShareReaction(
                     sendIntent,
                     stringRes(context, R.string.quick_action_share),
                 )
-            ContextCompat.startActivity(context, shareIntent, null)
+            context.startActivity(shareIntent)
         },
     ) {
         ShareIcon(barChartModifier, grayTint)
@@ -344,16 +348,15 @@ fun RenderZapRaiser(
     details: Boolean,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
 
     LaunchedEffect(key1 = zapsState) {
         zapsState?.note?.let {
-            accountViewModel.calculateZapraiser(baseNote) { newStatus ->
-                if (zapraiserStatus != newStatus) {
-                    zapraiserStatus = newStatus
-                }
+            val newStatus = accountViewModel.calculateZapraiser(baseNote)
+            if (zapraiserStatus != newStatus) {
+                zapraiserStatus = newStatus
             }
         }
     }
@@ -392,43 +395,14 @@ fun RenderZapRaiser(
 @Composable
 private fun WatchReactionsZapsBoostsAndDisplayIfExists(
     baseNote: Note,
+    accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val hasReactions by
-        baseNote
-            .live()
-            .hasReactions
-            .observeAsState(
-                baseNote.zaps.isNotEmpty() ||
-                    baseNote.boosts.isNotEmpty() ||
-                    baseNote.reactions.isNotEmpty(),
-            )
+    val hasReactions by observeNoteReferences(baseNote, accountViewModel)
 
     if (hasReactions) {
         content()
     }
-}
-
-fun <T, K, R> LiveData<T>.combineWith(
-    liveData1: LiveData<K>,
-    block: (T?, K?) -> R,
-): LiveData<R> {
-    val result = MediatorLiveData<R>()
-    result.addSource(this) { result.value = block(this.value, liveData1.value) }
-    result.addSource(liveData1) { result.value = block(this.value, liveData1.value) }
-    return result
-}
-
-fun <T, K, P, R> LiveData<T>.combineWith(
-    liveData1: LiveData<K>,
-    liveData2: LiveData<P>,
-    block: (T?, K?, P?) -> R,
-): LiveData<R> {
-    val result = MediatorLiveData<R>()
-    result.addSource(this) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    result.addSource(liveData1) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    result.addSource(liveData2) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    return result
 }
 
 @Composable
@@ -463,15 +437,7 @@ private fun ReactionDetailGallery(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    val hasReactions by
-        baseNote
-            .live()
-            .hasReactions
-            .observeAsState(
-                baseNote.zaps.isNotEmpty() ||
-                    baseNote.boosts.isNotEmpty() ||
-                    baseNote.reactions.isNotEmpty(),
-            )
+    val hasReactions by observeNoteReferences(baseNote, accountViewModel)
 
     if (hasReactions) {
         Row(
@@ -493,7 +459,7 @@ private fun WatchBoostsAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val boostsEvents by baseNote.live().boosts.observeAsState()
+    val boostsEvents by observeNoteReposts(baseNote, accountViewModel)
 
     boostsEvents?.let {
         if (it.note.boosts.isNotEmpty()) {
@@ -512,7 +478,7 @@ private fun WatchReactionsAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
+    val reactionsState by observeNoteReactions(baseNote, accountViewModel)
     val reactionEvents = reactionsState?.note?.reactions ?: return
 
     if (reactionEvents.isNotEmpty()) {
@@ -535,7 +501,7 @@ private fun WatchZapAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     var zapEvents by
         remember(zapsState) {
@@ -588,8 +554,7 @@ private fun BoostWithDialog(
                 val forkEvent = baseNote.event
                 val replyTo =
                     if (forkEvent is BaseThreadedEvent) {
-                        val hex = forkEvent.replyingTo()
-                        baseNote.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
+                        baseNote.replyTo?.firstOrNull { it.event?.id == forkEvent.replyingTo() }
                     } else {
                         null
                     }
@@ -616,36 +581,37 @@ private fun ReplyReactionWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ReplyReaction(baseNote, grayTint, accountViewModel) {
-        val noteEvent = baseNote.event
-        if (noteEvent is PrivateDmEvent) {
-            nav.nav {
-                routeToMessage(
-                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
-                    draftMessage = null,
-                    replyId = noteEvent.id,
-                    draftId = null,
-                    accountViewModel = accountViewModel,
-                )
-            }
-        } else if (noteEvent is ChatroomKeyable) {
-            nav.nav {
-                routeToMessage(
-                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
-                    draftMessage = null,
-                    replyId = noteEvent.id,
-                    draftId = null,
-                    accountViewModel = accountViewModel,
-                )
-            }
-        } else {
-            nav.nav {
-                Route.NewPost(
-                    baseReplyTo = baseNote.idHex,
-                    quote = null,
-                )
-            }
+    if (baseNote.event is BaseVoiceEvent) {
+        ReplyViaVoiceReaction(baseNote, grayTint, accountViewModel)
+    } else {
+        ReplyReaction(baseNote, grayTint, accountViewModel) {
+            nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
         }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun ReplyViaVoiceReaction(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    showCounter: Boolean = true,
+    iconSizeModifier: Modifier = Size19Modifier,
+) {
+    val context = LocalContext.current
+
+    RecordAudioBox(
+        modifier = iconSizeModifier,
+        onRecordTaken = { audio ->
+            accountViewModel.sendVoiceReply(baseNote, audio, context)
+        },
+    ) {
+        VoiceReplyIcon(iconSizeModifier, grayTint)
+    }
+
+    if (showCounter) {
+        ReplyCounter(baseNote, grayTint, accountViewModel)
     }
 }
 
@@ -692,7 +658,7 @@ fun ReplyCounter(
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val repliesState by baseNote.live().replyCount.observeAsState(baseNote.replies.size)
+    val repliesState by observeNoteReplyCount(baseNote, accountViewModel)
 
     SlidingAnimationCount(repliesState, textColor, accountViewModel)
 }
@@ -827,16 +793,7 @@ fun ObserveBoostIcon(
     accountViewModel: AccountViewModel,
     inner: @Composable (Boolean) -> Unit,
 ) {
-    val hasBoosted by
-        remember(baseNote) {
-            baseNote
-                .live()
-                .boosts
-                .map { it.note.isBoostedBy(accountViewModel.userProfile()) }
-                .distinctUntilChanged()
-        }.observeAsState(
-            baseNote.isBoostedBy(accountViewModel.userProfile()),
-        )
+    val hasBoosted by observeNoteRepostsBy(baseNote, accountViewModel.userProfile(), accountViewModel)
 
     inner(hasBoosted)
 }
@@ -847,7 +804,7 @@ fun BoostText(
     grayTint: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val boostState by baseNote.live().boostCount.observeAsState(baseNote.boosts.size)
+    val boostState by observeNoteRepostCount(baseNote, accountViewModel)
 
     SlidingAnimationCount(boostState, grayTint, accountViewModel)
 }
@@ -908,7 +865,7 @@ fun LikeReaction(
         }
     }
 
-    ObserveLikeText(baseNote) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
+    ObserveLikeText(baseNote, accountViewModel) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
 }
 
 @Composable
@@ -917,7 +874,7 @@ fun ObserveLikeIcon(
     accountViewModel: AccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
+    val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val reactionType by
@@ -972,9 +929,10 @@ private fun RenderReactionType(
 @Composable
 fun ObserveLikeText(
     baseNote: Note,
+    accountViewModel: AccountViewModel,
     inner: @Composable (Int) -> Unit,
 ) {
-    val reactionCount by baseNote.live().reactionCount.observeAsState(0)
+    val reactionCount by observeNoteReactionCount(baseNote, accountViewModel)
 
     inner(reactionCount)
 }
@@ -1142,13 +1100,14 @@ fun ZapReaction(
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
             Spacer(ModifierWidth3dp)
 
+            val animatedProgress by animateFloatAsState(
+                targetValue = zappingProgress,
+                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                label = "ZapIconIndicator",
+            )
+
             CircularProgressIndicator(
-                progress =
-                    animateFloatAsState(
-                        targetValue = zappingProgress,
-                        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                        label = "ZapIconIndicator",
-                    ).value,
+                progress = { animatedProgress },
                 modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp,
             )
@@ -1227,7 +1186,13 @@ fun ObserveZapIcon(
     val wasZappedByLoggedInUser = remember { mutableStateOf(false) }
 
     if (!wasZappedByLoggedInUser.value) {
-        val zapsState by baseNote.live().zaps.observeAsState()
+        val zapsState by observeNoteZaps(baseNote, accountViewModel)
+
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
 
         LaunchedEffect(key1 = zapsState) {
             if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
@@ -1249,17 +1214,22 @@ fun ObserveZapAmountText(
     accountViewModel: AccountViewModel,
     inner: @Composable (String) -> Unit,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
+
         @Suppress("ProduceStateDoesNotAssignValue")
         val zapAmountTxt by
             produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
                 zapsState?.note?.let {
-                    accountViewModel.calculateZapAmount(it) { newZapAmount ->
-                        if (value != newZapAmount) {
-                            value = newZapAmount
-                        }
+                    val newZapAmount = accountViewModel.calculateZapAmount(it)
+                    if (value != newZapAmount) {
+                        value = newZapAmount
                     }
                 }
             }
@@ -1417,7 +1387,7 @@ fun ReactionChoicePopup(
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
     val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
-    val toRemove = remember { baseNote.reactedBy(accountViewModel.userProfile()).toImmutableSet() }
+    val toRemove = remember { baseNote.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet() }
 
     Popup(
         alignment = Alignment.BottomCenter,

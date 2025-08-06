@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.experimental.medical
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent.Companion.ALT
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -47,7 +46,7 @@ class FhirResourceEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<FhirResourceEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, fhirPayload, createdAt) {
-            alt(ALT)
+            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

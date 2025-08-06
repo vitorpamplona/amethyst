@@ -69,7 +69,7 @@
     <string name="my_awesome_group">Grupku yang Hebat</string>
     <string name="picture_url">Alamat Url Gambar</string>
     <string name="description">Deskripsi</string>
-    <string name="about_us">"Tentang kami.. "</string>
+    <string name="about_us">"Tentang kami…"</string>
     <string name="what_s_on_your_mind">Apa yang anda pikirkan?</string>
     <string name="post">Kirim</string>
     <string name="save">Simpan</string>
@@ -375,8 +375,6 @@
     <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi lokal Anda. Pastikan kunci pribadi Anda dicadangkan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
     <string name="followed_tags">Tags yg diikuti</string>
     <string name="relay_setup">Relai</string>
-    <string name="discover_live">Siaran Langsung</string>
-    <string name="discover_community">Komunitas</string>
     <string name="discover_chat">Percakapan</string>
     <string name="community_approved_posts">Kiriman yg disetujui</string>
     <string name="groups_no_descriptor">Grup ini tidak memiliki deskripsi atau aturan. Bicaralah dengan pemiliknya untuk menambahkannya</string>

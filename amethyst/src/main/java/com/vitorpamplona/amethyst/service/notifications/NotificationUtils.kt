@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,9 +26,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
-import android.net.Uri
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.executeBlocking
@@ -201,7 +201,7 @@ object NotificationUtils {
         }
 
         val contentIntent =
-            Intent(applicationContext, MainActivity::class.java).apply { data = Uri.parse(uri) }
+            Intent(applicationContext, MainActivity::class.java).apply { data = uri.toUri() }
 
         val contentPendingIntent =
             PendingIntent.getActivity(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 
 interface MutableMediaAspectRatioCache {
-    fun get(url: String): Float
+    fun get(url: String): Float?
 
     fun add(
         url: String,
@@ -35,7 +35,7 @@ interface MutableMediaAspectRatioCache {
 object MediaAspectRatioCache : MutableMediaAspectRatioCache {
     val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
 
-    override fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
+    override fun get(url: String): Float? = mediaAspectRatioCacheByUrl.get(url)
 
     override fun add(
         url: String,

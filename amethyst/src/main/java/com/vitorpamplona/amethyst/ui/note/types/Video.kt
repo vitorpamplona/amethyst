@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -41,18 +41,19 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -131,15 +132,19 @@ fun VideoDisplay(
                     modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
                 ) {
                     image?.let {
-                        AsyncImage(
-                            model = it,
+                        MyAsyncImage(
+                            imageUrl = it,
                             contentDescription =
                                 stringRes(
                                     R.string.preview_card_image_for,
                                     it,
                                 ),
                             contentScale = ContentScale.FillWidth,
-                            modifier = MaterialTheme.colorScheme.imageModifier,
+                            mainImageModifier = Modifier,
+                            loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                            accountViewModel = accountViewModel,
+                            onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
+                            onError = { DefaultImageHeader(note, accountViewModel) },
                         )
                     } ?: run {
                         DefaultImageHeader(note, accountViewModel)
@@ -186,7 +191,7 @@ fun VideoDisplay(
                     Row(
                         Modifier.fillMaxWidth(),
                     ) {
-                        DisplayUncitedHashtags(event, summary, callbackUri, nav)
+                        DisplayUncitedHashtags(event, summary, callbackUri, accountViewModel, nav)
                     }
                 }
             }

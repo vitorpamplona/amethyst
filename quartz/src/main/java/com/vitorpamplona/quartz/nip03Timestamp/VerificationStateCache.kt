@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,21 +27,32 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class VerificationStateCache {
     private val cache = LruCache<HexKey, VerificationState>(200)
 
+    fun verify(
+        event: OtsEvent,
+        resolverBuilder: OtsResolverBuilder,
+    ): VerificationState {
+        cache.put(event.id, VerificationState.Verifying)
+        return event.verifyState(resolverBuilder.build()).also { cache.put(event.id, it) }
+    }
+
     fun cacheVerify(
         event: OtsEvent,
-        resolverBuilder: () -> OtsResolver,
+        resolverBuilder: OtsResolverBuilder,
     ): VerificationState =
         when (val verif = cache[event.id]) {
+            is VerificationState.Verifying -> verif
             is VerificationState.Verified -> verif
             is VerificationState.NetworkError -> {
                 // try again in 5 mins
                 if (verif.time < TimeUtils.fiveMinutesAgo()) {
-                    event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
+                    event.verifyState(resolverBuilder.build()).also { cache.put(event.id, it) }
                 } else {
-                    verif
+                    verify(event, resolverBuilder)
                 }
             }
             is VerificationState.Error -> verif
-            else -> event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
+            else -> {
+                verify(event, resolverBuilder)
+            }
         }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,21 +27,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -51,18 +51,26 @@ fun DrawBanner(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val banner = remember(userState) { userState?.user?.info?.banner }
+    val banner by observeUserBanner(baseUser, accountViewModel)
 
-    val clipboardManager = LocalClipboardManager.current
-    var zoomImageDialogOpen by remember { mutableStateOf(false) }
+    DrawBanner(banner, accountViewModel)
+}
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DrawBanner(
+    banner: String?,
+    accountViewModel: AccountViewModel,
+) {
     if (!banner.isNullOrBlank()) {
+        val clipboardManager = LocalClipboardManager.current
+        var zoomImageDialogOpen by remember { mutableStateOf(false) }
+
         AsyncImage(
             model = banner,
             contentDescription = stringRes(id = R.string.profile_image),
             contentScale = ContentScale.FillWidth,
-            placeholder = painterResource(R.drawable.profile_banner),
+            placeholder = painterRes(R.drawable.profile_banner, 1),
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -82,7 +90,7 @@ fun DrawBanner(
         }
     } else {
         Image(
-            painter = painterResource(R.drawable.profile_banner),
+            painter = painterRes(R.drawable.profile_banner, 2),
             contentDescription = stringRes(id = R.string.profile_banner),
             contentScale = ContentScale.FillWidth,
             modifier =

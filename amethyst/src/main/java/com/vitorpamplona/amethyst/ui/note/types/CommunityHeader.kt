@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,10 +51,12 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -100,7 +101,7 @@ fun RenderCommunity(
         Row(
             MaterialTheme.colorScheme.innerPostModifier
                 .clickable {
-                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) }
+                    routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) }
                 }.padding(Size10dp),
         ) {
             ShortCommunityHeader(
@@ -119,19 +120,17 @@ fun LongCommunityHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent =
-        remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
     Row(
         lineModifier,
     ) {
         val rulesLabel = stringRes(id = R.string.rules)
         val summary =
-            remember(noteState) {
-                val subject = noteEvent.subject()?.ifEmpty { null }
-                val body = noteEvent.description()?.ifBlank { null }
-                val rules = noteEvent.rules()?.ifBlank { null }
+            remember(noteEvent) {
+                val subject = noteEvent?.subject()?.ifEmpty { null }
+                val body = noteEvent?.description()?.ifBlank { null }
+                val rules = noteEvent?.rules()?.ifBlank { null }
 
                 if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
                     if (rules == null) {
@@ -167,12 +166,15 @@ fun LongCommunityHeader(
                 )
             }
 
-            if (summary != null && noteEvent.hasHashtags()) {
-                DisplayUncitedHashtags(
-                    event = noteEvent,
-                    content = summary,
-                    nav = nav,
-                )
+            noteEvent?.let {
+                if (it.hasHashtags()) {
+                    DisplayUncitedHashtags(
+                        event = it,
+                        content = summary ?: "",
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         }
 
@@ -195,7 +197,7 @@ fun LongCommunityHeader(
             modifier = Modifier.width(75.dp),
         )
         Spacer(DoubleHorzSpacer)
-        NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
+        NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
         Spacer(DoubleHorzSpacer)
         NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
     }
@@ -207,14 +209,12 @@ fun LongCommunityHeader(
             )
         }
 
-    LaunchedEffect(key1 = noteState) {
-        val participants = (noteState?.note?.event as? CommunityDefinitionEvent)?.moderators()
+    LaunchedEffect(key1 = noteEvent) {
+        val participants = noteEvent?.moderators()
 
         if (participants != null) {
             accountViewModel.loadParticipants(participants) { newParticipantUsers ->
-                if (
-                    newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
-                ) {
+                if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
                     participantUsers = newParticipantUsers
                 }
             }
@@ -228,7 +228,10 @@ fun LongCommunityHeader(
         ) {
             it.first.role?.let { it1 ->
                 Text(
-                    text = it1.capitalize(Locale.ROOT),
+                    text =
+                        it1.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                        },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(75.dp),
@@ -263,12 +266,10 @@ fun ShortCommunityHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent =
-        remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        noteEvent.image()?.let {
+        noteEvent?.image()?.let {
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
                 model = it.imageUrl,
@@ -290,7 +291,7 @@ fun ShortCommunityHeader(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = remember(noteState) { noteEvent.dTag() },
+                    text = noteEvent?.name() ?: baseNote.dTag(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -361,9 +362,10 @@ fun WatchAddressableNoteFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
+    val state by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
 
-    onFollowChanges(state.addresses.contains(note.idHex))
+    onFollowChanges(state.communities.contains(note.idHex))
 }
 
 @Composable
@@ -372,11 +374,13 @@ fun JoinCommunityButton(
     note: AddressableNote,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(note) } },
+        onClick = {
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.follow(note)
+            }
+        },
         shape = ButtonBorder,
         colors =
             ButtonDefaults.buttonColors(

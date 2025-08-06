@@ -96,7 +96,7 @@
     <string name="my_awesome_group">Mijn geweldige groep</string>
     <string name="picture_url">Afbeelding URL</string>
     <string name="description">Omschrijving</string>
-    <string name="about_us">"Over ons.. "</string>
+    <string name="about_us">"Over ons…"</string>
     <string name="what_s_on_your_mind">Waar denk je aan?</string>
     <string name="post">Verzenden</string>
     <string name="save">Opslaan</string>
@@ -281,7 +281,6 @@
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het terug zien in je feed.</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
@@ -300,7 +299,7 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokkeer & verberg gebruiker]]></string>
     <string name="report_dialog_report_btn">Misbruik melden</string>
     <string name="report_dialog_reminder_public">Alle geplaatste rapporteringen zijn openbaar.</string>
-    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering...</string>
+    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering…</string>
     <string name="report_dialog_additional_reason_label">Extra context</string>
     <string name="report_dialog_select_reason_label">Reden</string>
     <string name="report_dialog_select_reason_placeholder">Selecteer een reden…</string>
@@ -333,7 +332,7 @@
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
-    <string name="poll_consensus_threshold_percent">(0-100)%</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Sluit na</string>
     <string name="poll_closing_time_days">dagen</string>
     <string name="poll_unable_to_vote">Kan niet stemmen</string>
@@ -530,10 +529,7 @@
     <string name="are_you_sure_you_want_to_log_out">Uitloggen verwijdert al je lokale informatie. Zorg ervoor dat je een back-up hebt van je geheime sleutels om te voorkomen dat je je account kwijtraakt. Wilt u doorgaan?</string>
     <string name="followed_tags">Gevolgde tags</string>
     <string name="relay_setup">Relays</string>
-    <string name="discover_content">Note ontdekking</string>
     <string name="discover_marketplace">Marktplaats</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Community</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Goedgekeurde berichten</string>
     <string name="groups_no_descriptor">Deze groep heeft geen beschrijving of regels. Praat met de eigenaar om er een toe te voegen</string>
@@ -863,7 +859,7 @@
     <string name="edit_post">Bericht wijzigen</string>
     <string name="proposal_to_edit">Voorstel om een bericht te verbeteren</string>
     <string name="message_to_author">Samenvatting van wijzigingen</string>
-    <string name="message_to_author_placeholder">Snelle oplossingen...</string>
+    <string name="message_to_author_placeholder">Snelle oplossingen…</string>
     <string name="accept_the_suggestion">Accepteer de suggestie</string>
     <string name="accessibility_download_for_offline">Downloaden</string>
     <string name="accessibility_lyrics_on">Songteksten aan</string>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -34,12 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollOption(
-    pollViewModel: NewPostViewModel,
+    pollViewModel: ShortNotePostViewModel,
     optionIndex: Int,
 ) {
     Row {
@@ -85,8 +87,9 @@ fun NewPollOption(
     }
 }
 
+@SuppressLint("ViewModelConstructorInComposable")
 @Preview
 @Composable
 fun NewPollOptionPreview() {
-    NewPollOption(NewPostViewModel(), 0)
+    NewPollOption(ShortNotePostViewModel(), 0)
 }

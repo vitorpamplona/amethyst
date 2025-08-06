@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,27 +20,49 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilderFactory
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 
 class OkHttpWebSocket(
-    val url: String,
-    val forceProxy: Boolean,
-    val httpClient: (url: String, forceProxy: Boolean) -> OkHttpClient,
+    val url: NormalizedRelayUrl,
+    val httpClient: (url: NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
 ) : WebSocket {
     private val listener = OkHttpWebsocketListener()
+    private var usingOkHttp: OkHttpClient? = null
     private var socket: okhttp3.WebSocket? = null
 
-    fun buildRequest() = Request.Builder().url(url.trim()).build()
+    fun buildRequest() = Request.Builder().url(url.url).build()
+
+    override fun needsReconnect(): Boolean {
+        val myUsingOkHttp = usingOkHttp
+        if (myUsingOkHttp == null) return true
+
+        val currentOkHttp = httpClient(url)
+
+        val usingProxy = myUsingOkHttp.proxy
+        val currentProxy = currentOkHttp.proxy
+
+        if (usingProxy != null && currentProxy != null && usingProxy != currentProxy) return true
+        if (usingProxy == null && currentProxy != null) return true
+        if (usingProxy != null && currentProxy == null) return true
+
+        if (currentOkHttp.readTimeoutMillis != myUsingOkHttp.readTimeoutMillis) return true
+        if (currentOkHttp.writeTimeoutMillis != myUsingOkHttp.writeTimeoutMillis) return true
+        if (currentOkHttp.connectTimeoutMillis != myUsingOkHttp.connectTimeoutMillis) return true
+        if (currentOkHttp.callTimeoutMillis != myUsingOkHttp.callTimeoutMillis) return true
+
+        return false
+    }
 
     override fun connect() {
-        socket = httpClient(url, forceProxy).newWebSocket(buildRequest(), listener)
+        usingOkHttp = httpClient(url)
+        socket = usingOkHttp?.newWebSocket(buildRequest(), listener)
     }
 
     inner class OkHttpWebsocketListener : okhttp3.WebSocketListener() {
@@ -49,7 +71,7 @@ class OkHttpWebSocket(
             response: Response,
         ) = out.onOpen(
             response.receivedResponseAtMillis - response.sentRequestAtMillis,
-            response.headers.get("Sec-WebSocket-Extensions")?.contains("permessage-deflate") ?: false,
+            response.headers["Sec-WebSocket-Extensions"]?.contains("permessage-deflate") ?: false,
         )
 
         override fun onMessage(
@@ -73,30 +95,21 @@ class OkHttpWebSocket(
             webSocket: okhttp3.WebSocket,
             t: Throwable,
             response: Response?,
-        ) = out.onFailure(t, response?.message)
+        ) = out.onFailure(t, response?.code, response?.message)
     }
 
     class Builder(
-        val forceProxy: Boolean,
-        val httpClient: (String, Boolean) -> OkHttpClient,
+        val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     ) : WebsocketBuilder {
         // Called when connecting.
         override fun build(
-            url: String,
+            url: NormalizedRelayUrl,
             out: WebSocketListener,
-        ) = OkHttpWebSocket(url, forceProxy, httpClient, out)
+        ) = OkHttpWebSocket(url, httpClient, out)
     }
 
-    class BuilderFactory(
-        val httpClient: (String, Boolean) -> OkHttpClient,
-    ) : WebsocketBuilderFactory {
-        override fun build(
-            url: String,
-            forceProxy: Boolean,
-        ) = Builder(forceProxy, httpClient)
-    }
-
-    override fun cancel() {
+    override fun disconnect() {
+        // uses cancel to kill the SEND stack that might be waiting
         socket?.cancel()
     }
 

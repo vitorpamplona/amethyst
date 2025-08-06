@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,10 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.PollNote
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -76,7 +77,7 @@ fun RenderPoll(
                 val replyingTo = noteEvent.replyingToAddressOrEvent()
                 if (replyingTo != null) {
                     val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                    if (newNote != null && newNote.channelHex() == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
+                    if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
                         newNote
                     } else {
                         note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
@@ -129,7 +130,7 @@ fun RenderPoll(
         }
 
         if (noteEvent.hasHashtags()) {
-            DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
+            DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
         }
     }
 }

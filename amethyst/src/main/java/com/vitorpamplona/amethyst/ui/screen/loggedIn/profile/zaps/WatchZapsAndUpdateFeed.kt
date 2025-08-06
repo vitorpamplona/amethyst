@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,15 +23,18 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserZaps
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
 
 @Composable
 fun WatchZapsAndUpdateFeed(
     baseUser: User,
-    feedViewModel: NostrUserProfileZapsFeedViewModel,
+    feedViewModel: UserProfileZapsFeedViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-    val userState by baseUser.live().zaps.observeAsState()
+    val userState by observeUserZaps(baseUser, accountViewModel)
 
     LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }

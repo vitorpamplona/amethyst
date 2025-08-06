@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -42,7 +42,7 @@ class ImageDownloader {
             var imageData: Blob? = null
             var tentatives = 0
 
-            // Servers are usually not ready.. so tries to download it for 15 times/seconds.
+            // Servers are usually not ready, so tries to download it for 15 times/seconds.
             while (imageData == null && tentatives < 15) {
                 imageData =
                     try {

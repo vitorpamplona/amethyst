@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,16 +29,16 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
-fun PollField(postViewModel: NewPostViewModel) {
+fun PollField(postViewModel: ShortNotePostViewModel) {
     val optionsList = postViewModel.pollOptions
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -65,7 +65,7 @@ fun PollField(postViewModel: NewPostViewModel) {
                 ),
         ) {
             Image(
-                painterResource(id = android.R.drawable.ic_input_add),
+                painter = painterRes(resourceId = android.R.drawable.ic_input_add, 1),
                 contentDescription = "Add poll option button",
                 modifier = Size18Modifier,
             )

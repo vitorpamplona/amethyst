@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip70ProtectedEvts.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -28,14 +29,14 @@ class ProtectedTag {
         const val TAG_NAME = "-"
 
         @JvmStatic
-        fun match(tag: Array<String>): Boolean {
+        fun match(tag: Tag): Boolean {
             ensure(tag.has(0)) { return false }
             ensure(tag[0] == TAG_NAME) { return false }
             return true
         }
 
         @JvmStatic
-        fun parse(tag: Array<String>): Boolean? {
+        fun parse(tag: Tag): Boolean? {
             ensure(tag.has(0)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             return true

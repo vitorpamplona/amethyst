@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,13 +26,12 @@ import java.util.UUID
 class BunkerResponseEvent(
     id: String = UUID.randomUUID().toString(),
     val event: Event,
-) : com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse(id, event.toJson(), null) {
+) : BunkerResponse(id, event.toJson(), null) {
     companion object {
         fun parse(
             id: String,
             result: String,
             error: String? = null,
-        ) = com.vitorpamplona.quartz.nip46RemoteSigner
-            .BunkerResponseEvent(id, Event.fromJson(result))
+        ) = BunkerResponseEvent(id, Event.fromJson(result))
     }
 }

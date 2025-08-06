@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,19 +20,28 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class EventTemplate<T : Event>(
+    @JsonProperty("created_at")
     val createdAt: Long,
     val kind: Int,
     val tags: TagArray,
     val content: String,
-)
+) {
+    fun toJson(): String = JsonMapper.mapper.writeValueAsString(this)
+
+    companion object {
+        fun fromJson(json: String): EventTemplate<Event> = EventTemplateManualDeserializer.fromJson(JsonMapper.mapper.readTree(json))
+    }
+}
 
 inline fun <T : Event> eventTemplate(
     kind: Int,

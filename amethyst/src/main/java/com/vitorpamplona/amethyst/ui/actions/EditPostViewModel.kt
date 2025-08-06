@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -44,10 +43,13 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -120,18 +122,21 @@ open class EditPostViewModel : ViewModel() {
         editedFromNote = edit
     }
 
-    fun sendPost(relayList: List<RelaySetupInfo>) {
-        viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList) }
+    fun sendPost() {
+        viewModelScope.launch(Dispatchers.IO) { innerSendPost() }
     }
 
-    suspend fun innerSendPost(relayList: List<RelaySetupInfo>) {
+    suspend fun innerSendPost() {
         if (accountViewModel == null) {
             cancel()
             return
         }
 
+        val extraNotesToBroadcast = mutableListOf<Event>()
+
         nip95attachments.forEach {
-            account?.sendNip95(it.first, it.second, relayList)
+            extraNotesToBroadcast.add(it.first)
+            extraNotesToBroadcast.add(it.second)
         }
 
         val notify =
@@ -147,7 +152,7 @@ open class EditPostViewModel : ViewModel() {
             originalNote = editedFromNote!!,
             notify = notify,
             summary = subject.text.ifBlank { null },
-            relayList = relayList,
+            extraNotesToBroadcast,
         )
 
         cancel()
@@ -165,6 +170,23 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         context: Context,
+    ) = try {
+        uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        alt: String?,
+        sensitiveContent: Boolean,
+        mediaQuality: Int,
+        isPrivate: Boolean = false,
+        server: ServerName,
+        onError: (String, String) -> Unit,
+        context: Context,
     ) {
         viewModelScope.launch {
             val myAccount = account ?: return@launch
@@ -174,7 +196,6 @@ open class EditPostViewModel : ViewModel() {
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     alt,
                     if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQuality),
@@ -186,21 +207,21 @@ open class EditPostViewModel : ViewModel() {
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(
-                            state.result.bytes,
-                            headerInfo = state.result.fileHeader,
-                            alt,
-                            if (sensitiveContent) "" else null,
-                        ) { nip95 ->
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val nip95 =
+                            myAccount.createNip95(
+                                byteArray = state.result.bytes,
+                                headerInfo = state.result.fileHeader,
+                                alt = alt,
+                                contentWarningReason = if (sensitiveContent) "" else null,
+                            )
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            }
-
-                            urlPreview = findUrlInMessage()
+                        note?.let {
+                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
                         }
+
+                        urlPreview = findUrlInMessage()
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
                             IMetaTagBuilder(state.result.url)
@@ -251,8 +272,6 @@ open class EditPostViewModel : ViewModel() {
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
-
-        NostrSearchEventOrUserDataSource.clear()
     }
 
     open fun findUrlInMessage(): String? =

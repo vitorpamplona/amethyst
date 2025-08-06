@@ -1,5 +1,7 @@
 package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
+import android.annotation.SuppressLint;
+
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -32,6 +34,7 @@ public class VerifyResult implements Comparable<VerifyResult> {
         String pattern = "yyyy-MM-dd z";
         Locale locale = new Locale("en", "UK");
         DateFormatSymbols dateFormatSymbols = new DateFormatSymbols(locale);
+        @SuppressLint("SimpleDateFormat")
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern, dateFormatSymbols);
         String string = simpleDateFormat.format(new Date(timestamp * 1000));
 

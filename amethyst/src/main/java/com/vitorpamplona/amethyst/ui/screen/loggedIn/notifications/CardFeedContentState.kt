@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,6 +25,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -33,9 +34,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -57,7 +58,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.time.measureTimedValue
 
 @Stable
 class CardFeedContentState(
@@ -72,9 +72,11 @@ class CardFeedContentState(
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    private var lastFeedKey: String? = null
+    private var lastFeedKey: Any? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
+    val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
 
     fun sendToTop() {
         if (scrolltoTopPending) return
@@ -89,6 +91,8 @@ class CardFeedContentState(
 
     private var lastAccount: Account? = null
     private var lastNotes: Set<Note>? = null
+
+    fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
@@ -300,6 +304,13 @@ class CardFeedContentState(
     }
 
     private fun updateFeed(notes: ImmutableList<Card>) {
+        if (notes.size >= localFilter.limit()) {
+            val lastNomeTime = notes.lastOrNull()?.createdAt()
+            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull()?.createdAt())
+            }
+        }
+
         val currentState = _feedContent.value
         if (notes.isEmpty()) {
             _feedContent.tryEmit(CardFeedState.Empty)
@@ -363,8 +374,7 @@ class CardFeedContentState(
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
-            val (value, elapsed) = measureTimedValue { refreshSuspended() }
-            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+            logTime("${this.javaClass.simpleName} Card update") { refreshSuspended() }
         }
     }
 
@@ -373,12 +383,10 @@ class CardFeedContentState(
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
-            val (value, elapsed) =
-                measureTimedValue {
-                    refreshSuspended()
-                    sendToTop()
-                }
-            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+            logTime("${this.javaClass.simpleName} Card update") {
+                refreshSuspended()
+                sendToTop()
+            }
         }
     }
 
@@ -388,12 +396,10 @@ class CardFeedContentState(
             bundler.invalidate(false) {
                 // adds the time to perform the refresh into this delay
                 // holding off new updates in case of heavy refresh routines.
-                val (value, elapsed) =
-                    measureTimedValue {
-                        refreshSuspended()
-                        sendToTop()
-                    }
-                Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+                logTime("${this.javaClass.simpleName} Card update: checkKeysInvalidateDataAndSendToTop") {
+                    refreshSuspended()
+                    sendToTop()
+                }
             }
         }
     }
@@ -401,16 +407,11 @@ class CardFeedContentState(
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
             val newObjects = it.flatten().toSet()
-            val (value, elapsed) =
-                measureTimedValue {
-                    if (newObjects.isNotEmpty()) {
-                        refreshFromOldState(newObjects)
-                    }
+            logTime("${this.javaClass.simpleName} Card additive receiving ${newObjects.size} items into ${it.size} items") {
+                if (newObjects.isNotEmpty()) {
+                    refreshFromOldState(newObjects)
                 }
-            Log.d(
-                "Time",
-                "${this.javaClass.simpleName} Card additive update $elapsed. ${newObjects.size}",
-            )
+            }
         }
     }
 

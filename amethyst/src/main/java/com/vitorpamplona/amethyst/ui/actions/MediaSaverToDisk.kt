@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,19 +27,19 @@ import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.PICTURES_SUBDIRECTORY
 import kotlinx.coroutines.CancellationException
-import okhttp3.Call
-import okhttp3.Callback
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
+import okhttp3.coroutines.executeAsync
 import okio.BufferedSource
-import okio.IOException
 import okio.buffer
 import okio.sink
 import okio.source
@@ -47,16 +47,16 @@ import java.io.File
 import java.util.UUID
 
 object MediaSaverToDisk {
-    fun saveDownloadingIfNeeded(
+    suspend fun saveDownloadingIfNeeded(
         videoUri: String?,
         okHttpClient: (String) -> OkHttpClient,
         mimeType: String?,
         localContext: Context,
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
-    ) {
+    ) = withContext(Dispatchers.IO) {
         when {
-            videoUri.isNullOrBlank() -> return
+            videoUri.isNullOrBlank() -> return@withContext
             videoUri.startsWith("file") ->
                 save(
                     localFile = videoUri.toUri().toFile(),
@@ -82,7 +82,7 @@ object MediaSaverToDisk {
      *
      * @see PICTURES_SUBDIRECTORY
      */
-    fun downloadAndSave(
+    suspend fun downloadAndSave(
         url: String,
         mimeType: String?,
         okHttpClient: (String) -> OkHttpClient,
@@ -91,67 +91,50 @@ object MediaSaverToDisk {
         onError: (Throwable) -> Any?,
     ) {
         val client = okHttpClient(url)
-
         val request =
             Request
                 .Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .get()
                 .url(url)
                 .build()
 
-        client
-            .newCall(request)
-            .enqueue(
-                object : Callback {
-                    override fun onFailure(
-                        call: Call,
-                        e: IOException,
-                    ) {
-                        e.printStackTrace()
-                        onError(e)
-                    }
+        try {
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    check(response.isSuccessful)
 
-                    override fun onResponse(
-                        call: Call,
-                        response: Response,
-                    ) {
-                        try {
-                            check(response.isSuccessful)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val contentType = response.header("Content-Type") ?: getMimeTypeFromExtension(trimInlineMetaData(url))
+                        check(contentType.isNotBlank()) { "Can't find out the content type" }
 
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                val contentType = response.header("Content-Type") ?: getMimeTypeFromExtension(trimInlineMetaData(url))
-                                check(contentType.isNotBlank()) { "Can't find out the content type" }
-
-                                val realType =
-                                    if (contentType == "application/octet-stream") {
-                                        mimeType ?: getMimeTypeFromExtension(url)
-                                    } else {
-                                        contentType
-                                    }
-
-                                saveContentQ(
-                                    displayName = File(trimInlineMetaData(url)).nameWithoutExtension,
-                                    contentType = realType,
-                                    contentSource = response.body.source(),
-                                    contentResolver = context.contentResolver,
-                                )
+                        val realType =
+                            if (contentType == "application/octet-stream") {
+                                mimeType ?: getMimeTypeFromExtension(url)
                             } else {
-                                saveContentDefault(
-                                    fileName = File(trimInlineMetaData(url)).name,
-                                    contentSource = response.body.source(),
-                                    context = context,
-                                )
+                                contentType
                             }
-                            onSuccess()
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            e.printStackTrace()
-                            onError(e)
-                        }
+
+                        saveContentQ(
+                            displayName = File(trimInlineMetaData(url)).nameWithoutExtension,
+                            contentType = realType,
+                            contentSource = response.body.source(),
+                            contentResolver = context.contentResolver,
+                        )
+                    } else {
+                        saveContentDefault(
+                            fileName = File(trimInlineMetaData(url)).name,
+                            contentSource = response.body.source(),
+                            context = context,
+                        )
                     }
-                },
-            )
+                    onSuccess()
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("MediaSaverToDisk", "Error parsing response", e)
+            onError(e)
+        }
     }
 
     private fun getMimeTypeFromExtension(fileName: String): String =
@@ -188,7 +171,7 @@ object MediaSaverToDisk {
             onSuccess()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            e.printStackTrace()
+            Log.w("MediaSaverToDisk", "Unable to save", e)
             onError(e)
         }
     }
@@ -200,10 +183,11 @@ object MediaSaverToDisk {
         contentSource: BufferedSource,
         contentResolver: ContentResolver,
     ) {
+        val cleanMimeType = contentType.substringBefore(";").trim()
         val contentValues =
             ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                put(MediaStore.MediaColumns.MIME_TYPE, contentType)
+                put(MediaStore.MediaColumns.MIME_TYPE, cleanMimeType)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
                     Environment.DIRECTORY_PICTURES + File.separatorChar + PICTURES_SUBDIRECTORY,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,9 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,13 +42,16 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -65,10 +66,7 @@ fun ZapNoteCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val baseNoteRequest by baseReqResponse.zapRequest
-        .live()
-        .metadata
-        .observeAsState()
+    val baseNoteRequest by observeNote(baseReqResponse.zapRequest, accountViewModel)
 
     var baseAuthor by remember { mutableStateOf<User?>(null) }
 
@@ -117,14 +115,14 @@ private fun RenderZapNote(
             modifier = remember { Modifier.padding(start = 10.dp).weight(1f) },
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseAuthor, accountViewModel = accountViewModel) }
-            Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor) }
+            Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor, accountViewModel) }
         }
 
         Column(
             modifier = remember { Modifier.padding(start = 10.dp) },
             verticalArrangement = Arrangement.Center,
         ) {
-            ZapAmount(zapNote)
+            ZapAmount(zapNote, accountViewModel)
         }
 
         Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -134,8 +132,11 @@ private fun RenderZapNote(
 }
 
 @Composable
-private fun ZapAmount(zapEventNote: Note) {
-    val noteState by zapEventNote.live().metadata.observeAsState()
+private fun ZapAmount(
+    zapEventNote: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val noteState by observeNote(zapEventNote, accountViewModel)
 
     var zapAmount by remember { mutableStateOf<String?>(null) }
 
@@ -163,12 +164,11 @@ fun UserActionOptions(
     baseAuthor: User,
     accountViewModel: AccountViewModel,
 ) {
-    WatchIsHiddenUser(baseAuthor, accountViewModel) { isHidden ->
-        if (isHidden) {
-            ShowUserButton { accountViewModel.show(baseAuthor) }
-        } else {
-            ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
-        }
+    val isHidden by observeAccountIsHiddenUser(accountViewModel.account, baseAuthor)
+    if (isHidden) {
+        ShowUserButton { accountViewModel.show(baseAuthor) }
+    } else {
+        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
     }
 }
 
@@ -177,24 +177,9 @@ fun ShowFollowingOrUnfollowingButton(
     baseAuthor: User,
     accountViewModel: AccountViewModel,
 ) {
-    var isFollowing by remember { mutableStateOf(false) }
-    val accountFollowsState by accountViewModel.account
-        .userProfile()
-        .live()
-        .follows
-        .observeAsState()
+    var isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor, accountViewModel)
 
-    LaunchedEffect(key1 = accountFollowsState) {
-        launch(Dispatchers.Default) {
-            val newShowFollowingMark = accountFollowsState?.user?.isFollowing(baseAuthor) == true
-
-            if (newShowFollowingMark != isFollowing) {
-                isFollowing = newShowFollowingMark
-            }
-        }
-    }
-
-    if (isFollowing) {
+    if (isFollowing.value) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
@@ -220,13 +205,14 @@ fun ShowFollowingOrUnfollowingButton(
 }
 
 @Composable
-fun AboutDisplay(baseAuthor: User) {
-    val baseAuthorState by baseAuthor.live().metadata.observeAsState()
-    val userAboutMe by
-        remember(baseAuthorState) { derivedStateOf { baseAuthorState?.user?.info?.about ?: "" } }
+fun AboutDisplay(
+    baseAuthor: User,
+    accountViewModel: AccountViewModel,
+) {
+    val aboutMe by observeUserAboutMe(baseAuthor, accountViewModel)
 
     Text(
-        userAboutMe,
+        aboutMe,
         color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,61 +21,71 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.pullrefresh.PullRefreshIndicator
-import androidx.compose.material3.pullrefresh.pullRefresh
-import androidx.compose.material3.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefresheableBox(
     invalidateableContent: InvalidatableContent,
     enablePullRefresh: Boolean = true,
-    content: @Composable () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
 ) {
-    RefresheableBox(
-        enablePullRefresh = enablePullRefresh,
-        onRefresh = { invalidateableContent.invalidateData() },
-        content = content,
-    )
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val onRefresh: () -> Unit = {
+        isRefreshing = true
+        scope.launch {
+            invalidateableContent.invalidateData()
+            delay(500)
+            isRefreshing = false
+        }
+    }
+
+    if (enablePullRefresh) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
+            content = content,
+        )
+    } else {
+        Box(Modifier.fillMaxSize(), content = content)
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefresheableBox(
-    enablePullRefresh: Boolean = true,
     onRefresh: () -> Unit,
-    content: @Composable () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
 ) {
-    var refreshing by remember { mutableStateOf(false) }
-    val refresh = {
-        refreshing = true
-        onRefresh()
-        refreshing = false
-    }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = refresh)
-
-    val modifier =
-        if (enablePullRefresh) {
-            Modifier.fillMaxSize().pullRefresh(pullRefreshState)
-        } else {
-            Modifier.fillMaxSize()
-        }
-
-    Box(modifier) {
-        content()
-
-        if (enablePullRefresh) {
-            PullRefreshIndicator(
-                refreshing = refreshing,
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val onRefresh: () -> Unit = {
+        isRefreshing = true
+        scope.launch {
+            onRefresh()
+            delay(500)
+            isRefreshing = false
         }
     }
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+        content = content,
+    )
 }

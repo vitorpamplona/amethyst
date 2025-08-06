@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,8 +29,9 @@ import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -43,9 +44,10 @@ import kotlinx.coroutines.launch
 fun DisplayUncitedHashtags(
     event: Event,
     callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DisplayUncitedHashtags(event, event.content, callbackUri, nav)
+    DisplayUncitedHashtags(event, event.content, callbackUri, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -54,6 +56,7 @@ fun DisplayUncitedHashtags(
     event: Event,
     content: String,
     callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")

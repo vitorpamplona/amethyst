@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.hints
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexerTest.Companion.indexer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.usedMemoryMb
@@ -64,6 +64,7 @@ class HintIndexerTest {
                 ?.readAllBytes()
                 .toString()
                 .split("\n")
+                .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
 
         val indexer by lazy {
             System.gc()
@@ -120,31 +121,31 @@ class HintIndexerTest {
     @Test
     fun runProbExistingKeys() =
         assert99PercentSucess {
-            indexer.getKey(keys.random()).isNotEmpty()
+            indexer.hintsForKey(keys.random()).isNotEmpty()
         }
 
     @Test
     fun runProbNewKeys() =
         assert99PercentSucess {
-            indexer.getKey(RandomInstance.bytes(32)).isEmpty()
+            indexer.hintsForKey(RandomInstance.bytes(32)).isEmpty()
         }
 
     @Test
     fun runProbExistingEventIds() =
         assert99PercentSucess {
-            indexer.getEvent(eventIds.random()).isNotEmpty()
+            indexer.hintsForEvent(eventIds.random()).isNotEmpty()
         }
 
     @Test
     fun runProbNewEventIds() =
         assert99PercentSucess {
-            indexer.getEvent(RandomInstance.bytes(32)).isEmpty()
+            indexer.hintsForEvent(RandomInstance.bytes(32)).isEmpty()
         }
 
     @Test
     fun runProbExistingAddresses() =
         assert99PercentSucess {
-            indexer.getAddress(addresses.random()).isNotEmpty()
+            indexer.hintsForAddress(addresses.random()).isNotEmpty()
         }
 
     @Test
@@ -157,6 +158,6 @@ class HintIndexerTest {
                     randomChars(10),
                 )
 
-            indexer.getAddress(newAddress).isEmpty()
+            indexer.hintsForAddress(newAddress).isEmpty()
         }
 }

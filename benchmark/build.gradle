@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace 'com.vitorpamplona.amethyst.benchmark'
-    compileSdk libs.versions.android.compileSdk.get().toInteger()
+    namespace = 'com.vitorpamplona.amethyst.benchmark'
+    compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk libs.versions.android.minSdk.get().toInteger()
-        targetSdk libs.versions.android.targetSdk.get().toInteger()
+        minSdk = libs.versions.android.minSdk.get().toInteger()
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
 
         // Enable measuring on an emulator, or devices with low battery
         testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
@@ -36,12 +36,12 @@ android {
         }
         release {
             isDefault = false
-            minifyEnabled true
+            minifyEnabled = true
         }
         create("benchmark") {
             isDefault = true
             initWith(getByName("release"))
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
 }

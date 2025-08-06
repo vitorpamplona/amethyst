@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -82,7 +82,7 @@ object LibSodiumInstance {
         messageBytes: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ): ByteArray? {
+    ): ByteArray {
         val cipher = ByteArray(messageBytes.size)
         val k2 = ByteArray(32)
 
@@ -100,6 +100,6 @@ object LibSodiumInstance {
                 k2,
             )
 
-        return if (resultCode == 0) cipher else null
+        return if (resultCode == 0) cipher else throw IllegalStateException("Could not decrypt message")
     }
 }

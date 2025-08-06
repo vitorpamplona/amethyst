@@ -15,8 +15,8 @@
     <string name="could_not_decrypt_the_message">Dešifriranje sporočila ni uspelo</string>
     <string name="group_picture">Slika skupine</string>
     <string name="explicit_content">Eksplicitna vsebina</string>
-    <string name="spam">Nezaželjena vsebina</string>
-    <string name="spam_description">Iz tega releja izvira številna nezaželjena vsebina</string>
+    <string name="spam">Nezaželena vsebina</string>
+    <string name="spam_description">Iz tega releja izvira številna nezaželena vsebina</string>
     <string name="impersonation">Oponašanje</string>
     <string name="illegal_behavior">Nedovoljeno obnašanje</string>
     <string name="other">Drugo</string>
@@ -34,7 +34,7 @@
     <string name="request_deletion">Zaprosi za izbris</string>
     <string name="block_report">Blokiraj / Prijavi</string>
     <string name="block_hide_user"><![CDATA[Blokiraj in skrij uporabnika]]></string>
-    <string name="report_spam_scam">Prijavi nazaželjeno vsebino / prevaro</string>
+    <string name="report_spam_scam">Prijavi nazaželeno vsebino / prevaro</string>
     <string name="report_impersonation">Prijavi oponašalca</string>
     <string name="report_explicit_content">Prijavi eksplicitno vsebino</string>
     <string name="report_illegal_behaviour">Prijavi nedovoljeno obnašanje</string>
@@ -77,8 +77,10 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="profile_banner">Profilna pasica</string>
     <string name="payment_successful">Plačilo uspešno</string>
     <string name="error_parsing_error_message">Napaka pri razčlembi sporočila o napaki</string>
-    <string name="following">" Sledim"</string>
+    <string name="following">" Sledi"</string>
     <string name="followers">" Sledilcev"</string>
+    <string name="number_following">"%1$s Sledi"</string>
+    <string name="number_followers">"%1$s Sledi"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Varnostni filtri</string>
     <string name="log_out">Odjavi se</string>
@@ -90,8 +92,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="thank_you_so_much">Najlepša hvala!</string>
     <string name="amount_in_sats">Vsota v Sat</string>
     <string name="send_sats">Pošlji Sat</string>
-    <string name="secret_emoji_maker">Orodje za Emoji-je s skrivnostmi</string>
-    <string name="secret_emoji_maker_explainer">Izberi Emoji za pošiljanje s skritim sporočilom</string>
+    <string name="secret_emoji_maker">Orodje za emodžije s skrivnostmi</string>
+    <string name="secret_emoji_maker_explainer">Izberi emodži za pošiljanje s skritim sporočilom</string>
     <string name="secret_note_to_receiver">Sprejem skrivnosti</string>
     <string name="secret_note_to_receiver_placeholder">Moja skrita sporočila</string>
     <string name="secret_visible_text">Vidni prefiksi</string>
@@ -106,7 +108,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="description">Opis</string>
     <string name="about_us">"O nas.. "</string>
     <string name="what_s_on_your_mind">Kaj imaš v mislih?</string>
-    <string name="write_a_message">Napiši sporočilo...</string>
+    <string name="write_a_message">Napiši sporočilo…</string>
     <string name="post">Pošlji</string>
     <string name="save">Shrani</string>
     <string name="create">Ustvari</string>
@@ -163,6 +165,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="gallery">Galerija</string>
     <string name="follows">"Sledi"</string>
     <string name="reports">"Reportaže"</string>
+    <string name="number_reports">"%1$s Prijave"</string>
     <string name="more_options">Več možnosti</string>
     <string name="relays">" Releji"</string>
     <string name="website">Spletna stran</string>
@@ -177,9 +180,9 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="edits_the_user_s_metadata">Uredi uporabnikove metapodatke</string>
     <string name="follow">Sledi</string>
     <string name="follow_back">Sledi nazaj</string>
-    <string name="unblock">Odblokiraj</string>
+    <string name="unblock">Deblokiraj</string>
     <string name="copy_user_id">Kopiraj uporabnikov ID</string>
-    <string name="unblock_user">Odblokiraj uporabnika</string>
+    <string name="unblock_user">Deblokiraj uporabnika</string>
     <string name="npub_hex_username">"npub, uporabniško ime, tekst"</string>
     <string name="clear">Počisti</string>
     <string name="app_logo">Logo aplikacije</string>
@@ -221,7 +224,21 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="unfollow">Prenehaj slediti</string>
     <string name="channel_created">Kanal ustvarjen</string>
     <string name="channel_information_changed_to">"Informacije kanala spremenjene v"</string>
+    <string name="ephemeral_relay_chat">Izginjajoči klepeti</string>
+    <string name="relay_chat">Rele klepet</string>
+    <string name="relay_chat_title">Rele klepeti</string>
+    <string name="relay_chat_explainer">Pogovori prek relejev so pogovorne skupine, ki jih nadzoruje njihov domači rele.
+        Vidne so vsem na Nostru in v njih lahko sodeluje kdorkoli.
+        So odlične za odprte skupnosti, povezane s specifičnimi temami. Nekatere od teh skupin so kratkotrajne
+    zato sporočila v klepetu sčasoma izginejo</string>
     <string name="public_chat">Javni pogovor</string>
+    <string name="public_chat_title">Metapodatki Javnega Klepeta</string>
+    <string name="public_chat_explainer">Javni klepeti so vidni vsem na Nostru in vsakdo
+        se lahko pridruži. So odlični za odprte skupnosti o specifičnih temah.
+        Moderiranje je možno z brisanjem objav na njihovih relejih</string>
+    <string name="public_chat_relays_title">Releji</string>
+    <string name="public_chat_relays_explainer">Vnesi 1–3 releje, ki gostijo to skupino.
+        Nostr odjemalci uporabljajo to nastavitev, da vedo, od kod prenesti tvoja sporočila in kam jih poslati.</string>
     <string name="posts_received">sprejete objave</string>
     <string name="remove">Odstrani</string>
     <string name="translations_auto">Avtomatsko</string>
@@ -291,7 +308,6 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="quick_action_unfollow">Prenehaj slediti</string>
     <string name="quick_action_follow">Sledi</string>
     <string name="quick_action_request_deletion_gallery_title">Izbris iz galerije</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Odstrani ta medij iz tvoje galerije, lahko ga dodaš nazaj kasneje.</string>
     <string name="quick_action_request_deletion_alert_title">Prošnja za izbris</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst bo poslal prošnjo za izbris zapiska vsem relejem na katere ste povezani. Nobenega jamstva ni, da bo vaš zapisek trajno izbrisan iz teh relejev ali iz drugih relejev, kjer je morda shranjen.</string>
     <string name="quick_action_block_dialog_btn">Blokiraj</string>
@@ -300,7 +316,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="quick_action_report">Prijavi</string>
     <string name="quick_action_delete_button">Izbriši</string>
     <string name="quick_action_dont_show_again_button">Ne prikaži ponovno</string>
-    <string name="report_dialog_spam">Nezaželjena vsebina ali prevara</string>
+    <string name="report_dialog_spam">Nezaželena vsebina ali prevara</string>
     <string name="report_dialog_profanity">Nesramnost ali sovražno vedenje</string>
     <string name="report_dialog_impersonation">Zlonamerno lažno predstavljanje</string>
     <string name="report_dialog_nudity">Golota ali grafična vsebina</string>
@@ -309,7 +325,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="report_dialog_blocking_a_user">Blokiranje uporabnika bo skrilo njegove objave v tvoji aplikaciji. Tvoji zapiski še vedno ostajajo javno dostopni. Blokirani uporabniki so vidni v Varnost in filtri.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokiraj in skrij uporabnika]]></string>
     <string name="report_dialog_report_btn">Prijavi zlorabo</string>
-    <string name="report_dialog_reminder_public">Vse poslane prijave bojo javno vidne</string>
+    <string name="report_dialog_reminder_public">Vse poslane prijave bojo javno vidne.</string>
     <string name="report_dialog_additional_reason_placeholder">Opcijsko lahko dodaš dodatna pojasnila glede tvoje prijave…</string>
     <string name="report_dialog_additional_reason_label">Dodaten kontekst</string>
     <string name="report_dialog_select_reason_label">Razlog</string>
@@ -325,7 +341,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="add_to_public_bookmarks">Dodaj v javne zaznamke</string>
     <string name="remove_from_private_bookmarks">Odstrani iz privatnih zaznamkov</string>
     <string name="remove_from_public_bookmarks">Odstrani iz javnih zaznamkov</string>
-    <string name="wallet_connect_service">Wallet Connect storitev</string>
+    <string name="wallet_connect_service">Storitev Wallet Connect</string>
     <string name="wallet_connect_service_explainer">Pooblasti Nostr skrivnost (Nostr secret) za plačevanje  z Zapi brez zapuščanja aplikacije. Nostr skrivnost (Nostr secret) hranite na varnem in, če je mogoče, uporabite zasebni rele</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect javni ključ</string>
     <string name="wallet_connect_service_relay">Wallet Connect rele</string>
@@ -402,7 +418,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="uploading_state_error">Napaka</string>
     <string name="upload_server_relays_nip95">Tvoji releji (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Datoteke so gostovane preko tvojih relejev. Nov NIP: Preveri če podpirajo</string>
-    <string name="privacy_options">Zasebnostne nastavitve</string>
+    <string name="privacy_options">Nastavitve zasebnosti</string>
     <string name="connect_via_tor_short">Tor/Orbot nastavitve</string>
     <string name="connect_via_tor">Poveži se preko tvojih Orbot nastavitev</string>
     <string name="connect_via_tor1">Prilagodi</string>
@@ -486,10 +502,19 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="content_warning_explanation">Ta objava vsebuje občutljivo vsebino, ki jo lahko nekateri smatrajo za žaljivo ali vznemirjajočo</string>
     <string name="content_warning_hide_all_sensitive_content">Vedno skrij občutljivo vsebino</string>
     <string name="content_warning_show_all_sensitive_content">Vedno prikaži občutljivo vsebino</string>
-    <string name="content_warning_see_warnings">Vedno prikaži opozororilo o vsebini</string>
+    <string name="content_warning_see_warnings">Vedno prikaži opozorilo o vsebini</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Skrij</string>
+    <string name="content_warning_show_all_sensitive_content_option">Prikaži</string>
+    <string name="content_warning_see_warnings_option">Opozori</string>
     <string name="recommended_apps">Priporoča: </string>
-    <string name="filter_spam_from_strangers">Filtriraj nezaželjeno vsebino od neznancev</string>
+    <string name="filter_spam_from_strangers">Filtriraj nezaželeno vsebino od neznancev</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Opozori, ko objave vsebujejo prijave od oseb, ki jim slediš</string>
+    <string name="filter_spam_from_strangers_title">Filtriraj nezaželeno vsebino</string>
+    <string name="filter_spam_from_strangers_explainer">Skrije objave neznancev, ki so bile popolnoma enake več kot petkrat</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Opozori o prijavah</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Prikaže opozorilo, ko objava preseže 5 ali več prijav od oseb, ki jim slediš</string>
+    <string name="show_sensitive_content_title">Prikaži občutljivo vsebino</string>
+    <string name="show_sensitive_content_explainer">Prikaže opozorilo, če je avtor objavo označil kot občutljivo</string>
     <string name="new_reaction_symbol">Nov reakcijski simbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Za tega uporabnika niso predhodno izbrane nobene vrste reakcij. Dolgo pritisnite na gumb za srce, da jih spremenite</string>
     <string name="zapraiser">Zapraiser</string>
@@ -526,9 +551,10 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="payment">Plačilo</string>
     <string name="cashu">Cashu žeton</string>
     <string name="cashu_redeem">Unovči</string>
-    <string name="cashu_redeem_to_zap">Pošlji v Zap denarnico </string>
+    <string name="cashu_redeem_to_zap">Pošlji v Zap denarnico</string>
     <string name="cashu_redeem_to_cashu">Odpri Cashu denarnico</string>
     <string name="cashu_copy_token">Kopiraj žeton</string>
+    <string name="quick_actions_open_in_another_app">Odpri z drugo aplikacijo</string>
     <string name="no_lightning_address_set">Lightning naslov ni nastavljen</string>
     <string name="copied_token_to_clipboard">Žeton kopiran v odložišče</string>
     <string name="live_stream_live_tag">V ŽIVO</string>
@@ -540,10 +566,9 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="are_you_sure_you_want_to_log_out">Odjava bo izbrisala vse vaše lokalne informacije. Poskrbite, da imate varnostno kopijo svojih zasebnih ključev, da se izognete izgubi računa. Ali želite nadaljevati?</string>
     <string name="followed_tags">Spremljana vsebina</string>
     <string name="relay_setup">Releji</string>
-    <string name="discover_content">Odkrivanje zapiskov</string>
+    <string name="discover_follows">Sledi tropu</string>
+    <string name="discover_reads">Branje</string>
     <string name="discover_marketplace">Tržnica</string>
-    <string name="discover_live">V živo</string>
-    <string name="discover_community">Skupnosti</string>
     <string name="discover_chat">Pogovori</string>
     <string name="community_approved_posts">Odobrene objave</string>
     <string name="groups_no_descriptor">Ta skupina nima opisa ali pravil. Obrnite se na lastnika, da jih doda</string>
@@ -559,6 +584,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="ui_feature_set_type_complete">Celovit</string>
     <string name="ui_feature_set_type_simplified">Poenostavljen</string>
     <string name="ui_feature_set_type_performance">Optimiziran</string>
+    <string name="gallery_type_classic">Klasično</string>
+    <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistemska</string>
     <string name="light">Svetla</string>
     <string name="dark">Temna</string>
@@ -573,6 +600,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="automatically_hide_nav_bars_description">Skrij navigacijsko vrstico ob pomikanju</string>
     <string name="ui_style">UI način</string>
     <string name="ui_style_description">Izberi stil objave</string>
+    <string name="gallery_style">Slog galerije profila</string>
+    <string name="gallery_style_description">Izberi slog galerije</string>
     <string name="load_image">Naloži sliko</string>
     <string name="spamming_users">Pošiljatelji nezaželjenih vsebin</string>
     <string name="muted_button">Utišano. Klikni za vklop zvoka</string>
@@ -599,11 +628,14 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="new_feature_nip17_activate">Aktiviraj</string>
     <string name="messages_create_public_chat">Javno</string>
     <string name="messages_create_public_private_chat_description">Nova javna ali zasebna skupina</string>
+    <string name="messages_relay_based">Rele</string>
     <string name="messages_new_message">Zasebno</string>
     <string name="messages_new_message_to">Za</string>
     <string name="messages_new_message_subject">Zadeva</string>
     <string name="messages_new_message_subject_caption">Tema pogovora</string>
     <string name="messages_new_message_to_caption">"\@Uporabnik1, @Uporabnik2, @Uporabnik3"</string>
+    <string name="messages_cant_upload_title">Nalaganje ni uspelo</string>
+    <string name="messages_cant_upload_explainer">Najprej vnesi cilj sporočila</string>
     <string name="messages_group_descriptor">Člani te skupine</string>
     <string name="messages_new_subject_message">Razlaga članom</string>
     <string name="messages_new_subject_message_placeholder">Spreminjanje imena za dosego novih ciljev.</string>
@@ -722,7 +754,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="hi_there_is_this_still_available">Živjo, je to še na voljo?</string>
     <string name="classifieds">Prodaj stvar</string>
     <string name="classifieds_title">Naslov</string>
-    <string name="classifieds_title_placeholder">Nokia 5210</string>
+    <string name="classifieds_title_placeholder">Nokia 3310</string>
     <string name="classifieds_condition">Stanje</string>
     <string name="classifieds_category">Kategorija</string>
     <string name="classifieds_price">Cena (v Satoshi)</string>
@@ -789,6 +821,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="new_post">Nova objava</string>
     <string name="new_short">Novi kratki mediji: slike ali posnetki</string>
     <string name="new_community_note">Novo zapisek skupnosti</string>
+    <string name="new_product">Nov produkt</string>
     <string name="open_all_reactions_to_this_post">Odpri vse odzive na to objavo</string>
     <string name="close_all_reactions_to_this_post">Zapri vse odzive na to objavo</string>
     <string name="reply_description">Odgovori</string>
@@ -872,27 +905,28 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="message_to_author">Povzetek sprememb</string>
     <string name="message_to_author_placeholder">Hitri popravki…</string>
     <string name="accept_the_suggestion">Sprejmi predlog</string>
+    <string name="enter_picture_in_picture">Zaženi video v pojavnem oknu</string>
     <string name="accessibility_download_for_offline">Prenesi</string>
     <string name="accessibility_lyrics_on">Vklopi besedilo</string>
     <string name="accessibility_lyrics_off">Izklopi besedilo</string>
-    <string name="accessibility_turn_on_sealed_message">Zapečateno sporočilo je izklopljeno. Kliknite, da vklopite zapečateno sporočilo.</string>
+    <string name="accessibility_turn_on_sealed_message">Zapečateno sporočilo je izklopljeno. Kliknite, da vklopite zapečateno sporočilo</string>
     <string name="accessibility_turn_off_sealed_message">Zapečateno sporočilo je vklopljeno. Kliknite, da izklopite zapečateno sporočilo.</string>
     <string name="accessibility_send">Pošlji</string>
     <string name="accessibility_play_username">Predvajaj uporabniško ime</string>
     <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Skeniraj QR kodo</string>
-    <string name="accessibility_navigate_to_alby">Pojdite na stran tretjega ponudnika denarnice Alby.</string>
-    <string name="it_s_not_possible_to_reply_to_a_draft_note">Ni mogoče odgovoriti na osnutek zapiska.</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">Ni mogoče citirati osnutka zapiska.</string>
-    <string name="it_s_not_possible_to_react_to_a_draft_note">Ni mogoče reagirati na osnutek zapiska.</string>
+    <string name="accessibility_navigate_to_alby">Pojdite na stran tretjega ponudnika denarnice Alby</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">Ni mogoče odgovoriti na osnutek zapiska</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Ni mogoče citirati osnutka zapiska</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">Ni mogoče reagirati na osnutek zapiska</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Osnutke zapisa ni mogoče Zap-niti</string>
     <string name="draft_note">Osnutek zapiska</string>
     <string name="load_from_text">Iz zapiska</string>
     <string name="dvm_looking_for_app">Iščem aplikacijo</string>
     <string name="dvm_waiting_status">Zahteva poslana, čakam na odgovor</string>
     <string name="dvm_requesting_job">Zahtevam delo od DVM</string>
-    <string name="nwc_payment_request">Zahteva za plačilo poslana, čakam na potrditev iz vaše denarnice.</string>
-    <string name="dvm_waiting_to_confirm_payment">Čakam, da DVM potrdi plačilo ali pošlje rezultate.</string>
+    <string name="nwc_payment_request">Zahteva za plačilo poslana, čakam na potrditev iz vaše denarnice</string>
+    <string name="dvm_waiting_to_confirm_payment">Čakam, da DVM potrdi plačilo ali pošlje rezultate</string>
     <string name="http_status_400">Neveljavna zahteva - Strežnik ne more ali noče obdelati zahteve.</string>
     <string name="http_status_401">Nepooblaščeno - Uporabnik nima veljavnih overitvenih podatkov</string>
     <string name="http_status_402">Potrebno je plačilo - Strežnik zahteva plačilo za dokončanje zahteve</string>
@@ -908,7 +942,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="http_status_412">Predpogoj ni izpolnjen – Zahtevani predpogoji v glavi zahteve niso izpolnjeni s strani strežnika</string>
     <string name="http_status_413">Tovor je prevelik – Zahteva presega omejitve, določene s strani strežnika, zato jo strežniška obdelava zavrača</string>
     <string name="http_status_414">URI je predolg – URL, ki ga zahteva odjemalec, je predolg, da bi ga strežnik lahko obdelal. </string>
-    <string name="http_status_415">Nepodprta vrsta medija – Zahteva uporablja medijski format, ki ga strežnik ne podpira.</string>
+    <string name="http_status_415">Nepodprta vrsta medija – Zahteva uporablja medijski format, ki ga strežnik ne podpira</string>
     <string name="http_status_416">Razpon ni zadovoljiv – Strežnik ne more izpolniti vrednosti, navedene v \"request’s Range header\" polju. </string>
     <string name="http_status_417">Neizpolnjeno pričakovanje – Strežnik ne more izpolniti zahtev, navedenih v glavi zahteve \"Expect\"</string>
     <string name="http_status_426">Potrebna nadgradnja – Strežnik zavrača obdelavo zahteve z uporabo trenutnega protokola, razen če odjemalec ne preklopi na drug protokol.</string>
@@ -937,4 +971,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="torrent_no_apps">Ni nameščenih torent aplikacij za odpiranje in prenos datoteke.</string>
     <string name="select_list_to_filter">Izberite seznam za filtriranje vira</string>
     <string name="temporary_account">Odjava ob zaklepu naprave</string>
+    <string name="private_message">Zasebno sporočilo</string>
+    <string name="group_relay">Rele za klepet</string>
+    <string name="group_relay_explanation">Rele, na katerega so povezani vsi uporabniki tega klepeta</string>
+    <string name="share_image">Deli sliko…</string>
 </resources>

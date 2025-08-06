@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.utils.ensure
 
 class IMetaTag(
     val url: String,
-    val properties: Map<String, List<String>>,
+    val properties: Map<String, List<String>> = emptyMap(),
 ) {
     fun toTagArray() =
         arrayOf(TAG_NAME, "$ANCHOR_PROPERTY $url") +
@@ -48,7 +48,7 @@ class IMetaTag(
             ensure(tag[1].isNotEmpty()) { return null }
 
             val allTags = parseIMeta(tag)
-            val url = allTags.get(ANCHOR_PROPERTY)?.firstOrNull()
+            val url = allTags[ANCHOR_PROPERTY]?.firstOrNull()
 
             return if (url != null) {
                 IMetaTag(url, allTags.minus(ANCHOR_PROPERTY))

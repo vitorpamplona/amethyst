@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.forks
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.MARKER
 
@@ -29,8 +30,8 @@ fun MarkedETag.Companion.parseFork(tag: Array<String>): MarkedETag? {
     // ["e", id hex, relay hint, marker, pubkey]
     return MarkedETag(
         tag[ORDER_EVT_ID],
-        tag[ORDER_RELAY],
-        tag[ORDER_MARKER],
+        tag[ORDER_RELAY].ifBlank { null }?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+        MARKER.FORK,
         tag.getOrNull(
             ORDER_PUBKEY,
         ),
