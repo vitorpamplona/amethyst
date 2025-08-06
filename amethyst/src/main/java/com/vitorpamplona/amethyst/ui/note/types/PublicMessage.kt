@@ -59,10 +59,11 @@ fun RenderPublicMessage(
     nav: INav,
 ) {
     val noteEvent = note.event as? PublicMessageEvent ?: return
+    val content = remember(noteEvent) { noteEvent.peopleAndContent() }
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
-            text = noteEvent.content,
+            text = content,
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -75,7 +76,7 @@ fun RenderPublicMessage(
             accountViewModel = accountViewModel,
         ) {
             TranslatableRichTextViewer(
-                content = noteEvent.content,
+                content = content,
                 canPreview = canPreview && !makeItShort,
                 quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
@@ -91,8 +92,6 @@ fun RenderPublicMessage(
         if (noteEvent.hasHashtags()) {
             DisplayUncitedHashtags(noteEvent, noteEvent.content, callbackUri, accountViewModel, nav)
         }
-
-        DisplayUncitedUsers(noteEvent, accountViewModel, nav)
     }
 }
 
