@@ -39,7 +39,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
     client: NostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(query: AccountQueryState) = query.account.userProfile()
+    override fun user(key: AccountQueryState) = key.account.userProfile()
 
     /**
      * Downloads most notifications from the user's own inbox relays.

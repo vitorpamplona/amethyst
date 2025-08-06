@@ -76,6 +76,10 @@ fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBase
                     potentialRelaysToFindAddress(key.note).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, key.note.address)
                     }
+
+                    key.account.searchRelayList.flow.value.forEach { relayUrl ->
+                        add(relayUrl, key.note.address)
+                    }
                 }
 
                 // loads threading that is event-based
