@@ -91,11 +91,7 @@ fun ChatroomView(
     if (room.users.size == 1) {
         // Activates NIP-17 if the user has DM relays
         ObserveRelayListForDMs(pubkey = room.users.first(), accountViewModel = accountViewModel) {
-            if (it?.relays().isNullOrEmpty()) {
-                newPostModel.nip17 = false
-            } else {
-                newPostModel.nip17 = true
-            }
+            newPostModel.nip17 = !it?.relays().isNullOrEmpty()
         }
     }
 
