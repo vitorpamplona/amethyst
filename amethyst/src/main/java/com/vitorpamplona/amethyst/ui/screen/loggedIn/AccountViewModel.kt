@@ -177,25 +177,9 @@ class AccountViewModel(
 
     var firstRoute: Route? = null
 
-    // TODO: contact lists are not notes yet
-    // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
+    val toastManager = ToastManager()
 
-    val normalizedKind3RelaySetFlow =
-        account
-            .userProfile()
-            .flow()
-            .relays.stateFlow
-            .map { contactListState ->
-                checkNotInMainThread()
-                contactListState.user.latestContactList?.relays()?.map {
-                    RelayUrlFormatter.normalize(it.key)
-                } ?: emptySet()
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(10000, 10000),
-                emptySet(),
-            )
+    val feedStates = AccountFeedContentStates(this)
 
     val followSetsFlow =
         account
@@ -214,13 +198,6 @@ class AccountViewModel(
                 SharingStarted.WhileSubscribed(10000, 10000),
                 emptyList(),
             )
-
-    val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
-    val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
-
-    val toastManager = ToastManager()
-
-    val feedStates = AccountFeedContentStates(this)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =

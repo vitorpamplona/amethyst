@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,18 +22,22 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
 import android.util.Log
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +46,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 // TODO: Investigate the addition of feed filters, for bookmark sets and general ones.
-abstract class NostrListFeedViewModel(
+open class NostrListFeedViewModel(
     val dataSource: FeedFilter<FollowSet>,
 ) : ViewModel(),
     InvalidatableContent {
@@ -57,13 +62,26 @@ abstract class NostrListFeedViewModel(
         }
     }
 
-    fun getFollowSetAddressable(
-        addressValue: String,
+    fun getFollowSetNote(
+        noteIdentifier: String,
         account: Account,
     ): AddressableNote? {
         checkNotInMainThread()
-        val potentialNote = LocalCache.getAddressableNoteIfExists(Address.parse(addressValue)!!)
+        val potentialNote = account.userProfile().followSetNotes.find { it.dTag() == noteIdentifier }
         return potentialNote
+    }
+
+    fun followSetExistsWithName(
+        setName: String,
+        account: Account,
+    ): Boolean {
+        checkNotInMainThread()
+        val potentialNote =
+            account
+                .userProfile()
+                .followSetNotes
+                .find { (it.event as PeopleListEvent).nameOrTitle() == setName }
+        return potentialNote != null
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
@@ -96,6 +114,111 @@ abstract class NostrListFeedViewModel(
         }
     }
 
+    fun addFollowSet(
+        setName: String,
+        setDescription: String?,
+        setType: ListVisibility,
+        account: Account,
+    ) {
+        if (account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                PeopleListEvent.createListWithDescription(
+                    dTag = UUID.randomUUID().toString(),
+                    title = setName,
+                    description = setDescription,
+                    isPrivate = setType == ListVisibility.Private,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
+    fun renameFollowSet(
+        newName: String,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.modifyListName(
+                    earlierVersion = setEvent,
+                    newName = newName,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
+    fun deleteFollowSet(
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+            return
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(followSetEvent)))
+                account.sendMyPublicAndPrivateOutbox(deletionEvent)
+            }
+        }
+    }
+
+    fun addUserToSet(
+        userProfileHex: String,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+            return
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.addUser(
+                    earlierVersion = followSetEvent,
+                    pubKeyHex = userProfileHex,
+                    isPrivate = followSet.visibility == ListVisibility.Private,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
+    fun removeUserFromSet(
+        userProfileHex: String,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+            return
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.removeUser(
+                    earlierVersion = followSetEvent,
+                    pubKeyHex = userProfileHex,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
     private fun updateFeed(sets: ImmutableList<FollowSet>) {
         if (sets.isNotEmpty()) {
             _feedContent.update { FollowSetState.Loaded(sets) }
@@ -104,13 +227,14 @@ abstract class NostrListFeedViewModel(
         }
     }
 
-    private val bundler = BundledUpdate(1000, Dispatchers.IO)
+    private val bundler = BundledUpdate(2000, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
 //        refresh()
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
+
             refreshSuspended()
         }
     }
@@ -134,5 +258,12 @@ abstract class NostrListFeedViewModel(
         bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
+    }
+
+    @Stable
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = NostrListFeedViewModel(FollowSetFeedFilter(account)) as T
     }
 }

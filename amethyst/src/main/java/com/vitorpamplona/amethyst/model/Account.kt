@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -215,6 +216,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.Locale
 
@@ -838,6 +840,23 @@ class Account(
             }
         }
     }
+
+    suspend fun getFollowSetNotes() =
+        withContext(Dispatchers.Default) {
+            val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
+            userProfile().updateFollowSetNotes(followSetNotes)
+//            userProfile().followSets = followSetNotes
+            println("Number of follow sets: ${followSetNotes.size}")
+        }
+
+    suspend fun mapNoteToFollowSet(note: Note): FollowSet =
+        FollowSet
+            .mapEventToSet(
+                event = note.event as PeopleListEvent,
+                signer,
+            )
+
+//    fun followSetNotesFlow() = MutableStateFlow(userProfile().followSets)
 
     suspend fun updateAttestations() = sendAutomatic(otsState.updateAttestations())
 
@@ -1609,60 +1628,6 @@ class Account(
 
     suspend fun hideUser(pubkeyHex: HexKey) {
         sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))
-    fun getAppSpecificDataNote() = LocalCache.getOrCreateAddressableNote(AppSpecificDataEvent.createAddress(userProfile().pubkeyHex, APP_SPECIFIC_DATA_D_TAG))
-
-    fun getAppSpecificDataFlow(): StateFlow<NoteState> = getAppSpecificDataNote().flow().metadata.stateFlow
-
-    fun getBlockListNote() = LocalCache.getOrCreateAddressableNote(PeopleListEvent.createBlockAddress(userProfile().pubkeyHex))
-
-    fun getMuteListNote() = LocalCache.getOrCreateAddressableNote(MuteListEvent.createAddress(userProfile().pubkeyHex))
-
-    suspend fun getFollowSetNotes() =
-        withContext(Dispatchers.Default) {
-            val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
-            userProfile().updateFollowSetNotes(followSetNotes)
-//            userProfile().followSets = followSetNotes
-            println("Number of follow sets: ${followSetNotes.size}")
-        }
-
-    fun mapNoteToFollowSet(note: Note): FollowSet =
-        FollowSet
-            .mapEventToSet(
-                event = note.event as PeopleListEvent,
-                signer,
-            )
-
-//    fun followSetNotesFlow() = MutableStateFlow(userProfile().followSets)
-
-    fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
-
-    fun getBlockList(): PeopleListEvent? = getBlockListNote().event as? PeopleListEvent
-
-    fun getMuteList(): MuteListEvent? = getMuteListNote().event as? MuteListEvent
-
-    fun hideWord(word: String) {
-        val muteList = getMuteList()
-
-        if (muteList != null) {
-            MuteListEvent.addWord(
-                earlierVersion = muteList,
-                word = word,
-                isPrivate = true,
-                signer = signer,
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
-            }
-        } else {
-            MuteListEvent.createListWithWord(
-                word = word,
-                isPrivate = true,
-                signer = signer,
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
-            }
-        }
     }
 
     suspend fun showUser(pubkeyHex: HexKey) {

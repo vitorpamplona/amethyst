@@ -23,115 +23,18 @@ package com.vitorpamplona.amethyst.ui.screen
 import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
-import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrListFeedViewModel
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-class NostrChannelFeedViewModel(
-    val channel: Channel,
-    val account: Account,
-) : FeedViewModel(ChannelFeedFilter(channel, account)) {
-    class Factory(
-        val channel: Channel,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrChannelFeedViewModel : ViewModel> create(modelClass: Class<NostrChannelFeedViewModel>): NostrChannelFeedViewModel = NostrChannelFeedViewModel(channel, account) as NostrChannelFeedViewModel
-    }
-}
-
-class NostrChatroomFeedViewModel(
-    val user: ChatroomKey,
-    val account: Account,
-) : FeedViewModel(ChatroomFeedFilter(user, account)) {
-    class Factory(
-        val user: ChatroomKey,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrChatRoomFeedViewModel : ViewModel> create(modelClass: Class<NostrChatRoomFeedViewModel>): NostrChatRoomFeedViewModel = NostrChatroomFeedViewModel(user, account) as NostrChatRoomFeedViewModel
-    }
-}
-
-class NostrThreadFeedViewModel(
-    account: Account,
-    noteId: String,
-) : LevelFeedViewModel(ThreadFeedFilter(account, noteId)) {
-    class Factory(
-        val account: Account,
-        val noteId: String,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrThreadFeedViewModel : ViewModel> create(modelClass: Class<NostrThreadFeedViewModel>): NostrThreadFeedViewModel = NostrThreadFeedViewModel(account, noteId) as NostrThreadFeedViewModel
-    }
-}
-
-class NostrHashtagFeedViewModel(
-    val hashtag: String,
-    val account: Account,
-) : FeedViewModel(HashtagFeedFilter(hashtag, account)) {
-    class Factory(
-        val hashtag: String,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrHashtagFeedViewModel : ViewModel> create(modelClass: Class<NostrHashtagFeedViewModel>): NostrHashtagFeedViewModel = NostrHashtagFeedViewModel(hashtag, account) as NostrHashtagFeedViewModel
-    }
-}
-
-class NostrGeoHashFeedViewModel(
-    val geohash: String,
-    val account: Account,
-) : FeedViewModel(GeoHashFeedFilter(geohash, account)) {
-    class Factory(
-        val geohash: String,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrGeoHashFeedViewModel : ViewModel> create(modelClass: Class<NostrGeoHashFeedViewModel>): NostrGeoHashFeedViewModel = NostrGeoHashFeedViewModel(geohash, account) as NostrGeoHashFeedViewModel
-    }
-}
-
-class NostrCommunityFeedViewModel(
-    val note: AddressableNote,
-    val account: Account,
-) : FeedViewModel(CommunityFeedFilter(note, account)) {
-    class Factory(
-        val note: AddressableNote,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrCommunityFeedViewModel : ViewModel> create(modelClass: Class<NostrCommunityFeedViewModel>): NostrCommunityFeedViewModel = NostrCommunityFeedViewModel(note, account) as NostrCommunityFeedViewModel
-    }
-}
-
-@Stable
-class NostrBookmarkPublicFeedViewModel(
-    val account: Account,
-) : FeedViewModel(BookmarkPublicFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrBookmarkPublicFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPublicFeedViewModel>): NostrBookmarkPublicFeedViewModel = NostrBookmarkPublicFeedViewModel(account) as NostrBookmarkPublicFeedViewModel
-    }
-}
-
-@Stable
-class NostrBookmarkPrivateFeedViewModel(
-    val account: Account,
-) : FeedViewModel(BookmarkPrivateFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrBookmarkPrivateFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPrivateFeedViewModel>): NostrBookmarkPrivateFeedViewModel = NostrBookmarkPrivateFeedViewModel(account) as NostrBookmarkPrivateFeedViewModel
-    }
-}
 
 @Stable
 class NostrUserListFeedViewModel(
@@ -142,82 +45,6 @@ class NostrUserListFeedViewModel(
     ) : ViewModelProvider.Factory {
         override fun <NostrUserFollowSetFeedViewModel : ViewModel> create(modelClass: Class<NostrUserFollowSetFeedViewModel>): NostrUserFollowSetFeedViewModel = NostrUserListFeedViewModel(account) as NostrUserFollowSetFeedViewModel
     }
-}
-
-@Stable
-class NostrNIP90ContentDiscoveryFeedViewModel(
-    val account: Account,
-    dvmkey: String,
-    requestid: String,
-) : FeedViewModel(NIP90ContentDiscoveryResponseFilter(account, dvmkey, requestid)) {
-    class Factory(
-        val account: Account,
-        val dvmkey: String,
-        val requestid: String,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrNIP90ContentDiscoveryFeedViewModel : ViewModel> create(modelClass: Class<NostrNIP90ContentDiscoveryFeedViewModel>): NostrNIP90ContentDiscoveryFeedViewModel = NostrNIP90ContentDiscoveryFeedViewModel(account, dvmkey, requestid) as NostrNIP90ContentDiscoveryFeedViewModel
-    }
-}
-
-@Stable
-class NostrDraftEventsFeedViewModel(
-    val account: Account,
-) : FeedViewModel(DraftEventsFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrDraftEventsFeedViewModel : ViewModel> create(modelClass: Class<NostrDraftEventsFeedViewModel>): NostrDraftEventsFeedViewModel = NostrDraftEventsFeedViewModel(account) as NostrDraftEventsFeedViewModel
-    }
-}
-
-abstract class LevelFeedViewModel(
-    localFilter: FeedFilter<Note>,
-) : FeedViewModel(localFilter) {
-    var llState: LazyListState by mutableStateOf(LazyListState(0, 0))
-
-    val hasDragged = mutableStateOf(false)
-
-    val selectedIDHex =
-        llState.interactionSource.interactions
-            .onEach {
-                if (it is DragInteraction.Start) {
-                    hasDragged.value = true
-                }
-            }.stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                null,
-            )
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val levelCacheFlow: StateFlow<Map<Note, Int>> =
-        feedState.feedContent
-            .transformLatest { feed ->
-                emitAll(
-                    if (feed is FeedState.Loaded) {
-                        feed.feed.map {
-                            val cache = mutableMapOf<Note, Int>()
-                            it.list.forEach {
-                                ThreadLevelCalculator.replyLevel(it, cache)
-                            }
-                            cache
-                        }
-                    } else {
-                        MutableStateFlow(mapOf())
-                    },
-                )
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                mapOf(),
-            )
-
-    fun levelFlowForItem(note: Note) =
-        levelCacheFlow
-            .map {
-                it[note] ?: 0
-            }.distinctUntilChanged()
 }
 
 @Stable
