@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -81,6 +82,7 @@ class HomeConversationsFeedFilter(
                 event is ChannelMessageEvent ||
                 event is CommentEvent ||
                 event is VoiceReplyEvent ||
+                event is PublicMessageEvent ||
                 event is LiveActivitiesChatMessageEvent
         ) &&
             filterParams.match(event)
