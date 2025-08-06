@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -60,11 +60,11 @@ fun DeleteFromGalleryDialog(
 ) {
     QuickActionAlertDialogOneButton(
         title = stringRes(R.string.quick_action_request_deletion_gallery_title),
-        textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body),
+        textContent = stringRes(R.string.quick_action_request_deletion_gallery_alert_body_v2),
         buttonIcon = Icons.Default.Delete,
         buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            accountViewModel.removefromMediaGallery(note)
+            accountViewModel.removeFromMediaGallery(note)
             onDismiss()
         },
         onDismiss = onDismiss,

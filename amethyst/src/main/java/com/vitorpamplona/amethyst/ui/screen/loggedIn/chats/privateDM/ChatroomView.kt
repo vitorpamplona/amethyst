@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,23 +25,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMs
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
-import com.vitorpamplona.amethyst.ui.screen.NostrChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -58,11 +55,11 @@ fun ChatroomView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val feedViewModel: NostrChatroomFeedViewModel =
+    val feedViewModel: ChatroomFeedViewModel =
         viewModel(
             key = room.hashCode().toString() + "ChatroomViewModels",
             factory =
-                NostrChatroomFeedViewModel.Factory(
+                ChatroomFeedViewModel.Factory(
                     room,
                     accountViewModel.account,
                 ),
@@ -120,40 +117,13 @@ fun ChatroomView(
 @Composable
 fun ChatroomViewUI(
     room: ChatroomKey,
-    feedViewModel: NostrChatroomFeedViewModel,
+    feedViewModel: ChatroomFeedViewModel,
     newPostModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(room, accountViewModel) {
-        NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
-        NostrChatroomDataSource.start()
-        feedViewModel.invalidateData()
-
-        onDispose { NostrChatroomDataSource.stop() }
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Private Message Start")
-                    NostrChatroomDataSource.start()
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Private Message Stop")
-                    NostrChatroomDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    ChatroomFilterAssemblerSubscription(room, accountViewModel.dataSources().chatroom, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)

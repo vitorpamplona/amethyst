@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.quartz.utils.RandomInstance
 import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import okio.ByteString.Companion.toByteString
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -49,12 +49,10 @@ object OnlineChecker {
         return false
     }
 
-    fun isOnline(
+    suspend fun isOnline(
         url: String?,
-        okttpClient: (String) -> OkHttpClient,
+        okHttpClient: (String) -> OkHttpClient,
     ): Boolean {
-        checkNotInMainThread()
-
         if (url.isNullOrBlank()) return false
         if ((checkOnlineCache.get(url)?.timeInMs ?: 0) > System.currentTimeMillis() - fiveMinutes) {
             return checkOnlineCache.get(url).online
@@ -66,7 +64,6 @@ object OnlineChecker {
                     val request =
                         Request
                             .Builder()
-                            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                             .url(url.replace("wss+livekit://", "wss://"))
                             .header("Upgrade", "websocket")
                             .header("Connection", "Upgrade")
@@ -76,29 +73,23 @@ object OnlineChecker {
                             .build()
 
                     val client =
-                        okttpClient(url)
+                        okHttpClient(url)
                             .newBuilder()
                             .eventListener(EventListener.NONE)
                             .protocols(listOf(Protocol.HTTP_1_1))
                             .build()
 
-                    client.newCall(request).execute().use {
-                        checkNotInMainThread()
-                        it.isSuccessful
-                    }
+                    client.newCall(request).executeAsync().use { it.isSuccessful }
                 } else {
                     val request =
                         Request
                             .Builder()
-                            .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                             .url(url)
                             .get()
                             .build()
+                    val client = okHttpClient(url)
 
-                    okttpClient(url).newCall(request).execute().use {
-                        checkNotInMainThread()
-                        it.isSuccessful
-                    }
+                    client.newCall(request).executeAsync().use { it.isSuccessful }
                 }
 
             checkOnlineCache.put(url, OnlineCheckResult(System.currentTimeMillis(), result))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 
 object PackageUtils {
+    @SuppressLint("QueryPermissionsNeeded")
     private fun isPackageInstalled(
         context: Context,
         target: String,
@@ -34,14 +34,4 @@ object PackageUtils {
         } != null
 
     fun isOrbotInstalled(context: Context): Boolean = isPackageInstalled(context, "org.torproject.android")
-
-    fun isExternalSignerInstalled(context: Context): Boolean {
-        val intent =
-            Intent().apply {
-                action = Intent.ACTION_VIEW
-                data = Uri.parse("nostrsigner:")
-            }
-        val infos = context.packageManager.queryIntentActivities(intent, 0)
-        return infos.size > 0
-    }
 }

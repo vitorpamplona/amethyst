@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,7 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -53,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVi
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
@@ -78,8 +78,8 @@ fun GalleryThumbnail(
     nav: INav,
     ratio: Float = 1.0f,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent = noteState?.note?.event ?: return
+    val noteState by observeNote(baseNote, accountViewModel)
+    val noteEvent = noteState.note.event ?: return
 
     val content =
         if (noteEvent is ProfileGalleryEntryEvent) {
@@ -98,7 +98,8 @@ fun GalleryThumbnail(
                     MediaUrlImage(
                         url = url,
                         description = noteEvent.content,
-                        hash = null, // We don't want to show the hash banner here
+                        // We don't want to show the hash banner here
+                        hash = null,
                         blurhash = noteEvent.blurhash(),
                         dim = noteEvent.dimensions(),
                         uri = null,
@@ -111,7 +112,8 @@ fun GalleryThumbnail(
                 MediaUrlImage(
                     url = imeta.url,
                     description = noteEvent.content,
-                    hash = null, // We don't want to show the hash banner here
+                    // We don't want to show the hash banner here
+                    hash = null,
                     blurhash = imeta.blurhash,
                     dim = imeta.dimension,
                     uri = null,
@@ -123,7 +125,8 @@ fun GalleryThumbnail(
                 MediaUrlVideo(
                     url = imeta.url,
                     description = noteEvent.content,
-                    hash = null, // We don't want to show the hash banner here
+                    // We don't want to show the hash banner here
+                    hash = null,
                     blurhash = imeta.blurhash,
                     dim = imeta.dimension,
                     uri = null,
@@ -147,14 +150,17 @@ fun InnerRenderGalleryThumb(
     if (content.isNotEmpty()) {
         GalleryContentView(content, accountViewModel, ratio = ratio)
     } else {
-        DisplayGalleryAuthorBanner(note)
+        DisplayGalleryAuthorBanner(note, accountViewModel)
     }
 }
 
 @Composable
-fun DisplayGalleryAuthorBanner(note: Note) {
-    WatchAuthor(note) { author ->
-        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder))
+fun DisplayGalleryAuthorBanner(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    WatchAuthor(note, accountViewModel) { author ->
+        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder), accountViewModel)
     }
 }
 

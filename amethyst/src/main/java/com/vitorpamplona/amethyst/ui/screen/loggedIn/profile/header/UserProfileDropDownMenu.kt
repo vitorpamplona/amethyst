@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
@@ -59,7 +58,7 @@ fun UserProfileDropDownMenu(
             },
         )
 
-        val actContext = LocalContext.current
+        val context = LocalContext.current
 
         DropdownMenuItem(
             text = { Text(stringRes(R.string.quick_action_share)) },
@@ -74,13 +73,13 @@ fun UserProfileDropDownMenu(
                         )
                         putExtra(
                             Intent.EXTRA_TITLE,
-                            stringRes(actContext, R.string.quick_action_share_browser_link),
+                            stringRes(context, R.string.quick_action_share_browser_link),
                         )
                     }
 
                 val shareIntent =
-                    Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                ContextCompat.startActivity(actContext, shareIntent, null)
+                    Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                context.startActivity(shareIntent)
                 onDismiss()
             },
         )

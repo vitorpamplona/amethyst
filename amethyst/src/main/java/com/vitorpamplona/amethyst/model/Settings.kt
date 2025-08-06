@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -147,5 +147,35 @@ fun parseBooleanType(screenCode: Int): BooleanType =
         BooleanType.NEVER.screenCode -> BooleanType.NEVER
         else -> {
             BooleanType.ALWAYS
+        }
+    }
+
+enum class WarningType(
+    val prefCode: Boolean?,
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    WARN(null, 0, R.string.content_warning_see_warnings_option),
+    SHOW(true, 1, R.string.content_warning_show_all_sensitive_content_option),
+    HIDE(false, 2, R.string.content_warning_hide_all_sensitive_content_option),
+}
+
+fun parseWarningType(screenCode: Int): WarningType =
+    when (screenCode) {
+        WarningType.WARN.screenCode -> WarningType.WARN
+        WarningType.SHOW.screenCode -> WarningType.SHOW
+        WarningType.HIDE.screenCode -> WarningType.HIDE
+        else -> {
+            WarningType.WARN
+        }
+    }
+
+fun parseWarningType(code: Boolean?): WarningType =
+    when (code) {
+        WarningType.WARN.prefCode -> WarningType.WARN
+        WarningType.HIDE.prefCode -> WarningType.HIDE
+        WarningType.SHOW.prefCode -> WarningType.SHOW
+        else -> {
+            WarningType.WARN
         }
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,12 @@ class ReplyKindTag {
         fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
+        fun isKind(
+            tag: Tag,
+            kind: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == kind
+
+        @JvmStatic
         fun isTagged(
             tag: Tag,
             kind: String,
@@ -59,7 +65,7 @@ class ReplyKindTag {
         fun assemble(kind: Int) = arrayOf(TAG_NAME, kind.toString())
 
         @JvmStatic
-        fun assemble(id: ExternalId) = RootKindTag.assemble(id.toKind())
+        fun assemble(id: ExternalId) = assemble(id.toKind())
 
         @JvmStatic
         fun assemble(kinds: List<String>): List<Tag> = kinds.map { assemble(it) }

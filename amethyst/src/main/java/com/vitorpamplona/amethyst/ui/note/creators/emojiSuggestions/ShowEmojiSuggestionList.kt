@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -55,8 +55,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 @Composable
 fun ShowEmojiSuggestionList(
     emojiSuggestions: EmojiSuggestionState,
-    onSelect: (Account.EmojiMedia) -> Unit,
-    onFullSize: (Account.EmojiMedia) -> Unit,
+    onSelect: (EmojiPackState.EmojiMedia) -> Unit,
+    onFullSize: (EmojiPackState.EmojiMedia) -> Unit,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
 ) {
@@ -80,7 +80,7 @@ fun ShowEmojiSuggestionList(
                     horizontalArrangement = spacedBy(Size10dp),
                 ) {
                     Box(Size40Modifier) {
-                        UrlImageView(it.url, accountViewModel)
+                        UrlImageView(it.link, accountViewModel)
                     }
                     Text(it.code, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Box(Size40Modifier, contentAlignment = Alignment.Center) {

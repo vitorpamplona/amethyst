@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,21 +27,23 @@ import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
-import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.coroutines.executeAsync
 import okio.BufferedSink
 import okio.source
 import java.io.File
@@ -129,7 +131,7 @@ class BlossomUploader {
     ): MediaUploadResult {
         checkNotInMainThread()
 
-        val fileName = baseFileName ?: randomChars()
+        val fileName = baseFileName ?: RandomInstance.randomChars(16)
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
@@ -157,29 +159,28 @@ class BlossomUploader {
 
         requestBuilder
             .addHeader("Content-Length", length.toString())
-            .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
             .url(apiUrl)
             .put(requestBody)
 
         val request = requestBuilder.build()
 
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                response.body.use { body ->
-                    val str = body.string()
-                    val result = parseResults(str)
-                    return result
-                }
-            } else {
-                val errorMessage = response.headers.get("X-Reason")
-
-                val explanation = HttpStatusMessages.resourceIdFor(response.code)
-                if (errorMessage != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), errorMessage))
-                } else if (explanation != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), stringRes(context, explanation)))
+        return client.newCall(request).executeAsync().use { response ->
+            withContext(Dispatchers.IO) {
+                if (response.isSuccessful) {
+                    response.body.use { body ->
+                        parseResults(body.string())
+                    }
                 } else {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), response.code.toString()))
+                    val errorMessage = response.headers.get("X-Reason")
+
+                    val explanation = HttpStatusMessages.resourceIdFor(response.code)
+                    if (errorMessage != null) {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), errorMessage))
+                    } else if (explanation != null) {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), stringRes(context, explanation)))
+                    } else {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, serverBaseUrl.displayUrl(), response.code.toString()))
+                    }
                 }
             }
         }
@@ -208,20 +209,21 @@ class BlossomUploader {
 
         val request =
             requestBuilder
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(apiUrl.removeSuffix("/") + "/$hash.$extension")
                 .delete()
                 .build()
 
-        okHttpClient(apiUrl).newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                return true
-            } else {
-                val explanation = HttpStatusMessages.resourceIdFor(response.code)
-                if (explanation != null) {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+        return okHttpClient(apiUrl).newCall(request).executeAsync().use { response ->
+            withContext(Dispatchers.IO) {
+                if (response.isSuccessful) {
+                    true
                 } else {
-                    throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                    val explanation = HttpStatusMessages.resourceIdFor(response.code)
+                    if (explanation != null) {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, stringRes(context, explanation)))
+                    } else {
+                        throw RuntimeException(stringRes(context, R.string.failed_to_delete_with_message, response.code))
+                    }
                 }
             }
         }

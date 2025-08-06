@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -70,7 +71,7 @@ fun RelayCompose(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    relay.url.trim().removePrefix("wss://"),
+                    text = relay.url.displayUrl(),
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -108,7 +109,8 @@ private fun RelayOptions(
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit,
 ) {
-    val userState by accountViewModel.normalizedKind3RelaySetFlow.collectAsStateWithLifecycle()
+    val userState by accountViewModel.account.trustedRelays.flow
+        .collectAsStateWithLifecycle()
 
     if (!userState.contains(relay.url)) {
         AddRelayButton(onAddRelay)

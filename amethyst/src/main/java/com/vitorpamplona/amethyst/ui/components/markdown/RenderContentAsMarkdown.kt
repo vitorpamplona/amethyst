@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -41,8 +41,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -57,7 +57,6 @@ import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
 
 @Composable
 fun RenderContentAsMarkdown(
@@ -74,7 +73,7 @@ fun RenderContentAsMarkdown(
     val onClick =
         remember {
             { link: String ->
-                val route = uriToRoute(link)
+                val route = uriToRoute(link, accountViewModel.account)
                 if (route != null) {
                     nav.nav(route)
                 } else {
@@ -375,12 +374,12 @@ fun RenderContentAsMarkdownUserPreview() {
                         image = "https://duckduckgo.com/assets/logo_social-media.png",
                         title = "DuckDuckGo — Privacy, simplified.",
                         description = "The Internet privacy company that empowers you to seamlessly take control of your personal information online, without any tradeoffs.",
-                        mimeType = "text/html".toMediaType(),
+                        mimeType = "text/html",
                     ),
                 ),
             )
 
-            LocalCache.justConsume(qa, null)
+            LocalCache.justConsume(qa, null, false)
         }
     }
 
@@ -429,7 +428,7 @@ fun RenderContentAsMarkdownNotePreview() {
                     sig = "4c85e0eb0c46c5e3023431ad4ed8efa0abd66447ff757d246154e2349ac01ae0f88f213d02efa0a77f307f305d4a608c785ae1ca080c01cd3a9e7b8dffea6f9c",
                 )
 
-            LocalCache.justConsume(blogPost, null)
+            LocalCache.justConsume(blogPost, null, false)
         }
     }
 

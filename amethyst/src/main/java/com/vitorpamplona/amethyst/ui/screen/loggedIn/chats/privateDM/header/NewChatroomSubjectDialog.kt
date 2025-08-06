@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -48,16 +48,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun NewChatroomSubjectDialog(
@@ -75,7 +73,12 @@ fun NewChatroomSubjectDialog(
         Surface {
             val groupName =
                 remember {
-                    mutableStateOf<String>(accountViewModel.userProfile().privateChatrooms[room]?.subject ?: "")
+                    mutableStateOf<String>(
+                        accountViewModel.account.chatroomList.rooms
+                            .get(room)
+                            ?.subject
+                            ?.value ?: "",
+                    )
                 }
             val message = remember { mutableStateOf<String>("") }
             val scope = rememberCoroutineScope()
@@ -95,7 +98,7 @@ fun NewChatroomSubjectDialog(
 
                     PostButton(
                         onPost = {
-                            scope.launch(Dispatchers.IO) {
+                            accountViewModel.runIOCatching {
                                 val template =
                                     ChatMessageEvent.build(
                                         message.value,

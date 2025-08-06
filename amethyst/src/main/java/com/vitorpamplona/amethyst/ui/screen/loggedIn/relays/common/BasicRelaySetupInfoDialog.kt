@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,39 +22,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
-import com.vitorpamplona.amethyst.service.Nip11Retriever
-import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 
 @Composable
 fun BasicRelaySetupInfoDialog(
     item: BasicRelaySetupInfo,
-    onDelete: (BasicRelaySetupInfo) -> Unit,
+    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
-    val context = LocalContext.current
-
-    relayInfo?.let {
-        RelayInformationDialog(
-            onClose = { relayInfo = null },
-            relayInfo = it.relayInfo,
-            relayBriefInfo = it.relayBriefInfo,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
+    val relayInfo by loadRelayInfo(item.relay, accountViewModel)
 
     BasicRelaySetupInfoClickableRow(
         item = item,
@@ -62,54 +43,6 @@ fun BasicRelaySetupInfoDialog(
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onDelete = onDelete,
         accountViewModel = accountViewModel,
-        onClick = {
-            accountViewModel.retrieveRelayDocument(
-                item.url,
-                onInfo = {
-                    relayInfo = RelayInfoDialog(RelayBriefInfoCache.RelayBriefInfo(item.url), it)
-                },
-                onError = { url, errorCode, exceptionMessage ->
-                    val msg =
-                        when (errorCode) {
-                            Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    url,
-                                    exceptionMessage,
-                                )
-
-                            Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    url,
-                                    exceptionMessage,
-                                )
-
-                            Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    url,
-                                    exceptionMessage,
-                                )
-
-                            Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    url,
-                                    exceptionMessage,
-                                )
-                        }
-
-                    accountViewModel.toastManager.toast(
-                        stringRes(context, R.string.unable_to_download_relay_document),
-                        msg,
-                    )
-                },
-            )
-        },
+        onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
     )
 }

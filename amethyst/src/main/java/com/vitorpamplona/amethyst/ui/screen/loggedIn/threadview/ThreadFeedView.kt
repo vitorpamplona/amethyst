@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -59,7 +59,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -73,18 +72,21 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
@@ -101,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -115,11 +118,17 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
+import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
@@ -139,17 +148,20 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
-import com.vitorpamplona.amethyst.ui.screen.LevelFeedViewModel
+import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -159,7 +171,10 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
@@ -171,10 +186,11 @@ import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -194,9 +210,15 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
@@ -210,6 +232,7 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -434,9 +457,9 @@ private fun FullBleedNoteCompose(
         ) {
             NoteAuthorPicture(
                 baseNote = baseNote,
-                nav = nav,
-                accountViewModel = accountViewModel,
                 size = Size55dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -469,9 +492,9 @@ private fun FullBleedNoteCompose(
                         nav,
                     )
 
-                    val geo = remember { noteEvent.getGeoHash() }
+                    val geo = remember { noteEvent.geoHashOrScope() }
                     if (geo != null) {
-                        DisplayLocation(geo, nav)
+                        DisplayLocation(geo, accountViewModel, nav)
                     }
 
                     val baseReward = remember { noteEvent.bountyBaseReward()?.let { Reward(it) } }
@@ -496,8 +519,8 @@ private fun FullBleedNoteCompose(
         Spacer(modifier = Modifier.height(10.dp))
 
         when (noteEvent) {
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent)
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
+            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
         }
@@ -508,27 +531,36 @@ private fun FullBleedNoteCompose(
                     .padding(horizontal = 12.dp),
         ) {
             Column {
-                if (
-                    (noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) &&
-                    baseNote.channelHex() != null
-                ) {
-                    ChannelHeader(
-                        channelHex = baseNote.channelHex()!!,
-                        showVideo = true,
+                if (noteEvent is ChannelCreateEvent) {
+                    PublicChatChannelHeader(
+                        channelHex = noteEvent.id,
                         sendToChannel = true,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                } else if (noteEvent is ChannelMetadataEvent) {
+                    noteEvent.channelId()?.let {
+                        PublicChatChannelHeader(
+                            channelHex = it,
+                            sendToChannel = true,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 } else if (noteEvent is VideoEvent) {
                     VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is PictureEvent) {
                     PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
+                } else if (noteEvent is BaseVoiceEvent) {
+                    VoiceHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
                     FileHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {
                     FileStorageHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is PeopleListEvent) {
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is FollowListEvent) {
+                    DisplayFollowList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
                     AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
@@ -579,6 +611,16 @@ private fun FullBleedNoteCompose(
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {
                     DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is BlockedRelayListEvent) {
+                    DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is ProxyRelayListEvent) {
+                    DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is TrustedRelayListEvent) {
+                    DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is IndexerRelayListEvent) {
+                    DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is BroadcastRelayListEvent) {
+                    DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is FhirResourceEvent) {
                     RenderFhirResource(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GitRepositoryEvent) {
@@ -603,6 +645,8 @@ private fun FullBleedNoteCompose(
                     RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is PublicMessageEvent) {
+                    RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CommentEvent) {
                     RenderTextEvent(
                         baseNote,
@@ -726,7 +770,19 @@ private fun RenderClassifiedsReaderForThread(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val images = remember(noteEvent) { noteEvent.images().toImmutableList() }
+    val imageSet =
+        noteEvent.imageMetas().ifEmpty { null }?.map {
+            MediaUrlImage(
+                url = it.url,
+                description = it.alt,
+                hash = it.hash,
+                blurhash = it.blurhash,
+                dim = it.dimension,
+                uri = note.toNostrUri(),
+                mimeType = it.mimeType,
+            )
+        }
+
     val title = remember(noteEvent) { noteEvent.title() }
     val summary =
         remember(noteEvent) {
@@ -742,11 +798,14 @@ private fun RenderClassifiedsReaderForThread(
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
-            if (images.isNotEmpty()) {
-                Row {
-                    InlineCarrousel(
-                        images,
-                        images.first(),
+            if (imageSet != null && imageSet.isNotEmpty()) {
+                AutoNonlazyGrid(imageSet.size) {
+                    ZoomableContentView(
+                        content = imageSet[it],
+                        images = imageSet.toImmutableList(),
+                        roundedCorner = false,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
                     )
                 }
             } else {
@@ -824,7 +883,7 @@ private fun RenderClassifiedsReaderForThread(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_dm),
+                    painter = painterRes(R.drawable.ic_dm, 5),
                     stringRes(R.string.send_a_direct_message),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
@@ -901,19 +960,29 @@ private fun RenderClassifiedsReaderForThread(
 }
 
 @Composable
-private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
+private fun RenderLongFormHeaderForThread(
+    noteEvent: LongTextNoteEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
     Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         noteEvent.image()?.let {
-            AsyncImage(
-                model = it,
+            MyAsyncImage(
+                imageUrl = it,
                 contentDescription =
                     stringRes(
                         R.string.preview_card_image_for,
                         it,
                     ),
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
+                mainImageModifier = Modifier,
+                loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                accountViewModel = accountViewModel,
+                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
+                onError = { DefaultImageHeader(note, accountViewModel) },
             )
+        } ?: run {
+            DefaultImageHeader(note, accountViewModel)
         }
 
         noteEvent.title()?.let {
@@ -930,11 +999,12 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
             .summary()
             ?.ifBlank { null }
             ?.let {
-                Spacer(modifier = DoubleVertSpacer)
+                Spacer(modifier = StdVertSpacer)
                 Text(
                     text = it,
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
                 )
             }
     }
@@ -954,7 +1024,7 @@ private fun RenderWikiHeaderForThreadPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsume(event, null, false)
         }
     }
 

@@ -3,9 +3,9 @@
     <string name="point_to_the_qr_code">Nasměrujte na QR kód</string>
     <string name="show_qr">Zobrazit QR kód</string>
     <string name="profile_image">Profilový obrázek</string>
-    <string name="your_profile_image">Profilový obrázek</string>
+    <string name="your_profile_image">Váš profilový obrázek</string>
     <string name="scan_qr">Skenovat QR kód</string>
-    <string name="show_anyway">Zobrazit přesto</string>
+    <string name="show_anyway">Přesto zobrazit</string>
     <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
     <string name="post_not_found">Příspěvek nenalezen</string>
@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Přihlaste se pomocí soukromého klíče, abyste mohli zrušit sledování</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Používáte veřejný klíč a veřejné klíče jsou pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli skrýt slovo nebo větu</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Používáte veřejný klíč a veřejné klíče jsou pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli zobrazit slovo nebo větu</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Používáte veřejný klíč, který je pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli měnit nastavení</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Používáte veřejný klíč, který je pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli nahrávat</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Používáte veřejný klíč, který je pouze pro čtení. Přihlaste se pomocí soukromého klíče, abyste mohli podepisovat události</string>
+    <string name="unauthorized_exception">Neautorizované dešifrování</string>
+    <string name="unauthorized_exception_description">Podepisovatel neautorizoval dešifrování potřebné k provedení této operace. Aktivujte dešifrování NIP-44 ve své aplikaci pro podepisování a zkuste to znovu</string>
+    <string name="signer_not_found_exception">Podepisovatel nenalezen</string>
+    <string name="signer_not_found_exception_description">Byla aplikace pro podepisování odinstalována? Zkontrolujte, zda je aplikace nainstalována a obsahuje tento účet. Odhlaste se a přihlaste znovu, pokud se aplikace změnila.</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Počet zobrazení</string>
     <string name="boost">Zvýšení</string>
@@ -71,6 +78,8 @@
     <string name="error_parsing_error_message">Chyba při zpracování chybové zprávy</string>
     <string name="following">" Sleduje"</string>
     <string name="followers">" Sledující"</string>
+    <string name="number_following">"%1$s následuje"</string>
+    <string name="number_followers">"%1$s Sledujících"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Bezpečnostní filtry</string>
     <string name="log_out">Odhlásit</string>
@@ -96,9 +105,10 @@
     <string name="my_awesome_group">Má skvělá skupina</string>
     <string name="picture_url">URL obrázku</string>
     <string name="description">Popis</string>
-    <string name="about_us">"O nás.. "</string>
+    <string name="no_description">Popis nebyl nalezen</string>
+    <string name="about_us">"O nás…"</string>
     <string name="what_s_on_your_mind">Co vás napadá?</string>
-    <string name="write_a_message">Napište zprávu...</string>
+    <string name="write_a_message">Napište zprávu…</string>
     <string name="post">Příspěvek</string>
     <string name="save">Uložit</string>
     <string name="create">Vytvořit</string>
@@ -137,9 +147,13 @@
     <string name="video_saved_to_the_gallery">Video uloženo do video galerie telefonu</string>
     <string name="failed_to_save_the_video">Nepodařilo se uložit video</string>
     <string name="upload_image">Nahrát obrázek</string>
+    <string name="take_a_picture">Pořiďte fotografii</string>
+    <string name="record_a_message">Nahrajte zprávu</string>
+    <string name="record_a_message_title">Nahrajte zprávu</string>
+    <string name="record_a_message_description">Stiskněte a podržte pro nahrání zprávy</string>
     <string name="uploading">Nahrávání…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel nemá nastavenou LN adresu pro přijímání sats</string>
-    <string name="reply_here">"Odpověď zde.. "</string>
+    <string name="reply_here">"Odpověď zde…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Zkopíruje ID poznámky do schránky pro sdílení</string>
     <string name="copy_channel_id_note_to_the_clipboard">Zkopírovat ID kanálu (poznámka) do schránky</string>
     <string name="edits_the_channel_metadata">Upravit metadata kanálu</string>
@@ -155,6 +169,7 @@
     <string name="gallery">Galerie</string>
     <string name="follows">"Sleduje"</string>
     <string name="reports">"Zprávy"</string>
+    <string name="number_reports">"%1$s Reportů"</string>
     <string name="more_options">Více možností</string>
     <string name="relays">" Přeposílání"</string>
     <string name="website">Webová stránka</string>
@@ -213,14 +228,23 @@
     <string name="unfollow">Přestat sledovat</string>
     <string name="channel_created">Kanál vytvořen</string>
     <string name="channel_information_changed_to">"Informace kanálu změněna na"</string>
+    <string name="ephemeral_relay_chat">Mizící chat</string>
+    <string name="relay_chat">Relé chat</string>
+    <string name="relay_chat_title">Relé chaty</string>
+    <string name="relay_chat_explainer">Relay chaty jsou chatové skupiny ovládané jejich domácí relé.
+        Jsou viditelné pro všechny na Nostru a každý se jich může zúčastnit.
+        Jsou skvělé pro otevřené komunity kolem konkrétních témat. Některé z těchto skupin jsou efemérní
+    a proto zprávy časem mizí</string>
     <string name="public_chat">Veřejný chat</string>
     <string name="public_chat_title">Metadata veřejného chatu</string>
     <string name="public_chat_explainer">Veřejné konverzace jsou viditelné pro všechny na Nostru a kdokoli
         se na nich může podílet. Jsou skvělé pro otevřené komunity kolem konkrétních témat.
         Moderaci lze ovládat smazáním příspěvků na relé</string>
     <string name="public_chat_relays_title">Rele</string>
-    <string name="public_chat_relays_explainer">Vložte mezi 1-3 relé, které hostí tuto skupinu.
+    <string name="public_chat_relays_explainer">Vložte mezi 1–3 relé, které hostí tuto skupinu.
         Klienti Nostr používají toto nastavení, aby věděli, kam stahovat zprávy a odesílat zprávy.</string>
+    <string name="paid_relay">Placený Relé</string>
+    <string name="tor_relay">Vynutit Tor při připojení</string>
     <string name="posts_received">příspěvků přijato</string>
     <string name="remove">Odebrat</string>
     <string name="translations_auto">Automaticky</string>
@@ -263,6 +287,7 @@
     <string name="biometric_error">Chyba</string>
     <string name="badge_created_by">"Vytvořeno uživatelem %1$s"</string>
     <string name="badge_award_image_for">"Obrázek ocenění od %1$s"</string>
+    <string name="badge_award_image">Obrázek ocenění</string>
     <string name="new_badge_award_notif">Obdrželi jste nové ocenění</string>
     <string name="award_granted_to">Ocenění uděleno uživateli</string>
     <string name="copied_note_text_to_clipboard">Text poznámky zkopírován do schránky</string>
@@ -288,7 +313,7 @@
     <string name="quick_action_unfollow">Přestat sledovat</string>
     <string name="quick_action_follow">Sledovat</string>
     <string name="quick_action_request_deletion_gallery_title">Odstranit z galerie</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Odstraňte tato média z vaší galerie, můžete je přidat později</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Odstranit toto médium z vaší galerie.</string>
     <string name="quick_action_request_deletion_alert_title">Požadavek na smazání</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst požádá o smazání vaší poznámky ze spojek, ke kterým jste v současnosti připojeni. Není zaručeno, že vaše poznámka bude trvale smazána z těchto spojek nebo z dalších spojek, kde může být uložena.</string>
     <string name="quick_action_block_dialog_btn">Blokovat</string>
@@ -410,6 +435,7 @@
     <string name="no">Ne</string>
     <string name="follow_list_selection">Seznam sledovaných</string>
     <string name="follow_list_kind3follows">Všechna sledování</string>
+    <string name="follow_list_kind3follows_proxy">Sleduje přes proxy</string>
     <string name="follow_list_aroundme">Kolem mě</string>
     <string name="follow_list_global">Globální</string>
     <string name="follow_list_mute_list">Seznam ztlumení</string>
@@ -484,9 +510,18 @@
     <string name="content_warning_hide_all_sensitive_content">Vždy skrýt citlivý obsah</string>
     <string name="content_warning_show_all_sensitive_content">Vždy zobrazit citlivý obsah</string>
     <string name="content_warning_see_warnings">Vždy zobrazovat upozornění na obsah</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Skrýt</string>
+    <string name="content_warning_show_all_sensitive_content_option">Ukázat</string>
+    <string name="content_warning_see_warnings_option">Varovat</string>
     <string name="recommended_apps">Doporučuje: </string>
     <string name="filter_spam_from_strangers">Filtrovat spam od cizinců</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Varovat, když příspěvky obsahují hlášení od vašich sledovaných osob</string>
+    <string name="filter_spam_from_strangers_title">Filtrovat spam</string>
+    <string name="filter_spam_from_strangers_explainer">Skryje příspěvky od cizinců, které byly přesně stejné 5 a více krát</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Upozornit na hlášení</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zobrazí varovnou zprávu, když příspěvky mají 5 nebo více hlášení od vašich sledovaných</string>
+    <string name="show_sensitive_content_title">Zobrazit citlivý obsah</string>
+    <string name="show_sensitive_content_explainer">Zobrazí varovnou zprávu, když ji autor příspěvku označil jako citlivý</string>
     <string name="new_reaction_symbol">Nový symbol reakce</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nebyly vybrány žádné typy reakcí. Dlouhým stiskem změňte</string>
     <string name="zapraiser">Zap-sběr</string>
@@ -538,10 +573,12 @@
     <string name="are_you_sure_you_want_to_log_out">Odhlášení vymaže všechny vaše místní informace. Ujistěte se, že máte zálohované své privátní klíče, abyste se vyhnuli ztrátě účtu. Chcete pokračovat?</string>
     <string name="followed_tags">Sledované značky</string>
     <string name="relay_setup">Rele</string>
-    <string name="discover_content">Objevování poznámek</string>
+    <string name="discover_follows">Balíčky Sledování</string>
+    <string name="discover_reads">Přečtené</string>
+    <string name="discover_content_v2">Algoritmy kanálu</string>
     <string name="discover_marketplace">Trh</string>
-    <string name="discover_live">Živě</string>
-    <string name="discover_community">Komunita</string>
+    <string name="discover_live_v2">Živé vysílání</string>
+    <string name="discover_community_v2">Komunity</string>
     <string name="discover_chat">Chaty</string>
     <string name="community_approved_posts">Schválené příspěvky</string>
     <string name="groups_no_descriptor">Tato skupina nemá popis ani pravidla. Promluvte si s majitelem, aby je přidal/a.</string>
@@ -549,6 +586,7 @@
     <string name="add_sensitive_content_label">Citlivý obsah</string>
     <string name="add_sensitive_content_description">Před zobrazením tohoto obsahu přidá upozornění na citlivý obsah.</string>
     <string name="preferences">Nastavení aplikace</string>
+    <string name="user_preferences">Uživatelské nastavení</string>
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
@@ -593,6 +631,8 @@
     <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
     <string name="geohash_exclusive">Lokace-Exkluzívní příspěvek</string>
     <string name="geohash_exclusive_explainer">Uvidí to pouze následovníci umístění. Tvoji obecní následovníci to neuvidí.</string>
+    <string name="hashtag_exclusive">Hashtag-exkluzivní příspěvek</string>
+    <string name="hashtag_exclusive_explainer">Uvidí to pouze následovníci hashtagu. Tvůj všeobecní následovníci to neuvidí.</string>
     <string name="loading_location">Načítání umístění</string>
     <string name="lack_location_permissions">Žádná lokace oprávnění</string>
     <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
@@ -601,6 +641,7 @@
     <string name="new_feature_nip17_activate">Aktivovat</string>
     <string name="messages_create_public_chat">Veřejné</string>
     <string name="messages_create_public_private_chat_description">Nová veřejná nebo soukromá skupina</string>
+    <string name="messages_relay_based">Relé</string>
     <string name="messages_new_message">Soukromé</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject">Předmět</string>
@@ -666,6 +707,7 @@
     <string name="wallet_number">Peněženka %1$s</string>
     <string name="error_opening_external_signer">Chyba při otevírání aplikace pro podpis</string>
     <string name="error_opening_external_signer_description">Signner aplikace nebyla nalezena. Zkontrolujte, zda aplikace nebyla odinstalována</string>
+    <string name="sign_request_rejected2">Požadavek na podpis byl zamítnut</string>
     <string name="sign_request_rejected">Žádost o podpis byla zamítnuta</string>
     <string name="sign_request_rejected_description">Ujistěte se, že podepisující aplikace autorizovala tuto transakci</string>
     <string name="no_wallet_found_with_error">Nebyly nalezeny žádné peněženky pro platbu bleskové faktury (Chyba: %1$s). Prosím, nainstalujte si bleskovou peněženku pro použití Zapů</string>
@@ -793,6 +835,8 @@
     <string name="new_post">Nový příspěvek</string>
     <string name="new_short">Nové Shorts: obrázky nebo videa</string>
     <string name="new_community_note">Nová poznámka komunity</string>
+    <string name="new_product">Nový produkt</string>
+    <string name="new_exclusive_geo_note">Nový geoexkluzivní příspěvek</string>
     <string name="open_all_reactions_to_this_post">Otevřít všechny reakce pro tento příspěvek</string>
     <string name="close_all_reactions_to_this_post">Zavřít všechny reakce na tento příspěvek</string>
     <string name="reply_description">Odpověď</string>
@@ -847,12 +891,29 @@
     <string name="private_outbox_section_explainer">Vložte mezi 1–3 relé pro ukládání událostí nikoho jiného, jako jsou koncepty a/nebo nastavení aplikace. V ideálním případě jsou tato relé buď lokální, nebo vyžadují autentizaci před stažením obsahu každého uživatele.</string>
     <string name="kind_3_section">Obecná relé</string>
     <string name="kind_3_section_description">Amethyst používá tato relé ke stahování příspěvků pro vás.</string>
+    <string name="connected_section">Připojené přenašeče</string>
+    <string name="connected_section_description">Aktuální seznam používaných přenašečů</string>
     <string name="kind_3_recommended_section">Doporučené relé</string>
     <string name="kind_3_recommended_section_description">Pro příjem příspěvků od uvedených uživatelů přidejte následující relé do seznamu obecných relat.</string>
     <string name="search_section">Vyhledávací relé</string>
     <string name="search_section_explainer">Seznam relé, která se používají k vyhledávání a označování uživatelů. Označování a vyhledávání nebude fungovat, pokud nejsou k dispozici žádné možnosti.</string>
     <string name="local_section">Lokální relé</string>
     <string name="local_section_explainer">Seznam relací, které jsou v tomto zařízení spuštěny.</string>
+    <string name="trusted_relays_title">Důvěryhodné Relé</string>
+    <string name="trusted_section">Důvěryhodné přenašeče</string>
+    <string name="trusted_section_explainer">Přenašeče, kterým důvěřujete a nepotřebujete Tor</string>
+    <string name="proxy_relays_title">Proxy Relé</string>
+    <string name="proxy_section">Proxy přenašeče</string>
+    <string name="proxy_section_explainer">Agregační přenašeče, které aplikace používá ke stahování vašich zdrojů, jako např. filter.nostr.wine</string>
+    <string name="broadcast_relays_title">Vysílací Relé</string>
+    <string name="broadcast_section">Vysílací Relé</string>
+    <string name="broadcast_section_explainer">Relé, které šíří vaše poznámky do ostatních přenašečů, jako např. sendit.nosflare.com</string>
+    <string name="indexer_relays_title">Indexační Relé</string>
+    <string name="indexer_section">Indexační Relé</string>
+    <string name="indexer_section_explainer">Relé, které uchovávají metadata a seznamy přenašečů, např. purplepag.es</string>
+    <string name="blocked_relays_title">Blokované Relé</string>
+    <string name="blocked_section">Blokované Relé</string>
+    <string name="blocked_section_explainer">Amethyst se k těmto relé nikdy nepřipojí</string>
     <string name="zap_the_devs_title">Zapni vývojáře!</string>
     <string name="zap_the_devs_description">Váš příspěvek nám pomáhá dělat rozdíl. Každý sat se počítá!</string>
     <string name="donate_now">Přispět nyní</string>
@@ -942,4 +1003,11 @@
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
     <string name="private_message">Soukromá zpráva</string>
+    <string name="public_message">Veřejná zpráva</string>
+    <string name="group_relay">Relé chatu</string>
+    <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
+    <string name="share_image">Sdílet obrázek…</string>
+    <string name="search_by_hashtag">Vyhledávání hashtag: #%1$s</string>
+    <string name="dont_translate_from">Nepřekládat z</string>
+    <string name="dont_translate_from_description">Zde zobrazené jazyky nebudou přeloženy. Vyberte jazyk, který chcete odstranit a nechat je znovu přeložit.</string>
 </resources>

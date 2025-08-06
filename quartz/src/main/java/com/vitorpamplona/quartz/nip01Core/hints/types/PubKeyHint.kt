@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,10 +22,11 @@ package com.vitorpamplona.quartz.nip01Core.hints.types
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-class PubKeyHint(
+data class PubKeyHint(
     val pubkey: HexKey,
-    var relay: String? = null,
+    val relay: NormalizedRelayUrl,
 ) : Hint {
     override fun id() = pubkey.hexToByteArray()
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -51,7 +52,7 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
@@ -175,14 +176,18 @@ private fun FeedLoaded(
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
-                RenderCardItem(
-                    item,
-                    routeForLastRead,
-                    showHidden = items.showHidden,
-                    accountViewModel,
-                    nav,
-                )
+            Row(Modifier.fillMaxWidth().animateItem()) {
+                logTime(
+                    debugMessage = { "CardFeedView $item" },
+                ) {
+                    RenderCardItem(
+                        item,
+                        routeForLastRead,
+                        showHidden = items.showHidden,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
             HorizontalDivider(
                 thickness = DividerThickness,

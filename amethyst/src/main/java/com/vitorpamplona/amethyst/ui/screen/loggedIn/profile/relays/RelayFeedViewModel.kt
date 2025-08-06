@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,13 +28,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -45,61 +49,79 @@ class RelayFeedViewModel :
     val order =
         compareByDescending<RelayInfo> { it.lastEvent }
             .thenByDescending { it.counter }
-            .thenBy { it.url }
+            .thenBy { it.url.url }
 
     private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
     val feedContent = _feedContent.asStateFlow()
 
     var currentUser: User? = null
+    var currentJob: Job? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.Default) {
+            refreshSuspended()
+        }
     }
 
     fun refreshSuspended() {
         try {
             isRefreshing.value = true
 
-            val beingUsed = currentUser?.relaysBeingUsed?.values ?: emptyList()
-            val beingUsedSet = currentUser?.relaysBeingUsed?.keys ?: emptySet()
-
-            val newRelaysFromRecord =
-                currentUser?.latestContactList?.relays()?.entries?.mapNotNullTo(HashSet()) {
-                    val url = RelayUrlFormatter.normalize(it.key)
-                    if (url !in beingUsedSet) {
-                        RelayInfo(url, 0, 0)
-                    } else {
-                        null
-                    }
-                }
-                    ?: emptyList()
-
-            val newList = (beingUsed + newRelaysFromRecord).sortedWith(order)
-
-            _feedContent.update { newList }
+            currentUser?.let {
+                val newList = mergeRelays(it.relaysBeingUsed, it.latestContactList?.relays())
+                _feedContent.update { newList }
+            }
         } finally {
             isRefreshing.value = false
         }
     }
 
-    val listener: (UserState) -> Unit = { invalidateData() }
+    fun mergeRelays(
+        relaysBeingUsed: Map<NormalizedRelayUrl, RelayInfo>,
+        relays: Map<NormalizedRelayUrl, ReadWrite>?,
+    ): List<RelayInfo> {
+        val userRelaysBeingUsed = relaysBeingUsed.map { it.value }
 
+        val currentUserRelays =
+            relays?.mapNotNull {
+                val url = it.key
+                if (url !in relaysBeingUsed) {
+                    RelayInfo(url, 0, 0)
+                } else {
+                    null
+                }
+            } ?: emptyList()
+
+        return (userRelaysBeingUsed + currentUserRelays).sortedWith(order)
+    }
+
+    @OptIn(FlowPreview::class)
     fun subscribeTo(user: User) {
         if (currentUser != user) {
             currentUser = user
-            user.live().relays.observeForever(listener)
-            user.live().relayInfo.observeForever(listener)
+
+            currentJob?.cancel()
+            currentJob =
+                viewModelScope.launch {
+                    combine(currentUser!!.flow().relays.stateFlow, currentUser!!.flow().relayInfo.stateFlow) { relays, relayInfo ->
+                        mergeRelays(relays.user.relaysBeingUsed, relayInfo.user.latestContactList?.relays())
+                    }.debounce(1000)
+                        .collect { newList ->
+                            _feedContent.update { newList }
+                        }
+                }
+
             invalidateData()
         }
     }
 
     fun unsubscribeTo(user: User) {
         if (currentUser == user) {
-            user.live().relays.removeObserver(listener)
-            user.live().relayInfo.removeObserver(listener)
             currentUser = null
+            currentJob?.cancel()
+            invalidateData()
         }
     }
 
@@ -116,6 +138,7 @@ class RelayFeedViewModel :
     override fun onCleared() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         bundler.cancel()
+        currentJob?.cancel()
         super.onCleared()
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -73,6 +73,11 @@ fun LoadUrlPreviewDirect(
             is UrlPreviewState.Loaded -> {
                 RenderLoaded(state, url, callbackUri, accountViewModel)
             }
+            is UrlPreviewState.Loading -> {
+                WaitAndDisplay {
+                    DisplayUrlWithLoadingSymbol(url)
+                }
+            }
             else -> {
                 ClickableUrl(urlText, url)
             }
@@ -87,7 +92,7 @@ fun RenderLoaded(
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
-    if (state.previewInfo.mimeType.type == "image") {
+    if (state.previewInfo.mimeType.startsWith("image")) {
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(
                 content = MediaUrlImage(url, uri = callbackUri),
@@ -96,7 +101,7 @@ fun RenderLoaded(
                 accountViewModel = accountViewModel,
             )
         }
-    } else if (state.previewInfo.mimeType.type == "video") {
+    } else if (state.previewInfo.mimeType.startsWith("video")) {
         Box(modifier = HalfVertPadding) {
             ZoomableContentView(
                 content = MediaUrlVideo(url, uri = callbackUri),

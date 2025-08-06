@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -32,9 +32,9 @@ class EmojiSuggestionState(
     val accountViewModel: AccountViewModel,
 ) {
     val search: MutableStateFlow<String> = MutableStateFlow("")
-    val results: Flow<List<Account.EmojiMedia>> =
+    val results: Flow<List<EmojiPackState.EmojiMedia>> =
         accountViewModel.account
-            .myEmojis
+            .emoji.myEmojis
             .combine(search) { list, search ->
                 if (search.length == 1) {
                     list

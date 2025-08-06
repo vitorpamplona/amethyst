@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,9 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+@Deprecated("Replaced by NIP-68")
 @Immutable
 class GalleryListEvent(
     id: HexKey,
@@ -36,108 +37,96 @@ class GalleryListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 10011
         const val ALT = "Profile Gallery"
-        const val GALLERYTAGNAME = "url"
+        const val GALLERY_TAG_NAME = "url"
 
-        fun addEvent(
+        suspend fun addEvent(
             earlierVersion: GalleryListEvent?,
             eventId: HexKey,
             url: String,
             relay: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) = addTag(earlierVersion, GALLERYTAGNAME, eventId, url, relay, signer, createdAt, onReady)
+        ) = addTag(earlierVersion, GALLERY_TAG_NAME, eventId, url, relay, signer, createdAt)
 
-        fun addTag(
+        suspend fun addTag(
             earlierVersion: GalleryListEvent?,
             tagName: String,
-            eventid: HexKey,
+            eventId: HexKey,
             url: String,
             relay: String?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) {
-            val tags = arrayOf(tagName, url, eventid)
+        ): GalleryListEvent {
+            val tags = arrayOf(tagName, url, eventId)
             if (relay != null) {
                 tags + relay
             }
 
-            add(
+            return add(
                 earlierVersion,
                 arrayOf(tags),
                 signer,
                 createdAt,
-                onReady,
             )
         }
 
-        fun add(
+        suspend fun add(
             earlierVersion: GalleryListEvent?,
             listNewTags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) {
+        ): GalleryListEvent =
             create(
                 content = earlierVersion?.content ?: "",
                 tags = listNewTags.plus(earlierVersion?.tags ?: arrayOf()),
                 signer = signer,
                 createdAt = createdAt,
-                onReady = onReady,
             )
-        }
 
-        fun removeEvent(
+        suspend fun removeEvent(
             earlierVersion: GalleryListEvent,
             eventId: HexKey,
             url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, GALLERYTAGNAME, eventId, url, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, GALLERY_TAG_NAME, eventId, url, signer, createdAt)
 
-        fun removeReplaceable(
+        suspend fun removeReplaceable(
             earlierVersion: GalleryListEvent,
             aTag: ATag,
             url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) = removeTag(earlierVersion, GALLERYTAGNAME, aTag.toTag(), url, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, GALLERY_TAG_NAME, aTag.toTag(), url, signer, createdAt)
 
-        private fun removeTag(
+        private suspend fun removeTag(
             earlierVersion: GalleryListEvent,
             tagName: String,
-            eventid: HexKey,
+            eventId: HexKey,
             url: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) {
+        ): GalleryListEvent =
             create(
                 content = earlierVersion.content,
                 tags =
                     earlierVersion.tags
-                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == url && it[2] == eventid) }
+                        .filter { it.size <= 1 || !(it[0] == tagName && it[1] == url && it[2] == eventId) }
                         .toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
-                onReady = onReady,
             )
-        }
 
-        fun create(
+        suspend fun create(
             content: String,
             tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GalleryListEvent) -> Unit,
-        ) {
+        ): GalleryListEvent {
             val newTags =
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
@@ -145,7 +134,7 @@ class GalleryListEvent(
                     tags + AltTag.assemble(ALT)
                 }
 
-            signer.sign(createdAt, KIND, newTags, content, onReady)
+            return signer.sign(createdAt, KIND, newTags, content)
         }
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -48,7 +48,7 @@ data class EmojiUrlTag(
         }
 
         fun parse(tag: Array<String>): EmojiUrlTag? =
-            if (tag.size > 2 && tag[0] == "emoji") {
+            if (tag.size > 2 && tag[0] == TAG_NAME) {
                 EmojiUrlTag(tag[1], tag[2])
             } else {
                 null

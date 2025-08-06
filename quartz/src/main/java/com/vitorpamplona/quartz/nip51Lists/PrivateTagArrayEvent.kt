@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip51Lists
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import kotlinx.coroutines.CancellationException
 
 @Immutable
 abstract class PrivateTagArrayEvent(
@@ -35,226 +35,28 @@ abstract class PrivateTagArrayEvent(
     pubKey: HexKey,
     createdAt: Long,
     kind: Int,
-    tags: Array<Array<String>>,
+    tags: TagArray,
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient private var privateTagsCache: Array<Array<String>>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
-
     override fun isContentEncoded() = true
 
-    fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
+    suspend fun decrypt(signer: NostrSigner): TagArray {
+        if (signer.pubKey != pubKey) throw SignerExceptions.UnauthorizedDecryptionException()
 
-    fun privateTags(
-        signer: NostrSigner,
-        onReady: (Array<Array<String>>) -> Unit,
-    ) {
-        if (content.isEmpty()) {
-            onReady(emptyArray())
-            return
-        }
-
-        privateTagsCache?.let {
-            onReady(it)
-            return
-        }
-
-        try {
-            PrivateTagsInContent.decrypt(content, signer) {
-                privateTagsCache = it
-                privateTagsCache?.let { onReady(it) }
-            }
-        } catch (e: Throwable) {
-            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
-        }
+        return PrivateTagsInContent.decrypt(content, signer)
     }
 
-    fun decryptChangeEncrypt(
-        signer: NostrSigner,
-        change: (Array<Array<String>>) -> Array<Array<String>>,
-        onReady: (content: String) -> Unit,
-    ) {
-        privateTags(signer) { privateTags ->
-            PrivateTagsInContent.encryptNip04(
-                privateTags = change(privateTags),
-                signer = signer,
-            ) { encryptedTags ->
-                onReady(encryptedTags)
-            }
-        }
-    }
-
-    companion object {
-        fun add(
-            current: PrivateTagArrayEvent,
-            newTag: Array<String>,
-            toPrivate: Boolean,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            if (toPrivate) {
-                current.privateTags(signer) { privateTags ->
-                    PrivateTagsInContent.encryptNip04(
-                        privateTags = privateTags.plus(newTag),
-                        signer = signer,
-                    ) { encryptedTags ->
-                        onReady(encryptedTags, current.tags)
-                    }
-                }
-            } else {
-                onReady(current.content, current.tags.plus(newTag))
-            }
+    suspend fun privateTags(signer: NostrSigner): TagArray? {
+        if (signer.pubKey != pubKey) {
+            return null
         }
 
-        fun addAll(
-            current: PrivateTagArrayEvent,
-            newTag: Array<Array<String>>,
-            toPrivate: Boolean,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            if (toPrivate) {
-                current.privateTags(signer) { privateTags ->
-                    PrivateTagsInContent.encryptNip04(
-                        privateTags = privateTags.plus(newTag),
-                        signer = signer,
-                    ) { encryptedTags ->
-                        onReady(encryptedTags, current.tags)
-                    }
-                }
-            } else {
-                onReady(current.content, current.tags.plus(newTag))
-            }
-        }
-
-        fun replaceAllToPrivateNewTag(
-            dTag: String,
-            current: PrivateTagArrayEvent?,
-            oldTagStartsWith: Array<String>,
-            newTag: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            if (current == null) {
-                createPrivate(dTag, newTag, signer, onReady)
-            } else {
-                replaceAllToPrivateNewTag(current, oldTagStartsWith, newTag, signer, onReady)
-            }
-        }
-
-        fun replaceAllToPublicNewTag(
-            dTag: String,
-            current: PrivateTagArrayEvent?,
-            oldTagStartsWith: Array<String>,
-            newTag: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            if (current == null) {
-                createPublic(dTag, newTag, signer, onReady)
-            } else {
-                replaceAllToPublicNewTag(current, oldTagStartsWith, newTag, signer, onReady)
-            }
-        }
-
-        fun replaceAllToPrivateNewTag(
-            current: PrivateTagArrayEvent,
-            oldTagStartsWith: Array<String>,
-            newTag: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            current.privateTags(signer) { privateTags ->
-                PrivateTagsInContent.encryptNip04(
-                    privateTags = privateTags.replaceAll(oldTagStartsWith, newTag),
-                    signer = signer,
-                ) { encryptedTags ->
-                    onReady(encryptedTags, current.tags.remove(oldTagStartsWith))
-                }
-            }
-        }
-
-        fun replaceAllToPublicNewTag(
-            current: PrivateTagArrayEvent,
-            oldTagStartsWith: Array<String>,
-            newTag: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            current.privateTags(signer) { privateTags ->
-                PrivateTagsInContent.encryptNip04(
-                    privateTags = privateTags.remove(oldTagStartsWith),
-                    signer = signer,
-                ) { encryptedTags ->
-                    onReady(encryptedTags, current.tags.remove(oldTagStartsWith).plus(newTag))
-                }
-            }
-        }
-
-        fun removeAllFromPrivate(
-            current: PrivateTagArrayEvent,
-            oldTagStartsWith: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            current.privateTags(signer) { privateTags ->
-                PrivateTagsInContent.encryptNip04(
-                    privateTags = privateTags.remove(oldTagStartsWith),
-                    signer = signer,
-                ) { encryptedTags ->
-                    onReady(encryptedTags, current.tags)
-                }
-            }
-        }
-
-        fun removeAllFromPublic(
-            current: PrivateTagArrayEvent,
-            oldTagStartsWith: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) = onReady(current.content, current.tags.remove(oldTagStartsWith))
-
-        fun removeAll(
-            current: PrivateTagArrayEvent,
-            oldTagStartsWith: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            current.privateTags(signer) { privateTags ->
-                PrivateTagsInContent.encryptNip04(
-                    privateTags = privateTags.remove(oldTagStartsWith),
-                    signer = signer,
-                ) { encryptedTags ->
-                    onReady(encryptedTags, current.tags.remove(oldTagStartsWith))
-                }
-            }
-        }
-
-        fun createPrivate(
-            dTag: String,
-            newTag: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            PrivateTagsInContent.encryptNip04(
-                privateTags = arrayOf(newTag),
-                signer = signer,
-            ) { encryptedTags ->
-                onReady(encryptedTags, arrayOf(arrayOf("d", dTag)))
-            }
-        }
-
-        fun createPublic(
-            dTag: String,
-            newTag: Array<String>,
-            signer: NostrSigner,
-            onReady: (content: String, tags: Array<Array<String>>) -> Unit,
-        ) {
-            onReady("", arrayOf(arrayOf("d", dTag), newTag))
+        return try {
+            PrivateTagsInContent.decrypt(content, signer)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
@@ -55,6 +56,8 @@ class ClassifiedsEvent(
 
     fun condition() = tags.firstNotNullOfOrNull(ConditionTag::parse)
 
+    fun conditionValid() = tags.firstNotNullOfOrNull(ConditionTag::parseCondition)
+
     fun images() = tags.mapNotNull(ImageTag::parse)
 
     fun status() = tags.firstNotNullOfOrNull(StatusTag::parse)
@@ -70,6 +73,22 @@ class ClassifiedsEvent(
     fun categories() = tags.hashtags()
 
     fun isWellFormed() = tags.containsAllTagNamesWithValues(REQUIRED_FIELDS)
+
+    fun imageMetas(): List<ProductImageMeta> {
+        val images = images()
+        val imetas = imetas()
+
+        val imetaSet = imetas.associate { it.url to it }
+
+        return images.map {
+            val imeta = imetaSet.get(it)
+            if (imeta != null) {
+                ProductImageMeta.parse(imeta)
+            } else {
+                ProductImageMeta(it)
+            }
+        }
+    }
 
     companion object {
         const val KIND = 30402

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,6 +40,8 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -48,8 +49,8 @@ import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -74,6 +75,7 @@ fun RenderHighlight(
     val noteEvent = note.event as? HighlightEvent ?: return
 
     DisplayHighlight(
+        comment = noteEvent.comment(),
         highlight = noteEvent.quote(),
         context = noteEvent.context(),
         authorHex = noteEvent.pubKey,
@@ -92,6 +94,7 @@ fun RenderHighlight(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayHighlight(
+    comment: String?,
     highlight: String,
     context: String?,
     authorHex: String?,
@@ -105,6 +108,21 @@ fun DisplayHighlight(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    comment?.let {
+        TranslatableRichTextViewer(
+            content = it,
+            canPreview = canPreview && !makeItShort,
+            quotesLeft = quotesLeft,
+            modifier = Modifier.fillMaxWidth(),
+            tags = EmptyTagList,
+            backgroundColor = backgroundColor,
+            id = it,
+            callbackUri = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
     val quote =
         remember {
             highlight.split("\n").joinToString("\n") { "> *${it.removeSuffix(" ")}*" }
@@ -218,7 +236,7 @@ fun DisplayEntryForUser(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userMetadata by baseUser.live().userMetadataInfo.observeAsState()
+    val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
         clickablePart = userMetadata?.bestName() ?: baseUser.pubkeyDisplayHex(),
@@ -236,15 +254,15 @@ fun DisplayEntryForNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by note.live().metadata.observeAsState()
+    val noteState by observeNote(note, accountViewModel)
 
     val author = userBase ?: noteState?.note?.author
 
     if (author != null) {
-        RenderUserAsClickableText(author, null, nav)
+        RenderUserAsClickableText(author, null, accountViewModel, nav)
     }
 
-    val noteEvent = noteState?.note?.event as? BaseThreadedEvent ?: return
+    val noteEvent = noteState.note.event as? BaseThreadedEvent ?: return
 
     val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
 
@@ -253,10 +271,10 @@ fun DisplayEntryForNote(
     if (description != null) {
         ClickableTextPrimary(
             text = description,
-            onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav.nav(it) } },
+            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
         )
     } else {
-        DisplayEvent(noteEvent.id, noteEvent.kind, note.toNostrUri(), null, accountViewModel, nav)
+        DisplayEvent(noteEvent.id, note.toNostrUri(), null, accountViewModel, nav)
     }
 }
 

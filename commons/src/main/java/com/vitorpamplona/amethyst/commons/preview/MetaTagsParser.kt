@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -82,6 +82,7 @@ object MetaTagsParser {
 
         fun nextTag(): RawTag? {
             skipWhile { it != '<' }
+            if (this.exhausted()) return null
             consume()
 
             // read tag name
@@ -278,38 +279,34 @@ object MetaTagsParser {
 
                 State.VALUE -> {
                     var attr: Pair<String, String>? = null
-                    when {
-                        valueQuote != null -> {
-                            if (c == valueQuote) {
+                    if (valueQuote != null) {
+                        if (c == valueQuote) {
+                            attr =
+                                Pair(
+                                    input.slice(nameBegin..<nameEnd),
+                                    input.slice(valueBegin..<i),
+                                )
+                        }
+                    } else {
+                        when {
+                            c.isWhitespace() -> {
                                 attr =
                                     Pair(
                                         input.slice(nameBegin..<nameEnd),
                                         input.slice(valueBegin..<i),
                                     )
                             }
-                        }
 
-                        valueQuote == null -> {
-                            when {
-                                c.isWhitespace() -> {
-                                    attr =
-                                        Pair(
-                                            input.slice(nameBegin..<nameEnd),
-                                            input.slice(valueBegin..<i),
-                                        )
-                                }
+                            i == input.length - 1 -> {
+                                attr =
+                                    Pair(
+                                        input.slice(nameBegin..<nameEnd),
+                                        input.slice(valueBegin..i),
+                                    )
+                            }
 
-                                i == input.length - 1 -> {
-                                    attr =
-                                        Pair(
-                                            input.slice(nameBegin..<nameEnd),
-                                            input.slice(valueBegin..i),
-                                        )
-                                }
-
-                                NON_UNQUOTED_ATTR_VALUE_CHARS.contains(c) -> {
-                                    return null
-                                }
+                            NON_UNQUOTED_ATTR_VALUE_CHARS.contains(c) -> {
+                                return null
                             }
                         }
                     }

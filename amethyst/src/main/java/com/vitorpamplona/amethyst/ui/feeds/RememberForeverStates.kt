@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -41,10 +41,14 @@ object ScrollStateKeys {
     const val VIDEO_SCREEN = "VideoFeed"
     const val HOME_FOLLOWS = "HomeFollowsFeed"
     const val HOME_REPLIES = "HomeFollowsRepliesFeed"
+    const val MESSAGES_KNOWN = "MessagesKnown"
+    const val MESSAGES_NEW = "MessagesNew"
     const val PROFILE_GALLERY = "ProfileGalleryFeed"
 
     const val DRAFTS = "DraftsFeed"
 
+    const val DISCOVER_FOLLOWS = "DiscoverFollowSetsFeed"
+    const val DISCOVER_READS = "DiscoverReadsFeed"
     const val DISCOVER_CONTENT = "DiscoverDiscoverContentFeed"
     const val DISCOVER_MARKETPLACE = "DiscoverMarketplaceFeed"
     const val DISCOVER_LIVE = "DiscoverLiveFeed"

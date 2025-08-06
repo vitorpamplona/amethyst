@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.previews
 
 import androidx.compose.runtime.Immutable
-import okhttp3.MediaType
 import java.net.URL
 
 @Immutable
@@ -30,7 +29,7 @@ class UrlInfoItem(
     val title: String = "",
     val description: String = "",
     val image: String = "",
-    val mimeType: MediaType,
+    val mimeType: String,
 ) {
     val verifiedUrl = kotlin.runCatching { URL(url) }.getOrNull()
     val imageUrlFullPath =

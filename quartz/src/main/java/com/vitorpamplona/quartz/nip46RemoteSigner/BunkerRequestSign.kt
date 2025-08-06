@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,11 +21,12 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import java.util.UUID
 
 class BunkerRequestSign(
     id: String = UUID.randomUUID().toString(),
-    val event: Event,
+    val event: EventTemplate<Event>,
 ) : BunkerRequest(id, METHOD_NAME, arrayOf(event.toJson())) {
     companion object {
         val METHOD_NAME = "sign_event"
@@ -33,6 +34,6 @@ class BunkerRequestSign(
         fun parse(
             id: String,
             params: Array<String>,
-        ): BunkerRequestSign = BunkerRequestSign(id, Event.fromJson(params[0]))
+        ): BunkerRequestSign = BunkerRequestSign(id, EventTemplate.fromJson(params[0]))
     }
 }

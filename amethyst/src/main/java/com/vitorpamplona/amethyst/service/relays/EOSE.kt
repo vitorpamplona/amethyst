@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,64 +20,137 @@
  */
 package com.vitorpamplona.amethyst.service.relays
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.MutableTime
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-class EOSERelayList(
-    var relayList: Map<String, EOSETime> = emptyMap(),
-) {
+typealias SincePerRelayMap = Map<NormalizedRelayUrl, MutableTime>
+
+class EOSERelayList {
+    var relayList: SincePerRelayMap = emptyMap()
+
     fun addOrUpdate(
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val eose = relayList[relayUrl]
         if (eose == null) {
-            relayList = relayList + Pair(relayUrl, EOSETime(time))
+            relayList = relayList + Pair(relayUrl, MutableTime(time))
         } else {
-            eose.time = time
+            eose.updateIfNewer(time)
         }
     }
+
+    fun clear() {
+        relayList = emptyMap()
+    }
+
+    fun since() = relayList
+
+    fun newEose(
+        relay: NormalizedRelayUrl,
+        time: Long,
+    ) = addOrUpdate(relay, time)
 }
 
-class EOSEFollowList(
-    var followList: Map<String, EOSERelayList> = emptyMap(),
+open class EOSEByKey<U : Any>(
+    cacheSize: Int = 200,
 ) {
+    var followList: LruCache<U, EOSERelayList> = LruCache<U, EOSERelayList>(cacheSize)
+
     fun addOrUpdate(
-        listCode: String,
-        relayUrl: String,
+        listCode: U,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val relayList = followList[listCode]
         if (relayList == null) {
             val newList = EOSERelayList()
             newList.addOrUpdate(relayUrl, time)
-            followList = followList + mapOf(listCode to newList)
+            followList.put(listCode, newList)
         } else {
             relayList.addOrUpdate(relayUrl, time)
         }
     }
+
+    fun since(listCode: U) = followList[listCode]?.relayList
+
+    fun newEose(
+        listCode: U,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+    ) = addOrUpdate(listCode, relayUrl, time)
 }
 
-class EOSEAccount(
-    var users: Map<User, EOSEFollowList> = emptyMap(),
+open class EOSEAccountKey<U : Any>(
+    cacheSize: Int = 20,
 ) {
+    var users: LruCache<User, EOSEByKey<U>> = LruCache<User, EOSEByKey<U>>(cacheSize)
+
     fun addOrUpdate(
         user: User,
-        listCode: String,
-        relayUrl: String,
+        listCode: U,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val followList = users[user]
         if (followList == null) {
-            val newList = EOSEFollowList()
+            val newList = EOSEByKey<U>()
+            users.put(user, newList)
             newList.addOrUpdate(listCode, relayUrl, time)
-            users = users + mapOf(user to newList)
         } else {
             followList.addOrUpdate(listCode, relayUrl, time)
         }
     }
 
     fun removeDataFor(user: User) {
-        users = users.minus(user)
+        users.remove(user)
     }
+
+    fun since(
+        key: User,
+        listCode: U,
+    ) = users[key]?.followList?.get(listCode)?.relayList
+
+    fun newEose(
+        user: User,
+        listCode: U,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+    ) = addOrUpdate(user, listCode, relayUrl, time)
+}
+
+class EOSEAccountFast<T : Any>(
+    cacheSize: Int = 20,
+) {
+    private val users: LruCache<T, EOSERelayList> = LruCache<T, EOSERelayList>(cacheSize)
+
+    fun addOrUpdate(
+        user: T,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+    ) {
+        val relayList = users[user]
+        if (relayList == null) {
+            val newList = EOSERelayList()
+            users.put(user, newList)
+
+            newList.addOrUpdate(relayUrl, time)
+        } else {
+            relayList.addOrUpdate(relayUrl, time)
+        }
+    }
+
+    fun removeDataFor(user: T) {
+        users.remove(user)
+    }
+
+    fun since(key: T) = users[key]?.relayList
+
+    fun newEose(
+        user: T,
+        relayUrl: NormalizedRelayUrl,
+        time: Long,
+    ) = addOrUpdate(user, relayUrl, time)
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -55,7 +55,11 @@ class DeletionEvent(
     AddressHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     fun deleteEvents() = taggedEvents()
 
@@ -78,6 +82,25 @@ class DeletionEvent(
 
             deleteEvents.forEach {
                 eTag(ETag(it.id))
+                if (it is AddressableEvent) {
+                    aTag(it.aTag())
+                }
+            }
+
+            pTagIds(deleteEvents.mapTo(HashSet()) { it.pubKey })
+            kinds(deleteEvents.mapTo(HashSet()) { it.kind })
+
+            initializer()
+        }
+
+        fun buildAddressOnly(
+            deleteEvents: List<Event>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+
+            deleteEvents.forEach {
                 if (it is AddressableEvent) {
                     aTag(it.aTag())
                 }

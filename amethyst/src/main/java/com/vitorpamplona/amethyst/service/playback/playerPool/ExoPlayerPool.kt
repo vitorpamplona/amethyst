@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +41,14 @@ class ExoPlayerPool(
     private val playerPool = ConcurrentLinkedQueue<ExoPlayer>()
     private val poolSize = SimultaneousPlaybackCalculator.max()
     private val poolStartingSize = 3
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // Exists to avoid exceptions stopping the coroutine
+    val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            Log.e("BundledInsert", "Caught exception: ${throwable.message}", throwable)
+        }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
 
     private val mutex = Mutex()
 

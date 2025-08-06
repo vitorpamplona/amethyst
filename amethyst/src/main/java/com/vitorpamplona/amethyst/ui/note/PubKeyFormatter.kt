@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.ui.note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
-fun ByteArray.toShortenHex(): String = toHexKey().toShortenHex()
+fun ByteArray.toHexShortDisplay(): String = toHexKey().toShortDisplay()
 
-fun String.toShortenHex(): String {
+fun String.toShortDisplay(): String {
     if (length <= 16) return this
-    return replaceRange(8, length - 8, ":")
+    return replaceRange(8, length - 8, "…")
 }
 
-fun HexKey.toDisplayHexKey(): String = this.toShortenHex()
+fun HexKey.toDisplayHexKey(): String = this.toShortDisplay()

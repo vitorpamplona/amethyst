@@ -96,8 +96,9 @@
     <string name="my_awesome_group">Mon groupe spectaculaire</string>
     <string name="picture_url">Url de l\'image</string>
     <string name="description">Description</string>
-    <string name="about_us">"à propos"</string>
+    <string name="about_us">"à propos…"</string>
     <string name="what_s_on_your_mind">Quoi de neuf ?</string>
+    <string name="write_a_message">Rédiger un message…</string>
     <string name="post">Envoyer</string>
     <string name="save">Sauvegarder</string>
     <string name="create">Créer</string>
@@ -281,7 +282,6 @@
     <string name="quick_action_unfollow">Ne plus suivre</string>
     <string name="quick_action_follow">Suivre</string>
     <string name="quick_action_request_deletion_gallery_title">Supprimer de la galerie</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Retirer ce média de votre galerie, vous pourrez le réajouter plus tard</string>
     <string name="quick_action_request_deletion_alert_title">Demande de Suppression</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n\'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d\'autres relais où elle peut être stockée.</string>
     <string name="quick_action_block_dialog_btn">Bloquer</string>
@@ -530,10 +530,7 @@
     <string name="are_you_sure_you_want_to_log_out">Se déconnecter supprime toutes vos informations locales. Assurez-vous d\'avoir vos clés privées sauvegardées pour éviter de perdre votre compte. Voulez-vous continuer ?</string>
     <string name="followed_tags">Tags suivis</string>
     <string name="relay_setup">Relais</string>
-    <string name="discover_content">Découverte de notes</string>
     <string name="discover_marketplace">Place de Marché</string>
-    <string name="discover_live">Direct</string>
-    <string name="discover_community">Communauté</string>
     <string name="discover_chat">Salons</string>
     <string name="community_approved_posts">Messages approuvés</string>
     <string name="groups_no_descriptor">Ce groupe n\'a pas de description ou de règles. Parlez au propriétaire pour en ajouter une</string>
@@ -818,7 +815,7 @@
     <string name="dm_relays_not_found_description">Ce paramètre informe tout le monde les relais à utiliser pour vous envoyer des messages. Sans eux, vous risquez de manquer certains messages.</string>
     <string name="dm_relays_not_found_examples">Les bonnes options sont:\n - inbox.nostr.wine (payant)\n - auth.nostr1.com (gratuit)\n - you.nostr1.com (relais personnels - payant)</string>
     <string name="dm_relays_not_found_examples2">De bonnes options sont:\n - auth.nostr1.com (gratuit)\n - inbox.nostr.wine (payant)\n - relay.0xchat.com (gratuit)</string>
-    <string name="dm_relays_not_found_editing">Insérez entre 1-3 relais pour utiliser de boîte de réception privée. Les relais de boîte de réception MP doivent accepter les messages de tout le monde, mais ne vous permet que de les télécharger.</string>
+    <string name="dm_relays_not_found_editing">Insérez entre 1–3 relais pour utiliser de boîte de réception privée. Les relais de boîte de réception MP doivent accepter les messages de tout le monde, mais ne vous permet que de les télécharger.</string>
     <string name="dm_relays_not_found_create_now">Configurer maintenant</string>
     <string name="search_relays_title">Relais de recherche</string>
     <string name="search_relays_not_found">Configurez vos relais de recherche</string>
@@ -863,7 +860,7 @@
     <string name="edit_post">Modifier le Message</string>
     <string name="proposal_to_edit">Proposition pour améliorer votre publication</string>
     <string name="message_to_author">Récapitulatif des modifications</string>
-    <string name="message_to_author_placeholder">Corrections rapides ...</string>
+    <string name="message_to_author_placeholder">Corrections rapides …</string>
     <string name="accept_the_suggestion">Accepter la Suggestion</string>
     <string name="accessibility_download_for_offline">Télécharger</string>
     <string name="accessibility_lyrics_on">Paroles activées</string>

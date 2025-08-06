@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.ots
 
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendar
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
@@ -60,7 +59,6 @@ class OkHttpCalendar(
             val request =
                 okhttp3.Request
                     .Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .header("Accept", "application/vnd.opentimestamps.v1")
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .url(url)
@@ -112,7 +110,6 @@ class OkHttpCalendar(
             val request =
                 okhttp3.Request
                     .Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                     .header("Accept", "application/vnd.opentimestamps.v1")
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .url(url)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
-import android.util.Log
 import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.coroutines.CancellationException
 import java.util.Base64
 
 class Nip44v1 {
@@ -57,7 +57,7 @@ class Nip44v1 {
             )
 
         return EncryptedInfo(
-            ciphertext = cipher ?: ByteArray(0),
+            ciphertext = cipher,
             nonce = nonce,
         )
     }
@@ -66,7 +66,7 @@ class Nip44v1 {
         payload: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
+    ): String {
         val sharedSecret = getSharedSecret(privateKey, pubKey)
         return decrypt(payload, sharedSecret)
     }
@@ -75,7 +75,7 @@ class Nip44v1 {
         encryptedInfo: EncryptedInfo,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
+    ): String {
         val sharedSecret = getSharedSecret(privateKey, pubKey)
         return decrypt(encryptedInfo, sharedSecret)
     }
@@ -83,21 +83,21 @@ class Nip44v1 {
     fun decrypt(
         payload: String,
         sharedSecret: ByteArray,
-    ): String? {
-        val encryptedInfo = EncryptedInfo.decodePayload(payload) ?: return null
+    ): String {
+        val encryptedInfo = EncryptedInfo.decodePayload(payload)
         return decrypt(encryptedInfo, sharedSecret)
     }
 
     fun decrypt(
         encryptedInfo: EncryptedInfo,
         sharedSecret: ByteArray,
-    ): String? =
+    ): String =
         LibSodiumInstance
             .cryptoStreamXChaCha20Xor(
                 messageBytes = encryptedInfo.ciphertext,
                 nonce = encryptedInfo.nonce,
                 key = sharedSecret,
-            )?.decodeToString()
+            ).decodeToString()
 
     fun getSharedSecret(
         privateKey: ByteArray,
@@ -127,19 +127,18 @@ class Nip44v1 {
         companion object {
             const val V: Int = 1
 
-            fun decodePayload(payload: String): EncryptedInfo? {
-                return try {
+            fun decodePayload(payload: String): EncryptedInfo =
+                try {
                     val byteArray = Base64.getDecoder().decode(payload)
                     check(byteArray[0].toInt() == V)
-                    return EncryptedInfo(
+                    EncryptedInfo(
                         nonce = byteArray.copyOfRange(1, 25),
                         ciphertext = byteArray.copyOfRange(25, byteArray.size),
                     )
                 } catch (e: Exception) {
-                    Log.w("NIP44v1", "Unable to Parse encrypted payload: $payload")
-                    null
+                    if (e is CancellationException) throw e
+                    throw IllegalStateException("NIP-44v1 Unable to Parse encrypted payload: $payload", e)
                 }
-            }
         }
 
         fun encodePayload(): String =

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 class EventHasher {
@@ -61,7 +61,7 @@ class EventHasher {
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): String = EventMapper.toJson(makeJsonObjectForId(pubKey, createdAt, kind, tags, content))
+        ): String = JsonMapper.toJson(makeJsonObjectForId(pubKey, createdAt, kind, tags, content))
 
         fun hashIdBytes(
             pubKey: HexKey,

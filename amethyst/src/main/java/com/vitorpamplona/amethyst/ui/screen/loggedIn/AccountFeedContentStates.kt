@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,25 +23,30 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
+import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.screen.FollowListState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.DiscoverChatFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.DiscoverFollowSetsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.DiscoverLiveFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.DiscoverCommunityFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverNIP89FeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.DiscoverMarketplaceFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 
 class AccountFeedContentStates(
     val accountViewModel: AccountViewModel,
 ) {
+    val homeLive = ChannelFeedContentState(HomeLiveFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val homeReplies = FeedContentState(HomeConversationsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
 
@@ -50,6 +55,8 @@ class AccountFeedContentStates(
 
     val videoFeed = FeedContentState(VideoFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
 
+    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverLive = FeedContentState(DiscoverLiveFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
@@ -69,6 +76,7 @@ class AccountFeedContentStates(
     fun updateFeedsWith(newNotes: Set<Note>) {
         checkNotInMainThread()
 
+        homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
 
@@ -78,6 +86,8 @@ class AccountFeedContentStates(
         videoFeed.updateFeedWith(newNotes)
 
         discoverMarketplace.updateFeedWith(newNotes)
+        discoverFollowSets.updateFeedWith(newNotes)
+        discoverReads.updateFeedWith(newNotes)
         discoverDVMs.updateFeedWith(newNotes)
         discoverLive.updateFeedWith(newNotes)
         discoverCommunities.updateFeedWith(newNotes)
@@ -99,6 +109,8 @@ class AccountFeedContentStates(
         videoFeed.destroy()
 
         discoverMarketplace.destroy()
+        discoverFollowSets.destroy()
+        discoverReads.destroy()
         discoverDVMs.destroy()
         discoverLive.destroy()
         discoverCommunities.destroy()

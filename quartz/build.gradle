@@ -6,12 +6,12 @@ plugins {
 }
 
 android {
-    namespace 'com.vitorpamplona.quartz'
-    compileSdk libs.versions.android.compileSdk.get().toInteger()
+    namespace = 'com.vitorpamplona.quartz'
+    compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        minSdk libs.versions.android.minSdk.get().toInteger()
-        targetSdk libs.versions.android.targetSdk.get().toInteger()
+        minSdk = libs.versions.android.minSdk.get().toInteger()
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -19,12 +19,12 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         create("benchmark") {
             initWith(getByName("release"))
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
     compileOptions {
@@ -47,7 +47,6 @@ kotlin {
 
 dependencies {
     implementation libs.androidx.core.ktx
-
     implementation platform(libs.androidx.compose.bom)
 
     // @Immutable and @Stable
@@ -58,11 +57,12 @@ dependencies {
 
     // LibSodium for ChaCha encryption (NIP-44)
     // Wait for @aar support in version catalogs
-    implementation "com.goterl:lazysodium-android:5.1.0@aar"
-    implementation 'net.java.dev.jna:jna:5.17.0@aar'
 
-    //implementation (libs.lazysodium.android) { artifact { type = "aar" } }
-    //implementation (libs.jna) { artifact { type = "aar" } }
+    // implementation 'com.goterl:lazysodium-android:5.2.0@aar'
+    // implementation 'net.java.dev.jna:jna:5.17.0@aar'
+
+    implementation variantOf(libs.lazysodium.android) { artifactType("aar") }
+    implementation variantOf(libs.jna) { artifactType("aar") }
 
     // Performant Parser of JSONs into Events
     api libs.jackson.module.kotlin

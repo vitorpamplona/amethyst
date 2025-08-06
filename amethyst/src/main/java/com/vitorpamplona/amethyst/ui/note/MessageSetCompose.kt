@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +39,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MessageSetCard
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
@@ -81,7 +85,7 @@ fun MessageSetCompose(
                         scope.launch {
                             routeFor(
                                 baseNote,
-                                accountViewModel.userProfile(),
+                                accountViewModel.account,
                             )?.let { nav.nav(it) }
                         }
                     },
@@ -116,6 +120,11 @@ fun MessageSetCompose(
 @Composable
 fun MessageIconBox() {
     Box(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) {
-        MessageIcon(Modifier.size(16.dp).align(Alignment.TopEnd))
+        Icon(
+            painter = painterRes(R.drawable.ic_dm, 4),
+            null,
+            modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
+            tint = MaterialTheme.colorScheme.primary,
+        )
     }
 }

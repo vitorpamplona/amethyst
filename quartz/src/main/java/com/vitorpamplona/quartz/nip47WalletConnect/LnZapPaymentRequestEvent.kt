@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,16 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class LnZapPaymentRequestEvent(
@@ -40,60 +38,41 @@ class LnZapPaymentRequestEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    // Once one of an app user decrypts the payment, all users else can see it.
-    @Transient private var lnInvoice: String? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (lnInvoice?.bytesUsedInMemory() ?: 0) // rough calculation
+    override fun isContentEncoded() = true
 
     fun walletServicePubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) walletServicePubKey() ?: pubKey else pubKey
 
-    fun lnInvoice(
-        signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
-        lnInvoice?.let {
-            onReady(it)
-            return
-        }
+    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || walletServicePubKey() == signer.pubKey
 
-        try {
-            signer.decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
-                val payInvoiceMethod = EventMapper.mapper.readValue(jsonText, Request::class.java)
-
-                lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
-
-                lnInvoice?.let { onReady(it) }
-            }
-        } catch (e: Exception) {
-            Log.w("BookmarkList", "Error decrypting the message ${e.message}")
-        }
+    suspend fun decryptRequest(signer: NostrSigner): Request {
+        if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
+        val jsonText = signer.decrypt(content, talkingWith(signer.pubKey))
+        return JsonMapper.mapper.readValue(jsonText, Request::class.java)
     }
 
     companion object {
         const val KIND = 23194
         const val ALT = "Zap payment request"
 
-        fun create(
+        suspend fun create(
             lnInvoice: String,
             walletServicePubkey: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (LnZapPaymentRequestEvent) -> Unit,
-        ) {
-            val serializedRequest = EventMapper.mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
+        ): LnZapPaymentRequestEvent {
+            val serializedRequest = JsonMapper.mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
 
             val tags = arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
 
-            signer.nip04Encrypt(
-                serializedRequest,
-                walletServicePubkey,
-            ) { content ->
-                signer.sign(createdAt, KIND, tags, content, onReady)
-            }
+            val encrypted =
+                signer.nip04Encrypt(
+                    serializedRequest,
+                    walletServicePubkey,
+                )
+
+            return signer.sign(createdAt, KIND, tags, encrypted)
         }
     }
 }

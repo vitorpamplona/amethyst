@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -168,18 +168,20 @@ object Bech32 {
         bech32: String,
         noChecksum: Boolean = false,
     ): Triple<String, Array<Int5>, Encoding> {
+        val filteredBech32 = bech32.filter { it.code in 33..126 }
+
         var pos = 0
-        bech32.forEachIndexed { index, char ->
+        filteredBech32.forEachIndexed { index, char ->
             require(char.code in 33..126) { "invalid character $char" }
             if (char == '1') {
                 pos = index
             }
         }
 
-        val hrp = bech32.take(pos).lowercase() // strings must be lower case
+        val hrp = filteredBech32.take(pos).lowercase() // strings must be lower case
         require(hrp.length in 1..83) { "hrp must contain 1 to 83 characters" }
 
-        val data = Array(bech32.length - pos - 1) { map[bech32[pos + 1 + it].code] }
+        val data = Array(filteredBech32.length - pos - 1) { map[filteredBech32[pos + 1 + it].code] }
 
         return if (noChecksum) {
             Triple(hrp, data, Encoding.Beck32WithoutChecksum)

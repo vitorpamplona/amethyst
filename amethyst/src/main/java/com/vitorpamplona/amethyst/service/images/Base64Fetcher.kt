@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,12 +39,14 @@ class Base64Fetcher(
     private val options: Options,
     private val data: Uri,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult =
-        ImageFetchResult(
-            image = Base64Image.Companion.toBitmap(data.toString()).asImage(true),
-            isSampled = false,
-            dataSource = DataSource.MEMORY,
-        )
+    override suspend fun fetch(): FetchResult? =
+        runCatching {
+            ImageFetchResult(
+                image = Base64Image.Companion.toBitmap(data.toString()).asImage(true),
+                isSampled = false,
+                dataSource = DataSource.MEMORY,
+            )
+        }.getOrNull()
 
     object Factory : Fetcher.Factory<Uri> {
         override fun create(

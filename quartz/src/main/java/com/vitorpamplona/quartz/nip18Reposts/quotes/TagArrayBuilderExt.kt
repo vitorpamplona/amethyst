@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,9 +27,9 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 
 fun <T : Event> TagArrayBuilder<T>.quote(tag: QTag) = add(tag.toTagArray())
 
@@ -37,7 +37,7 @@ fun <T : Event> TagArrayBuilder<T>.quotes(tag: List<QTag>) = addAll(tag.map { it
 
 fun <T : Event> TagArrayBuilder<T>.quote(entity: Entity) =
     when (entity) {
-        is Note -> add(entity.toQuoteTagArray())
+        is NNote -> add(entity.toQuoteTagArray())
         is NEvent -> add(entity.toQuoteTagArray())
         is NAddress -> add(entity.toQuoteTagArray())
         is NEmbed -> add(entity.toQuoteTagArray())

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,4 +23,4 @@ package com.vitorpamplona.quartz.nip01Core.tags.geohash
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun <T : Event> TagArrayBuilder<T>.geohash(tag: String) = addAll(GeoHash.assemble(tag))
+fun <T : Event> TagArrayBuilder<T>.geohash(tag: String) = addAll(GeoHashTag.assemble(tag))

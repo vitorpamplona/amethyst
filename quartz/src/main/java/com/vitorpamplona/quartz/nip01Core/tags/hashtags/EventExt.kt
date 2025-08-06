@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,9 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-
-fun Event.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = tags.forEachHashTag(onEach)
 
 fun Event.anyHashTag(onEach: (str: String) -> Boolean) = tags.anyHashTag(onEach)
 

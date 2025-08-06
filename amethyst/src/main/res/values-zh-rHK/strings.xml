@@ -219,10 +219,10 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[阻止並隱藏用户]]></string>
     <string name="report_dialog_report_btn">違規報告</string>
     <string name="report_dialog_reminder_public">所有舉報都將被公開可見</string>
-    <string name="report_dialog_additional_reason_placeholder">可選擇提供關於您的舉報的額外背景...</string>
+    <string name="report_dialog_additional_reason_placeholder">可選擇提供關於您的舉報的額外背景…</string>
     <string name="report_dialog_additional_reason_label">其他背景</string>
     <string name="report_dialog_select_reason_label">理由</string>
-    <string name="report_dialog_select_reason_placeholder">選擇一個理由...</string>
+    <string name="report_dialog_select_reason_placeholder">選擇一個理由…</string>
     <string name="report_dialog_post_report_btn">發佈舉報</string>
     <string name="report_dialog_title">阻止與舉報</string>
     <string name="block_only">僅阻止</string>

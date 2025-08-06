@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,14 +47,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -127,7 +126,7 @@ fun TorrentPreview() {
                         sig = "40e1ccfdc38a32e6c164bb66e50df0cd3769e0431137a07709534a72b462dfcbc40106560d0dd66841fef4cbb7aece7db64e83a0fbe414759d4d9a799e522c57",
                     )
 
-                LocalCache.justConsume(torrent, null)
+                LocalCache.justConsume(torrent, null, false)
 
                 LocalCache.getOrCreateNote("e1ab66dd66e6ac4f32119deacf80d7c50787705d343d3bb896c099cf93821757")
             }
@@ -213,17 +212,20 @@ fun DisplayFileList(
 
             val context = LocalContext.current
 
-            IconButton(onClick = {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link()))
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            IconButton(
+                onClick = {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, link().toUri())
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-                    ContextCompat.startActivity(context, intent, null)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)
-                }
-            }, Modifier.size(Size30dp)) {
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)
+                    }
+                },
+                Modifier.size(Size30dp),
+            ) {
                 DownloadForOfflineIcon(Size20dp, MaterialTheme.colorScheme.onBackground)
             }
         }

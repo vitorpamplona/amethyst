@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,14 +23,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReports
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 
 @Composable
 fun WatchReportsAndUpdateFeed(
     baseUser: User,
-    feedViewModel: NostrUserProfileReportFeedViewModel,
+    feedViewModel: UserProfileReportFeedViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-    val userState by baseUser.live().reports.observeAsState()
+    val userState by observeUserReports(baseUser, accountViewModel)
     LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }

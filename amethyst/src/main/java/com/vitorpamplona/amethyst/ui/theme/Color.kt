@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -52,12 +52,19 @@ val Nip05EmailColorLight = Color(0xFFa770f3)
 
 val DarkerGreen = Color.Green.copy(alpha = 0.32f)
 
-val WarningColor = Color(0xFFC62828)
+val LightRedColor = Color(0xFFC62828)
+val LighterRedColor = Color(0xFFFF0E0E)
 
 val RelayIconFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.5f) })
 
 val LightWarningColor = Color(0xFFffcc00)
 val DarkWarningColor = Color(0xFFF8DE22)
+
+val LightRedColorOnSecondSurface = Color(0xFFC62828)
+val DarkRedColorOnSecondSurface = Color(0xFFF34747)
+
+val LightWarningColorOnSecondSurface = Color(0xFFC09B14)
+val DarkWarningColorOnSecondSurface = Color(0xFFE1C419)
 
 val LightAllGoodColor = Color(0xFF339900)
 val DarkAllGoodColor = Color(0xFF99cc33)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,15 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
 fun TagArray.forEachTaggedQuoteId(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(QTag.TAG_NAME, onEach)
 
 fun <R> TagArray.mapTaggedQuoteId(map: (eventId: HexKey) -> R) = this.mapValueTagged(QTag.TAG_NAME, map)
 
-fun TagArray.taggedQuotes() = this.mapNotNull(QTag.Companion::parse)
+fun TagArray.taggedQuotes() = this.mapNotNull(QTag::parse)
 
-fun TagArray.taggedQuoteIds() = this.mapValues(QTag.TAG_NAME)
+fun TagArray.taggedQuoteIds() = this.mapNotNull(QTag::parseId)
 
 fun TagArray.firstTaggedQuote() = this.firstNotNullOfOrNull(QTag.Companion::parse)
 

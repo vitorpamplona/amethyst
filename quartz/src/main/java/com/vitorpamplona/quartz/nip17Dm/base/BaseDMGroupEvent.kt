@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip17Dm.base
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
@@ -41,6 +42,8 @@ open class BaseDMGroupEvent(
     NIP17Group,
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     /** Recipients intended to receive this conversation */
     fun recipients() = tags.mapNotNull(PTag::parse)
@@ -65,6 +68,8 @@ open class BaseDMGroupEvent(
 
         return result
     }
+
+    override fun isIncluded(pubKey: HexKey) = pubKey == this.pubKey || tags.any(PTag::isTagged, pubKey)
 
     override fun groupMembers() = recipientsPubKey().plus(pubKey).toSet()
 

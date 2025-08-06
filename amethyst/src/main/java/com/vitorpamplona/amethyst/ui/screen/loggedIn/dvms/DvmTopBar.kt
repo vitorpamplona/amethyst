@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,23 +21,19 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
 
 @Composable
 fun DvmTopBar(
@@ -49,25 +45,37 @@ fun DvmTopBar(
         title = {
             LoadNote(baseNoteHex = appDefinitionId, accountViewModel = accountViewModel) { appDefinitionNote ->
                 if (appDefinitionNote != null) {
-                    val card = observeAppDefinition(appDefinitionNote)
+                    val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
                     card.cover?.let {
-                        AsyncImage(
-                            model = it,
-                            contentDescription = null,
+                        MyAsyncImage(
+                            imageUrl = it,
+                            contentDescription = card.name,
                             contentScale = ContentScale.Crop,
-                            modifier =
-                                Modifier
-                                    .size(Size34dp)
-                                    .clip(shape = CircleShape),
+                            mainImageModifier = Modifier,
+                            loadedImageModifier = SimpleImage35Modifier,
+                            accountViewModel = accountViewModel,
+                            onLoadingBackground = {
+                                appDefinitionNote.author?.let { author ->
+                                    BannerImage(author, SimpleImage35Modifier, accountViewModel)
+                                }
+                            },
+                            onError = {
+                                appDefinitionNote.author?.let { author ->
+                                    BannerImage(author, SimpleImage35Modifier, accountViewModel)
+                                }
+                            },
                         )
-                    } ?: run { NoteAuthorPicture(baseNote = appDefinitionNote, size = Size34dp, accountViewModel = accountViewModel) }
+                    } ?: run {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage35Modifier, accountViewModel)
+                        }
+                    }
 
                     Spacer(modifier = DoubleHorzSpacer)
 
                     Text(
                         text = card.name,
-                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

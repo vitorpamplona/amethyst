@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,11 +52,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.service.CachedCashuProcessor
-import com.vitorpamplona.amethyst.service.CashuToken
+import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
+import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.CopyIcon
 import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
@@ -82,10 +82,10 @@ fun CashuPreview(
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val cashuData by produceState(
-        initialValue = CachedCashuProcessor.cached(cashutoken),
+        initialValue = CachedCashuParser.cached(cashutoken),
         key1 = cashutoken,
     ) {
-        val newToken = withContext(Dispatchers.Default) { CachedCashuProcessor.parse(cashutoken) }
+        val newToken = withContext(Dispatchers.Default) { CachedCashuParser.parse(cashutoken) }
         if (value != newToken) {
             value = newToken
         }
@@ -209,7 +209,7 @@ fun CashuPreviewNew(
                 FilledTonalButton(
                     onClick = {
                         try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("cashu://${token.token}"))
+                            val intent = Intent(Intent.ACTION_VIEW, "cashu://${token.token}".toUri())
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
                             startActivity(context, intent, null)

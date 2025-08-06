@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,8 +32,9 @@ fun <K, V> produceCachedStateAsync(
 ): State<V?> =
     @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(key), key1 = key) {
-        cache.update(key) {
-            value = it
+        val newValue = cache.update(key)
+        if (newValue != value) {
+            value = newValue
         }
     }
 
@@ -45,18 +46,16 @@ fun <K, V> produceCachedStateAsync(
 ): State<V?> =
     @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(updateValue), key1 = key) {
-        cache.update(updateValue) {
-            value = it
+        val newValue = cache.update(updateValue)
+        if (newValue != value) {
+            value = newValue
         }
     }
 
 interface AsyncCachedState<K, V> {
     fun cached(k: K): V?
 
-    suspend fun update(
-        k: K,
-        onReady: (V?) -> Unit,
-    )
+    suspend fun update(k: K): V?
 }
 
 abstract class GenericBaseCacheAsync<K, V>(
@@ -66,23 +65,17 @@ abstract class GenericBaseCacheAsync<K, V>(
 
     override fun cached(k: K): V? = cache[k]
 
-    override suspend fun update(
-        k: K,
-        onReady: (V?) -> Unit,
-    ) {
-        cache[k]?.let { onReady(it) }
+    override suspend fun update(k: K): V? {
+        cache[k]?.let { return it }
 
-        compute(k) {
-            if (it != null) {
-                cache.put(k, it)
-            }
+        val newValue = compute(k)
 
-            onReady(it)
+        if (newValue != null) {
+            cache.put(k, newValue)
         }
+
+        return newValue
     }
 
-    abstract suspend fun compute(
-        key: K,
-        onReady: (V?) -> Unit,
-    )
+    abstract suspend fun compute(key: K): V?
 }

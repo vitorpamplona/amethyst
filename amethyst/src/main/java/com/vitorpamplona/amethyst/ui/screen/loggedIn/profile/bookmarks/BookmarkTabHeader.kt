@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,33 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarkCount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
-fun BookmarkTabHeader(baseUser: User) {
-    val userState by baseUser.live().bookmarks.observeAsState()
-
-    var userBookmarks by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newBookmarks = userState?.user?.latestBookmarkList?.countBookmarks() ?: 0
-
-            if (newBookmarks != userBookmarks) {
-                userBookmarks = newBookmarks
-            }
-        }
-    }
+fun BookmarkTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val userBookmarks by observeUserBookmarkCount(baseUser, accountViewModel)
 
     Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
 }

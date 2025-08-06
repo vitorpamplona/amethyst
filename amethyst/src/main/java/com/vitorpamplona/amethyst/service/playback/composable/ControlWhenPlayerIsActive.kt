@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable
 
+import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -67,23 +68,30 @@ fun ControlWhenPlayerIsActive(
 
     // Keeps the screen on while playing and viewing videos.
     DisposableEffect(key1 = controller, key2 = view) {
-        val listener =
-            object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    // doesn't consider the mutex because the screen can turn off if the video
-                    // being played in the mutex is not visible.
-                    if (view.keepScreenOn != isPlaying) {
-                        view.keepScreenOn = isPlaying
-                    }
-                }
-            }
+        val listener = PlayerEventListener(view)
 
         controller.addListener(listener)
         onDispose {
-            if (view.keepScreenOn) {
-                view.keepScreenOn = false
-            }
             controller.removeListener(listener)
+            listener.destroy()
+        }
+    }
+}
+
+class PlayerEventListener(
+    val view: View,
+) : Player.Listener {
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        // doesn't consider the mutex because the screen can turn off if the video
+        // being played in the mutex is not visible.
+        if (view.keepScreenOn != isPlaying) {
+            view.keepScreenOn = isPlaying
+        }
+    }
+
+    fun destroy() {
+        if (view.keepScreenOn) {
+            view.keepScreenOn = false
         }
     }
 }

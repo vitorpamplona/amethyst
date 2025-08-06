@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,10 +24,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -74,9 +74,8 @@ fun WatchNoteEvent(
         onNoteEventFound()
     } else {
         // avoid observing costs if already has an event.
-
-        val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
-        CrossfadeIfEnabled(targetState = hasEvent, label = "Event presence", accountViewModel = accountViewModel) {
+        val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
+        CrossfadeIfEnabled(targetState = hasEvent, accountViewModel = accountViewModel) {
             if (it) {
                 onNoteEventFound()
             } else {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -51,7 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,11 +75,12 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.toasts.StringToastMsg
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockVitorAccountViewModel
@@ -152,9 +153,9 @@ fun PollNotePreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
-            LocalCache.consume(zapVote.zapRequest!!)
-            LocalCache.consume(zapVote, null)
+            LocalCache.justConsume(event, null, false)
+            LocalCache.consume(zapVote.zapRequest!!, null, false)
+            LocalCache.justConsume(zapVote, null, false)
             baseNote = LocalCache.getOrCreateNote("6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72")
         }
     }
@@ -206,7 +207,7 @@ fun PollNotePreview2() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsume(event, null, false)
             baseNote = LocalCache.getOrCreateNote("3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
         }
     }
@@ -242,7 +243,8 @@ fun PollNote(
 ) {
     val pollViewModel: PollNoteViewModel = viewModel(key = "PollNoteViewModel${baseNote.idHex}")
 
-    pollViewModel.load(accountViewModel.account, baseNote)
+    pollViewModel.init(accountViewModel.account)
+    pollViewModel.load(baseNote)
 
     PollNote(
         baseNote = baseNote,
@@ -263,7 +265,7 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchZapsAndUpdateTallies(baseNote, pollViewModel)
+    WatchZapsAndUpdateTallies(baseNote, pollViewModel, accountViewModel)
 
     pollViewModel.tallies.forEach { option ->
         OptionNote(
@@ -282,8 +284,9 @@ fun PollNote(
 private fun WatchZapsAndUpdateTallies(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     LaunchedEffect(key1 = zapsState) { pollViewModel.refreshTallies() }
 }
@@ -513,7 +516,7 @@ fun ZapVote(
         )
     }
 
-    var zappingProgress by remember { mutableStateOf(0f) }
+    var zappingProgress by remember { mutableFloatStateOf(0f) }
     var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
     val context = LocalContext.current
@@ -658,7 +661,7 @@ fun ZapVote(
             } else {
                 Spacer(Modifier.width(3.dp))
                 CircularProgressIndicator(
-                    progress = zappingProgress,
+                    progress = { zappingProgress },
                     modifier = Modifier.size(14.dp),
                     strokeWidth = 2.dp,
                 )

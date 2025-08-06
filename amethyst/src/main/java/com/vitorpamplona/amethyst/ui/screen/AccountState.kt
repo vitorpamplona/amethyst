@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,13 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 
 sealed class AccountState {
     object Loading : AccountState()
@@ -55,11 +54,13 @@ fun SetAccountCentricViewModelStore(
         content()
     }
 
-    DisposableEffect(key1 = state) {
-        onDispose {
-            state.currentViewModelStore.viewModelStore.clear()
-        }
-    }
+    // moved this clearing activity to the viewmodel account
+    // because the new composable might run before the onDispose.
+    // DisposableEffect(key1 = state) {
+    //    onDispose {
+    //        state.currentViewModelStore.viewModelStore.clear()
+    //    }
+    // }
 }
 
 class AccountCentricViewModelStore : ViewModelStoreOwner {

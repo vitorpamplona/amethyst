@@ -96,7 +96,7 @@
     <string name="my_awesome_group">Meine tolle Gruppe</string>
     <string name="picture_url">Bild-URL</string>
     <string name="description">Beschreibung</string>
-    <string name="about_us">"Über uns.. "</string>
+    <string name="about_us">"Über uns…"</string>
     <string name="what_s_on_your_mind">Was beschäftigt dich?</string>
     <string name="post">Beitrag</string>
     <string name="save">Speichern</string>
@@ -140,7 +140,7 @@ erie gespeichert</string>
     <string name="upload_image">Bild hochladen</string>
     <string name="uploading">Hochladen…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
-    <string name="reply_here">"Hier antworten.. "</string>
+    <string name="reply_here">"Hier antworten…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiert die Notiz-ID zum Teilen in die Zwischenablage</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiere Kanal-ID (Notiz) in die Zwischenablage</string>
     <string name="edits_the_channel_metadata">Bearbeitet die Kanalmetadaten</string>
@@ -221,7 +221,7 @@ anz der Bedingungen ist erforderlich</string>
         kann daran teilnehmen. Sie eignen sich hervorragend für offene Gemeinschaften rund um bestimmte Themen.
         Moderation kann durch Löschen von Beiträgen auf den Relais gesteuert werden</string>
     <string name="public_chat_relays_title">Relais</string>
-    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1-3 Relais ein, die diese Gruppe beherbergen.
+    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1–3 Relais ein, die diese Gruppe beherbergen.
         Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
     <string name="posts_received">empfangene Beiträge</string>
     <string name="remove">Entfernen</string>
@@ -290,7 +290,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_unfollow">Entfolgen</string>
     <string name="quick_action_follow">Folgen</string>
     <string name="quick_action_request_deletion_gallery_title">Aus Galerie löschen</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Entferne diese Medien von deiner Galerie, du kannst sie später hinzufügen</string>
     <string name="quick_action_request_deletion_alert_title">Löschung anfordern</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst wird beantragen, dass Ihre Notiz von den Relays gelöscht wird, mit denen Sie derzeit verbunden sind. Es gibt keine Garantie dafür, dass Ihre Notiz dauerhaft von diesen Relays oder anderen Relays, in denen sie gespeichert sein kann, gelöscht wird.</string>
     <string name="quick_action_block_dialog_btn">Blockieren</string>
@@ -351,7 +350,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
     <string name="poll_zap_amount">Zap-Betrag</string>
     <string name="one_vote_per_user_on_atomic_votes">Es ist nur eine Stimme pro Benutzer für diesen Umfragetyp erlaubt</string>
-    <string name="looking_for_event">"Veranstaltung suchen"</string>
+    <string name="looking_for_event">"Veranstaltung suchen %1$s"</string>
     <string name="custom_zaps_add_a_message">Füge eine öffentliche Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_private">Füge eine private Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_nonzap">Füge eine Rechnungsnachricht hinzu</string>
@@ -540,10 +539,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="are_you_sure_you_want_to_log_out">Das Abmelden löscht alle Ihre lokalen Informationen. Stellen Sie sicher, dass Sie Ihre privaten Schlüssel gesichert haben, um einen Kontoverlust zu vermeiden. Möchten Sie fortfahren?</string>
     <string name="followed_tags">Gefolgte Tags</string>
     <string name="relay_setup">Relais</string>
-    <string name="discover_content">Notizen Entdeckung</string>
     <string name="discover_marketplace">Marktplatz</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Gemeinschaft</string>
     <string name="discover_chat">Plaudern</string>
     <string name="community_approved_posts">Genehmigte Beiträge</string>
     <string name="groups_no_descriptor">Diese Gruppe hat keine Beschreibung oder Regeln. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>
@@ -941,4 +937,40 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
+    <string name="share_image">Bild teilen…</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um Einstellungen ändern zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um hochladen zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um Ereignisse zu signieren</string>
+    <string name="unauthorized_exception">Unbefugte Entschlüsselung</string>
+    <string name="unauthorized_exception_description">Der Signierer hat die erforderliche Entschlüsselung nicht autorisiert. Aktiviere NIP-44-Entschlüsselung in deiner Signierer-App und versuche es erneut</string>
+    <string name="signer_not_found_exception">Signierer nicht gefunden</string>
+    <string name="signer_not_found_exception_description">Wurde die Signierer-App deinstalliert? Überprüfe, ob sie installiert ist und dieses Konto enthält. Melde dich ab und wieder an, falls sich die App geändert hat.</string>
+    <string name="no_description">Keine Beschreibung gefunden</string>
+    <string name="take_a_picture">Ein Foto aufnehmen</string>
+    <string name="record_a_message">Eine Nachricht aufnehmen</string>
+    <string name="record_a_message_title">Eine Nachricht aufnehmen</string>
+    <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>
+    <string name="paid_relay">Bezahltes Relay</string>
+    <string name="tor_relay">Tor-Verbindung erzwingen</string>
+    <string name="badge_award_image">Auszeichnungsbild</string>
+    <string name="follow_list_kind3follows_proxy">Folgt über Proxy</string>
+    <string name="sign_request_rejected2">Signaturanfrage abgelehnt</string>
+    <string name="connected_section">Verbundene Relays</string>
+    <string name="connected_section_description">Aktuelle Liste der verwendeten Relays</string>
+    <string name="trusted_relays_title">Vertrauenswürdige Relays</string>
+    <string name="trusted_section">Vertrauenswürdige Relays</string>
+    <string name="trusted_section_explainer">Relays, denen du vertraust und für die keine Tor-Verbindung erforderlich ist</string>
+    <string name="proxy_relays_title">Proxy-Relays</string>
+    <string name="proxy_section">Proxy-Relays</string>
+    <string name="proxy_section_explainer">Aggregator-Relays wie filter.nostr.wine, von denen die App deine Feeds herunterlädt</string>
+    <string name="broadcast_relays_title">Broadcast-Relays</string>
+    <string name="broadcast_section">Broadcast-Relays</string>
+    <string name="broadcast_section_explainer">Relays, die deine Beiträge an andere Relays weiterleiten, z.B. sendit.nosflare.com. Amethyst fügt diesen Relay zu allen neuen Ereignissen hinzu</string>
+    <string name="indexer_relays_title">Indexer-Relays</string>
+    <string name="indexer_section">Indexer-Relays</string>
+    <string name="indexer_section_explainer">Relays, die Metadaten und Relay-Listen hosten, z.B. purplepag.es. Amethyst verwendet sie, um Benutzer zu finden, die nicht in deinen Listen sind.</string>
+    <string name="blocked_relays_title">Blockierte Relays</string>
+    <string name="blocked_section">Blockierte Relays</string>
+    <string name="blocked_section_explainer">Amethyst wird sich niemals mit diesen Relays verbinden</string>
+    <string name="public_message">Öffentliche Nachricht</string>
 </resources>

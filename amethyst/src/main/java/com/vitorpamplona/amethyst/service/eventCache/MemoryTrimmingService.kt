@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,38 +21,45 @@
 package com.vitorpamplona.amethyst.service.eventCache
 
 import android.util.Log
-import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
-class MemoryTrimmingService {
+class MemoryTrimmingService(
+    val cache: LocalCache,
+) {
     var isTrimmingMemoryMutex = AtomicBoolean(false)
 
-    private suspend fun doTrim(account: Account?) {
-        LocalCache.cleanObservers()
-
-        val accounts = LocalPreferences.allSavedAccounts().mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
+    private suspend fun doTrim(
+        account: Account? = null,
+        otherAccounts: List<AccountInfo>,
+    ) {
+        cache.cleanMemory()
+        cache.cleanObservers()
 
         account?.let {
-            LocalCache.pruneHiddenMessages(it)
-            LocalCache.pruneOldAndHiddenMessages(it)
-            NostrChatroomDataSource.clearEOSEs(it)
-
-            LocalCache.pruneContactLists(accounts)
-            LocalCache.pruneRepliesAndReactions(accounts)
-            LocalCache.prunePastVersionsOfReplaceables()
-            LocalCache.pruneExpiredEvents()
+            cache.pruneHiddenEvents(it)
+            cache.pruneHiddenMessages(it)
         }
+
+        val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
+        cache.pruneOldMessages()
+        cache.pruneContactLists(accounts)
+        cache.pruneRepliesAndReactions(accounts)
+        cache.prunePastVersionsOfReplaceables()
+        cache.pruneExpiredEvents()
     }
 
-    suspend fun run(account: Account?) {
+    suspend fun run(
+        account: Account?,
+        otherAccounts: List<AccountInfo>,
+    ) {
         if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
             Log.d("ServiceManager", "Trimming Memory")
             try {
-                doTrim(account)
+                doTrim(account, otherAccounts)
             } finally {
                 isTrimmingMemoryMutex.getAndSet(false)
             }

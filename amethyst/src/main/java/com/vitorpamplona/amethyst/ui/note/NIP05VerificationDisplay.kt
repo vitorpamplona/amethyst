@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,7 +25,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Downloading
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -35,33 +37,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNip05
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.note.LoadStatuses
-import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
-import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
-import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -121,7 +126,7 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchAuthor(baseNote = baseNote) {
+    WatchAuthor(baseNote = baseNote, accountViewModel) {
         ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav)
     }
 }
@@ -133,24 +138,22 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
+    val nip05 by observeUserNip05(baseUser, accountViewModel)
+    val statuses by observeUserStatuses(baseUser, accountViewModel)
 
-    LoadStatuses(baseUser, accountViewModel) { statuses ->
-        CrossfadeIfEnabled(
-            targetState = nip05,
-            modifier = columnModifier,
-            label = "ObserveDisplayNip05StatusCrossfade",
-            accountViewModel = accountViewModel,
-        ) {
-            VerifyAndDisplayNIP05OrStatusLine(
-                it,
-                statuses,
-                baseUser,
-                columnModifier,
-                accountViewModel,
-                nav,
-            )
-        }
+    CrossfadeIfEnabled(
+        targetState = nip05,
+        modifier = columnModifier,
+        accountViewModel = accountViewModel,
+    ) {
+        VerifyAndDisplayNIP05OrStatusLine(
+            it,
+            statuses,
+            baseUser,
+            columnModifier,
+            accountViewModel,
+            nav,
+        )
     }
 }
 
@@ -193,7 +196,7 @@ fun ObserveRotateStatuses(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses)
+    ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses, accountViewModel)
 
     RotateStatuses(
         statuses,
@@ -203,11 +206,13 @@ fun ObserveRotateStatuses(
 }
 
 @Composable
-fun ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses: ImmutableList<AddressableNote>) {
-    statuses
-        .map {
-            it.live().metadata.observeAsState()
-        }
+fun ObserveAllStatusesToAvoidSwitchigAllTheTime(
+    statuses: ImmutableList<AddressableNote>,
+    accountViewModel: AccountViewModel,
+) {
+    statuses.map {
+        EventFinderFilterAssemblerSubscription(it, accountViewModel)
+    }
 }
 
 @Composable
@@ -247,7 +252,7 @@ fun DisplayStatus(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by addressableNote.live().metadata.observeAsState()
+    val noteState by observeNote(addressableNote, accountViewModel)
     val noteEvent = noteState?.note?.event as? StatusEvent ?: return
 
     DisplayStatus(noteEvent, accountViewModel, nav)
@@ -307,7 +312,7 @@ fun DisplayStatusInner(
             onClick = { runCatching { uri.openUri(url.trim()) } },
         ) {
             Icon(
-                imageVector = Icons.Default.OpenInNew,
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 null,
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -322,12 +327,12 @@ fun DisplayStatusInner(
                     onClick = {
                         routeFor(
                             note,
-                            accountViewModel.userProfile(),
+                            accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -344,12 +349,12 @@ fun DisplayStatusInner(
                     onClick = {
                         routeFor(
                             it,
-                            accountViewModel.userProfile(),
+                            accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -387,7 +392,7 @@ fun DisplayNIP05(
         )
     }
 
-    NIP05VerifiedSymbol(nip05Verified, NIP05IconSize, accountViewModel)
+    NIP05VerifiedSymbol(nip05Verified, 1, NIP05IconSize, accountViewModel)
 
     ClickableTextPrimary(
         text = domain,
@@ -402,14 +407,33 @@ fun DisplayNIP05(
 @Composable
 private fun NIP05VerifiedSymbol(
     nip05Verified: MutableState<Boolean?>,
+    compositionSizeReference: Int,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     CrossfadeIfEnabled(targetState = nip05Verified.value, accountViewModel = accountViewModel) {
         when (it) {
-            null -> NIP05CheckingIcon(modifier = modifier)
-            true -> NIP05VerifiedIcon(modifier = modifier)
-            false -> NIP05FailedVerification(modifier = modifier)
+            null ->
+                Icon(
+                    imageVector = Icons.Default.Downloading,
+                    contentDescription = stringRes(id = R.string.nip05_checking),
+                    modifier = modifier,
+                    tint = Color.Yellow,
+                )
+            true ->
+                Icon(
+                    painter = painterRes(R.drawable.nip_05, compositionSizeReference),
+                    contentDescription = stringRes(id = R.string.nip05_verified),
+                    modifier = modifier,
+                    tint = Color.Unspecified,
+                )
+            false ->
+                Icon(
+                    imageVector = Icons.Default.Report,
+                    contentDescription = stringRes(id = R.string.nip05_failed),
+                    modifier = modifier,
+                    tint = Color.Red,
+                )
         }
     }
 }
@@ -425,7 +449,7 @@ fun DisplayNip05ProfileStatus(
         if (nip05.split("@").size <= 2) {
             val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NIP05VerifiedSymbol(nip05Verified, Size16Modifier, accountViewModel)
+                NIP05VerifiedSymbol(nip05Verified, 2, Size16Modifier, accountViewModel)
                 var domainPadStart = 5.dp
 
                 val (user, domain) =

@@ -9,6 +9,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.DeserializationExc
 import com.vitorpamplona.quartz.utils.Hex;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Operations that act on a message and a single argument.
@@ -56,7 +57,7 @@ public abstract class OpBinary extends Op implements Comparable<Op> {
 
     @Override
     public String toString() {
-        return this._TAG_NAME() + ' ' + Hex.encode(this.arg).toLowerCase();
+        return this._TAG_NAME() + ' ' + Hex.encode(this.arg).toLowerCase(Locale.ROOT);
     }
 
     @Override

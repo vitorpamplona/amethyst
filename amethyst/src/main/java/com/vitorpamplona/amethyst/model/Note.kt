@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,21 +22,12 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.distinctUntilChanged
-import com.vitorpamplona.amethyst.launchAndWaitAll
-import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
+import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.replace
-import com.vitorpamplona.amethyst.tryAndWait
-import com.vitorpamplona.amethyst.ui.note.combineWith
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -44,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -57,34 +48,38 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.launchAndWaitAll
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import java.math.BigDecimal
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
+
+interface NotesGatherer {
+    fun removeNote(note: Note)
+}
 
 @Stable
 class AddressableNote(
@@ -94,17 +89,25 @@ class AddressableNote(
 
     override fun toNEvent() = toNAddr()
 
-    override fun idDisplayNote() = idNote().toShortenHex()
+    override fun idDisplayNote() = idNote().toShortDisplay()
 
     override fun address() = address
 
     override fun createdAt(): Long? {
-        if (event == null) return null
+        val currentEvent = event
 
-        val publishedAt = (event as? LongTextNoteEvent)?.publishedAt() ?: Long.MAX_VALUE
-        val lastCreatedAt = event?.createdAt ?: Long.MAX_VALUE
+        if (currentEvent == null) return null
 
-        return minOf(publishedAt, lastCreatedAt)
+        val publishedAt =
+            when (currentEvent) {
+                is LongTextNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                is WikiNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                is VideoEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                is ClassifiedsEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                else -> Long.MAX_VALUE
+            }
+
+        return minOf(publishedAt, currentEvent.createdAt)
     }
 
     fun dTag(): String = address.dTag
@@ -125,12 +128,33 @@ class AddressableNote(
 @Stable
 open class Note(
     val idHex: String,
-) {
+) : NotesGatherer {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: Event? = null
     var author: User? = null
     var replyTo: List<Note>? = null
+
+    var inGatherers: List<NotesGatherer>? = null
+
+    fun inGatherers() = inGatherers ?: listOf<NotesGatherer>().also { inGatherers = it }
+
+    fun addGatherer(gatherer: NotesGatherer) {
+        inGatherers = inGatherers() + gatherer
+    }
+
+    fun removeGatherer(gatherer: NotesGatherer) {
+        inGatherers = inGatherers() - gatherer
+    }
+
+    override fun removeNote(note: Note) {
+        removeReply(note)
+        removeBoost(note)
+        removeReaction(note)
+        removeZap(note)
+        removeZapPayment(note)
+        removeReport(note)
+    }
 
     // These fields are updated every time an event related to this note is received.
     var replies = listOf<Note>()
@@ -153,12 +177,8 @@ open class Note(
     var zapPayments = mapOf<Note, Note?>()
         private set
 
-    var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
+    var relays = listOf<NormalizedRelayUrl>()
         private set
-
-    var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
-
-    fun id() = Hex.decode(idHex)
 
     open fun idNote() = toNEvent()
 
@@ -181,14 +201,26 @@ open class Note(
         }
     }
 
-    fun relayHintUrl(): String? {
+    fun relayUrls(): List<NormalizedRelayUrl> {
+        val authorRelay = author?.relayHints()?.ifEmpty { null }
+
+        return authorRelay ?: relays
+    }
+
+    fun relayUrlsForReactions(): List<NormalizedRelayUrl> {
+        val authorRelay = author?.inboxRelays()?.ifEmpty { null }
+
+        return authorRelay ?: relays
+    }
+
+    fun relayHintUrl(): NormalizedRelayUrl? {
         val authorRelay = author?.latestMetadataRelay
 
         return if (relays.isNotEmpty()) {
-            if (authorRelay != null && relays.any { it.url == authorRelay }) {
+            if (authorRelay != null && relays.any { it == authorRelay }) {
                 authorRelay
             } else {
-                relays.firstOrNull()?.url
+                relays.firstOrNull()
             }
         } else {
             null
@@ -197,24 +229,7 @@ open class Note(
 
     fun toNostrUri(): String = "nostr:${toNEvent()}"
 
-    open fun idDisplayNote() = idNote().toShortenHex()
-
-    fun channelHex(): HexKey? =
-        if (
-            event is ChannelMessageEvent ||
-            event is ChannelMetadataEvent ||
-            event is ChannelCreateEvent ||
-            event is LiveActivitiesChatMessageEvent ||
-            event is LiveActivitiesEvent
-        ) {
-            (event as? ChannelMessageEvent)?.channelId()
-                ?: (event as? ChannelMetadataEvent)?.channelId()
-                ?: (event as? ChannelCreateEvent)?.id
-                ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
-                ?: (event as? LiveActivitiesEvent)?.aTag()?.toTag()
-        } else {
-            null
-        }
+    open fun idDisplayNote() = idNote().toShortDisplay()
 
     open fun address(): Address? = null
 
@@ -232,29 +247,36 @@ open class Note(
             this.author = author
             this.replyTo = replyTo
 
-            liveSet?.innerMetadata?.invalidateData()
             flowSet?.metadata?.invalidateData()
         }
+    }
+
+    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty()
+
+    fun countReactions(): Int {
+        var total = 0
+        reactions.forEach { total += it.value.size }
+        return total
     }
 
     fun addReply(note: Note) {
         if (note !in replies) {
             replies = replies + note
-            liveSet?.innerReplies?.invalidateData()
+            flowSet?.replies?.invalidateData()
         }
     }
 
     fun removeReply(note: Note) {
         if (note in replies) {
             replies = replies - note
-            liveSet?.innerReplies?.invalidateData()
+            flowSet?.replies?.invalidateData()
         }
     }
 
     fun removeBoost(note: Note) {
         if (note in boosts) {
             boosts = boosts - note
-            liveSet?.innerBoosts?.invalidateData()
+            flowSet?.boosts?.invalidateData()
         }
     }
 
@@ -282,16 +304,13 @@ open class Note(
         zaps = mapOf<Note, Note?>()
         zapPayments = mapOf<Note, Note?>()
         zapsAmount = BigDecimal.ZERO
-        relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
-        lastReactionsDownloadTime = emptyMap()
+        relays = listOf<NormalizedRelayUrl>()
 
-        if (repliesChanged) liveSet?.innerReplies?.invalidateData()
-        if (reactionsChanged) liveSet?.innerReactions?.invalidateData()
-        if (boostsChanged) liveSet?.innerBoosts?.invalidateData()
-        if (reportsChanged) {
-            flowSet?.reports?.invalidateData()
-        }
-        if (zapsChanged) liveSet?.innerZaps?.invalidateData()
+        if (repliesChanged) flowSet?.replies?.invalidateData()
+        if (reactionsChanged) flowSet?.reactions?.invalidateData()
+        if (boostsChanged) flowSet?.boosts?.invalidateData()
+        if (reportsChanged) flowSet?.reports?.invalidateData()
+        if (zapsChanged) flowSet?.zaps?.invalidateData()
 
         return toBeRemoved
     }
@@ -310,7 +329,7 @@ open class Note(
                         reactions = reactions + Pair(reaction, newList)
                     }
 
-                    liveSet?.innerReactions?.invalidateData()
+                    flowSet?.reactions?.invalidateData()
                 }
             }
         }
@@ -331,28 +350,28 @@ open class Note(
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
             updateZapTotal()
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
             zaps = zaps.filterValues { it != note }
             updateZapTotal()
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
     fun removeZapPayment(note: Note) {
         if (zapPayments.containsKey(note)) {
             zapPayments = zapPayments.minus(note)
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         } else if (zapPayments.containsValue(note)) {
             zapPayments = zapPayments.filterValues { it != note }
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
-            liveSet?.innerBoosts?.invalidateData()
+            flowSet?.boosts?.invalidateData()
         }
     }
 
@@ -373,13 +392,11 @@ open class Note(
         zapRequest: Note,
         zap: Note?,
     ) {
-        checkNotInMainThread()
-
         if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
-            if (inserted) {
+            if (inserted && zap != null) {
                 updateZapTotal()
-                liveSet?.innerZaps?.invalidateData()
+                flowSet?.zaps?.invalidateData()
             }
         }
     }
@@ -405,7 +422,7 @@ open class Note(
         if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
-                liveSet?.innerZaps?.invalidateData()
+                flowSet?.zaps?.invalidateData()
             }
         }
     }
@@ -417,10 +434,10 @@ open class Note(
         val listOfAuthors = reactions[reaction]
         if (listOfAuthors == null) {
             reactions = reactions + Pair(reaction, listOf(note))
-            liveSet?.innerReactions?.invalidateData()
+            flowSet?.reactions?.invalidateData()
         } else if (!listOfAuthors.contains(note)) {
             reactions = reactions + Pair(reaction, listOfAuthors + note)
-            liveSet?.innerReactions?.invalidateData()
+            flowSet?.reactions?.invalidateData()
         }
     }
 
@@ -439,24 +456,17 @@ open class Note(
     }
 
     @Synchronized
-    fun addRelaySync(briefInfo: RelayBriefInfoCache.RelayBriefInfo) {
-        if (briefInfo !in relays) {
-            relays = relays + briefInfo
+    fun addRelaySync(relay: NormalizedRelayUrl) {
+        if (relay !in relays) {
+            relays = relays + relay
         }
     }
 
-    fun hasRelay(relay: Relay) = relay.brief !in relays
+    fun hasRelay(relay: NormalizedRelayUrl) = relay in relays
 
-    fun addRelay(relay: Relay) {
-        if (relay.brief !in relays) {
-            addRelaySync(relay.brief)
-            flowSet?.relays?.invalidateData()
-        }
-    }
-
-    fun addRelayBrief(brief: RelayBriefInfoCache.RelayBriefInfo) {
-        if (brief !in relays) {
-            addRelaySync(brief)
+    fun addRelay(relay: NormalizedRelayUrl) {
+        if (relay !in relays) {
+            addRelaySync(relay)
             flowSet?.relays?.invalidateData()
         }
     }
@@ -476,21 +486,13 @@ open class Note(
             val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
 
             if (zapResponseEvent != null) {
-                val result =
-                    tryAndWait { continuation ->
-                        account.decryptZapPaymentResponseEvent(zapResponseEvent) { response ->
-                            if (
-                                response is PayInvoiceSuccessResponse &&
-                                account.isNIP47Author(zapResponseEvent.requestAuthor())
-                            ) {
-                                continuation.resume(true)
-                            }
-                        }
-                    }
+                account.nip47SignerState.decryptResponse(zapResponseEvent)?.let { response ->
+                    val result = response is PayInvoiceSuccessResponse && account.nip47SignerState.isNIP47Author(zapResponseEvent.requestAuthor())
 
-                if (!hasSentOne && result == true) {
-                    hasSentOne = true
-                    onWasZappedByAuthor()
+                    if (!hasSentOne && result == true) {
+                        hasSentOne = true
+                        onWasZappedByAuthor()
+                    }
                 }
             }
         }
@@ -507,6 +509,8 @@ open class Note(
             return
         }
 
+        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent?>>()
+
         zapEvents.forEach { next ->
             val zapRequest = next.key.event as LnZapRequestEvent
             val zapEvent = next.value?.event as? LnZapEvent
@@ -521,7 +525,7 @@ open class Note(
                 // private events
 
                 // if has already decrypted
-                val privateZap = zapRequest.cachedPrivateZap()
+                val privateZap = account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)
                 if (privateZap != null) {
                     if (privateZap.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
                         onWasZappedByAuthor()
@@ -529,20 +533,21 @@ open class Note(
                     }
                 } else {
                     if (account.isWriteable()) {
-                        val result =
-                            tryAndWait { continuation ->
-                                zapRequest.decryptPrivateZap(account.signer) {
-                                    continuation.resume(it)
-                                }
-                            }
-
-                        if (result?.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
-                            onWasZappedByAuthor()
-                            return
-                        }
+                        parallelDecrypt.add(Pair(zapRequest, zapEvent))
                     }
                 }
             }
+        }
+
+        val result =
+            anyAsync(parallelDecrypt) { pair ->
+                val result = account.privateZapsDecryptionCache.decryptPrivateZap(pair.first)
+
+                result?.pubKey == user.pubkeyHex && (option == null || option == pair.second?.zappedPollOption())
+            }
+
+        if (result) {
+            onWasZappedByAuthor()
         }
     }
 
@@ -609,26 +614,21 @@ open class Note(
         startAmount: BigDecimal,
         paidInvoiceSet: LinkedHashSet<String>,
         zapPayments: List<Pair<Note, Note?>>,
-        signer: NostrSigner,
-        onReady: (BigDecimal) -> Unit,
-    ) {
+        signerState: NwcSignerState,
+    ): BigDecimal {
         if (zapPayments.isEmpty()) {
-            onReady(startAmount)
-            return
+            return startAmount
         }
 
         var output: BigDecimal = startAmount
 
         launchAndWaitAll(zapPayments) { next ->
             val result =
-                tryAndWait { continuation ->
-                    processZapAmountFromResponse(
-                        next.first,
-                        next.second,
-                        continuation,
-                        signer,
-                    )
-                }
+                processZapAmountFromResponse(
+                    next.first,
+                    next.second,
+                    signerState,
+                )
 
             if (result != null && !paidInvoiceSet.contains(result.invoice)) {
                 paidInvoiceSet.add(result.invoice)
@@ -636,27 +636,25 @@ open class Note(
             }
         }
 
-        onReady(output)
+        return output
     }
 
-    private fun processZapAmountFromResponse(
+    private suspend fun processZapAmountFromResponse(
         paymentRequest: Note,
         paymentResponse: Note?,
-        continuation: Continuation<InvoiceAmount?>,
-        signer: NostrSigner,
-    ) {
+        signerState: NwcSignerState,
+    ): InvoiceAmount? {
         val nwcRequest = paymentRequest.event as? LnZapPaymentRequestEvent
         val nwcResponse = paymentResponse?.event as? LnZapPaymentResponseEvent
 
-        if (nwcRequest != null && nwcResponse != null) {
+        return if (nwcRequest != null && nwcResponse != null) {
             processZapAmountFromResponse(
                 nwcRequest,
                 nwcResponse,
-                continuation,
-                signer,
+                signerState,
             )
         } else {
-            continuation.resume(null)
+            null
         }
     }
 
@@ -665,18 +663,19 @@ open class Note(
         val amount: BigDecimal,
     )
 
-    private fun processZapAmountFromResponse(
+    private suspend fun processZapAmountFromResponse(
         nwcRequest: LnZapPaymentRequestEvent,
         nwcResponse: LnZapPaymentResponseEvent,
-        continuation: Continuation<InvoiceAmount?>,
-        signer: NostrSigner,
-    ) {
+        signerState: NwcSignerState,
+    ): InvoiceAmount? {
         // if we can decrypt the reply
-        nwcResponse.response(signer) { noteEvent ->
+        return signerState.decryptResponse(nwcResponse)?.let { noteEvent ->
             // if it is a sucess
             if (noteEvent is PayInvoiceSuccessResponse) {
                 // if we can decrypt the invoice
-                nwcRequest.lnInvoice(signer) { invoice ->
+                val request = signerState.decryptRequest(nwcRequest)
+                val invoice = (request as? PayInvoiceMethod)?.params?.invoice
+                if (invoice != null) {
                     // if we can parse the amount
                     val amount =
                         try {
@@ -688,34 +687,32 @@ open class Note(
 
                     // avoid double counting
                     if (amount != null) {
-                        continuation.resume(InvoiceAmount(invoice, amount))
+                        InvoiceAmount(invoice, amount)
                     } else {
-                        continuation.resume(null)
+                        null
                     }
+                } else {
+                    null
                 }
             } else {
-                continuation.resume(null)
+                null
             }
         }
     }
 
-    suspend fun zappedAmountWithNWCPayments(
-        signer: NostrSigner,
-        onReady: (BigDecimal) -> Unit,
-    ) {
+    suspend fun zappedAmountWithNWCPayments(signerState: NwcSignerState): BigDecimal {
         if (zapPayments.isEmpty()) {
-            onReady(zapsAmount)
+            return zapsAmount
         }
 
         val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
         zaps.forEach { (it.value?.event as? LnZapEvent)?.lnInvoice()?.let { invoiceSet.add(it) } }
 
-        zappedAmountCalculation(
+        return zappedAmountCalculation(
             zapsAmount,
             invoiceSet,
             zapPayments.toList(),
-            signer,
-            onReady,
+            signerState,
         )
     }
 
@@ -770,19 +767,27 @@ open class Note(
     fun hasReacted(
         loggedIn: User,
         content: String,
-    ): Boolean = reactedBy(loggedIn, content).isNotEmpty()
+    ): Boolean = allReactionsOfContentByAuthor(loggedIn, content).isNotEmpty()
 
-    fun reactedBy(
+    fun allReactionsOfContentByAuthor(
         loggedIn: User,
         content: String,
     ): List<Note> = reactions[content]?.filter { it.author == loggedIn } ?: emptyList()
 
-    fun reactedBy(loggedIn: User): List<String> = reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
+    fun allReactionsByAuthor(loggedIn: User): List<String> = reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
-        return boosts.firstOrNull {
-            it.author == loggedIn && (it.createdAt() ?: 0) > TimeUtils.fiveMinutesAgo()
-        } != null // 5 minute protection
+        val fiveMinsAgo = TimeUtils.fiveMinutesAgo()
+        return boosts.any {
+            it.author == loggedIn && (it.createdAt() ?: 0) > fiveMinsAgo
+        }
+    }
+
+    fun hasBoostedInTheLast5Minutes(loggedIn: HexKey): Boolean {
+        val fiveMinsAgo = TimeUtils.fiveMinutesAgo()
+        return boosts.any {
+            (it.createdAt() ?: 0) > fiveMinsAgo && it.author?.pubkeyHex == loggedIn
+        }
     }
 
     fun boostedBy(loggedIn: User): List<Note> = boosts.filter { it.author == loggedIn }
@@ -824,11 +829,7 @@ open class Note(
         zapsAmount = BigDecimal.ZERO
     }
 
-    fun clearEOSE() {
-        lastReactionsDownloadTime = emptyMap()
-    }
-
-    fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
+    fun isHiddenFor(accountChoices: HiddenUsersState.LiveHiddenUsers): Boolean {
         val thisEvent = event ?: return false
         val hash = thisEvent.pubKey.hashCode()
 
@@ -860,6 +861,10 @@ open class Note(
                 return true
             }
 
+            if (thisEvent is CommentEvent) {
+                thisEvent.isScoped { it.containsAny(accountChoices.hiddenWordsCase) }
+            }
+
             if (thisEvent.anyHashTag { it.containsAny(accountChoices.hiddenWordsCase) }) {
                 return true
             }
@@ -870,35 +875,7 @@ open class Note(
         return false
     }
 
-    var liveSet: NoteLiveSet? = null
     var flowSet: NoteFlowSet? = null
-
-    @Synchronized
-    fun createOrDestroyLiveSync(create: Boolean) {
-        if (create) {
-            if (liveSet == null) {
-                liveSet = NoteLiveSet(this)
-            }
-        } else {
-            if (liveSet != null && liveSet?.isInUse() == false) {
-                liveSet?.destroy()
-                liveSet = null
-            }
-        }
-    }
-
-    fun live(): NoteLiveSet {
-        if (liveSet == null) {
-            createOrDestroyLiveSync(true)
-        }
-        return liveSet!!
-    }
-
-    fun clearLive() {
-        if (liveSet != null && liveSet?.isInUse() == false) {
-            createOrDestroyLiveSync(false)
-        }
-    }
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {
@@ -908,7 +885,6 @@ open class Note(
             }
         } else {
             if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet?.destroy()
                 flowSet = null
             }
         }
@@ -954,7 +930,14 @@ open class Note(
         }
     }
 
-    fun <T : Event> toEventHint() = (event as? T)?.let { EventHintBundle(it, relayHintUrl(), author?.bestRelayHint()) }
+    inline fun <reified T : Event> toEventHint(): EventHintBundle<T>? {
+        val safeEvent = event
+        return if (safeEvent is T) {
+            EventHintBundle(safeEvent, relayHintUrl(), author?.bestRelayHint())
+        } else {
+            null
+        }
+    }
 
     fun toMarkedETag(marker: MarkedETag.MARKER): MarkedETag {
         val noteEvent = event
@@ -974,6 +957,12 @@ class NoteFlowSet(
     val metadata = NoteBundledRefresherFlow(u)
     val reports = NoteBundledRefresherFlow(u)
     val relays = NoteBundledRefresherFlow(u)
+    val reactions = NoteBundledRefresherFlow(u)
+    val boosts = NoteBundledRefresherFlow(u)
+    val replies = NoteBundledRefresherFlow(u)
+    val zaps = NoteBundledRefresherFlow(u)
+    val ots = NoteBundledRefresherFlow(u)
+    val edits = NoteBundledRefresherFlow(u)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun author() =
@@ -985,84 +974,15 @@ class NoteFlowSet(
         }
 
     fun isInUse(): Boolean =
-        metadata.stateFlow.subscriptionCount.value > 0 ||
-            reports.stateFlow.subscriptionCount.value > 0 ||
-            relays.stateFlow.subscriptionCount.value > 0
-
-    fun destroy() {
-        metadata.destroy()
-        reports.destroy()
-        relays.destroy()
-    }
-}
-
-@Stable
-class NoteLiveSet(
-    u: Note,
-) {
-    // Observers line up here.
-    val innerMetadata = NoteBundledRefresherLiveData(u)
-    val innerReactions = NoteBundledRefresherLiveData(u)
-    val innerBoosts = NoteBundledRefresherLiveData(u)
-    val innerReplies = NoteBundledRefresherLiveData(u)
-    val innerZaps = NoteBundledRefresherLiveData(u)
-    val innerOts = NoteBundledRefresherLiveData(u)
-    val innerModifications = NoteBundledRefresherLiveData(u)
-
-    val metadata = innerMetadata.map { it }
-    val reactions = innerReactions.map { it }
-    val boosts = innerBoosts.map { it }
-    val replies = innerReplies.map { it }
-    val zaps = innerZaps.map { it }
-
-    val hasEvent = innerMetadata.map { it.note.event != null }.distinctUntilChanged()
-
-    val hasReactions =
-        innerZaps
-            .combineWith(innerBoosts, innerReactions) { zapState, boostState, reactionState ->
-                zapState?.note?.zaps?.isNotEmpty()
-                    ?: false ||
-                    boostState?.note?.boosts?.isNotEmpty() ?: false ||
-                    reactionState?.note?.reactions?.isNotEmpty() ?: false
-            }.distinctUntilChanged()
-
-    val replyCount = innerReplies.map { it.note.replies.size }.distinctUntilChanged()
-
-    val reactionCount =
-        innerReactions
-            .map {
-                var total = 0
-                it.note.reactions.forEach { total += it.value.size }
-                total
-            }.distinctUntilChanged()
-
-    val boostCount = innerBoosts.map { it.note.boosts.size }.distinctUntilChanged()
-
-    val content = innerMetadata.map { it.note.event?.content ?: "" }
-
-    fun isInUse(): Boolean =
         metadata.hasObservers() ||
+            reports.hasObservers() ||
+            relays.hasObservers() ||
             reactions.hasObservers() ||
             boosts.hasObservers() ||
             replies.hasObservers() ||
             zaps.hasObservers() ||
-            hasEvent.hasObservers() ||
-            hasReactions.hasObservers() ||
-            replyCount.hasObservers() ||
-            reactionCount.hasObservers() ||
-            boostCount.hasObservers() ||
-            innerOts.hasObservers() ||
-            innerModifications.hasObservers()
-
-    fun destroy() {
-        innerMetadata.destroy()
-        innerReactions.destroy()
-        innerBoosts.destroy()
-        innerReplies.destroy()
-        innerZaps.destroy()
-        innerOts.destroy()
-        innerModifications.destroy()
-    }
+            ots.hasObservers() ||
+            edits.hasObservers()
 }
 
 @Stable
@@ -1070,78 +990,16 @@ class NoteBundledRefresherFlow(
     val note: Note,
 ) {
     // Refreshes observers in batches.
-    // TODO: Replace the bundler for .sample
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(NoteState(note))
 
-    fun destroy() {
-        bundler.cancel()
-    }
-
     fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            stateFlow.emit(NoteState(note))
-        }
+        stateFlow.tryEmit(NoteState(note))
     }
+
+    fun hasObservers() = stateFlow.subscriptionCount.value > 0
 }
 
-@Stable
-class NoteBundledRefresherLiveData(
-    val note: Note,
-) : LiveData<NoteState>(NoteState(note)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
-
-    fun destroy() {
-        bundler.cancel()
-    }
-
-    fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            postValue(NoteState(note))
-        }
-    }
-
-    fun <Y> map(transform: (NoteState) -> Y): NoteLoadingLiveData<Y> {
-        val initialValue = this.value?.let { transform(it) }
-        val result = NoteLoadingLiveData(note, initialValue)
-        result.addSource(this) { x -> result.value = transform(x) }
-        return result
-    }
-}
-
-@Stable
-class NoteLoadingLiveData<Y>(
-    val note: Note,
-    initialValue: Y?,
-) : MediatorLiveData<Y>(initialValue) {
-    override fun onActive() {
-        super.onActive()
-        if (note is AddressableNote) {
-            NostrSingleEventDataSource.addAddress(note)
-        } else {
-            NostrSingleEventDataSource.add(note)
-        }
-    }
-
-    override fun onInactive() {
-        super.onInactive()
-        if (note is AddressableNote) {
-            NostrSingleEventDataSource.removeAddress(note)
-        } else {
-            NostrSingleEventDataSource.remove(note)
-        }
-    }
-}
-
-@Immutable class NoteState(
+@Immutable
+class NoteState(
     val note: Note,
 )

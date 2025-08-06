@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,13 +34,17 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,13 +52,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -66,19 +66,24 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -93,6 +98,8 @@ fun DiscoverScreen(
     nav: INav,
 ) {
     DiscoverScreen(
+        discoveryFollowSetsFeedContentState = accountViewModel.feedStates.discoverFollowSets,
+        discoveryReadsFeedContentState = accountViewModel.feedStates.discoverReads,
         discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
         discoveryMarketplaceFeedContentState = accountViewModel.feedStates.discoverMarketplace,
         discoveryLiveFeedContentState = accountViewModel.feedStates.discoverLive,
@@ -106,6 +113,8 @@ fun DiscoverScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
+    discoveryFollowSetsFeedContentState: FeedContentState,
+    discoveryReadsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
     discoveryMarketplaceFeedContentState: FeedContentState,
     discoveryLiveFeedContentState: FeedContentState,
@@ -114,34 +123,40 @@ fun DiscoverScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
     val tabs by
-        remember(
-            discoveryContentNIP89FeedContentState,
-            discoveryLiveFeedContentState,
-            discoveryCommunityFeedContentState,
-            discoveryChatFeedContentState,
-            discoveryMarketplaceFeedContentState,
-        ) {
+        remember(accountViewModel) {
             mutableStateOf(
                 listOf(
                     TabItem(
-                        R.string.discover_content,
+                        R.string.discover_follows,
+                        discoveryFollowSetsFeedContentState,
+                        "DiscoverFollowSets",
+                        ScrollStateKeys.DISCOVER_FOLLOWS,
+                        FollowListEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_reads,
+                        discoveryReadsFeedContentState,
+                        "DiscoverReads",
+                        ScrollStateKeys.DISCOVER_READS,
+                        LongTextNoteEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_content_v2,
                         discoveryContentNIP89FeedContentState,
                         "DiscoverDiscoverContent",
                         ScrollStateKeys.DISCOVER_CONTENT,
                         AppDefinitionEvent.KIND,
                     ),
                     TabItem(
-                        R.string.discover_live,
+                        R.string.discover_live_v2,
                         discoveryLiveFeedContentState,
                         "DiscoverLive",
                         ScrollStateKeys.DISCOVER_LIVE,
                         LiveActivitiesEvent.KIND,
                     ),
                     TabItem(
-                        R.string.discover_community,
+                        R.string.discover_community_v2,
                         discoveryCommunityFeedContentState,
                         "DiscoverCommunity",
                         ScrollStateKeys.DISCOVER_COMMUNITY,
@@ -169,6 +184,8 @@ fun DiscoverScreen(
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
 
     WatchAccountForDiscoveryScreen(
+        discoveryFollowSetsFeedContentState = discoveryFollowSetsFeedContentState,
+        discoveryReadsFeedContentState = discoveryReadsFeedContentState,
         discoveryContentNIP89FeedContentState = discoveryContentNIP89FeedContentState,
         discoveryMarketplaceFeedContentState = discoveryMarketplaceFeedContentState,
         discoveryLiveFeedContentState = discoveryLiveFeedContentState,
@@ -177,22 +194,15 @@ fun DiscoverScreen(
         accountViewModel = accountViewModel,
     )
 
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Discovery Start")
-                    NostrDiscoveryDataSource.start()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Discovery Stop")
-                    NostrDiscoveryDataSource.stop()
-                }
-            }
+    WatchLifecycleAndUpdateModel(discoveryFollowSetsFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryReadsFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryContentNIP89FeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryMarketplaceFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryLiveFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryCommunityFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryChatFeedContentState)
 
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    DiscoveryFilterAssemblerSubscription(accountViewModel.dataSources().discovery, accountViewModel)
 
     DiscoverPages(pagerState, tabs, accountViewModel, nav)
 }
@@ -235,6 +245,11 @@ private fun DiscoverPages(
                 } else {
                     nav.newStack(route)
                 }
+            }
+        },
+        floatingButton = {
+            if (tabs[pagerState.currentPage].resource == R.string.discover_marketplace) {
+                NewProductButton(accountViewModel, nav)
             }
         },
         accountViewModel = accountViewModel,
@@ -311,6 +326,28 @@ private fun RenderDiscoverFeed(
 }
 
 @Composable
+fun NewProductButton(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    FloatingActionButton(
+        onClick = {
+            nav.nav(Route.NewProduct())
+        },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Add,
+            contentDescription = stringRes(id = R.string.new_product),
+            modifier = Size26Modifier,
+            tint = Color.White,
+        )
+    }
+}
+
+@Composable
 private fun RenderDiscoverFeed(
     feedContentState: FeedContentState,
     routeForLastRead: String?,
@@ -353,6 +390,8 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun WatchAccountForDiscoveryScreen(
+    discoveryFollowSetsFeedContentState: FeedContentState,
+    discoveryReadsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
     discoveryMarketplaceFeedContentState: FeedContentState,
     discoveryLiveFeedContentState: FeedContentState,
@@ -363,7 +402,8 @@ fun WatchAccountForDiscoveryScreen(
     val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
-        NostrDiscoveryDataSource.resetFilters()
+        discoveryFollowSetsFeedContentState.checkKeysInvalidateDataAndSendToTop()
+        discoveryReadsFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryContentNIP89FeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryMarketplaceFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryLiveFeedContentState.checkKeysInvalidateDataAndSendToTop()
@@ -389,9 +429,7 @@ private fun DiscoverFeedLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 ChannelCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
@@ -427,9 +465,7 @@ private fun DiscoverFeedColumnsLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 ChannelCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,8 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -102,12 +102,11 @@ fun ObserveRelayListForDMs(
     inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
 ) {
     LoadAddressableNote(
-        ChatMessageRelayListEvent.createAddressTag(pubkey),
+        ChatMessageRelayListEvent.createAddress(pubkey),
         accountViewModel,
     ) { relayList ->
         if (relayList != null) {
-            val relayListNoteState by relayList.live().metadata.observeAsState()
-            val relayListEvent = relayListNoteState?.note?.event as? ChatMessageRelayListEvent
+            val relayListEvent by observeNoteEvent<ChatMessageRelayListEvent>(relayList, accountViewModel)
 
             inner(relayListEvent)
         }

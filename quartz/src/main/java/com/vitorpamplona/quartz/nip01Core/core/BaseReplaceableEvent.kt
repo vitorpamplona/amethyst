@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
@@ -36,7 +37,7 @@ open class BaseReplaceableEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     override fun dTag() = FIXED_D_TAG
 
-    override fun aTag(relayHint: String?) = ATag(kind, pubKey, FIXED_D_TAG, relayHint)
+    override fun aTag(relayHint: NormalizedRelayUrl?) = ATag(kind, pubKey, FIXED_D_TAG, relayHint)
 
     override fun address() = Address(kind, pubKey, dTag())
 

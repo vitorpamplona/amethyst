@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import kotlinx.coroutines.CancellationException
 
 class Nip05 {
@@ -46,7 +46,7 @@ class Nip05 {
         // lowercase version of the username.
         val nip05url =
             try {
-                EventMapper.mapper.readTree(returnBody.lowercase())
+                JsonMapper.mapper.readTree(returnBody.lowercase())
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 return Result.failure(e)

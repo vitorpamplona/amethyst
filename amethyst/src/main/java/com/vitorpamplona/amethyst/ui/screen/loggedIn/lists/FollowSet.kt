@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,8 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 
 @Stable
 data class FollowSet(
@@ -33,7 +34,7 @@ data class FollowSet(
     val profileList: Set<String>,
 ) : NostrList(listVisibility = visibility, content = profileList) {
     companion object {
-        fun mapEventToSet(
+        suspend fun mapEventToSet(
             event: PeopleListEvent,
             signer: NostrSigner,
         ): FollowSet {
@@ -41,9 +42,12 @@ data class FollowSet(
             val dTag = event.dTag()
             val listTitle = event.nameOrTitle() ?: dTag
             val listDescription = event.description() ?: ""
-            val publicFollows = event.filterTagList("p", null)
-            val privateFollows = mutableListOf<String>()
-            event.privateTaggedUsers(signer) { userList -> privateFollows.addAll(userList) }
+            val publicFollows = event.publicPeople().map { it.toTagArray() }.map { it.value() }
+            val privateFollows =
+                event
+                    .privatePeople(signer)
+                    ?.map { it.toTagArray() }
+                    ?.map { it.value() } ?: emptyList()
             return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
                 FollowSet(
                     identifierTag = dTag,

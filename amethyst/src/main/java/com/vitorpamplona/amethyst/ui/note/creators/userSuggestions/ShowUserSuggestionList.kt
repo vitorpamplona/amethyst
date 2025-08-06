@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,20 +28,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.AnimateOnNewSearch
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun ShowUserSuggestionList(
@@ -50,14 +58,57 @@ fun ShowUserSuggestionList(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
 ) {
-    val userSuggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
+    UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
-    if (userSuggestions.isNotEmpty()) {
+    val listState = rememberLazyListState()
+
+    AnimateOnNewSearch(userSuggestions, listState)
+
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.Default) {
+            LocalCache.live.newEventBundles.collect {
+                userSuggestions.invalidateData()
+            }
+        }
+        launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect {
+                userSuggestions.invalidateData()
+            }
+        }
+    }
+
+    WatchResponses(userSuggestions, listState, onSelect, accountViewModel, modifier)
+}
+
+@Composable
+fun AnimateOnNewSearch(
+    userSuggestions: UserSuggestionState,
+    listState: LazyListState,
+) {
+    val searchTerm by userSuggestions.searchTerm.collectAsStateWithLifecycle("")
+
+    LaunchedEffect(searchTerm) {
+        listState.animateScrollToItem(0)
+    }
+}
+
+@Composable
+fun WatchResponses(
+    userSuggestions: UserSuggestionState,
+    listState: LazyListState,
+    onSelect: (User) -> Unit,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
+) {
+    val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
+
+    if (suggestions.isNotEmpty()) {
         LazyColumn(
             contentPadding = PaddingValues(top = 10.dp),
             modifier = modifier,
+            state = listState,
         ) {
-            itemsIndexed(userSuggestions, key = { _, item -> item.pubkeyHex }) { _, item ->
+            itemsIndexed(suggestions, key = { _, item -> item.pubkeyHex }) { _, item ->
                 UserLine(item, accountViewModel) { onSelect(item) }
                 HorizontalDivider(
                     thickness = DividerThickness,
@@ -94,7 +145,7 @@ fun UserLine(
                 )
             }
 
-            AboutDisplay(baseUser)
+            AboutDisplay(baseUser, accountViewModel)
         }
     }
 }

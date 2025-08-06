@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -36,17 +35,17 @@ import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.AmethystClickableIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import kotlinx.coroutines.channels.Channel
 
 @Composable
 fun MessagesTwoPane(
@@ -63,22 +62,16 @@ fun MessagesTwoPane(
     val strategy =
         remember {
             if (widthSizeClass == WindowWidthSizeClass.Expanded) {
-                HorizontalTwoPaneStrategy(
-                    splitFraction = 1f / 3f,
-                )
+                HorizontalTwoPaneStrategy(splitFraction = 1f / 3f)
             } else {
-                HorizontalTwoPaneStrategy(
-                    splitFraction = 1f / 2.5f,
-                )
+                HorizontalTwoPaneStrategy(splitFraction = 1f / 2.5f)
             }
         }
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            Column {
-                MainTopBar(accountViewModel, nav)
-            }
+            UserDrawerSearchTopBar(accountViewModel, nav) { AmethystClickableIcon() }
         },
         bottomBar = {
             AppBottomBar(Route.Message, accountViewModel) { route ->
@@ -111,15 +104,18 @@ fun MessagesTwoPane(
                 Box(Modifier.fillMaxSize().systemBarsPadding()) {
                     twoPaneNav.innerNav.value?.let {
                         if (it is Route.Room) {
-                            Chatroom(
-                                roomId = it.id.toString(),
+                            ChatroomView(
+                                room = it.toKey(),
                                 accountViewModel = accountViewModel,
+                                draftMessage = it.message,
+                                replyToNote = it.replyId,
+                                editFromDraft = it.draftId,
                                 nav = nav,
                             )
                         }
 
-                        if (it is Route.Channel) {
-                            ChannelView(
+                        if (it is Route.PublicChatChannel) {
+                            PublicChatChannelView(
                                 channelId = it.id,
                                 accountViewModel = accountViewModel,
                                 nav = nav,

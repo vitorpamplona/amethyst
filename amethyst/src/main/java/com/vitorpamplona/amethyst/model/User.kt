@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,29 +22,21 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.distinctUntilChanged
-import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -52,8 +44,6 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 
@@ -64,7 +54,7 @@ class User(
     var info: UserMetadata? = null
 
     var latestMetadata: MetadataEvent? = null
-    var latestMetadataRelay: String? = null
+    var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
     var followSetNotes: Set<AddressableNote> = setOf()
@@ -73,36 +63,37 @@ class User(
     var reports = mapOf<User, Set<Note>>()
         private set
 
-    var latestEOSEs: Map<String, EOSETime> = emptyMap()
-
     var zaps = mapOf<Note, Note?>()
         private set
 
-    var relaysBeingUsed = mapOf<String, RelayInfo>()
-        private set
-
-    var privateChatrooms = mapOf<ChatroomKey, Chatroom>()
+    var relaysBeingUsed = mapOf<NormalizedRelayUrl, RelayInfo>()
         private set
 
     fun pubkey() = Hex.decode(pubkeyHex)
 
     fun pubkeyNpub() = pubkey().toNpub()
 
-    fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
+    fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay()
+
+    fun dmInboxRelayList() = (LocalCache.getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(pubkeyHex))?.event as? ChatMessageRelayListEvent)
 
     fun authorRelayList() = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)
 
     fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
 
-    fun relayHints() = authorRelayList()?.writeRelays()?.take(3) ?: listOfNotNull(latestMetadataRelay)
+    fun outboxRelays() = authorRelayList()?.writeRelaysNorm() ?: listOfNotNull(latestMetadataRelay)
 
-    fun bestRelayHint() = authorRelayList()?.writeRelays()?.firstOrNull() ?: latestMetadataRelay
+    fun relayHints() = authorRelayList()?.writeRelaysNorm()?.take(3) ?: listOfNotNull(latestMetadataRelay)
+
+    fun inboxRelays() = authorRelayList()?.readRelaysNorm() ?: listOfNotNull(latestMetadataRelay)
+
+    fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
+
+    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: latestMetadataRelay
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
     fun toNostrUri() = "nostr:${toNProfile()}"
-
-    override fun toString(): String = pubkeyHex
 
     fun toBestShortFirstName(): String {
         val fullName = toBestDisplayName()
@@ -126,17 +117,6 @@ class User(
 
     fun profilePicture(): String? = info?.picture
 
-    fun updateBookmark(event: BookmarkListEvent) {
-        if (event.id == latestBookmarkList?.id) return
-
-        latestBookmarkList = event
-        liveSet?.innerBookmarks?.invalidateData()
-    }
-
-    fun clearEOSE() {
-        latestEOSEs = emptyMap()
-    }
-
     fun updateContactList(event: ContactListEvent) {
         if (event.id == latestContactList?.id) return
 
@@ -144,7 +124,6 @@ class User(
         latestContactList = event
 
         // Update following of the current user
-        liveSet?.innerFollows?.invalidateData()
         flowSet?.follows?.invalidateData()
 
         // Update Followers of the past user list
@@ -152,19 +131,18 @@ class User(
         (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
             LocalCache
                 .getUserIfExists(it)
-                ?.liveSet
-                ?.innerFollowers
+                ?.flowSet
+                ?.followers
                 ?.invalidateData()
         }
         (latestContactList)?.unverifiedFollowKeySet()?.forEach {
             LocalCache
                 .getUserIfExists(it)
-                ?.liveSet
-                ?.innerFollowers
+                ?.flowSet
+                ?.followers
                 ?.invalidateData()
         }
 
-        liveSet?.innerRelays?.invalidateData()
         flowSet?.relays?.invalidateData()
     }
 
@@ -178,10 +156,10 @@ class User(
         val reportsBy = reports[author]
         if (reportsBy == null) {
             reports = reports + Pair(author, setOf(note))
-            liveSet?.innerReports?.invalidateData()
+            flowSet?.reports?.invalidateData()
         } else if (!reportsBy.contains(note)) {
             reports = reports + Pair(author, reportsBy + note)
-            liveSet?.innerReports?.invalidateData()
+            flowSet?.reports?.invalidateData()
         }
     }
 
@@ -191,7 +169,7 @@ class User(
         if (reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
-                liveSet?.innerReports?.invalidateData()
+                flowSet?.reports?.invalidateData()
             }
         }
     }
@@ -202,17 +180,17 @@ class User(
     ) {
         if (zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
     fun removeZap(zapRequestOrZapEvent: Note) {
         if (zaps.containsKey(zapRequestOrZapEvent)) {
             zaps = zaps.minus(zapRequestOrZapEvent)
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(zapRequestOrZapEvent)) {
             zaps = zaps.filter { it.value != zapRequestOrZapEvent }
-            liveSet?.innerZaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
@@ -242,80 +220,13 @@ class User(
                 }
             }.flatten()
 
-    @Synchronized
-    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom =
-        privateChatrooms[key]
-            ?: run {
-                val privateChatroom = Chatroom()
-                privateChatrooms = privateChatrooms + Pair(key, privateChatroom)
-                privateChatroom
-            }
-
-    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
-        val key = ChatroomKey(persistentSetOf(user.pubkeyHex))
-        return getOrCreatePrivateChatroom(key)
-    }
-
-    private fun getOrCreatePrivateChatroom(key: ChatroomKey): Chatroom = privateChatrooms[key] ?: getOrCreatePrivateChatroomSync(key)
-
-    fun addMessage(
-        room: ChatroomKey,
-        msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg !in privateChatroom.roomMessages) {
-            privateChatroom.addMessageSync(msg)
-            liveSet?.innerMessages?.invalidateData()
-        }
-    }
-
-    fun addMessage(
-        user: User,
-        msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg !in privateChatroom.roomMessages) {
-            privateChatroom.addMessageSync(msg)
-            liveSet?.innerMessages?.invalidateData()
-        }
-    }
-
-    fun createChatroom(withKey: ChatroomKey) {
-        getOrCreatePrivateChatroom(withKey)
-    }
-
-    fun removeMessage(
-        user: User,
-        msg: Note,
-    ) {
-        checkNotInMainThread()
-
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg in privateChatroom.roomMessages) {
-            privateChatroom.removeMessageSync(msg)
-            liveSet?.innerMessages?.invalidateData()
-        }
-    }
-
-    fun removeMessage(
-        room: ChatroomKey,
-        msg: Note,
-    ) {
-        checkNotInMainThread()
-        val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg in privateChatroom.roomMessages) {
-            privateChatroom.removeMessageSync(msg)
-            liveSet?.innerMessages?.invalidateData()
-        }
-    }
-
     fun addRelayBeingUsed(
-        relay: Relay,
+        relay: NormalizedRelayUrl,
         eventTime: Long,
     ) {
-        val here = relaysBeingUsed[relay.brief.url]
+        val here = relaysBeingUsed[relay]
         if (here == null) {
-            relaysBeingUsed = relaysBeingUsed + Pair(relay.brief.url, RelayInfo(relay.brief.url, eventTime, 1))
+            relaysBeingUsed = relaysBeingUsed + Pair(relay, RelayInfo(relay, eventTime, 1))
         } else {
             if (eventTime > here.lastEvent) {
                 here.lastEvent = eventTime
@@ -323,7 +234,7 @@ class User(
             here.counter++
         }
 
-        liveSet?.innerRelayInfo?.invalidateData()
+        flowSet?.relayInfo?.invalidateData()
     }
 
     fun updateUserInfo(
@@ -343,7 +254,6 @@ class User(
         }
 
         flowSet?.metadata?.invalidateData()
-        liveSet?.innerMetadata?.invalidateData()
     }
 
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
@@ -356,19 +266,12 @@ class User(
 
     suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
-    fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
-        val messagesToUser = privateChatrooms[key] ?: return false
-
-        return messagesToUser.authors.any { this == it }
-    }
-
     fun hasReport(
         loggedIn: User,
         type: ReportType,
     ): Boolean =
         reports[loggedIn]?.firstOrNull {
-            it.event is ReportEvent &&
-                (it.event as ReportEvent).reportedAuthor().any { it.type == type }
+            (it.event as? ReportEvent)?.reportedAuthor()?.any { it.type == type } ?: false
         } != null
 
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
@@ -407,35 +310,7 @@ class User(
 
     fun anyNameStartsWith(username: String): Boolean = info?.anyNameStartsWith(username) ?: false
 
-    var liveSet: UserLiveSet? = null
     var flowSet: UserFlowSet? = null
-
-    fun live(): UserLiveSet {
-        if (liveSet == null) {
-            createOrDestroyLiveSync(true)
-        }
-        return liveSet!!
-    }
-
-    fun clearLive() {
-        if (liveSet != null && liveSet?.isInUse() == false) {
-            createOrDestroyLiveSync(false)
-        }
-    }
-
-    @Synchronized
-    fun createOrDestroyLiveSync(create: Boolean) {
-        if (create) {
-            if (liveSet == null) {
-                liveSet = UserLiveSet(this)
-            }
-        } else {
-            if (liveSet != null && liveSet?.isInUse() == false) {
-                liveSet?.destroy()
-                liveSet = null
-            }
-        }
-    }
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {
@@ -445,7 +320,6 @@ class User(
             }
         } else {
             if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet?.destroy()
                 flowSet = null
             }
         }
@@ -473,6 +347,11 @@ class UserFlowSet(
     val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
     val relays = UserBundledRefresherFlow(u)
+    val followers = UserBundledRefresherFlow(u)
+    val reports = UserBundledRefresherFlow(u)
+    val relayInfo = UserBundledRefresherFlow(u)
+    val zaps = UserBundledRefresherFlow(u)
+    val statuses = UserBundledRefresherFlow(u)
     val followSets = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
@@ -526,106 +405,36 @@ class UserLiveSet(
 
     fun isInUse(): Boolean =
         metadata.hasObservers() ||
+            relays.hasObservers() ||
             follows.hasObservers() ||
             followers.hasObservers() ||
             reports.hasObservers() ||
-            messages.hasObservers() ||
-            relays.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            bookmarks.hasObservers() ||
-            statuses.hasObservers() ||
-            profilePictureChanges.hasObservers() ||
-            nip05Changes.hasObservers() ||
-            userMetadataInfo.hasObservers()
-
-    fun destroy() {
-        innerMetadata.destroy()
-        innerFollows.destroy()
-        innerFollowers.destroy()
-        innerReports.destroy()
-        innerMessages.destroy()
-        innerRelays.destroy()
-        innerRelayInfo.destroy()
-        innerZaps.destroy()
-        innerBookmarks.destroy()
-        innerStatuses.destroy()
-    }
+            statuses.hasObservers()
 }
 
 @Immutable
 data class RelayInfo(
-    val url: String,
+    val url: NormalizedRelayUrl,
     var lastEvent: Long,
     var counter: Long,
 )
-
-class UserBundledRefresherLiveData(
-    val user: User,
-) : LiveData<UserState>(UserState(user)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
-
-    fun destroy() {
-        bundler.cancel()
-    }
-
-    fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            postValue(UserState(user))
-        }
-    }
-
-    fun <Y> map(transform: (UserState) -> Y): UserLoadingLiveData<Y> {
-        val initialValue = this.value?.let { transform(it) }
-        val result = UserLoadingLiveData(user, initialValue)
-        result.addSource(this) { x -> result.value = transform(x) }
-        return result
-    }
-}
 
 @Stable
 class UserBundledRefresherFlow(
     val user: User,
 ) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(UserState(user))
 
-    fun destroy() {
-        bundler.cancel()
-    }
-
     fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            stateFlow.emit(UserState(user))
-        }
+        stateFlow.tryEmit(UserState(user))
     }
+
+    fun hasObservers() = stateFlow.subscriptionCount.value > 0
 }
 
-class UserLoadingLiveData<Y>(
-    val user: User,
-    initialValue: Y?,
-) : MediatorLiveData<Y>(initialValue) {
-    override fun onActive() {
-        super.onActive()
-        NostrSingleUserDataSource.add(user)
-    }
-
-    override fun onInactive() {
-        super.onInactive()
-        NostrSingleUserDataSource.remove(user)
-    }
-}
-
-@Immutable class UserState(
+@Immutable
+class UserState(
     val user: User,
 )

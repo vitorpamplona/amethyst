@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,18 +25,16 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.anyTagged
 import com.vitorpamplona.quartz.nip01Core.core.firstAnyLowercaseTaggedValue
 import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
 import com.vitorpamplona.quartz.nip01Core.core.isAnyLowercaseTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
 fun TagArray.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(HashtagTag.TAG_NAME, onEach)
 
 fun TagArray.anyHashTag(onEach: (str: String) -> Boolean) = this.anyTagged(HashtagTag.TAG_NAME, onEach)
 
-fun TagArray.hasHashtags() = this.hasTagWithContent(HashtagTag.TAG_NAME)
+fun TagArray.hasHashtags() = this.any(HashtagTag::isTagged)
 
-fun TagArray.hashtags() = this.mapValues(HashtagTag.TAG_NAME)
+fun TagArray.hashtags() = this.mapNotNull(HashtagTag::parse)
 
 fun TagArray.countHashtags() = this.count(HashtagTag::isTagged)
 

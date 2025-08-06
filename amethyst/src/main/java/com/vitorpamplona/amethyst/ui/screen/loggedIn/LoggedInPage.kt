@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,30 +32,26 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
-import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.components.getActivity
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
-import com.vitorpamplona.amethyst.ui.tor.TorType
-import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
-import kotlinx.coroutines.CancellationException
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -70,21 +68,40 @@ fun LoggedInPage(
                 AccountViewModel.Factory(
                     accountSettings,
                     sharedPreferencesViewModel.sharedPrefs,
+                    Amethyst.instance,
                 ),
         )
 
-    Log.d("ManageRelayServices", "LoggedInPage $accountViewModel")
-
     accountViewModel.firstRoute = route
 
-    ManageSpamFilters(accountViewModel)
+    // Adds this account to the authentication procedures for relays.
+    RelayAuthSubscription(accountViewModel)
 
-    ManageRelayServices(accountViewModel, sharedPreferencesViewModel)
+    // Sets up Coil's Image Loader
+    ObserveImageLoadingTor(accountViewModel)
 
-    ManageTorInstance(accountViewModel)
+    // Sets up the use of Proxy based on this Account's settings
+    SetProxyDeterminator(accountViewModel)
 
+    // Loads account information + DMs and Notifications from Relays.
+    AccountFilterAssemblerSubscription(accountViewModel)
+
+    // Pre-loads each of the main screens.
+    HomeFilterAssemblerSubscription(accountViewModel)
+    ChatroomListFilterAssemblerSubscription(accountViewModel)
+    VideoFilterAssemblerSubscription(accountViewModel)
+    DiscoveryFilterAssemblerSubscription(accountViewModel)
+
+    // Updates local cache of the anti-spam filter choice of this user.
+    ObserveAntiSpamFilterSettings(accountViewModel)
+
+    // Pauses relay services when the app pauses
+    ManageRelayServices(accountViewModel)
+
+    // Listens to Amber
     ListenToExternalSignerIfNeeded(accountViewModel)
 
+    // Register token with the Push Notification Provider.
     NotificationRegistration(accountViewModel)
 
     AppNavigation(
@@ -95,66 +112,33 @@ fun LoggedInPage(
 }
 
 @Composable
-fun ManageSpamFilters(accountViewModel: AccountViewModel) {
+fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
     val isSpamActive by accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers
         .collectAsStateWithLifecycle(true)
 
-    LocalCache.antiSpam.active = isSpamActive
+    Amethyst.instance.cache.antiSpam.active = isSpamActive
 }
 
 @Composable
-fun ManageRelayServices(
-    accountViewModel: AccountViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-) {
-    LaunchedEffect(
-        sharedPreferencesViewModel.sharedPrefs.currentNetworkId,
-        sharedPreferencesViewModel.sharedPrefs.isOnMobileOrMeteredConnection,
-    ) {
-        Log.d("ManageRelayServices", "Loading/Change Network Id/State ${sharedPreferencesViewModel.sharedPrefs.currentNetworkId}, forcing start/restart of the relay services")
-        accountViewModel.forceRestartServices()
+fun SetProxyDeterminator(accountViewModel: AccountViewModel) {
+    LaunchedEffect(accountViewModel) {
+        Amethyst.instance.torProxySettingsAnchor.flow
+            .tryEmit(accountViewModel.account.torRelayState.flow)
     }
+}
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    val scope = rememberCoroutineScope()
-    var job = remember<Job?> { null }
-
-    Log.d("ManageRelayServices", "Job $job for $accountViewModel")
-
-    DisposableEffect(key1 = accountViewModel) {
-        job?.cancel()
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> {
-                        job?.cancel()
-                        Log.d("ManageRelayServices", "Resuming Relay Services $accountViewModel")
-                        job = accountViewModel.justStart()
-                    }
-                    Lifecycle.Event.ON_PAUSE -> {
-                        Log.d("ManageRelayServices", "Prepare to pause Relay Services $accountViewModel")
-                        job?.cancel()
-                        job =
-                            scope.launch {
-                                delay(30000) // 30 seconds
-                                Log.d("ManageRelayServices", "Pausing Relay Services $accountViewModel")
-                                accountViewModel.justPause()
-                            }
-                    }
-                    else -> {}
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            job?.cancel()
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-            Log.d("ManageRelayServices", "Disposing Relay Services $accountViewModel")
-            // immediately stops upon disposal
-            accountViewModel.pauseAndLogOff()
-        }
+@Composable
+fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
+    LaunchedEffect(accountViewModel) {
+        Amethyst.instance.setImageLoader(accountViewModel.account.privacyState::shouldUseTorForImageDownload)
     }
+}
+
+@Composable
+fun ManageRelayServices(accountViewModel: AccountViewModel) {
+    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
+        .collectAsStateWithLifecycle()
+    Log.d("ManageRelayServices", "Relay Services changed $relayServices")
 }
 
 @Composable
@@ -167,7 +151,10 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
         job?.cancel()
         job =
             scope.launch {
-                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), accountViewModel::okHttpClientForTrustedRelays)
+                PushNotificationUtils.checkAndInit(
+                    LocalPreferences.allSavedAccounts(),
+                    accountViewModel::okHttpClientForTrustedRelays,
+                )
             }
 
         onPauseOrDispose {
@@ -177,95 +164,38 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
 }
 
 @Composable
-fun ManageTorInstance(accountViewModel: AccountViewModel) {
-    val torSettings by accountViewModel.account.settings.torSettings.torType
-        .collectAsStateWithLifecycle()
-    if (torSettings == TorType.INTERNAL) {
-        WatchTorConnection(accountViewModel)
-    }
-}
-
-@Composable
-fun WatchTorConnection(accountViewModel: AccountViewModel) {
-    val status by Amethyst.instance.torManager.status
-        .collectAsStateWithLifecycle()
-
-    if (status is TorServiceStatus.Active) {
-        LaunchedEffect(key1 = status, key2 = accountViewModel) {
-            Log.d("TorService", "Tor has just finished connecting, force restart relays $accountViewModel")
-            accountViewModel.changeProxyPort((status as TorServiceStatus.Active).port)
-        }
-    }
-}
-
-@Composable
 private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
-    if (accountViewModel.account.signer is NostrSignerExternal) {
-        val activity = getActivity() as MainActivity
-
-        val lifeCycleOwner = LocalLifecycleOwner.current
+    if (accountViewModel.account.signer is IActivityLauncher) {
         val launcher =
             rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult(),
                 onResult = { result ->
-                    if (result.resultCode != Activity.RESULT_OK) {
-                        accountViewModel.toastManager.toast(
-                            R.string.sign_request_rejected,
-                            R.string.sign_request_rejected_description,
-                        )
-                    } else {
+                    if (result.resultCode == Activity.RESULT_OK) {
                         result.data?.let {
                             accountViewModel.runOnIO {
-                                accountViewModel.account.signer.launcher
-                                    .newResult(it)
+                                accountViewModel.account.signer.newResponse(it)
                             }
                         }
                     }
                 },
             )
 
-        DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity, lifeCycleOwner) {
-            val observer =
-                LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        accountViewModel.account.signer.launcher.registerLauncher(
-                            launcher = {
-                                try {
-                                    launcher.launch(it)
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    Log.e("Signer", "Error opening Signer app", e)
-                                    accountViewModel.toastManager.toast(
-                                        R.string.error_opening_external_signer,
-                                        R.string.error_opening_external_signer_description,
-                                    )
-                                }
-                            },
-                            contentResolver = Amethyst.instance::contentResolverFn,
-                        )
-                    }
+        DisposableEffect(accountViewModel, accountViewModel.account, launcher) {
+            val launcher: (Intent) -> Unit = { intent ->
+                try {
+                    launcher.launch(intent)
+                } catch (e: ActivityNotFoundException) {
+                    accountViewModel.toastManager.toast(
+                        R.string.error_opening_external_signer,
+                        R.string.error_opening_external_signer_description,
+                    )
+                    throw e
                 }
+            }
 
-            lifeCycleOwner.lifecycle.addObserver(observer)
-            accountViewModel.account.signer.launcher.registerLauncher(
-                launcher = {
-                    try {
-                        launcher.launch(it)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e("Signer", "Error opening Signer app", e)
-                        accountViewModel.toastManager.toast(
-                            R.string.error_opening_external_signer,
-                            R.string.error_opening_external_signer_description,
-                        )
-                    }
-                },
-                contentResolver = Amethyst.instance::contentResolverFn,
-            )
+            accountViewModel.account.signer.registerForegroundLauncher(launcher)
             onDispose {
-                accountViewModel.account.signer.launcher
-                    .clearLauncher()
-                lifeCycleOwner.lifecycle.removeObserver(observer)
+                accountViewModel.account.signer.unregisterForegroundLauncher(launcher)
             }
         }
     }

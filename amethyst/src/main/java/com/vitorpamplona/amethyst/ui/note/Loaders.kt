@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,25 +22,30 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.ProduceStateScope
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.CoroutineContext
 
 @Composable
 fun LoadDecryptedContent(
@@ -84,48 +89,17 @@ fun LoadDecryptedContentOrNull(
 
 @Composable
 fun LoadAddressableNote(
-    aTagHex: String,
-    accountViewModel: AccountViewModel,
-    content: @Composable (AddressableNote?) -> Unit,
-) {
-    var note by
-        remember(aTagHex) {
-            mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTagHex))
-        }
-
-    if (note == null) {
-        LaunchedEffect(key1 = aTagHex) {
-            accountViewModel.checkGetOrCreateAddressableNote(aTagHex) { newNote ->
-                if (newNote != note) {
-                    note = newNote
-                }
-            }
-        }
-    }
-
-    content(note)
-}
-
-@Composable
-fun LoadAddressableNote(
     address: Address,
     accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
-    var note by
-        remember(address) {
-            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address.toValue()))
-        }
-
-    if (note == null) {
-        LaunchedEffect(key1 = address) {
-            val newNote =
-                withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateAddressableNote(address)
-                }
-            if (note != newNote) {
-                note = newNote
-            }
+    val note by produceState(
+        accountViewModel.getAddressableNoteIfExists(address),
+        address,
+    ) {
+        val newNote = accountViewModel.getOrCreateAddressableNote(address)
+        if (newNote != value) {
+            value = newNote
         }
     }
 
@@ -138,19 +112,9 @@ fun LoadStatuses(
     accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<AddressableNote>) -> Unit,
 ) {
-    var statuses: ImmutableList<AddressableNote> by remember { mutableStateOf(persistentListOf()) }
+    val userStatuses by observeUserStatuses(user, accountViewModel)
 
-    val userStatus by user.live().statuses.observeAsState()
-
-    LaunchedEffect(key1 = userStatus) {
-        accountViewModel.findStatusesForUser(userStatus?.user ?: user) { newStatuses ->
-            if (!equalImmutableLists(statuses, newStatuses)) {
-                statuses = newStatuses
-            }
-        }
-    }
-
-    content(statuses)
+    content(userStatuses)
 }
 
 @Composable
@@ -162,7 +126,7 @@ fun LoadOts(
 ) {
     var earliestDate: GenericLoadable<Long> by remember { mutableStateOf(GenericLoadable.Loading()) }
 
-    val noteStatus by note.live().innerOts.observeAsState()
+    val noteStatus by observeNoteOts(note, accountViewModel)
 
     LaunchedEffect(key1 = noteStatus) {
         accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->
@@ -189,23 +153,70 @@ fun LoadOts(
 }
 
 @Composable
-fun LoadChannel(
-    baseChannelHex: String,
+fun LoadPublicChatChannel(
+    id: String,
     accountViewModel: AccountViewModel,
-    content: @Composable (Channel) -> Unit,
+    content: @Composable (PublicChatChannel) -> Unit,
 ) {
-    var channel by
-        remember(baseChannelHex) {
-            mutableStateOf<Channel?>(accountViewModel.getChannelIfExists(baseChannelHex))
+    val channel =
+        produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
         }
 
-    if (channel == null) {
-        LaunchedEffect(key1 = baseChannelHex) {
-            accountViewModel.checkGetOrCreateChannel(baseChannelHex) { newChannel ->
-                launch(Dispatchers.Main) { channel = newChannel }
-            }
+    channel.value?.let { content(it) }
+}
+
+@Composable
+fun LoadEphemeralChatChannel(
+    id: RoomId,
+    accountViewModel: AccountViewModel,
+    content: @Composable (EphemeralChatChannel) -> Unit,
+) {
+    val channel =
+        produceStateIfNotNull(accountViewModel.getEphemeralChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateEphemeralChatChannel(id)
+        }
+
+    channel.value?.let { content(it) }
+}
+
+@Composable
+fun LoadLiveActivityChannel(
+    id: Address,
+    accountViewModel: AccountViewModel,
+    content: @Composable (LiveActivitiesChannel) -> Unit,
+) {
+    val channel =
+        produceStateIfNotNull(accountViewModel.getLiveActivityChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateLiveActivityChannel(id)
+        }
+
+    channel.value?.let { content(it) }
+}
+
+@Composable
+fun <T> produceStateIfNotNull(
+    initialValue: T,
+    key1: Any?,
+    producer: suspend ProduceStateScope<T>.() -> Unit,
+): State<T> {
+    val result = remember(key1) { mutableStateOf(initialValue) }
+    if (result.value == null) {
+        LaunchedEffect(key1) { ProduceStateScopeImpl(result, coroutineContext).producer() }
+    }
+    return result
+}
+
+class ProduceStateScopeImpl<T>(
+    state: MutableState<T>,
+    override val coroutineContext: CoroutineContext,
+) : ProduceStateScope<T>,
+    MutableState<T> by state {
+    override suspend fun awaitDispose(onDispose: () -> Unit): Nothing {
+        try {
+            suspendCancellableCoroutine<Nothing> {}
+        } finally {
+            onDispose()
         }
     }
-
-    channel?.let { content(it) }
 }

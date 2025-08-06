@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip18Reposts.quotes
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
@@ -32,10 +34,10 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class QEventTag(
     val eventId: HexKey,
 ) : QTag {
-    var relay: String? = null
+    var relay: NormalizedRelayUrl? = null
     var author: HexKey? = null
 
-    constructor(eventId: HexKey, relayHint: String? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
+    constructor(eventId: HexKey, relayHint: NormalizedRelayUrl? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
         this.relay = relayHint
         this.author = authorPubKeyHex
     }
@@ -43,7 +45,7 @@ data class QEventTag(
     fun countMemory(): Long =
         3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             eventId.bytesUsedInMemory() +
-            (relay?.bytesUsedInMemory() ?: 0) +
+            (relay?.url?.bytesUsedInMemory() ?: 0) +
             (author?.bytesUsedInMemory() ?: 0)
 
     override fun toTagArray() = assemble(eventId, relay, author)
@@ -56,14 +58,17 @@ data class QEventTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return QEventTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+            return QEventTag(tag[1], hint, tag.getOrNull(3))
         }
 
         @JvmStatic
         fun assemble(
             eventId: HexKey,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
             author: HexKey?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relay, author)
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay?.url, author)
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,9 +23,7 @@ package com.vitorpamplona.quartz.nip19Bech32.entities
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip19Bech32.toNEmbed
-import java.io.ByteArrayOutputStream
-import java.util.zip.GZIPInputStream
-import java.util.zip.GZIPOutputStream
+import com.vitorpamplona.quartz.utils.GZip
 
 @Immutable
 data class NEmbed(
@@ -34,18 +32,9 @@ data class NEmbed(
     companion object {
         fun parse(bytes: ByteArray): NEmbed? {
             if (bytes.isEmpty()) return null
-            return NEmbed(Event.fromJson(ungzip(bytes)))
+            return NEmbed(Event.fromJson(GZip.decompress(bytes)))
         }
 
-        fun create(event: Event): String = gzip(event.toJson()).toNEmbed()
-
-        fun gzip(content: String): ByteArray {
-            val bos = ByteArrayOutputStream()
-            GZIPOutputStream(bos).bufferedWriter(Charsets.UTF_8).use { it.write(content) }
-            val array = bos.toByteArray()
-            return array
-        }
-
-        fun ungzip(content: ByteArray): String = GZIPInputStream(content.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
+        fun create(event: Event): String = GZip.compress(event.toJson()).toNEmbed()
     }
 }

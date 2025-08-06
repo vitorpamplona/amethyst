@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,6 +29,16 @@ class HashtagTag {
 
         @JvmStatic
         fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun isTagged(
+            tag: Array<String>,
+            hashtag: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == hashtag
+
+        fun isAnyTagged(
+            tag: Array<String>,
+            hashtags: Set<String>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in hashtags
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {

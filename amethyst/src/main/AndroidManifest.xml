@@ -23,6 +23,9 @@
     <!-- To take pictures -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- To record audio messages -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- To read NFCs that contain nostr:<NIP19> -->
     <uses-permission android:name="android.permission.NFC" />
 
@@ -115,12 +118,44 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
+
+            <intent-filter android:label="njump.me">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="njump.me" />
+            </intent-filter>
+
+            <intent-filter android:label="Primal">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="primal.net" />
+                <data android:pathPrefix="/e/" />
+                <data android:pathPrefix="/p/" />
+                <data android:pathPrefix="/a/" />
+            </intent-filter>
+
+            <intent-filter android:label="Yakihonne">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="yakihonne.com" />
+                <data android:pathPrefix="/notes/" />
+                <data android:pathPrefix="/users/" />
+                <data android:pathPrefix="/videos/" />
+                <data android:pathPrefix="/article/" />
+            </intent-filter>
         </activity>
 
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
-            tools:replace="screenOrientation" />
+            tools:replace="screenOrientation"
+            tools:ignore="DiscouragedApi" />
 
         <activity
             android:name=".service.playback.pip.PipVideoActivity"
@@ -137,7 +172,8 @@
             android:name=".service.playback.service.PlaybackService"
             android:foregroundServiceType="mediaPlayback"
             android:stopWithTask="true"
-            android:exported="true">
+            android:exported="true"
+            tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService"/>
                 <action android:name="android.media.browse.MediaBrowserService"/>
@@ -157,6 +193,7 @@
         <receiver
             android:name=".service.notifications.PokeyReceiver"
             android:exported="true"
+            tools:ignore="ExportedReceiver"
             >
             <intent-filter>
                 <action android:name="com.shared.NOSTR" />

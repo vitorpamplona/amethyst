@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -33,19 +33,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPublicFeedViewModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal.BookmarkPrivateFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal.BookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
@@ -55,35 +55,36 @@ fun BookmarkListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val publicFeedViewModel: NostrBookmarkPublicFeedViewModel =
+    val publicFeedViewModel: BookmarkPublicFeedViewModel =
         viewModel(
             key = "NostrBookmarkPublicFeedViewModel",
-            factory = NostrBookmarkPublicFeedViewModel.Factory(accountViewModel.account),
+            factory = BookmarkPublicFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel =
+    val privateFeedViewModel: BookmarkPrivateFeedViewModel =
         viewModel(
             key = "NostrBookmarkPrivateFeedViewModel",
-            factory = NostrBookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
+            factory = BookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val userState by accountViewModel.account.decryptBookmarks.observeAsState()
+    val bookmarkState by accountViewModel.account.bookmarkState.bookmarks
+        .collectAsStateWithLifecycle(null)
 
-    LaunchedEffect(userState) {
+    LaunchedEffect(bookmarkState) {
         publicFeedViewModel.invalidateData()
         privateFeedViewModel.invalidateData()
     }
 
-    RenderBookmarkScreen(privateFeedViewModel, accountViewModel, nav, publicFeedViewModel)
+    RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, accountViewModel, nav)
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun RenderBookmarkScreen(
-    privateFeedViewModel: NostrBookmarkPrivateFeedViewModel,
+    publicFeedViewModel: BookmarkPublicFeedViewModel,
+    privateFeedViewModel: BookmarkPrivateFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    publicFeedViewModel: NostrBookmarkPublicFeedViewModel,
 ) {
     val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()

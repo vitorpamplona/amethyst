@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,22 +22,9 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Card
-import com.vitorpamplona.quartz.nip01Core.core.Event
 
 val DefaultFeedOrder: Comparator<Note> =
-    compareByDescending<Note>
-        {
-            val noteEvent = it.event
-            if (noteEvent == null) {
-                null
-            } else {
-                if (noteEvent is Event) {
-                    noteEvent.createdAt
-                } else {
-                    null
-                }
-            }
-        }.thenBy { it.idHex }
+    compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex }
 
 val DefaultFeedOrderCard: Comparator<Card> =
     compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }

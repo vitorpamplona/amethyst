@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,9 +21,7 @@
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 
-fun TagArray.hasZapSplitSetup() = this.hasTagWithContent(BaseZapSplitSetup.TAG_NAME)
+fun TagArray.hasZapSplitSetup() = this.any(ZapSplitSetupParser::isTagged)
 
-fun TagArray.zapSplitSetup(): List<BaseZapSplitSetup> = this.mapTagged(BaseZapSplitSetup.TAG_NAME) { ZapSplitSetupParser.parse(it) }
+fun TagArray.zapSplitSetup(): List<BaseZapSplitSetup> = this.mapNotNull(ZapSplitSetupParser::parse)

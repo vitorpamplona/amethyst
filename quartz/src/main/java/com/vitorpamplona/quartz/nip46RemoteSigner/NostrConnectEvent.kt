@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,12 +23,12 @@ package com.vitorpamplona.quartz.nip46RemoteSigner
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class NostrConnectEvent(
@@ -39,17 +39,18 @@ class NostrConnectEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient private var decryptedContent: Map<HexKey, BunkerMessage> = mapOf()
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (decryptedContent.values.sumOf { pointerSizeInBytes + it.countMemory() })
-
     override fun isContentEncoded() = true
 
-    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || recipientPubKey() == signer.pubKey
 
-    fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this) }?.getOrNull()
+    suspend fun decryptMessage(signer: NostrSigner): BunkerMessage {
+        if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
+
+        val retVal = signer.decrypt(content, talkingWith(signer.pubKey))
+        return JsonMapper.mapper.readValue(retVal, BunkerMessage::class.java)
+    }
+
+    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
 
     fun verifiedRecipientPubKey(): HexKey? {
         val recipient = recipientPubKey()
@@ -62,47 +63,29 @@ class NostrConnectEvent(
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
 
-    fun plainContent(
-        signer: NostrSigner,
-        onReady: (BunkerMessage) -> Unit,
-    ) {
-        decryptedContent[signer.pubKey]?.let {
-            onReady(it)
-            return
-        }
-
-        // decrypts using NIP-04 or NIP-44
-        signer.decrypt(content, talkingWith(signer.pubKey)) { retVal ->
-            val content = EventMapper.mapper.readValue(retVal, BunkerMessage::class.java)
-
-            decryptedContent = decryptedContent + Pair(signer.pubKey, content)
-
-            onReady(content)
-        }
-    }
-
     companion object {
         const val KIND = 24133
         const val ALT = "Nostr Connect Event"
 
-        fun create(
+        suspend fun create(
             message: BunkerMessage,
             remoteKey: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (NostrConnectEvent) -> Unit,
-        ) {
-            val tags =
-                arrayOf(
-                    AltTag.assemble(ALT),
-                    arrayOf("p", remoteKey),
-                )
-
-            val encrypted = EventMapper.mapper.writeValueAsString(message)
-
-            signer.nip44Encrypt(encrypted, remoteKey) { content ->
-                signer.sign(createdAt, KIND, tags, content, onReady)
-            }
-        }
+        ): NostrConnectEvent =
+            signer.sign(
+                createdAt = createdAt,
+                kind = KIND,
+                tags =
+                    arrayOf(
+                        AltTag.assemble(ALT),
+                        arrayOf("p", remoteKey),
+                    ),
+                content =
+                    signer.nip44Encrypt(
+                        plaintext = JsonMapper.mapper.writeValueAsString(message),
+                        toPublicKey = remoteKey,
+                    ),
+            )
     }
 }

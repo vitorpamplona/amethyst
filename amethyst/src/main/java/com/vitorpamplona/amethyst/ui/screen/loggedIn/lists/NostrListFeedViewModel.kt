@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -127,14 +127,12 @@ class NostrListFeedViewModel(
             viewModelScope.launch(Dispatchers.IO) {
                 PeopleListEvent.createListWithDescription(
                     dTag = UUID.randomUUID().toString(),
-                    key = "title",
-                    tag = setName,
+                    title = setName,
                     description = setDescription,
                     isPrivate = setType == ListVisibility.Private,
                     signer = account.signer,
                 ) {
-                    Amethyst.instance.client.send(it)
-                    LocalCache.consume(it, null)
+                    account.sendMyPublicAndPrivateOutbox(it)
                 }
             }
         }
@@ -150,15 +148,12 @@ class NostrListFeedViewModel(
         } else {
             viewModelScope.launch(Dispatchers.IO) {
                 val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
-                PeopleListEvent.modifyTag(
+                PeopleListEvent.modifyListName(
                     earlierVersion = setEvent,
-                    key = "title",
-                    tag = newName,
-                    isPrivate = followSet.visibility == ListVisibility.Private,
-                    account.signer,
+                    newName = newName,
+                    signer = account.signer,
                 ) {
-                    Amethyst.instance.client.send(it)
-                    LocalCache.consume(it, null)
+                    account.sendMyPublicAndPrivateOutbox(it)
                 }
             }
         }
@@ -174,12 +169,8 @@ class NostrListFeedViewModel(
         } else {
             viewModelScope.launch(Dispatchers.IO) {
                 val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
-                account.signer.sign(
-                    DeletionEvent.build(listOf(followSetEvent)),
-                ) {
-                    Amethyst.instance.client.send(it)
-                    LocalCache.justConsume(it, null)
-                }
+                val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(followSetEvent)))
+                account.sendMyPublicAndPrivateOutbox(deletionEvent)
             }
         }
     }
@@ -201,8 +192,7 @@ class NostrListFeedViewModel(
                     isPrivate = followSet.visibility == ListVisibility.Private,
                     signer = account.signer,
                 ) {
-                    Amethyst.instance.client.send(it)
-                    LocalCache.consume(it, null)
+                    account.sendMyPublicAndPrivateOutbox(it)
                 }
             }
         }
@@ -222,11 +212,9 @@ class NostrListFeedViewModel(
                 PeopleListEvent.removeUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
-                    isPrivate = followSet.visibility == ListVisibility.Private,
                     signer = account.signer,
                 ) {
-                    Amethyst.instance.client.send(it)
-                    LocalCache.consume(it, null)
+                    account.sendMyPublicAndPrivateOutbox(it)
                 }
             }
         }

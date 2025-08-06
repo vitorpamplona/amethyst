@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,44 +27,16 @@ import android.os.Debug
 import android.util.Log
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrCommunityDataSource
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
-import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
-import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import kotlin.time.DurationUnit
+import kotlin.time.measureTimedValue
+
+@Suppress("SENSELESS_COMPARISON")
+val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
 fun debugState(context: Context) {
-    Amethyst.instance.client
-        .allSubscriptions()
-        .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toDebugJson() }}") }
-
-    NostrAccountDataSource.printCounter()
-    NostrChannelDataSource.printCounter()
-    NostrChatroomDataSource.printCounter()
-    NostrChatroomListDataSource.printCounter()
-    NostrCommunityDataSource.printCounter()
-    NostrDiscoveryDataSource.printCounter()
-    NostrHashtagDataSource.printCounter()
-    NostrGeohashDataSource.printCounter()
-    NostrHomeDataSource.printCounter()
-    NostrSearchEventOrUserDataSource.printCounter()
-    NostrSingleChannelDataSource.printCounter()
-    NostrSingleEventDataSource.printCounter()
-    NostrSingleUserDataSource.printCounter()
-    NostrThreadDataSource.printCounter()
-    NostrUserProfileDataSource.printCounter()
-    NostrVideoDataSource.printCounter()
+    // Amethyst.instance.client
+    //    .allSubscriptions()
+    //    .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.filters.joinToString { it.filter.toJson() }}") }
 
     val totalMemoryMb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
     val freeMemoryMb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
@@ -72,22 +44,31 @@ fun debugState(context: Context) {
 
     val jvmHeapAllocatedMb = totalMemoryMb - freeMemoryMb
 
-    Log.d("STATE DUMP", "Total Heap Allocated: " + jvmHeapAllocatedMb + "/" + maxMemoryMb + " MB")
+    Log.d("STATE DUMP", "Total Heap Allocated: $jvmHeapAllocatedMb/$maxMemoryMb MB")
 
     val nativeHeap = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
     val maxNative = Debug.getNativeHeapSize() / (1024 * 1024)
 
-    Log.d("STATE DUMP", "Total Native Heap Allocated: " + nativeHeap + "/" + maxNative + " MB")
+    Log.d("STATE DUMP", "Total Native Heap Allocated: $nativeHeap/$maxNative MB")
 
     val activityManager: ActivityManager? = context.getSystemService()
     if (activityManager != null) {
         val isLargeHeap = (context.applicationInfo.flags and ApplicationInfo.FLAG_LARGE_HEAP) != 0
         val memClass = if (isLargeHeap) activityManager.largeMemoryClass else activityManager.memoryClass
 
-        Log.d("STATE DUMP", "Memory Class " + memClass + " MB (largeHeap $isLargeHeap)")
+        Log.d("STATE DUMP", "Memory Class $memClass MB (largeHeap $isLargeHeap)")
     }
 
-    Log.d("STATE DUMP", "Connected Relays: " + Amethyst.instance.client.connectedRelays())
+    Log.d(
+        "STATE DUMP",
+        "Connected Relays: " +
+            Amethyst.instance.client
+                .relayStatusFlow()
+                .value.connected.size + "/" +
+            Amethyst.instance.client
+                .relayStatusFlow()
+                .value.available.size,
+    )
 
     Log.d(
         "STATE DUMP",
@@ -95,14 +76,12 @@ fun debugState(context: Context) {
     )
     Log.d(
         "STATE DUMP",
-        "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.size) / (1024 * 1024)} MB",
+        "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.maxSize) / (1024 * 1024)} MB",
     )
 
     Log.d(
         "STATE DUMP",
         "Notes: " +
-            LocalCache.notes.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.notes.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.notes.filter { _, it -> it.event != null }.size +
@@ -112,8 +91,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Addressables: " +
-            LocalCache.addressables.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.addressables.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.addressables.filter { _, it -> it.event != null }.size +
@@ -123,8 +100,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Users: " +
-            LocalCache.users.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.users.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
@@ -147,7 +122,7 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Spam: " +
-            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentMessages.size(),
+            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentEventIds.size() + " / " + LocalCache.antiSpam.recentAddressables.size(),
     )
 
     Log.d(
@@ -167,10 +142,58 @@ fun debugState(context: Context) {
         LocalCache.addressables
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
 
-    qttNotes.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
-        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes.get(kind)?.div((1024 * 1024))}MB ")
+    qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
+        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes[kind]?.div((1024 * 1024))}MB ")
     }
-    qttAddressables.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
-        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables.get(kind)?.div((1024 * 1024))}MB ")
+    qttAddressables.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
+        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB ")
+    }
+}
+
+inline fun <T> logTime(
+    debugMessage: String,
+    minToReportMs: Int = 1,
+    block: () -> T,
+): T =
+    if (isDebug) {
+        val (result, elapsed) = measureTimedValue(block)
+        if (elapsed.inWholeMilliseconds > minToReportMs) {
+            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+        }
+        result
+    } else {
+        block()
+    }
+
+inline fun <T> logTime(
+    debugMessage: (T) -> String,
+    minToReportMs: Int = 1,
+    block: () -> T,
+): T =
+    if (isDebug) {
+        val (result, elapsed) = measureTimedValue(block)
+        if (elapsed.inWholeMilliseconds > minToReportMs) {
+            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
+        }
+        result
+    } else {
+        block()
+    }
+
+fun debug(
+    tag: String,
+    debugMessage: String,
+) {
+    if (isDebug) {
+        Log.d(tag, debugMessage)
+    }
+}
+
+inline fun debug(
+    tag: String,
+    debugMessage: () -> String,
+) {
+    if (isDebug) {
+        Log.d(tag, debugMessage())
     }
 }

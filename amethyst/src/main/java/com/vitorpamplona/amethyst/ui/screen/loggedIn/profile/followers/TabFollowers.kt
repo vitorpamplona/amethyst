@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,10 +25,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowers
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -40,7 +40,7 @@ fun TabFollowers(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchFollowerChanges(baseUser, feedViewModel)
+    WatchFollowerChanges(baseUser, feedViewModel, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
@@ -51,8 +51,9 @@ fun TabFollowers(
 private fun WatchFollowerChanges(
     baseUser: User,
     feedViewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-    val userState by baseUser.live().followers.observeAsState()
+    val userState by observeUserFollowers(baseUser, accountViewModel)
 
     LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }

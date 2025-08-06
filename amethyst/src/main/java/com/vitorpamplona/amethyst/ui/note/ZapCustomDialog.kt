@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -67,8 +66,8 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -85,7 +84,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 
-class ZapOptionstViewModel : ViewModel() {
+class ZapOptionViewModel : ViewModel() {
     private var account: Account? = null
 
     var customAmount by mutableStateOf(TextFieldValue("21"))
@@ -112,7 +111,7 @@ fun ZapCustomDialog(
     baseNote: Note,
 ) {
     val context = LocalContext.current
-    val postViewModel: ZapOptionstViewModel = viewModel()
+    val postViewModel: ZapOptionViewModel = viewModel()
 
     LaunchedEffect(accountViewModel) { postViewModel.load(accountViewModel.account) }
 
@@ -215,11 +214,7 @@ fun ZapCustomDialog(
 
                     TextSpinner(
                         label = stringRes(id = R.string.zap_type),
-                        placeholder =
-                            zapTypes
-                                .filter { it.first == accountViewModel.defaultZapType() }
-                                .first()
-                                .second,
+                        placeholder = zapTypes.first { it.first == accountViewModel.defaultZapType() }.second,
                         options = zapOptions,
                         onSelect = { selectedZapType = zapTypes[it].first },
                         modifier = Modifier.weight(1f).padding(end = 5.dp),
@@ -233,15 +228,16 @@ fun ZapCustomDialog(
                     OutlinedTextField(
                         // stringRes(R.string.new_amount_in_sats
                         label = {
-                            if (
-                                selectedZapType == LnZapEvent.ZapType.PUBLIC ||
-                                selectedZapType == LnZapEvent.ZapType.ANONYMOUS
-                            ) {
-                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
-                            } else if (selectedZapType == LnZapEvent.ZapType.PRIVATE) {
-                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
-                            } else if (selectedZapType == LnZapEvent.ZapType.NONZAP) {
-                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
+                            when (selectedZapType) {
+                                LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
+                                    Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
+                                }
+                                LnZapEvent.ZapType.PRIVATE -> {
+                                    Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
+                                }
+                                LnZapEvent.ZapType.NONZAP -> {
+                                    Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
+                                }
                             }
                         },
                         value = postViewModel.customMessage,
@@ -296,7 +292,7 @@ fun PayViaIntentDialog(
     if (payingInvoices.size == 1) {
         val payable = payingInvoices.first()
         payViaIntent(payable.invoice, context, onClose) {
-            onError(UserBasedErrorMessage(it, payable.user))
+            onError(UserBasedErrorMessage(it, payable.info.user))
         }
     } else {
         Dialog(
@@ -327,8 +323,8 @@ fun PayViaIntentDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(vertical = Size10dp),
                         ) {
-                            if (payable.user != null) {
-                                BaseUserPicture(payable.user, Size55dp, accountViewModel = accountViewModel)
+                            if (payable.info.user != null) {
+                                BaseUserPicture(payable.info.user, Size55dp, accountViewModel = accountViewModel)
                             } else {
                                 DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
                             }
@@ -336,8 +332,8 @@ fun PayViaIntentDialog(
                             Spacer(modifier = DoubleHorzSpacer)
 
                             Column(modifier = Modifier.weight(1f)) {
-                                if (payable.user != null) {
-                                    UsernameDisplay(payable.user, accountViewModel = accountViewModel)
+                                if (payable.info.user != null) {
+                                    UsernameDisplay(payable.info.user, accountViewModel = accountViewModel)
                                 } else {
                                     Text(
                                         text = stringRes(id = R.string.wallet_number, index + 1),
@@ -388,10 +384,10 @@ fun payViaIntent(
     onError: (String) -> Unit,
 ) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$invoice"))
+        val intent = Intent(Intent.ACTION_VIEW, "lightning:$invoice".toUri())
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-        ContextCompat.startActivity(context, intent, null)
+        context.startActivity(intent)
         onPaid()
     } catch (e: Exception) {
         if (e is CancellationException) throw e

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -30,7 +30,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,16 +41,18 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarks
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollows
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
@@ -185,7 +186,9 @@ fun NoteDropDownMenu(
             text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
+                accountViewModel.decrypt(lastNoteVersion) {
+                    clipboardManager.setText(AnnotatedString(it))
+                }
                 onDismiss()
             },
         )
@@ -270,7 +273,7 @@ fun NoteDropDownMenu(
             },
         )
         HorizontalDivider(thickness = DividerThickness)
-        if (accountViewModel.account.hasPendingAttestations(note)) {
+        if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.timestamp_pending)) },
                 onClick = {
@@ -322,34 +325,6 @@ fun NoteDropDownMenu(
             )
         }
         HorizontalDivider(thickness = DividerThickness)
-        if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_hide_all_sensitive_content)) },
-                onClick = {
-                    accountViewModel.hideSensitiveContent()
-                    onDismiss()
-                },
-            )
-        }
-        if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_show_all_sensitive_content)) },
-                onClick = {
-                    accountViewModel.disableContentWarnings()
-                    onDismiss()
-                },
-            )
-        }
-        if (state.showSensitiveContent != null) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_see_warnings)) },
-                onClick = {
-                    accountViewModel.seeContentWarnings()
-                    onDismiss()
-                },
-            )
-        }
-        HorizontalDivider(thickness = DividerThickness)
         if (state.isLoggedUser) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.request_deletion)) },
@@ -380,39 +355,25 @@ fun WatchBookmarksFollowsAndAccount(
     accountViewModel: AccountViewModel,
     onNew: (DropDownParams) -> Unit,
 ) {
-    val followState by accountViewModel
-        .userProfile()
-        .live()
-        .follows
-        .observeAsState()
-    val bookmarkState by accountViewModel
-        .userProfile()
-        .live()
-        .bookmarks
-        .observeAsState()
-    val showSensitiveContent by accountViewModel
-        .showSensitiveContent()
-        .collectAsStateWithLifecycle()
+    val followState by observeUserFollows(accountViewModel.userProfile(), accountViewModel)
+    val bookmarkState by observeUserBookmarks(accountViewModel.userProfile(), accountViewModel)
+    val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-        launch(Dispatchers.IO) {
-            accountViewModel.isInPrivateBookmarks(note) {
-                val newState =
-                    DropDownParams(
-                        isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                        isPrivateBookmarkNote = it,
-                        isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                        isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                        isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
-                        showSensitiveContent = showSensitiveContent,
-                    )
+        val newState =
+            DropDownParams(
+                isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                isPrivateBookmarkNote = accountViewModel.account.bookmarkState.isInPrivateBookmarks(note),
+                isPublicBookmarkNote = accountViewModel.account.bookmarkState.isInPublicBookmarks(note),
+                isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
+                showSensitiveContent = showSensitiveContent,
+            )
 
-                launch(Dispatchers.Main) {
-                    onNew(
-                        newState,
-                    )
-                }
-            }
+        launch(Dispatchers.Main) {
+            onNew(
+                newState,
+            )
         }
     }
 }

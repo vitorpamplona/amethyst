@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.experimental.relationshipStatus
 
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetnameTag
+import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetNameTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
 fun TagArrayBuilder<RelationshipStatusEvent>.rank(rank: Int) = add(RankTag.assemble(rank))
 
-fun TagArrayBuilder<RelationshipStatusEvent>.petname(name: String) = add(PetnameTag.assemble(name))
+fun TagArrayBuilder<RelationshipStatusEvent>.petName(name: String) = add(PetNameTag.assemble(name))
 
 fun TagArrayBuilder<RelationshipStatusEvent>.summary(summary: String) = add(SummaryTag.assemble(summary))

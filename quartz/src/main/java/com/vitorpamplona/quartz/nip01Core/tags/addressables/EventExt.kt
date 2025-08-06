@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,9 +26,9 @@ fun <R> Event.mapTaggedAddress(map: (address: String) -> R) = tags.mapTaggedAddr
 
 fun Event.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = tags.firstIsTaggedAddressableNote(addressableNotes)
 
-fun Event.isTaggedAddressableNote(idHex: String) = tags.isTaggedAddressableNote(idHex)
+fun Event.isTaggedAddressableNote(addressId: String) = tags.isTaggedAddressableNote(addressId)
 
-fun Event.isTaggedAddressableNotes(idHexes: Set<String>) = tags.isTaggedAddressableNotes(idHexes)
+fun Event.isTaggedAddressableNotes(addressIds: Set<String>) = tags.isTaggedAddressableNotes(addressIds)
 
 fun Event.isTaggedAddressableKind(kind: Int) = tags.isTaggedAddressableKind(kind)
 

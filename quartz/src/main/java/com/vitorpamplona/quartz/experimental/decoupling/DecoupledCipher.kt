@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -45,68 +45,62 @@ class DecoupledCipher {
         pubKey = fromPublicKey.hexToByteArray(),
     )
 
-    fun encrypt(
+    suspend fun encrypt(
         decryptedContent: String,
         toPublicKey: HexKey,
         fromKeyList: EncryptionKeyListEvent,
         toKeyList: EncryptionKeyListEvent,
         signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
+    ): String? {
         val toKeys = toKeyList.keys()
         val sendToKey = if (toKeys.isEmpty()) toKeyList.pubKey else toKeys.random().pubkey
 
         val fromKeys = fromKeyList.keys()
 
         // uses the main key
-        if (fromKeys.isEmpty()) {
-            signer.nip44Encrypt(decryptedContent, sendToKey, onReady)
+        return if (fromKeys.isEmpty()) {
+            signer.nip44Encrypt(decryptedContent, sendToKey)
         } else {
             val keyToUse = fromKeys.random()
 
-            EncryptionKeyCache.getOrLoad(
-                deriveFromPubKey = signer.pubKey,
-                nonce = keyToUse.nonce,
-                load = { onLoaded ->
-                    signer.deriveKey(keyToUse.nonce) { newPrivKey ->
-                        onLoaded(newPrivKey.hexToByteArray())
-                    }
-                },
-            ) { derivedPrivKey ->
-                onReady(innerEncrypt(decryptedContent, derivedPrivKey, sendToKey))
-            }
+            EncryptionKeyCache
+                .getOrLoad(
+                    deriveFromPubKey = signer.pubKey,
+                    nonce = keyToUse.nonce,
+                    load = { signer.deriveKey(keyToUse.nonce).hexToByteArray() },
+                )?.let { derivedPrivKey ->
+                    return innerEncrypt(decryptedContent, derivedPrivKey, sendToKey)
+                }
         }
     }
 
-    fun decrypt(
+    suspend fun decrypt(
         encryptedContent: String,
         fromPublicKey: HexKey,
         toPublicKey: HexKey,
         fromKeyList: EncryptionKeyListEvent,
         toEncryptedKeyList: EncryptionKeyListEvent,
         signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
+    ): String? {
         val fromKeys = fromKeyList.keys()
         val sentFromKey = if (fromKeys.isEmpty()) fromKeyList.pubKey else fromKeys.random().pubkey
 
         val keyToUse = toEncryptedKeyList.keys().firstOrNull { it.pubkey == toPublicKey }
 
         // uses the main key
-        if (signer.pubKey == toPublicKey) {
-            signer.nip44Decrypt(encryptedContent, sentFromKey, onReady)
+        return if (signer.pubKey == toPublicKey) {
+            signer.nip44Decrypt(encryptedContent, sentFromKey)
         } else if (keyToUse != null) {
-            EncryptionKeyCache.getOrLoad(
-                deriveFromPubKey = signer.pubKey,
-                nonce = keyToUse.nonce,
-                load = { onLoaded ->
-                    signer.deriveKey(keyToUse.nonce) { newPrivKey ->
-                        onLoaded(newPrivKey.hexToByteArray())
-                    }
-                },
-            ) { derivedPrivKey ->
-                innerDecrypt(encryptedContent, derivedPrivKey, sentFromKey)?.let { onReady(it) }
-            }
+            EncryptionKeyCache
+                .getOrLoad(
+                    deriveFromPubKey = signer.pubKey,
+                    nonce = keyToUse.nonce,
+                    load = { signer.deriveKey(keyToUse.nonce).hexToByteArray() },
+                )?.let { derivedPrivKey ->
+                    innerDecrypt(encryptedContent, derivedPrivKey, sentFromKey)
+                }
+        } else {
+            null
         }
     }
 }

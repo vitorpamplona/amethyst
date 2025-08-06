@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 @Immutable
 class GenericRepostEvent(
@@ -55,21 +57,27 @@ class GenericRepostEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    fun boostedEvents() = tags.mapNotNull(ETag::parse)
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
-    fun boostedATags() = tags.mapNotNull(ATag::parse)
+    fun boostedEvent() = tags.lastNotNullOfOrNull(ETag::parse)
 
-    fun boostedAddresses() = tags.mapNotNull(ATag::parseAddress)
+    fun boostedATag() = tags.lastNotNullOfOrNull(ATag::parse)
+
+    fun boostedAddress() = tags.lastNotNullOfOrNull(ATag::parseAddress)
+
+    fun boostedEventId() = tags.lastNotNullOfOrNull(ETag::parseId)
+
+    fun boostedAddressIds() = tags.lastNotNullOfOrNull(ATag::parseAddressId)
 
     fun originalAuthors() = tags.mapNotNull(PTag::parse)
-
-    fun boostedEventIds() = tags.mapNotNull(ETag::parseId)
-
-    fun boostedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     fun originalAuthorKeys() = tags.mapNotNull(PTag::parseKey)
 
@@ -86,8 +94,8 @@ class GenericRepostEvent(
 
         fun build(
             boostedPost: Event,
-            eventSourceRelay: String?,
-            authorHomeRelay: String?,
+            eventSourceRelay: NormalizedRelayUrl?,
+            authorHomeRelay: NormalizedRelayUrl?,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GenericRepostEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, boostedPost.toJson(), createdAt) {
@@ -103,12 +111,11 @@ class GenericRepostEvent(
             initializer()
         }
 
-        fun create(
+        suspend fun create(
             boostedPost: Event,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GenericRepostEvent) -> Unit,
-        ) {
+        ): GenericRepostEvent {
             val content = boostedPost.toJson()
 
             val tags =
@@ -124,7 +131,7 @@ class GenericRepostEvent(
             tags.add(arrayOf("k", "${boostedPost.kind}"))
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
     }
 }

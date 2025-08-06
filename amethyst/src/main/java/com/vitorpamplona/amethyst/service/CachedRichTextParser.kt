@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -59,6 +59,26 @@ object CachedRichTextParser {
         } else {
             val newUrls = RichTextParser().parseText(content, tags, callbackUri)
             richTextCache.put(key, newUrls)
+            newUrls
+        }
+    }
+}
+
+object CachedUrlParser {
+    private val parsedUrlsCache = LruCache<Int, List<String>>(10)
+
+    fun cachedParseValidUrls(content: String): List<String> = parsedUrlsCache[content.hashCode()]
+
+    fun parseValidUrls(content: String): List<String> {
+        if (content.isEmpty()) return emptyList()
+
+        val key = content.hashCode()
+        val cached = parsedUrlsCache[key]
+        return if (cached != null) {
+            cached
+        } else {
+            val newUrls = RichTextParser().parseValidUrls(content).toList()
+            parsedUrlsCache.put(key, newUrls)
             newUrls
         }
     }

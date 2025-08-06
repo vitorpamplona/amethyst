@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -62,7 +64,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 @Composable
 fun InvoiceRequestCard(
     lud16: String,
-    toUserPubKeyHex: String,
+    user: User,
     accountViewModel: AccountViewModel,
     titleText: String? = null,
     buttonText: String? = null,
@@ -80,7 +82,7 @@ fun InvoiceRequestCard(
     ) {
         InvoiceRequest(
             lud16,
-            toUserPubKeyHex,
+            user,
             accountViewModel,
             titleText,
             buttonText,
@@ -93,11 +95,11 @@ fun InvoiceRequestCard(
 @Composable
 fun InvoiceRequest(
     lud16: String,
-    toUserPubKeyHex: String,
+    user: User,
     accountViewModel: AccountViewModel,
     titleText: String? = null,
     buttonText: String? = null,
-    onSuccess: (String) -> Unit,
+    onNewInvoice: (String) -> Unit,
     onError: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -125,7 +127,7 @@ fun InvoiceRequest(
         HorizontalDivider(thickness = DividerThickness)
 
         var message by remember { mutableStateOf("") }
-        var amount by remember { mutableStateOf(1000L) }
+        var amount by remember { mutableLongStateOf(1000L) }
 
         OutlinedTextField(
             label = { Text(text = stringRes(R.string.note_to_receiver)) },
@@ -175,11 +177,11 @@ fun InvoiceRequest(
             modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             onClick = {
                 accountViewModel.sendSats(
-                    lnaddress = lud16,
+                    lnAddress = lud16,
+                    user = user,
                     milliSats = amount * 1000,
                     message = message,
-                    toUserPubKeyHex = toUserPubKeyHex,
-                    onSuccess = onSuccess,
+                    onNewInvoice = onNewInvoice,
                     onError = onError,
                     onProgress = {},
                     context = context,

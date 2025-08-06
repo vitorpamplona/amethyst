@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,18 +27,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.appendLink
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -80,10 +82,10 @@ fun ForkInformationRowLightColor(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by originalVersion.live().metadata.observeAsState()
+    val noteState by observeNote(originalVersion, accountViewModel)
     val note = noteState?.note ?: return
     val author = note.author ?: return
-    val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
+    val route = remember(note) { routeFor(note, accountViewModel.account) }
 
     if (route != null) {
         Row(modifier) {
@@ -103,20 +105,16 @@ fun ForkInformationRowLightColor(
                 overflow = TextOverflow.Visible,
             )
 
-            val userState by author.live().metadata.observeAsState()
-            val userDisplayName = remember(userState) { userState?.user?.toBestDisplayName() }
-            val userTags =
-                remember(userState) { userState?.user?.info?.tags }
-
-            if (userDisplayName != null) {
+            val userState by observeUser(author, accountViewModel)
+            userState?.user?.toBestDisplayName()?.let {
                 CreateClickableTextWithEmoji(
-                    clickablePart = userDisplayName,
+                    clickablePart = it,
                     maxLines = 1,
                     route = route,
                     overrideColor = MaterialTheme.colorScheme.nip05,
                     fontSize = Font14SP,
                     nav = nav,
-                    tags = userTags,
+                    tags = userState?.user?.info?.tags,
                 )
             }
         }
@@ -130,19 +128,19 @@ fun ForkInformationRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by originalVersion.live().metadata.observeAsState()
+    val noteState by observeNote(originalVersion, accountViewModel)
     val note = noteState?.note ?: return
-    val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
+    val route = remember(note) { routeFor(note, accountViewModel.account) }
 
     if (route != null) {
         Row(modifier) {
             val author = note.author ?: return
-            val meta by author.live().userMetadataInfo.observeAsState(author.info)
+            val meta by observeUserInfo(author, accountViewModel)
 
             Text(stringRes(id = R.string.forked_from))
             Spacer(modifier = StdHorzSpacer)
 
-            val userMetadata by author.live().userMetadataInfo.observeAsState()
+            val userMetadata by observeUserInfo(author, accountViewModel)
 
             CreateClickableTextWithEmoji(
                 clickablePart = remember(meta) { meta?.bestName() ?: author.pubkeyDisplayHex() },

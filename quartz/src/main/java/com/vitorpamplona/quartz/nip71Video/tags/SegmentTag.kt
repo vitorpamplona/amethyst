@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,8 +25,10 @@ import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 class SegmentTag(
-    val start: String, // HH:MM:SS.sss
-    val end: String, // HH:MM:SS.sss
+    // HH:MM:SS.sss
+    val start: String,
+    // HH:MM:SS.sss
+    val end: String,
     val title: String,
     val thumbnailUrl: String?,
 ) {
@@ -47,8 +49,10 @@ class SegmentTag(
 
         @JvmStatic
         fun assemble(
-            start: String, // HH:MM:SS.sss
-            end: String, // HH:MM:SS.sss
+            // HH:MM:SS.sss
+            start: String,
+            // HH:MM:SS.sss
+            end: String,
             title: String,
             thumbnailUrl: String?,
         ) = arrayOfNotNull(TAG_NAME, start, end, title, thumbnailUrl)

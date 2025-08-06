@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.nip48ProxyTags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -37,8 +39,12 @@ data class ProxyTag(
         const val TAG_NAME = "proxy"
 
         @JvmStatic
-        fun parse(tags: Array<String>): ProxyTag {
-            require(tags[0] == TAG_NAME)
+        fun isTagged(tag: Array<String>) = tag.has(2) && tag[0] == TAG_NAME && tag[1].isNotEmpty() && tag[2].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tags: Array<String>): ProxyTag? {
+            ensure(tags.has(2)) { return null }
+            ensure(tags[0] == TAG_NAME) { return null }
             return ProxyTag(tags[1], tags[2])
         }
 

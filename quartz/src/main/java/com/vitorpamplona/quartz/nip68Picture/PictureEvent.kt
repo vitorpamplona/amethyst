@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,25 +24,16 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip68Picture.tags.LocationTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -55,63 +46,21 @@ class PictureEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope {
-    // ---------------
-    // current
-    // --------------
+    @Transient var iMetas: List<PictureMeta>? = null
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    /** old standard didnt use IMetas **/
-    private fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
+    fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
 
-    private fun urls() = tags.mapNotNull(UrlTag::parse)
+    fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
-    private fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
+    fun hashtags() = tags.hashtags()
 
-    private fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
+    fun geohashes() = tags.geohashes()
 
-    private fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
+    fun location() = tags.mapNotNull(LocationTag::parse)
 
-    private fun dimensions() = tags.firstNotNullOfOrNull(DimensionTag::parse)
-
-    private fun magnetURI() = tags.firstNotNullOfOrNull(MagnetTag::parse)
-
-    private fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
-
-    private fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
-
-    private fun hasUrl() = tags.any(UrlTag::isTag)
-
-    private fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
-
-    private fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
-
-    private fun images() = tags.mapNotNull(ImageTag::parse)
-
-    private fun thumb() = tags.firstNotNullOfOrNull(ThumbTag::parse)
-
-    private fun service() = tags.firstNotNullOfOrNull(ServiceTag::parse)
-
-    private fun fallbacks() = tags.mapNotNull(FallbackTag::parse)
-
-    // hack to fix pablo's bug
-    fun rootImage() =
-        url()?.let {
-            PictureMeta(
-                url = it,
-                mimeType = mimeType(),
-                blurhash = blurhash(),
-                alt = alt(),
-                hash = hash(),
-                dimension = dimensions(),
-                size = size(),
-                service = service(),
-                fallback = fallbacks(),
-                annotations = emptyList(),
-            )
-        }
-
-    fun imetaTags() = imetas().map { PictureMeta.parse(it) }.plus(rootImage()).filterNotNull()
+    fun imetaTags() = iMetas ?: imetas().map { PictureMeta.parse(it) }.also { iMetas = it }
 
     companion object {
         const val KIND = 20
@@ -142,7 +91,7 @@ class PictureEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<PictureEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
-            alt(ClassifiedsEvent.ALT_DESCRIPTION)
+            alt(ALT_DESCRIPTION)
             initializer()
         }
     }

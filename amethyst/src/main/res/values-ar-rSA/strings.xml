@@ -90,7 +90,7 @@
     <string name="my_awesome_group">مجموعتي الرائعة</string>
     <string name="picture_url">رابط الصورة</string>
     <string name="description">الوصف</string>
-    <string name="about_us">"معلومات عن القناة.."</string>
+    <string name="about_us">"معلومات عن القناة…"</string>
     <string name="what_s_on_your_mind">ما الذي يدور في ذهنك؟</string>
     <string name="post">نشر</string>
     <string name="save">حفظ</string>
@@ -132,7 +132,7 @@
     <string name="upload_image">تحميل الصورة</string>
     <string name="uploading">جاري التحميل…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">لا يمتلك المستخدم عنوان (Lightning Address) لاستقبال sats</string>
-    <string name="reply_here">"الرد هنا.. "</string>
+    <string name="reply_here">"الرد هنا…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">نسخ معرف الملاحظة إلى الحافظة للمشاركة</string>
     <string name="copy_channel_id_note_to_the_clipboard">انسخ معرف القناة (ملاحظة) إلى الحافظة</string>
     <string name="edits_the_channel_metadata">تعديل البيانات الوصفية للقناة</string>
@@ -274,7 +274,6 @@
     <string name="quick_action_unfollow">الغاء المتابعة</string>
     <string name="quick_action_follow">متابعة</string>
     <string name="quick_action_request_deletion_gallery_title">إزالته من المعرض</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">إزالة هذه الوسيطة من المعرض.</string>
     <string name="quick_action_request_deletion_alert_title">طلب حذفها</string>
     <string name="quick_action_request_deletion_alert_body">سيطلب Amethyst حذف ملاحظتك من المرحلات المتصل بها حاليا، لا يوجد ضمان لحذفها من هذه المرحلات أو من المرحلات الأخرى التي ربما حفظت فيها.</string>
     <string name="quick_action_block_dialog_btn">حظر </string>
@@ -476,7 +475,6 @@
     <string name="are_you_sure_you_want_to_log_out">تسجيل الخروج سوف يحذف معلوماتك من على الجهاز. تأكد من نسخ مفتاحك الخاص لتجنب فقدان الحساب. هل تريد ألاستمرار؟</string>
     <string name="followed_tags">العلامات المُتابعة</string>
     <string name="relay_setup">مرحلات</string>
-    <string name="discover_community">مجتمع</string>
     <string name="discover_chat">االدردشات</string>
     <string name="community_approved_posts">المنشورات الموافق عليها</string>
     <string name="groups_no_descriptor">هذه المجموعة ليس لديها وصف أو قواعد.

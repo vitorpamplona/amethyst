@@ -71,7 +71,7 @@
     <string name="my_awesome_group">Oma upea ryhmäni</string>
     <string name="picture_url">Kuvan URL</string>
     <string name="description">Kuvaus</string>
-    <string name="about_us">"Tietoa meistä.. "</string>
+    <string name="about_us">"Tietoa meistä…"</string>
     <string name="what_s_on_your_mind">Mitä mielessä?</string>
     <string name="post">Lähetä</string>
     <string name="save">Tallenna</string>
@@ -233,10 +233,10 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Estä ja piilota käyttäjä]]></string>
     <string name="report_dialog_report_btn">Ilmoita väärinkäytöstä</string>
     <string name="report_dialog_reminder_public">Kaikki ilmoitukset ovat julkisesti nähtävillä.</string>
-    <string name="report_dialog_additional_reason_placeholder">Voit antaa lisäkontekstia ilmoituksellesi valinnaisesti...</string>
+    <string name="report_dialog_additional_reason_placeholder">Voit antaa lisäkontekstia ilmoituksellesi valinnaisesti…</string>
     <string name="report_dialog_additional_reason_label">Lisäkonteksti</string>
     <string name="report_dialog_select_reason_label">Syy</string>
-    <string name="report_dialog_select_reason_placeholder">Valitse syy...</string>
+    <string name="report_dialog_select_reason_placeholder">Valitse syy…</string>
     <string name="report_dialog_post_report_btn">Lähetä ilmoitus</string>
     <string name="report_dialog_title">Estä ja ilmoita</string>
     <string name="block_only">Estä</string>
@@ -258,7 +258,7 @@
     <string name="post_poll">Luo äänestys</string>
     <string name="poll_heading_required">Vaaditut kohdat:</string>
     <string name="poll_zap_recipients">Zap-vastaanottajat</string>
-    <string name="poll_primary_description">Pääasiallinen äänestyksen kuvaus...</string>
+    <string name="poll_primary_description">Pääasiallinen äänestyksen kuvaus…</string>
     <string name="poll_option_index">Vaihtoehto %s</string>
     <string name="poll_option_description">Vaihtoehdon kuvaus</string>
     <string name="poll_heading_optional">Valinnaiset kohdat:</string>
@@ -391,7 +391,6 @@
     <string name="followed_tags">Seuratut tagit</string>
     <string name="relay_setup">Releet</string>
     <string name="discover_marketplace">Markkinapaikka</string>
-    <string name="discover_community">Yhteisö</string>
     <string name="discover_chat">Keskustelut</string>
     <string name="community_approved_posts">Hyväksytyt viestit</string>
     <string name="groups_no_descriptor">Tällä ryhmällä ei ole kuvausta tai sääntöjä. Keskustele omistajan kanssa sen lisäämiseksi</string>

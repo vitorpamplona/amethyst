@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.kinds
 
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -27,7 +28,7 @@ class KindTag {
     companion object {
         const val TAG_NAME = "k"
 
-        fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME
 
         fun isTagged(
             tag: Array<String>,

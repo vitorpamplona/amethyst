@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,20 +55,16 @@ fun AddButtonPreview() {
 
 @Composable
 fun AddButton(
+    modifier: Modifier = Modifier,
     text: Int = R.string.add,
     isActive: Boolean = true,
-    modifier: Modifier = Modifier.padding(start = 3.dp),
     onClick: () -> Unit,
 ) {
     OutlinedButton(
         modifier = modifier,
-        onClick = {
-            if (isActive) {
-                onClick()
-            }
-        },
-        shape = ButtonBorder,
         enabled = isActive,
+        onClick = onClick,
+        shape = ButtonBorder,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
         Text(text = stringRes(text), textAlign = TextAlign.Center)
@@ -78,20 +73,18 @@ fun AddButton(
 
 @Composable
 fun RemoveButton(
+    modifier: Modifier = Modifier,
+    text: Int = R.string.remove,
     isActive: Boolean = true,
     onClick: () -> Unit,
 ) {
     OutlinedButton(
-        modifier = Modifier.padding(start = 3.dp),
-        onClick = {
-            if (isActive) {
-                onClick()
-            }
-        },
+        modifier = modifier,
+        onClick = onClick,
         shape = ButtonBorder,
         enabled = isActive,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
-        Text(text = stringRes(R.string.remove))
+        Text(text = stringRes(text))
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
-import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -29,84 +28,123 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
+import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 
 @Stable
+@OptIn(FlowPreview::class)
 class SearchBarViewModel(
     val account: Account,
-) : ViewModel() {
+) : ViewModel(),
+    InvalidatableContent {
     val focusRequester = FocusRequester()
     var searchValue by mutableStateOf("")
 
-    private var _searchResultsUsers = MutableStateFlow<List<User>>(emptyList())
-    private var _searchResultsNotes = MutableStateFlow<List<Note>>(emptyList())
-    private var _searchResultsChannels = MutableStateFlow<List<Channel>>(emptyList())
-    private var _hashtagResults = MutableStateFlow<List<String>>(emptyList())
+    val invalidations = MutableStateFlow<Int>(0)
+    val searchValueFlow = MutableStateFlow<String>("")
 
-    val searchResultsUsers = _searchResultsUsers.asStateFlow()
-    val searchResultsNotes = _searchResultsNotes.asStateFlow()
-    val searchResultsChannels = _searchResultsChannels.asStateFlow()
-    val hashtagResults = _hashtagResults.asStateFlow()
+    val searchTerm =
+        searchValueFlow
+            .debounce(300)
+            .distinctUntilChanged()
+            .onEach(::updateDataSource)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
-    val isSearching by derivedStateOf { searchValue.isNotBlank() }
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
+
+    val searchResultsUsers =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations.debounce(100),
+        ) { term, version ->
+            LocalCache.findUsersStartingWith(term, account)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val searchResultsNotes =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache
+                .findNotesStartingWith(term, account.hiddenUsers)
+                .sortedWith(DefaultFeedOrder)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val searchResultsPublicChatChannels =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache.findPublicChatChannelsStartingWith(term)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val searchResultsEphemeralChannels =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache.findEphemeralChatChannelsStartingWith(term)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val searchResultsLiveActivityChannels =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache.findLiveActivityChannelsStartingWith(term)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val hashtagResults =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            findHashtags(term)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }
+
+    override fun invalidateData(ignoreIfDoing: Boolean) {
+        // force new query
+        invalidations.update { it + 1 }
+    }
 
     fun updateSearchValue(newValue: String) {
         searchValue = newValue
+        searchValueFlow.tryEmit(newValue)
     }
 
-    private suspend fun runSearch() {
-        if (searchValue.isBlank()) {
-            _hashtagResults.value = emptyList()
-            _searchResultsUsers.value = emptyList()
-            _searchResultsChannels.value = emptyList()
-            _searchResultsNotes.value = emptyList()
-            return
+    fun clear() = updateSearchValue("")
+
+    fun updateDataSource(searchTerm: String) {
+        if (searchTerm.isBlank()) {
+            searchDataSourceState.searchQuery.tryEmit("")
+        } else {
+            searchDataSourceState.searchQuery.tryEmit(searchTerm)
         }
-
-        _hashtagResults.emit(findHashtags(searchValue))
-        _searchResultsUsers.emit(
-            LocalCache.findUsersStartingWith(searchValue, account),
-        )
-        _searchResultsNotes.emit(
-            LocalCache
-                .findNotesStartingWith(searchValue, account)
-                .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
-                .reversed(),
-        )
-        _searchResultsChannels.emit(LocalCache.findChannelsStartingWith(searchValue))
-    }
-
-    fun clear() {
-        searchValue = ""
-        _searchResultsUsers.value = emptyList()
-        _searchResultsChannels.value = emptyList()
-        _searchResultsNotes.value = emptyList()
-        _searchResultsChannels.value = emptyList()
-    }
-
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-
-    fun invalidateData() {
-        bundler.invalidate {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            runSearch()
-        }
-    }
-
-    override fun onCleared() {
-        bundler.cancel()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        super.onCleared()
     }
 
     fun isSearchingFun() = searchValue.isNotBlank()
@@ -114,6 +152,7 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel = SearchBarViewModel(account) as SearchBarViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account) as T
     }
 }

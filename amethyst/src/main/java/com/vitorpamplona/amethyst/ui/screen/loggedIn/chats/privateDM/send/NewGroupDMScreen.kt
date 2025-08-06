@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -50,15 +50,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,8 +67,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -85,7 +79,6 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -93,9 +86,10 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Nav
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
@@ -117,14 +111,10 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -134,7 +124,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -162,18 +151,8 @@ fun NewGroupDMScreen(
 
     val context = LocalContext.current
 
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(key1 = postViewModel.draftTag) {
-        launch(Dispatchers.IO) {
-            postViewModel.draftTag.versions.collectLatest {
-                postViewModel.sendDraft()
-            }
-        }
-    }
-
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             message?.ifBlank { null }?.let {
                 postViewModel.updateMessage(TextFieldValue(it))
             }
@@ -184,52 +163,35 @@ fun NewGroupDMScreen(
         }
     }
 
-    DisposableEffect(Unit) {
-        NostrSearchEventOrUserDataSource.start()
-
-        onDispose {
-            NostrSearchEventOrUserDataSource.clear()
-            NostrSearchEventOrUserDataSource.stop()
-        }
-    }
-
     WatchAndLoadMyEmojiList(accountViewModel)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                actions = {
-                    ActionButton(postViewModel, accountViewModel, nav)
+            PostingTopBar(
+                titleRes = R.string.private_message,
+                isActive = postViewModel::canPost,
+                onCancel = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.runIOCatching {
+                        postViewModel.sendDraftSync()
+                        delay(100)
+                        nav.popBack()
+                        postViewModel.cancel()
+                    }
                 },
-                title = {
-                    Text(
-                        text = stringRes(R.string.private_message),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleLarge,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                    )
+                onPost = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.runIOCatching {
+                        postViewModel.sendPostSync()
+                        postViewModel.room?.let {
+                            nav.nav(routeToMessage(it, null, null, null, accountViewModel))
+                        }
+                        postViewModel.cancel()
+                    }
+                    nav.popBack()
                 },
-                navigationIcon = {
-                    CloseButton(
-                        modifier = HalfStartPadding,
-                        onPress = {
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    postViewModel.sendDraftSync()
-                                    postViewModel.cancel()
-                                }
-                                delay(100)
-                                nav.popBack()
-                            }
-                        },
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->
@@ -243,26 +205,6 @@ fun NewGroupDMScreen(
             GroupDMScreenContent(postViewModel, accountViewModel, nav)
         }
     }
-}
-
-@Composable
-fun ActionButton(
-    postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    PostButton(
-        modifier = HalfEndPadding,
-        onPost = {
-            postViewModel.sendPost {
-                postViewModel.room?.let {
-                    nav.nav(routeToMessage(it, null, null, null, accountViewModel))
-                }
-            }
-            nav.popBack()
-        },
-        isActive = postViewModel.canPost(),
-    )
 }
 
 @Composable

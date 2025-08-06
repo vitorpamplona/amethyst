@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,17 +25,15 @@ import com.vitorpamplona.amethyst.service.ots.OkHttpBitcoinExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
-import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class OkHttpOtsTest {
@@ -49,30 +47,30 @@ class OkHttpOtsTest {
     val resolver =
         OtsResolver(
             OkHttpBitcoinExplorer(
-                OkHttpBitcoinExplorer.MEMPOOL_API_URL,
+                baseAPI = OkHttpBitcoinExplorer.MEMPOOL_API_URL,
                 client = OkHttpClient.Builder().build(),
-                otsCache,
+                cache = otsCache,
             ),
             OkHttpCalendarBuilder { OkHttpClient.Builder().build() },
         )
 
     @Test
     fun verifyNostrEvent() {
-        val ots = EventMapper.fromJson(otsEvent) as OtsEvent
+        val ots = JsonMapper.fromJson(otsEvent) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(1707688818L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrEvent2() {
-        val ots = EventMapper.fromJson(otsEvent2) as OtsEvent
+        val ots = JsonMapper.fromJson(otsEvent2) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(1706322179L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrPendingEvent() {
-        val ots = EventMapper.fromJson(otsPendingEvent) as OtsEvent
+        val ots = JsonMapper.fromJson(otsPendingEvent) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(null, ots.verify(resolver))
     }
@@ -80,20 +78,15 @@ class OkHttpOtsTest {
     @Test
     fun createOTSEventAndVerify() {
         val signer = NostrSignerInternal(KeyPair())
-        var ots: OtsEvent? = null
-
-        val countDownLatch = CountDownLatch(1)
 
         val otsFile = OtsEvent.stamp(otsEvent2Digest, resolver)
 
-        signer.sign(OtsEvent.build(otsEvent2Digest, otsFile)) {
-            ots = it
-            countDownLatch.countDown()
-        }
+        val ots =
+            runBlocking {
+                signer.sign(OtsEvent.build(otsEvent2Digest, otsFile))
+            }
 
-        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-        println(ots!!.toJson())
+        println(ots.toJson())
         println(resolver.info(ots.otsByteArray()))
 
         // Should not be valid because we need to wait for confirmations

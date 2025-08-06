@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
-import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
 import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.CancellationException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Base64
@@ -88,26 +88,26 @@ class Nip44v2 {
         payload: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? = decrypt(payload, getConversationKey(privateKey, pubKey))
+    ): String = decrypt(payload, getConversationKey(privateKey, pubKey))
 
     fun decrypt(
         decoded: EncryptedInfo,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? = decrypt(decoded, getConversationKey(privateKey, pubKey))
+    ): String = decrypt(decoded, getConversationKey(privateKey, pubKey))
 
     fun decrypt(
         payload: String,
         conversationKey: ByteArray,
-    ): String? {
-        val decoded = EncryptedInfo.decodePayload(payload) ?: return null
+    ): String {
+        val decoded = EncryptedInfo.decodePayload(payload)
         return decrypt(decoded, conversationKey)
     }
 
     fun decrypt(
         decoded: EncryptedInfo,
         conversationKey: ByteArray,
-    ): String? {
+    ): String {
         val messageKey = getMessageKeys(conversationKey, decoded.nonce)
         val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
 
@@ -236,7 +236,7 @@ class Nip44v2 {
         companion object {
             const val V: Int = 2
 
-            fun decodePayload(payload: String): EncryptedInfo? {
+            fun decodePayload(payload: String): EncryptedInfo {
                 check(payload.length >= 132 || payload.length <= 87472) {
                     "Invalid payload length ${payload.length} for $payload"
                 }
@@ -245,14 +245,14 @@ class Nip44v2 {
                 return try {
                     val byteArray = Base64.getDecoder().decode(payload)
                     check(byteArray[0].toInt() == V)
-                    return EncryptedInfo(
+                    EncryptedInfo(
                         nonce = byteArray.copyOfRange(1, 33),
                         ciphertext = byteArray.copyOfRange(33, byteArray.size - 32),
                         mac = byteArray.copyOfRange(byteArray.size - 32, byteArray.size),
                     )
                 } catch (e: Exception) {
-                    Log.w("NIP44v2", "Unable to Parse encrypted payload: $payload")
-                    null
+                    if (e is CancellationException) throw e
+                    throw IllegalStateException("NIP-44v2 Unable to Parse encrypted payload: $payload", e)
                 }
             }
         }

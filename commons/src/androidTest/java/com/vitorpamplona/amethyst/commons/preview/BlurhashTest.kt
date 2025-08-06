@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -96,7 +96,7 @@ class BlurhashTest {
     @Test
     fun testLorikeet() {
         val blurhash = load("/lorikeet.jpg").toBlurhash()
-        assertEquals("rFDcT@_LNs#p%Mt*nNM}E2VrIVX6VuV@WUo{xtjv9]RRw[OXS}rrWFX9w{OZxaxWNHX4n\$M}NGaK%0RkM}w{xto|jFs,Sh-Tj]bcwJnjXSxZs.NI", blurhash)
+        assertEquals("rFDcT@_LNs#:-pyBnhRRE2Z~MyX5VuV@WUo{xta\$9]RQw[OXS}rrWFXSw|OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI", blurhash)
     }
 
     private fun load(filename: String): Bitmap =

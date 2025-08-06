@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -44,9 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
@@ -75,7 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -170,7 +170,7 @@ fun NormalChatNote(
         parentBackgroundColor = parentBackgroundColor,
         onClick = {
             if (note.event is ChannelCreateEvent) {
-                nav.nav(Route.Channel(note.idHex))
+                nav.nav(Route.PublicChatChannel(note.idHex))
                 true
             } else {
                 false
@@ -224,10 +224,10 @@ fun NormalChatNote(
 
                             ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
 
-                            val geo = remember(note) { note.event?.getGeoHash() }
+                            val geo = remember(note) { note.event?.geoHashOrScope() }
                             if (geo != null) {
                                 Spacer(StdHorzSpacer)
-                                DisplayLocation(geo, nav)
+                                DisplayLocation(geo, accountViewModel, nav)
                             }
 
                             val pow = remember(note) { note.event?.strongPoWOrNull() }

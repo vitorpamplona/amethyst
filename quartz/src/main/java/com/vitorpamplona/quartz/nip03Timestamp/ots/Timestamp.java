@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -376,7 +377,7 @@ public class Timestamp {
 
                 if (attestation instanceof BitcoinBlockHeaderAttestation) {
                     String tx = Utils.bytesToHex(Utils.arrayReverse(this.msg));
-                    builder.append(Timestamp.indention(indent) + "# Bitcoin block merkle root " + tx.toLowerCase() + "\n");
+                    builder.append(Timestamp.indention(indent) + "# Bitcoin block merkle root " + tx.toLowerCase(Locale.ROOT) + "\n");
                 }
             }
         }
@@ -395,7 +396,7 @@ public class Timestamp {
                     curPar = ((OpBinary) op).arg;
                 }
 
-                builder.append(Timestamp.indention(indent) + " -> " + op.toString().toLowerCase() + strResult(verbosity, curPar, curRes).toLowerCase() + "\n");
+                builder.append(Timestamp.indention(indent) + " -> " + op.toString().toLowerCase(Locale.ROOT) + strResult(verbosity, curPar, curRes).toLowerCase(Locale.ROOT) + "\n");
                 builder.append(timestamp.strTree(indent + 1, verbosity));
             }
         } else if (this.ops.size() > 0) {
@@ -411,7 +412,7 @@ public class Timestamp {
                     curPar = ((OpBinary) op).arg;
                 }
 
-                builder.append(Timestamp.indention(indent) + op.toString().toLowerCase() + strResult(verbosity, curPar, curRes).toLowerCase() + "\n");
+                builder.append(Timestamp.indention(indent) + op.toString().toLowerCase(Locale.ROOT) + strResult(verbosity, curPar, curRes).toLowerCase(Locale.ROOT) + "\n");
                 builder.append(timestamp.strTree(indent, verbosity));
             }
         }

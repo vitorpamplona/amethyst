@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
-import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -31,104 +29,51 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 abstract class NostrSigner(
     val pubKey: HexKey,
 ) {
-    fun <T : Event> sign(
-        ev: EventTemplate<T>,
-        onReady: (T) -> Unit,
-    ) = sign(ev.createdAt, ev.kind, ev.tags, ev.content, onReady)
+    abstract fun isWriteable(): Boolean
 
-    abstract fun <T : Event> sign(
+    suspend fun <T : Event> sign(ev: EventTemplate<T>): T = sign(ev.createdAt, ev.kind, ev.tags, ev.content)
+
+    abstract suspend fun <T : Event> sign(
         createdAt: Long,
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-        onReady: (T) -> Unit,
-    )
+    ): T
 
-    abstract fun nip04Encrypt(
-        decryptedContent: String,
+    abstract suspend fun nip04Encrypt(
+        plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun nip04Decrypt(
-        encryptedContent: String,
+    abstract suspend fun nip04Decrypt(
+        ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun nip44Encrypt(
-        decryptedContent: String,
+    abstract suspend fun nip44Encrypt(
+        plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun nip44Decrypt(
+    abstract suspend fun nip44Decrypt(
+        ciphertext: String,
+        fromPublicKey: HexKey,
+    ): String
+
+    abstract suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent
+
+    abstract suspend fun deriveKey(nonce: HexKey): HexKey
+
+    suspend fun decrypt(
         encryptedContent: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String {
+        if (encryptedContent.isBlank()) throw SignerExceptions.NothingToDecrypt()
 
-    abstract fun decryptZapEvent(
-        event: LnZapRequestEvent,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    )
-
-    abstract fun deriveKey(
-        nonce: HexKey,
-        onReady: (HexKey) -> Unit,
-    )
-
-    fun decrypt(
-        encryptedContent: String,
-        fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        if (EncryptedInfo.isNIP04(encryptedContent)) {
-            nip04Decrypt(encryptedContent, fromPublicKey, onReady)
+        return if (EncryptedInfo.isNIP04(encryptedContent)) {
+            nip04Decrypt(encryptedContent, fromPublicKey)
         } else {
-            nip44Decrypt(encryptedContent, fromPublicKey, onReady)
+            nip44Decrypt(encryptedContent, fromPublicKey)
         }
     }
-
-    fun <T : Event> assembleRumor(
-        ev: EventTemplate<T>,
-        onReady: (T) -> Unit,
-    ) = assembleRumor(ev.createdAt, ev.kind, ev.tags, ev.content, onReady)
-
-    fun <T : Event> assembleRumor(
-        createdAt: Long,
-        kind: Int,
-        tags: Array<Array<String>>,
-        content: String,
-        onReady: (T) -> Unit,
-    ) {
-        onReady(
-            EventFactory.create(
-                id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
-                pubKey = pubKey,
-                createdAt = createdAt,
-                kind = kind,
-                tags = tags,
-                content = content,
-                sig = "",
-            ) as T,
-        )
-    }
-
-    fun <T : Event> assembleRumor(ev: EventTemplate<T>) = assembleRumor<T>(ev.createdAt, ev.kind, ev.tags, ev.content)
-
-    fun <T : Event> assembleRumor(
-        createdAt: Long,
-        kind: Int,
-        tags: Array<Array<String>>,
-        content: String,
-    ) = EventFactory.create(
-        id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
-        pubKey = pubKey,
-        createdAt = createdAt,
-        kind = kind,
-        tags = tags,
-        content = content,
-        sig = "",
-    ) as T
 }

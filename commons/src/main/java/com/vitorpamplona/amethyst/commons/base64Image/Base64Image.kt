@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,7 +29,7 @@ import java.util.regex.Pattern
 
 class Base64Image {
     companion object {
-        val pattern = Pattern.compile("data:image/(${RichTextParser.Companion.imageExtensions.joinToString(separator = "|") { it } });base64,([a-zA-Z0-9+/]+={0,2})")
+        val pattern = Pattern.compile("data:image/(${RichTextParser.imageExtensions.joinToString(separator = "|") { it } });base64,([a-zA-Z0-9+/]+={0,2})")
 
         fun isBase64(content: String): Boolean {
             val matcher = pattern.matcher(content)

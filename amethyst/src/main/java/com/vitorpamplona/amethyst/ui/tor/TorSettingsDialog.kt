@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,22 +23,19 @@ package com.vitorpamplona.amethyst.ui.tor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,8 +45,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -74,14 +71,13 @@ fun ConnectTorDialog(
                 decorFitsSystemWindows = false,
             ),
     ) {
-        Surface {
-            TorDialogContents(
-                torSettings,
-                onClose,
-                onPost,
-                onError,
-            )
-        }
+        SetDialogToEdgeToEdge()
+        TorDialogContents(
+            torSettings,
+            onClose,
+            onPost,
+            onError,
+        )
     }
 }
 
@@ -121,24 +117,12 @@ fun TorDialogContents(
     onPost: (torSettings: TorSettings) -> Unit,
     onError: (String) -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(
-                    rememberScrollState(),
-                ).padding(10.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            CloseButton(onPress = { onClose() })
-
+    Scaffold(
+        topBar = {
             val toastMessage = stringRes(R.string.invalid_port_number)
-
-            SaveButton(
+            SavingTopBar(
+                titleRes = R.string.privacy_options,
+                onCancel = onClose,
                 onPost = {
                     try {
                         onPost(dialogViewModel.save())
@@ -147,144 +131,157 @@ fun TorDialogContents(
                         onError(toastMessage)
                     }
                 },
-                isActive = true,
             )
+        },
+    ) {
+        Column(
+            Modifier
+                .padding(it)
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState(),
+                ).padding(horizontal = 10.dp),
+        ) {
+            PrivacySettingsBody(dialogViewModel)
+        }
+    }
+}
+
+@Composable
+fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
+    Column(
+        modifier = Modifier.padding(horizontal = 5.dp),
+        verticalArrangement = Arrangement.spacedBy(Size10dp),
+    ) {
+        SettingsRow(
+            R.string.use_internal_tor,
+            R.string.use_internal_tor_explainer,
+            persistentListOf(
+                TitleExplainer(stringRes(TorType.OFF.resourceId)),
+                TitleExplainer(stringRes(TorType.INTERNAL.resourceId)),
+                TitleExplainer(stringRes(TorType.EXTERNAL.resourceId)),
+            ),
+            dialogViewModel.torType.value.screenCode,
+        ) {
+            dialogViewModel.torType.value = parseTorType(it)
         }
 
+        AnimatedVisibility(
+            visible = dialogViewModel.torType.value == TorType.EXTERNAL,
+        ) {
+            SettingsRow(
+                R.string.orbot_socks_port,
+                R.string.connect_through_your_orbot_setup_short,
+            ) {
+                OutlinedTextField(
+                    value = dialogViewModel.socksPortStr.value,
+                    onValueChange = { dialogViewModel.socksPortStr.value = it },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.None,
+                            keyboardType = KeyboardType.Number,
+                        ),
+                    placeholder = {
+                        Text(
+                            text = "9050",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    AnimatedVisibility(
+        visible = dialogViewModel.torType.value != TorType.OFF,
+    ) {
         Column(
             modifier = Modifier.padding(horizontal = 5.dp),
             verticalArrangement = Arrangement.spacedBy(Size10dp),
         ) {
             SettingsRow(
-                R.string.use_internal_tor,
-                R.string.use_internal_tor_explainer,
+                R.string.tor_preset,
+                R.string.tor_preset_explainer,
                 persistentListOf(
-                    TitleExplainer(stringRes(TorType.OFF.resourceId)),
-                    TitleExplainer(stringRes(TorType.INTERNAL.resourceId)),
-                    TitleExplainer(stringRes(TorType.EXTERNAL.resourceId)),
+                    TitleExplainer(stringRes(TorPresetType.ONLY_WHEN_NEEDED.resourceId), stringRes(TorPresetType.ONLY_WHEN_NEEDED.explainerId)),
+                    TitleExplainer(stringRes(TorPresetType.DEFAULT.resourceId), stringRes(TorPresetType.DEFAULT.explainerId)),
+                    TitleExplainer(stringRes(TorPresetType.SMALL_PAYLOADS.resourceId), stringRes(TorPresetType.SMALL_PAYLOADS.explainerId)),
+                    TitleExplainer(stringRes(TorPresetType.FULL_PRIVACY.resourceId), stringRes(TorPresetType.FULL_PRIVACY.explainerId)),
+                    TitleExplainer(stringRes(TorPresetType.CUSTOM.resourceId), stringRes(TorPresetType.CUSTOM.explainerId)),
                 ),
-                dialogViewModel.torType.value.screenCode,
+                dialogViewModel.preset.value.screenCode,
             ) {
-                dialogViewModel.torType.value = parseTorType(it)
+                dialogViewModel.setPreset(parseTorPresetType(it))
             }
 
-            AnimatedVisibility(
-                visible = dialogViewModel.torType.value == TorType.EXTERNAL,
-            ) {
-                SettingsRow(
-                    R.string.orbot_socks_port,
-                    R.string.connect_through_your_orbot_setup_short,
-                ) {
-                    OutlinedTextField(
-                        value = dialogViewModel.socksPortStr.value,
-                        onValueChange = { dialogViewModel.socksPortStr.value = it },
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.None,
-                                keyboardType = KeyboardType.Number,
-                            ),
-                        placeholder = {
-                            Text(
-                                text = "9050",
-                                color = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        },
-                    )
-                }
-            }
-        }
+            SwitchSettingsRow(
+                R.string.tor_use_onion_address,
+                R.string.tor_use_onion_address_explainer,
+                dialogViewModel.onionRelaysViaTor,
+            )
 
-        AnimatedVisibility(
-            visible = dialogViewModel.torType.value != TorType.OFF,
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 5.dp),
-                verticalArrangement = Arrangement.spacedBy(Size10dp),
-            ) {
-                SettingsRow(
-                    R.string.tor_preset,
-                    R.string.tor_preset_explainer,
-                    persistentListOf(
-                        TitleExplainer(stringRes(TorPresetType.ONLY_WHEN_NEEDED.resourceId), stringRes(TorPresetType.ONLY_WHEN_NEEDED.explainerId)),
-                        TitleExplainer(stringRes(TorPresetType.DEFAULT.resourceId), stringRes(TorPresetType.DEFAULT.explainerId)),
-                        TitleExplainer(stringRes(TorPresetType.SMALL_PAYLOADS.resourceId), stringRes(TorPresetType.SMALL_PAYLOADS.explainerId)),
-                        TitleExplainer(stringRes(TorPresetType.FULL_PRIVACY.resourceId), stringRes(TorPresetType.FULL_PRIVACY.explainerId)),
-                        TitleExplainer(stringRes(TorPresetType.CUSTOM.resourceId), stringRes(TorPresetType.CUSTOM.explainerId)),
-                    ),
-                    dialogViewModel.preset.value.screenCode,
-                ) {
-                    dialogViewModel.setPreset(parseTorPresetType(it))
-                }
+            SwitchSettingsRow(
+                R.string.tor_use_dm_relays,
+                R.string.tor_use_dm_relays_explainer,
+                dialogViewModel.dmRelaysViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_onion_address,
-                    R.string.tor_use_onion_address_explainer,
-                    dialogViewModel.onionRelaysViaTor,
-                )
+            SwitchSettingsRow(
+                R.string.tor_use_new_relays,
+                R.string.tor_use_new_relays_explainer,
+                dialogViewModel.newRelaysViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_dm_relays,
-                    R.string.tor_use_dm_relays_explainer,
-                    dialogViewModel.dmRelaysViaTor,
-                )
+            SwitchSettingsRow(
+                R.string.tor_use_trusted_relays,
+                R.string.tor_use_trusted_relays_explainer,
+                dialogViewModel.trustedRelaysViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_new_relays,
-                    R.string.tor_use_new_relays_explainer,
-                    dialogViewModel.newRelaysViaTor,
-                )
+            SwitchSettingsRow(
+                R.string.tor_use_money_operations,
+                R.string.tor_use_money_operations_explainer,
+                dialogViewModel.moneyOperationsViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_trusted_relays,
-                    R.string.tor_use_trusted_relays_explainer,
-                    dialogViewModel.trustedRelaysViaTor,
-                )
+            /**
+             * Too hard to separate Coil into regular images and profile pics
+             SwitchSettingsRow(
+             R.string.tor_use_profile_pictures,
+             R.string.tor_use_profile_pictures_explainer,
+             dialogViewModel.profilePicsViaTor,
+             )
+             */
 
-                SwitchSettingsRow(
-                    R.string.tor_use_money_operations,
-                    R.string.tor_use_money_operations_explainer,
-                    dialogViewModel.moneyOperationsViaTor,
-                )
+            SwitchSettingsRow(
+                R.string.tor_use_nip05_verification,
+                R.string.tor_use_nip05_verification_explainer,
+                dialogViewModel.nip05VerificationsViaTor,
+            )
 
-                /**
-                 * Too hard to separate Coil into regular images and profile pics
-                 SwitchSettingsRow(
-                 R.string.tor_use_profile_pictures,
-                 R.string.tor_use_profile_pictures_explainer,
-                 dialogViewModel.profilePicsViaTor,
-                 )
-                 */
+            SwitchSettingsRow(
+                R.string.tor_use_url_previews,
+                R.string.tor_use_url_previews_explainer,
+                dialogViewModel.urlPreviewsViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_nip05_verification,
-                    R.string.tor_use_nip05_verification_explainer,
-                    dialogViewModel.nip05VerificationsViaTor,
-                )
+            SwitchSettingsRow(
+                R.string.tor_use_images,
+                R.string.tor_use_images_explainer,
+                dialogViewModel.imagesViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_url_previews,
-                    R.string.tor_use_url_previews_explainer,
-                    dialogViewModel.urlPreviewsViaTor,
-                )
+            SwitchSettingsRow(
+                R.string.tor_use_videos,
+                R.string.tor_use_videos_explainer,
+                dialogViewModel.videosViaTor,
+            )
 
-                SwitchSettingsRow(
-                    R.string.tor_use_images,
-                    R.string.tor_use_images_explainer,
-                    dialogViewModel.imagesViaTor,
-                )
-
-                SwitchSettingsRow(
-                    R.string.tor_use_videos,
-                    R.string.tor_use_videos_explainer,
-                    dialogViewModel.videosViaTor,
-                )
-
-                SwitchSettingsRow(
-                    R.string.tor_use_nip96_uploads,
-                    R.string.tor_use_nip96_uploads_explainer,
-                    dialogViewModel.nip96UploadsViaTor,
-                )
-            }
+            SwitchSettingsRow(
+                R.string.tor_use_nip96_uploads,
+                R.string.tor_use_nip96_uploads_explainer,
+                dialogViewModel.nip96UploadsViaTor,
+            )
         }
     }
 }

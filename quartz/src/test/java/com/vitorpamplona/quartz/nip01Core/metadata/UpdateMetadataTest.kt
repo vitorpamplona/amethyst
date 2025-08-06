@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,12 +20,23 @@
  */
 package com.vitorpamplona.quartz.nip01Core.metadata
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.nsecToSigner
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class UpdateMetadataTest {
     val signer = "nsec10g0wheggqn9dawlc0yuv6adnat6n09anr7eyykevw2dm8xa5fffs0wsdsr".nsecToSigner()
+
+    /**
+     * For debug purposes only
+     */
+    fun Event.toPrettyJson(): String {
+        val obj = EventManualSerializer.assemble(id, pubKey, createdAt, kind, tags, content, sig)
+        return JsonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
+    }
 
     @Test
     fun createNewMetadata() {

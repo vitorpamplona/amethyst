@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,26 +23,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelaysUsing
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun RelaysTabHeader(baseUser: User) {
-    val userState by baseUser.live().relays.observeAsState()
-    val userRelaysBeingUsed = remember(userState) { userState?.user?.relaysBeingUsed?.size ?: "--" }
+fun RelaysTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val userState by observeUserRelaysUsing(baseUser, accountViewModel)
 
-    val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-    val userRelays =
-        remember(userStateRelayInfo) {
-            userStateRelayInfo
-                ?.user
-                ?.latestContactList
-                ?.relays()
-                ?.size ?: "--"
-        }
-
-    Text(text = "$userRelaysBeingUsed / $userRelays ${stringRes(R.string.relays)}")
+    Text(text = "${sizeAsString(userState.userRelayList.size)} / ${sizeAsString(userState.relays.size)} ${stringRes(R.string.relays)}")
 }
+
+private fun sizeAsString(count: Int) = if (count > 0) count.toString() else "--"

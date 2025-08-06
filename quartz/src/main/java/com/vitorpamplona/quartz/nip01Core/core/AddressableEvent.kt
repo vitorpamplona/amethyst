@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
@@ -28,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 interface AddressableEvent : IEvent {
     fun dTag(): String
 
-    fun aTag(relayHint: String? = null): ATag
+    fun aTag(relayHint: NormalizedRelayUrl? = null): ATag
 
     fun address(): Address
 

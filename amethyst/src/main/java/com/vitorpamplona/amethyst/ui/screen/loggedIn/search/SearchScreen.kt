@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -43,38 +43,33 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
-import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForSearchAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -84,14 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.channels.Channel as CoroutineChannel
 
 @Composable
 fun SearchScreen(
@@ -116,27 +104,7 @@ fun SearchScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    WatchAccountForSearchScreen(accountViewModel)
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Search Start")
-                    NostrSearchEventOrUserDataSource.start()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Search Stop")
-                    NostrSearchEventOrUserDataSource.clear()
-                    NostrSearchEventOrUserDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(searchBarViewModel)
 
     val listState = rememberLazyListState()
 
@@ -147,7 +115,7 @@ fun SearchScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            SearchBar(searchBarViewModel, listState, nav)
+            SearchBar(searchBarViewModel, listState, accountViewModel, nav)
         },
         bottomBar = {
             AppBottomBar(Route.Search, accountViewModel) { route ->
@@ -165,30 +133,27 @@ fun SearchScreen(
     }
 }
 
-@Composable
-fun WatchAccountForSearchScreen(accountViewModel: AccountViewModel) {
-    LaunchedEffect(accountViewModel) {
-        launch(Dispatchers.IO) { NostrSearchEventOrUserDataSource.start() }
-    }
-}
-
 @OptIn(FlowPreview::class)
 @Composable
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,
     listState: LazyListState,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
-
-    // Create a channel for processing search queries.
-    val searchTextChanges = remember { CoroutineChannel<String>(CoroutineChannel.CONFLATED) }
+    TextSearchDataSourceSubscription(searchBarViewModel, accountViewModel)
 
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
+        launch(Dispatchers.Default) {
             LocalCache.live.newEventBundles.collect {
-                checkNotInMainThread()
+                if (searchBarViewModel.isSearchingFun()) {
+                    searchBarViewModel.invalidateData()
+                }
+            }
+        }
 
+        launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect {
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
                 }
@@ -196,31 +161,20 @@ private fun SearchBar(
         }
     }
 
-    LaunchedEffect(Unit) {
-        // Wait for text changes to stop for 300 ms before firing off search.
-        withContext(Dispatchers.IO) {
-            searchTextChanges
-                .receiveAsFlow()
-                .filter { it.isNotBlank() }
-                .distinctUntilChanged()
-                .debounce(300)
-                .collectLatest {
-                    if (it.length >= 2) {
-                        NostrSearchEventOrUserDataSource.search(it.trim())
-                    }
+    AnimateOnNewSearch(searchBarViewModel, listState)
 
-                    searchBarViewModel.invalidateData()
+    SearchTextField(searchBarViewModel, Modifier.statusBarsPadding())
+}
 
-                    // makes sure to show the top of the search
-                    launch(Dispatchers.Main) { listState.animateScrollToItem(0) }
-                }
-        }
-    }
+@Composable
+fun AnimateOnNewSearch(
+    searchBarViewModel: SearchBarViewModel,
+    listState: LazyListState,
+) {
+    val searchTerm by searchBarViewModel.searchTerm.collectAsStateWithLifecycle()
 
-    DisposableEffect(Unit) { onDispose { NostrSearchEventOrUserDataSource.clear() } }
-
-    SearchTextField(searchBarViewModel, modifier = Modifier.statusBarsPadding()) {
-        scope.launch(Dispatchers.IO) { searchTextChanges.trySend(it) }
+    LaunchedEffect(searchTerm) {
+        listState.animateScrollToItem(0)
     }
 }
 
@@ -228,7 +182,6 @@ private fun SearchBar(
 private fun SearchTextField(
     searchBarViewModel: SearchBarViewModel,
     modifier: Modifier,
-    onTextChanges: (String) -> Unit,
 ) {
     Row(
         modifier = modifier.padding(10.dp).fillMaxWidth(),
@@ -239,7 +192,6 @@ private fun SearchTextField(
             value = searchBarViewModel.searchValue,
             onValueChange = {
                 searchBarViewModel.updateSearchValue(it)
-                onTextChanges(it)
             },
             shape = RoundedCornerShape(25.dp),
             keyboardOptions =
@@ -259,11 +211,10 @@ private fun SearchTextField(
                 )
             },
             trailingIcon = {
-                if (searchBarViewModel.isSearching) {
+                if (searchBarViewModel.isRefreshing.value) {
                     IconButton(
                         onClick = {
                             searchBarViewModel.clear()
-                            NostrSearchEventOrUserDataSource.clear()
                         },
                     ) {
                         ClearTextIcon()
@@ -287,13 +238,15 @@ private fun DisplaySearchResults(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    if (!searchBarViewModel.isSearching) {
+    if (!searchBarViewModel.isRefreshing.value) {
         return
     }
 
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
-    val channels by searchBarViewModel.searchResultsChannels.collectAsStateWithLifecycle()
+    val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
+    val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
+    val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -325,8 +278,8 @@ private fun DisplaySearchResults(
         }
 
         itemsIndexed(
-            channels,
-            key = { _, item -> "c" + item.idHex },
+            publicChatChannels,
+            key = { _, item -> "public" + item.idHex },
         ) { _, item ->
             ChannelName(
                 channelIdHex = item.idHex,
@@ -342,7 +295,63 @@ private fun DisplaySearchResults(
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                onClick = { nav.nav(Route.Channel(item.idHex)) },
+                onClick = { nav.nav(routeFor(item)) },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            ephemeralChannels,
+            key = { _, item -> "ephem" + item.roomId.toKey() },
+        ) { _, item ->
+            val relayInfo by loadRelayInfo(item.roomId.relayUrl, accountViewModel)
+
+            ChannelName(
+                channelIdHex = item.roomId.toKey(),
+                channelPicture = relayInfo.icon,
+                channelTitle = {
+                    Text(
+                        item.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = stringRes(R.string.ephemeral_relay_chat),
+                hasNewMessages = false,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                onClick = { nav.nav(routeFor(item)) },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            liveActivityChannels,
+            key = { _, item -> "live" + item.address.toValue() },
+        ) { _, item ->
+            ChannelName(
+                channelIdHex = item.address.toValue(),
+                channelPicture = item.profilePicture(),
+                channelTitle = {
+                    Text(
+                        item.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = item.summary(),
+                hasNewMessages = false,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                onClick = { nav.nav(routeFor(item)) },
             )
 
             HorizontalDivider(
@@ -380,6 +389,7 @@ fun HashtagLine(
                 start = 12.dp,
                 end = 12.dp,
                 top = 10.dp,
+                bottom = 10.dp,
             ),
     ) {
         Row(
@@ -388,7 +398,7 @@ fun HashtagLine(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                "Search hashtag: #$tag",
+                stringRes(R.string.search_by_hashtag, tag),
                 fontWeight = FontWeight.Bold,
             )
         }

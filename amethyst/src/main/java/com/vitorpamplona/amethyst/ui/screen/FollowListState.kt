@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,15 +25,15 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -45,9 +45,10 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -74,7 +75,7 @@ class FollowListState(
 ) {
     val kind3Follow =
         PeopleListOutBoxFeedDefinition(
-            code = KIND3_FOLLOWS,
+            code = ALL_FOLLOWS,
             name = ResourceName(R.string.follow_list_kind3follows),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -87,7 +88,6 @@ class FollowListState(
             name = ResourceName(R.string.follow_list_global),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
-            relays = account.activeGlobalRelays().toList(),
         )
 
     val aroundMe =
@@ -135,6 +135,7 @@ class FollowListState(
                     (
                         (
                             noteEvent is PeopleListEvent ||
+                                noteEvent is FollowListEvent ||
                                 noteEvent is MuteListEvent ||
                                 noteEvent is ContactListEvent
                         ) ||
@@ -159,20 +160,19 @@ class FollowListState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<List<FeedDefinition>> =
-        account.liveKind3Follows.transformLatest {
+        account.kind3FollowList.flow.transformLatest {
             checkNotInMainThread()
 
             val communities =
-                it.addresses.mapNotNull {
+                it.communities.mapNotNull {
                     LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
                         TagFeedDefinition(
                             "Community/${communityNote.idHex}",
                             CommunityName(communityNote),
                             CodeNameType.ROUTE,
-                            route = Route.Community(communityNote.idHex),
+                            route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
                             kinds = DEFAULT_COMMUNITY_FEEDS,
                             aTags = listOf(communityNote.idHex),
-                            relays = account.activeGlobalRelays().toList(),
                         )
                     }
                 }
@@ -186,7 +186,6 @@ class FollowListState(
                         route = Route.Hashtag(it),
                         kinds = DEFAULT_FEED_KINDS,
                         tTags = listOf(it),
-                        relays = account.activeGlobalRelays().toList(),
                     )
                 }
 
@@ -199,7 +198,6 @@ class FollowListState(
                         route = Route.Geohash(it),
                         kinds = DEFAULT_FEED_KINDS,
                         gTags = listOf(it),
-                        relays = account.activeGlobalRelays().toList(),
                     )
                 }
 
@@ -239,8 +237,14 @@ class FollowListState(
             )
         }
 
-    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
-    val kind3GlobalPeople = _kind3GlobalPeople.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+    val kind3GlobalPeopleRoutes =
+        _kind3GlobalPeopleRoutes
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+    val kind3GlobalPeople =
+        _kind3GlobalPeople
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
     suspend fun initializeSuspend() {
         checkNotInMainThread()
@@ -288,13 +292,22 @@ class ResourceName(
 class PeopleListName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
+    override fun name(): String {
+        val noteEvent = note.event
+        return if (noteEvent is PeopleListEvent) {
+            noteEvent.nameOrTitle() ?: note.dTag()
+        } else if (noteEvent is FollowListEvent) {
+            noteEvent.title() ?: note.dTag()
+        } else {
+            note.dTag()
+        }
+    }
 }
 
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = "/n/${(note.dTag() ?: "")}"
+    override fun name() = "/n/${(note.dTag())}"
 }
 
 @Immutable
@@ -311,7 +324,6 @@ class GlobalFeedDefinition(
     name: Name,
     type: CodeNameType,
     val kinds: List<Int>,
-    val relays: List<String>,
 ) : FeedDefinition(code, name, type, null)
 
 @Immutable
@@ -321,7 +333,6 @@ class TagFeedDefinition(
     type: CodeNameType,
     route: Route?,
     val kinds: List<Int>,
-    val relays: List<String>,
     val pTags: List<String>? = null,
     val eTags: List<String>? = null,
     val aTags: List<String>? = null,

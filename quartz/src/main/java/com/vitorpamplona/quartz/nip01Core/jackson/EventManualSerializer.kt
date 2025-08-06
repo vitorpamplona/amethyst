@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 class EventManualSerializer {
     companion object {
-        private fun assemble(
+        fun assemble(
             id: HexKey,
             pubKey: HexKey,
             createdAt: Long,
@@ -67,23 +67,7 @@ class EventManualSerializer {
             sig: String,
         ): String {
             val obj = assemble(id, pubKey, createdAt, kind, tags, content, sig)
-            return EventMapper.mapper.writeValueAsString(obj)
-        }
-
-        /**
-         * For debug purposes only
-         */
-        fun toPrettyJson(
-            id: HexKey,
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-            sig: String,
-        ): String {
-            val obj = assemble(id, pubKey, createdAt, kind, tags, content, sig)
-            return EventMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
+            return JsonMapper.mapper.writeValueAsString(obj)
         }
     }
 }

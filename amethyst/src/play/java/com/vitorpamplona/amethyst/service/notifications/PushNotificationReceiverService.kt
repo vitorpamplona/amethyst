@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrC
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +40,13 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class PushNotificationReceiverService : FirebaseMessagingService() {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    // Exists to avoid exceptions stopping the coroutine
+    val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            Log.e("AmethystCoroutine", "Caught exception: ${throwable.message}", throwable)
+        }
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
     private val eventCache = LruCache<String, String>(100)
 
     // this is called when a message is received

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
-import coil3.util.CoilUtils.result
+import android.util.Log
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
@@ -78,7 +78,7 @@ class LocationState(
                             }.onEach {
                                 latestLocation = it
                             }.catch { e ->
-                                e.printStackTrace()
+                                Log.w("GeohashStateFlow", "Exception in the flow", e)
                                 latestLocation = LocationResult.LackPermission
                                 emit(LocationResult.LackPermission)
                             }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.people
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -37,12 +38,12 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 @Immutable
 data class PTag(
     override val pubKey: HexKey,
-    override val relayHint: String? = null,
+    override val relayHint: NormalizedRelayUrl? = null,
 ) : PubKeyReferenceTag {
     fun countMemory(): Long =
         2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
             pubKey.bytesUsedInMemory() +
-            (relayHint?.bytesUsedInMemory() ?: 0)
+            (relayHint?.url?.bytesUsedInMemory() ?: 0)
 
     fun toNProfile(): String = NProfile.create(pubKey, relayHint?.let { listOf(it) } ?: emptyList())
 
@@ -63,17 +64,22 @@ data class PTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return PTag(tag[1], tag.getOrNull(2))
+
+            val hint = pickRelayHint(tag)
+
+            return PTag(tag[1], hint)
+        }
+
+        private fun pickRelayHint(tag: Array<String>): NormalizedRelayUrl? {
+            if (tag.has(2) && tag[2].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[2])) return RelayUrlNormalizer.normalizeOrNull(tag[2])
+            return null
         }
 
         @JvmStatic
         fun parseKey(tag: Array<String>): HexKey? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) {
-                Log.w("PTag", "Invalid `$TAG_NAME` value ${tag.joinToString(", ")}")
-                return null
-            }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 
@@ -83,13 +89,18 @@ data class PTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return PubKeyHint(tag[1], tag[2])
+
+            val hint = pickRelayHint(tag)
+
+            ensure(hint != null) { return null }
+
+            return PubKeyHint(tag[1], hint)
         }
 
         @JvmStatic
         fun assemble(
             pubkey: HexKey,
-            relayHint: String?,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint)
+            relayHint: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url)
     }
 }

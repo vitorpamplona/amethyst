@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,23 +25,24 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.launchAndWaitAll
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.tryAndWait
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
+import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import kotlin.coroutines.resume
+import okhttp3.coroutines.executeAsync
 
 class RegisterAccounts(
     private val accounts: List<AccountInfo>,
     private val client: (String) -> OkHttpClient,
 ) {
+    @Suppress("SENSELESS_COMPARISON")
     val tag =
         if (BuildConfig.FLAVOR == "play") {
             "RegisterAccounts FirebaseMsgService"
@@ -51,70 +52,54 @@ class RegisterAccounts(
 
     private suspend fun signAllAuths(
         notificationToken: String,
-        remainingTos: List<Pair<AccountSettings, List<String>>>,
-        output: MutableList<RelayAuthEvent>,
-        onReady: (List<RelayAuthEvent>) -> Unit,
-    ) {
+        remainingTos: List<Registration>,
+    ): List<RelayAuthEvent> {
         if (remainingTos.isEmpty()) {
-            onReady(output)
-            return
+            return emptyList()
         }
 
-        launchAndWaitAll(remainingTos) { accountRelayPair ->
-            val result =
-                tryAndWait { continuation ->
-                    val signer = accountRelayPair.first.createSigner()
-                    // TODO: Modify the external launcher to launch as different users.
-                    // Right now it only registers if Amber has already approved this signature
-                    if (signer is NostrSignerExternal) {
-                        signer.launcher.registerLauncher(
-                            launcher = { },
-                            contentResolver = Amethyst.instance::contentResolverFn,
-                        )
-                    }
-
-                    RelayAuthEvent.create(accountRelayPair.second, notificationToken, signer) { result ->
-                        continuation.resume(result)
-                    }
-                }
-
-            if (result != null) {
-                output.add(result)
-            }
+        return mapNotNullAsync(remainingTos) { info ->
+            val signer = info.accountSettings.createSigner(Amethyst.instance.contentResolver)
+            RelayAuthEvent.create(info.relays, notificationToken, signer)
         }
-
-        onReady(output)
     }
+
+    class Registration(
+        val accountSettings: AccountSettings,
+        val relays: List<NormalizedRelayUrl>,
+    )
 
     // creates proof that it controls all accounts
     private suspend fun signEventsToProveControlOfAccounts(
         accounts: List<AccountInfo>,
         notificationToken: String,
-        onReady: (List<RelayAuthEvent>) -> Unit,
-    ) {
+    ): List<RelayAuthEvent> {
         val readyToSend =
             accounts
-                .mapNotNull {
-                    Log.d(tag, "Register Account ${it.npub}")
+                .mapNotNull { account ->
+                    if (account.hasPrivKey || account.loggedInWithExternalSigner) {
+                        Log.d(tag, "Register Account ${account.npub}")
 
-                    val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
-                    if (acc != null && acc.isWriteable()) {
-                        val nip65Read = acc.backupNIP65RelayList?.readRelays() ?: emptyList()
+                        val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(account.npub)
+                        if (acc != null && acc.isWriteable()) {
+                            val nip65Read = acc.backupNIP65RelayList?.readRelaysNorm() ?: emptyList()
+                            val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList()
 
-                        Log.d(tag, "Register Account ${it.npub} NIP65 Reads ${nip65Read.joinToString(", ")}")
+                            if (isDebug) {
+                                val readRelays = nip65Read.joinToString(", ") { it.url }
+                                Log.d(tag, "Register Account ${account.npub} NIP65 Reads $readRelays")
 
-                        val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList<String>()
+                                val dmRelays = nip17Read.joinToString(", ") { it.url }
+                                Log.d(tag, "Register Account ${account.npub} NIP17 Reads $dmRelays")
+                            }
 
-                        Log.d(tag, "Register Account ${it.npub} NIP17 Reads ${nip17Read.joinToString(", ")}")
+                            val relays = (nip65Read + nip17Read)
 
-                        val readKind3Relays = acc.backupContactList?.relays()?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList<String>()
-
-                        Log.d(tag, "Register Account ${it.npub} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
-
-                        val relays = (nip65Read + nip17Read + readKind3Relays)
-
-                        if (relays.isNotEmpty()) {
-                            Pair(acc, relays)
+                            if (relays.isNotEmpty()) {
+                                Registration(acc, relays)
+                            } else {
+                                null
+                            }
                         } else {
                             null
                         }
@@ -123,16 +108,10 @@ class RegisterAccounts(
                     }
                 }
 
-        val listOfAuthEvents = mutableListOf<RelayAuthEvent>()
-        signAllAuths(
-            notificationToken,
-            readyToSend,
-            listOfAuthEvents,
-            onReady,
-        )
+        return signAllAuths(notificationToken, readyToSend)
     }
 
-    fun postRegistrationEvent(events: List<RelayAuthEvent>) {
+    suspend fun postRegistrationEvent(events: List<RelayAuthEvent>) {
         val jsonObject =
             """{
             "events": [ ${events.joinToString(", ") { it.toJson() }} ]
@@ -146,19 +125,21 @@ class RegisterAccounts(
         val request =
             Request
                 .Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(url)
                 .post(body)
                 .build()
 
-        val isSucess = client(url).newCall(request).execute().use { it.isSuccessful }
-        Log.i(tag, "Server registration $isSucess")
+        val client = client(url)
+
+        client.newCall(request).executeAsync().use { response ->
+            Log.i(tag, "Server registration ${response.isSuccessful}")
+        }
     }
 
     suspend fun go(notificationToken: String) {
         if (notificationToken.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                signEventsToProveControlOfAccounts(accounts, notificationToken) { postRegistrationEvent(it) }
+                postRegistrationEvent(signEventsToProveControlOfAccounts(accounts, notificationToken))
             }
         }
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -41,17 +41,10 @@ fun Event.verifySignature(): Boolean {
 /** Checks if the ID is correct and then if the pubKey's secret key signed the event. */
 fun Event.checkSignature() {
     if (!verifyId()) {
-        throw Exception(
-            """
-            |Unexpected ID.
-            |  Event: ${toJson()}
-            |  Actual ID: $id
-            |  Generated: ${generateId()}
-            """.trimIndent(),
-        )
+        throw Exception("ID mismatch: our ID is ${generateId()} for event ${toJson()}")
     }
     if (!verifySignature()) {
-        throw Exception("""Bad signature!""")
+        throw Exception("Bad signature!")
     }
 }
 

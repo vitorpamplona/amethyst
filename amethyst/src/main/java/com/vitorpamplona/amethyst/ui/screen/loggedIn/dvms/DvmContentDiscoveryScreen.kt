@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,15 +39,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -56,41 +56,41 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.DVMCard
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.note.elements.customZapClick
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.SimpleImage75Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -117,10 +117,10 @@ fun DvmContentDiscoveryScreen(
             DvmTopBar(appDefinitionEventId, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it)) {
-            LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) {
-                it?.let { baseNote ->
+    ) { paddingValues ->
+        Column(Modifier.padding(paddingValues)) {
+            LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
+                note?.let { baseNote ->
                     WatchNoteEvent(
                         baseNote,
                         onNoteEventFound = {
@@ -151,7 +151,7 @@ fun DvmContentDiscoveryScreen(
         }
 
     val onRefresh = {
-        accountViewModel.requestDVMContentDiscovery(noteAuthor.pubkeyHex) {
+        accountViewModel.requestDVMContentDiscovery(noteAuthor) {
             requestEventID = it
         }
     }
@@ -194,7 +194,8 @@ fun ObserverContentDiscoveryResponse(
     nav: INav,
 ) {
     val noteAuthor = appDefinition.author ?: return
-    val updateFiltersFromRelays = dvmRequestId.live().metadata.observeAsState()
+
+    EventFinderFilterAssemblerSubscription(dvmRequestId, accountViewModel)
 
     val resultFlow =
         remember(dvmRequestId) {
@@ -261,10 +262,10 @@ fun PrepareViewContentDiscoveryModels(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
+    val resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel =
         viewModel(
             key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
-            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvm.pubkeyHex, requestid = dvmRequestId),
+            factory = NIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
         )
 
     LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
@@ -276,7 +277,7 @@ fun PrepareViewContentDiscoveryModels(
 
 @Composable
 fun RenderNostrNIP90ContentDiscoveryScreen(
-    resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel,
+    resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -320,19 +321,36 @@ fun FeedDVM(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val card = observeAppDefinition(appDefinitionNote)
+        val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
         card.cover?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(Size75dp)
-                        .clip(QuoteBorder),
-            )
-        } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
+            Box(contentAlignment = BottomStart) {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = card.name,
+                    contentScale = ContentScale.Crop,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = SimpleImage75Modifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                    onError = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                )
+            }
+        } ?: run {
+            appDefinitionNote.author?.let { author ->
+                Box(contentAlignment = BottomStart) {
+                    BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                }
+            }
+        }
 
         Spacer(modifier = DoubleVertSpacer)
 
@@ -358,7 +376,7 @@ fun FeedDVM(
             if (invoice != null) {
                 val context = LocalContext.current
                 Button(onClick = {
-                    if (accountViewModel.account.hasWalletConnectSetup()) {
+                    if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
                         accountViewModel.sendZapPaymentRequestFor(
                             bolt11 = invoice,
                             zappedNote = null,
@@ -395,7 +413,7 @@ fun FeedDVM(
                     val amountInInvoice =
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice).toLong()
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
 
@@ -447,8 +465,8 @@ fun ZapDVMButton(
             )
         }
 
-    // Makes sure the user is loaded to get his ln address
-    val userState = noteAuthor.live().metadata.observeAsState()
+    // Makes sure the user is loaded to get his ln address ahead of time.
+    UserFinderFilterAssemblerSubscription(noteAuthor, accountViewModel)
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -530,13 +548,14 @@ fun ZapDVMButton(
             if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
                 Spacer(ModifierWidth3dp)
 
+                val animatedProgress by animateFloatAsState(
+                    targetValue = zappingProgress,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                    label = "ZapIconIndicator",
+                )
+
                 CircularProgressIndicator(
-                    progress =
-                        animateFloatAsState(
-                            targetValue = zappingProgress,
-                            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                            label = "ZapIconIndicator",
-                        ).value,
+                    progress = { animatedProgress },
                     modifier = remember { Modifier.size(animationSize) },
                     strokeWidth = 2.dp,
                     color = grayTint,
@@ -587,19 +606,36 @@ fun FeedEmptyWithStatus(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val card = observeAppDefinition(appDefinitionNote)
+        val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
         card.cover?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(Size75dp)
-                        .clip(QuoteBorder),
-            )
-        } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
+            Box(contentAlignment = BottomStart) {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = card.name,
+                    contentScale = ContentScale.Crop,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = SimpleImage75Modifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                    onError = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                )
+            }
+        } ?: run {
+            appDefinitionNote.author?.let { author ->
+                Box(contentAlignment = BottomStart) {
+                    BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                }
+            }
+        }
 
         Spacer(modifier = DoubleVertSpacer)
 
@@ -639,26 +675,12 @@ fun convertAppMetadataToCard(metadata: AppMetadata?): DVMCard {
 }
 
 @Composable
-fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
-    val noteEvent =
-        appDefinitionNote.event as? AppDefinitionEvent ?: return DVMCard(
-            name = "",
-            description = "",
-            cover = null,
-            amount = "",
-            personalized = false,
-        )
-
-    val card by
-        appDefinitionNote
-            .live()
-            .metadata
-            .map {
-                convertAppMetadataToCard((it.note.event as? AppDefinitionEvent)?.appMetaData())
-            }.distinctUntilChanged()
-            .observeAsState(
-                convertAppMetadataToCard(noteEvent.appMetaData()),
-            )
-
+fun observeAppDefinition(
+    appDefinitionNote: Note,
+    accountViewModel: AccountViewModel,
+): DVMCard {
+    val card by observeNoteAndMap(appDefinitionNote, accountViewModel) {
+        convertAppMetadataToCard((it.event as? AppDefinitionEvent)?.appMetaData())
+    }
     return card
 }

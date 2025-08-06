@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import android.R.attr.onClick
 import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,13 +63,14 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.appendLink
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
@@ -162,7 +161,7 @@ fun ZapTheDevsCardPreview() {
             }
             """.trimIndent()
 
-        LocalCache.justConsume(Event.fromJson(releaseNotes), null)
+        LocalCache.justConsume(Event.fromJson(releaseNotes), null, false)
     }
 
     val accountViewModel = mockAccountViewModel()
@@ -189,7 +188,7 @@ fun ZapTheDevsCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val releaseNoteState by baseNote.live().metadata.observeAsState()
+    val releaseNoteState by observeNote(baseNote, accountViewModel)
     val releaseNote = releaseNoteState?.note ?: return
 
     Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
@@ -237,7 +236,7 @@ fun ZapTheDevsCard(
                 if (noteEvent != null) {
                     val route =
                         remember(releaseNote) {
-                            routeFor(releaseNote, accountViewModel.userProfile())
+                            routeFor(releaseNote, accountViewModel.account)
                         }
 
                     if (route != null) {

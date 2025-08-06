@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,6 +28,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -45,6 +46,7 @@ object PlaybackServiceClient {
         // release when can
         if (myController != null) {
             mediaControllerState.controller = null
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.Main) {
                 // myController.pause()
                 // myController.stop()
