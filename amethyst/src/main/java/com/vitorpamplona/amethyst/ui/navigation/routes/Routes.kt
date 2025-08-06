@@ -251,6 +251,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.GeoPost>() -> entry.toRoute<Route.GeoPost>()
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
         dest.hasRoute<Route.GenericCommentPost>() -> entry.toRoute<Route.GenericCommentPost>()
+        dest.hasRoute<Route.NewPublicMessage>() -> entry.toRoute<Route.NewPublicMessage>()
 
         else -> {
             null
