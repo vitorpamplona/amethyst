@@ -2539,21 +2539,7 @@ object LocalCache : ILocalCache {
         event: DraftEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        if (!event.isDeleted()) {
-            if (consumeBaseReplaceable(event, relay, wasVerified)) {
-                return true
-            }
-        } else {
-            // passes to the AccountViewModel for further delete.
-            val note = Note(event.id)
-            note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
-            relay?.let { note.addRelay(it) }
-            refreshNewNoteObservers(note)
-        }
-
-        return false
-    }
+    ): Boolean = !event.isDeleted() && consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(nip19: Entity) {
         when (nip19) {
