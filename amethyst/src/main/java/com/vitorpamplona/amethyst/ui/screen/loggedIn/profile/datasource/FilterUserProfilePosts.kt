@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -50,6 +51,7 @@ val UserProfilePostKinds1 =
         HighlightEvent.KIND,
         WikiNoteEvent.KIND,
         VoiceEvent.KIND,
+        PublicMessageEvent.KIND,
     )
 
 val UserProfilePostKinds2 =
