@@ -146,6 +146,7 @@ val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp
 
 val Size5Modifier = Modifier.size(5.dp)
 val Size10Modifier = Modifier.size(10.dp)
+val Size14Modifier = Modifier.size(14.dp)
 val Size15Modifier = Modifier.size(15.dp)
 val Size16Modifier = Modifier.size(16.dp)
 val Size17Modifier = Modifier.size(17.dp)

@@ -658,7 +658,7 @@ class AccountViewModel(
             showErrorIfNoLnAddress = showErrorIfNoLnAddress,
             okHttpClient = ::okHttpClientForMoney,
             onError = onError,
-            onProgress = { onProgress(it) },
+            onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
             zapType = zapType ?: defaultZapType(),
         )

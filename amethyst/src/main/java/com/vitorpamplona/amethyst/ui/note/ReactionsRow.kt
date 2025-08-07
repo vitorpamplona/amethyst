@@ -135,7 +135,7 @@ import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightWithPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserWithPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size14dp
+import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -977,7 +977,7 @@ fun ZapReaction(
     accountViewModel: AccountViewModel,
     iconSize: Dp = Size20dp,
     iconSizeModifier: Modifier = Size20Modifier,
-    animationSize: Dp = Size14dp,
+    animationModifier: Modifier = Size14Modifier,
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
@@ -1108,7 +1108,7 @@ fun ZapReaction(
 
             CircularProgressIndicator(
                 progress = { animatedProgress },
-                modifier = remember { Modifier.size(animationSize) },
+                modifier = animationModifier,
                 strokeWidth = 2.dp,
             )
         } else {
