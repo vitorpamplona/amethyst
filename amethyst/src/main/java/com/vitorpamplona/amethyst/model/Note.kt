@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import coil3.util.CoilUtils.result
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -472,28 +473,28 @@ open class Note(
     }
 
     private suspend fun isPaidByCalculation(
+        zapPayments: List<Pair<Note, Note?>>,
+        afterTimeInSeconds: Long,
         account: Account,
-        zapEvents: List<Pair<Note, Note?>>,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        if (zapEvents.isEmpty()) {
-            return
+    ): Boolean {
+        if (zapPayments.isEmpty()) {
+            return false
         }
 
-        var hasSentOne = false
-
-        launchAndWaitAll(zapEvents) { next ->
+        return anyAsync(zapPayments) { next ->
             val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
 
             if (zapResponseEvent != null) {
-                account.nip47SignerState.decryptResponse(zapResponseEvent)?.let { response ->
-                    val result = response is PayInvoiceSuccessResponse && account.nip47SignerState.isNIP47Author(zapResponseEvent.requestAuthor())
-
-                    if (!hasSentOne && result == true) {
-                        hasSentOne = true
-                        onWasZappedByAuthor()
-                    }
+                val response = account.nip47SignerState.decryptResponse(zapResponseEvent)
+                if (response != null) {
+                    response is PayInvoiceSuccessResponse &&
+                        account.nip47SignerState.isNIP47Author(zapResponseEvent.requestAuthor()) &&
+                        zapResponseEvent.createdAt > afterTimeInSeconds
+                } else {
+                    false
                 }
+            } else {
+                false
             }
         }
     }
@@ -501,75 +502,81 @@ open class Note(
     private suspend fun isZappedByCalculation(
         option: Int?,
         user: User,
+        afterTimeInSeconds: Long,
         account: Account,
         zapEvents: Map<Note, Note?>,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
+    ): Boolean {
         if (zapEvents.isEmpty()) {
-            return
+            return false
         }
 
-        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent?>>()
+        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent>>()
 
         zapEvents.forEach { next ->
             val zapRequest = next.key.event as LnZapRequestEvent
             val zapEvent = next.value?.event as? LnZapEvent
 
-            if (!zapRequest.isPrivateZap()) {
-                // public events
-                if (zapRequest.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
-                    onWasZappedByAuthor()
-                    return
-                }
-            } else {
-                // private events
-
-                // if has already decrypted
-                val privateZap = account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)
-                if (privateZap != null) {
-                    if (privateZap.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
-                        onWasZappedByAuthor()
-                        return
+            if (zapEvent != null) {
+                if (!zapRequest.isPrivateZap()) {
+                    // public events
+                    if (zapRequest.pubKey == user.pubkeyHex &&
+                        zapEvent.createdAt > afterTimeInSeconds &&
+                        (option == null || option == zapEvent.zappedPollOption())
+                    ) {
+                        return true
                     }
                 } else {
-                    if (account.isWriteable()) {
-                        parallelDecrypt.add(Pair(zapRequest, zapEvent))
+                    // private events
+
+                    // if has already decrypted
+                    val privateZap = account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)
+                    if (privateZap != null) {
+                        if (privateZap.pubKey == user.pubkeyHex &&
+                            zapEvent.createdAt > afterTimeInSeconds &&
+                            (option == null || option == zapEvent.zappedPollOption())
+                        ) {
+                            return true
+                        }
+                    } else {
+                        if (account.isWriteable()) {
+                            parallelDecrypt.add(Pair(zapRequest, zapEvent))
+                        }
                     }
                 }
             }
         }
 
-        val result =
-            anyAsync(parallelDecrypt) { pair ->
-                val result = account.privateZapsDecryptionCache.decryptPrivateZap(pair.first)
+        if (parallelDecrypt.isEmpty()) {
+            return false
+        }
 
-                result?.pubKey == user.pubkeyHex && (option == null || option == pair.second?.zappedPollOption())
-            }
-
-        if (result) {
-            onWasZappedByAuthor()
+        return anyAsync(parallelDecrypt) { pair ->
+            val result = account.privateZapsDecryptionCache.decryptPrivateZap(pair.first)
+            result?.pubKey == user.pubkeyHex &&
+                pair.second.createdAt > afterTimeInSeconds &&
+                (option == null || option == pair.second.zappedPollOption())
         }
     }
 
     suspend fun isZappedBy(
         user: User,
+        afterTimeInSeconds: Long,
         account: Account,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        isZappedByCalculation(null, user, account, zaps, onWasZappedByAuthor)
+    ): Boolean {
+        val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
+        if (first) return true
         if (account.userProfile() == user) {
-            isPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
+            return isPaidByCalculation(zapPayments.toList(), afterTimeInSeconds, account)
         }
+        return false
     }
 
     suspend fun isZappedBy(
         option: Int?,
         user: User,
+        afterTimeInSeconds: Long,
         account: Account,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        isZappedByCalculation(option, user, account, zaps, onWasZappedByAuthor)
-    }
+    ): Boolean = isZappedByCalculation(option, user, afterTimeInSeconds, account, zaps)
 
     fun getReactionBy(user: User): String? =
         reactions.firstNotNullOfOrNull {

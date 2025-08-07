@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,12 +84,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -285,7 +288,7 @@ fun ZapDonationButton(
     accountViewModel: AccountViewModel,
     iconSize: Dp = Size35dp,
     iconSizeModifier: Modifier = Size20Modifier,
-    animationSize: Dp = 14.dp,
+    animationModifier: Modifier = Size14Modifier,
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
@@ -300,6 +303,8 @@ fun ZapDonationButton(
     val scope = rememberCoroutineScope()
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
+    var zapStartingTime by remember { mutableLongStateOf(0L) }
+
     var hasZapped by remember { mutableStateOf(false) }
 
     Button(
@@ -308,6 +313,7 @@ fun ZapDonationButton(
                 baseNote,
                 accountViewModel,
                 context,
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onZappingProgress = { progress: Float ->
                     scope.launch { zappingProgress = progress }
                 },
@@ -329,6 +335,7 @@ fun ZapDonationButton(
                 zapAmountChoices = it,
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onDismiss = {
                     wantsToZap = null
                     zappingProgress = 0f
@@ -376,17 +383,30 @@ fun ZapDonationButton(
             if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
                 Spacer(ModifierWidth3dp)
 
-                CircularProgressIndicator(
-                    progress =
-                        animateFloatAsState(
-                            targetValue = zappingProgress,
-                            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                            label = "ZapIconIndicator",
-                        ).value,
-                    modifier = remember { Modifier.size(animationSize) },
-                    strokeWidth = 2.dp,
-                    color = grayTint,
+                val animatedProgress by animateFloatAsState(
+                    targetValue = zappingProgress,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                    label = "ZapIconIndicator",
                 )
+
+                ObserveZapIcon(
+                    baseNote,
+                    accountViewModel,
+                    zapStartingTime,
+                ) { wasZappedByLoggedInUser ->
+                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
+                        if (it) {
+                            ZappedIcon(iconSizeModifier)
+                        } else {
+                            CircularProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = animationModifier,
+                                strokeWidth = 2.dp,
+                                color = grayTint,
+                            )
+                        }
+                    }
+                }
             } else {
                 ObserveZapIcon(
                     baseNote,
@@ -423,6 +443,7 @@ fun customZapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     context: Context,
+    onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: (List<Long>) -> Unit,
     onError: (String, String, User?) -> Unit,
@@ -452,6 +473,7 @@ fun customZapClick(
         val amount = choices.first()
 
         if (amount > 1100) {
+            onZapStarts()
             accountViewModel.zap(
                 baseNote,
                 amount * 1000,

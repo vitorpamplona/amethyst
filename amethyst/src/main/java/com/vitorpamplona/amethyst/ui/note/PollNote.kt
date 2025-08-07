@@ -52,6 +52,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -100,6 +102,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -517,6 +520,8 @@ fun ZapVote(
     }
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
+    var zapStartingTime by remember { mutableLongStateOf(0L) }
+
     var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
     val context = LocalContext.current
@@ -558,6 +563,7 @@ fun ZapVote(
                         accountViewModel.zapAmountChoices().size == 1 &&
                         pollViewModel.isValidInputVoteAmount(accountViewModel.zapAmountChoices().first())
                     ) {
+                        zapStartingTime = TimeUtils.now()
                         accountViewModel.zap(
                             baseNote,
                             accountViewModel.zapAmountChoices().first() * 1000,
@@ -583,6 +589,7 @@ fun ZapVote(
                 accountViewModel,
                 pollViewModel,
                 poolOption.option,
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onDismiss = {
                     wantsToZap = false
                     zappingProgress = 0f
@@ -660,9 +667,10 @@ fun ZapVote(
                 )
             } else {
                 Spacer(Modifier.width(3.dp))
+
                 CircularProgressIndicator(
                     progress = { zappingProgress },
-                    modifier = Modifier.size(14.dp),
+                    modifier = Size14Modifier,
                     strokeWidth = 2.dp,
                 )
             }
@@ -688,6 +696,7 @@ fun FilteredZapAmountChoicePopup(
     accountViewModel: AccountViewModel,
     pollViewModel: PollNoteViewModel,
     pollOption: Int,
+    onZapStarts: () -> Unit,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String, toUser: User?) -> Unit,
@@ -717,6 +726,7 @@ fun FilteredZapAmountChoicePopup(
                 Button(
                     modifier = Modifier.padding(horizontal = 3.dp),
                     onClick = {
+                        onZapStarts()
                         accountViewModel.zap(
                             baseNote,
                             amountInSats * 1000,
@@ -743,6 +753,7 @@ fun FilteredZapAmountChoicePopup(
                         modifier =
                             Modifier.combinedClickable(
                                 onClick = {
+                                    onZapStarts()
                                     accountViewModel.zap(
                                         baseNote,
                                         amountInSats * 1000,

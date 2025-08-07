@@ -516,10 +516,8 @@ class Account(
 
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note?,
-        onWasZapped: () -> Unit,
-    ) {
-        zappedNote?.isZappedBy(userProfile(), this, onWasZapped)
-    }
+        afterTimeInSeconds: Long,
+    ): Boolean = zappedNote?.isZappedBy(userProfile(), afterTimeInSeconds, this) == true
 
     suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal = zappedNote.zappedAmountWithNWCPayments(nip47SignerState)
 

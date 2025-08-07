@@ -395,12 +395,11 @@ class AccountViewModel(
 
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
-        onWasZapped: (Boolean) -> Unit,
-    ) {
+        afterTimeInSeconds: Long,
+    ): Boolean =
         withContext(Dispatchers.IO) {
-            account.calculateIfNoteWasZappedByAccount(zappedNote) { onWasZapped(true) }
+            account.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
         }
-    }
 
     suspend fun calculateZapAmount(zappedNote: Note): String =
         if (zappedNote.zapPayments.isNotEmpty()) {

@@ -66,6 +66,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -154,11 +155,13 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -994,6 +997,7 @@ fun ZapReaction(
     val scope = rememberCoroutineScope()
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
+    var zapStartingTime by remember { mutableLongStateOf(0L) }
 
     Row(
         verticalAlignment = CenterVertically,
@@ -1008,6 +1012,7 @@ fun ZapReaction(
                             baseNote,
                             accountViewModel,
                             context,
+                            onZapStarts = { zapStartingTime = TimeUtils.now() },
                             onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
                             onMultipleChoices = {
                                 scope.launch {
@@ -1033,6 +1038,7 @@ fun ZapReaction(
                 baseNote = baseNote,
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onDismiss = {
                     wantsToZap = false
                     zappingProgress = 0f
@@ -1083,6 +1089,7 @@ fun ZapReaction(
 
         if (wantsToSetCustomZap) {
             ZapCustomDialog(
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onClose = { wantsToSetCustomZap = false },
                 onError = { _, message, user ->
                     scope.launch {
@@ -1106,11 +1113,23 @@ fun ZapReaction(
                 label = "ZapIconIndicator",
             )
 
-            CircularProgressIndicator(
-                progress = { animatedProgress },
-                modifier = animationModifier,
-                strokeWidth = 2.dp,
-            )
+            ObserveZapIcon(
+                baseNote,
+                accountViewModel,
+                zapStartingTime,
+            ) { wasZappedByLoggedInUser ->
+                CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
+                    if (it) {
+                        ZappedIcon(iconSizeModifier)
+                    } else {
+                        CircularProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = animationModifier,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                }
+            }
         } else {
             ObserveZapIcon(
                 baseNote,
@@ -1136,6 +1155,7 @@ fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     context: Context,
+    onZapStarts: () -> Unit,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
     onError: (String, String, User?) -> Unit,
@@ -1162,6 +1182,7 @@ fun zapClick(
             R.string.login_with_a_private_key_to_be_able_to_send_zaps,
         )
     } else if (choices.size == 1) {
+        onZapStarts()
         accountViewModel.zap(
             baseNote,
             choices.first() * 1000,
@@ -1181,6 +1202,7 @@ fun zapClick(
 fun ObserveZapIcon(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    afterTimeInSeconds: Long = 0,
     inner: @Composable (MutableState<Boolean>) -> Unit,
 ) {
     val wasZappedByLoggedInUser = remember { mutableStateOf(false) }
@@ -1196,10 +1218,9 @@ fun ObserveZapIcon(
 
         LaunchedEffect(key1 = zapsState) {
             if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
-                accountViewModel.calculateIfNoteWasZappedByAccount(baseNote) { newWasZapped ->
-                    if (wasZappedByLoggedInUser.value != newWasZapped) {
-                        wasZappedByLoggedInUser.value = newWasZapped
-                    }
+                val newWasZapped = accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
+                if (wasZappedByLoggedInUser.value != newWasZapped) {
+                    wasZappedByLoggedInUser.value = newWasZapped
                 }
             }
         }
@@ -1552,6 +1573,7 @@ fun ZapAmountChoicePopup(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
+    onZapStarts: () -> Unit,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
@@ -1562,7 +1584,7 @@ fun ZapAmountChoicePopup(
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
 
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onDismiss, onChangeAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onZapStarts, onDismiss, onChangeAmount, onError, onProgress, onPayViaIntent)
 }
 
 @Composable
@@ -1571,6 +1593,7 @@ fun ZapAmountChoicePopup(
     zapAmountChoices: ImmutableList<Long>,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
+    onZapStarts: () -> Unit,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
@@ -1578,7 +1601,7 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     val visibilityState = rememberVisibilityState(onDismiss)
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, visibilityState, onChangeAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onError, onProgress, onPayViaIntent)
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -1589,6 +1612,7 @@ fun ZapAmountChoicePopup(
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
     visibilityState: MutableTransitionState<Boolean>,
+    onZapStarts: () -> Unit,
     onChangeAmount: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
@@ -1615,6 +1639,7 @@ fun ZapAmountChoicePopup(
                     Button(
                         modifier = Modifier.padding(horizontal = 3.dp),
                         onClick = {
+                            onZapStarts()
                             accountViewModel.zap(
                                 baseNote,
                                 amountInSats * 1000,
@@ -1641,6 +1666,7 @@ fun ZapAmountChoicePopup(
                             modifier =
                                 Modifier.combinedClickable(
                                     onClick = {
+                                        onZapStarts()
                                         accountViewModel.zap(
                                             baseNote,
                                             amountInSats * 1000,
