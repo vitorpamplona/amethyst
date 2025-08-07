@@ -62,12 +62,16 @@ class PublicMessageEvent(
 
     fun groupKeySetWithoutOwner() = tags.mapNotNullTo(mutableSetOf(), ReceiverTag::parseKey) - this.pubKey
 
-    fun groupAsNProfileList(toRemove: Set<HexKey>) =
-        group().joinToString {
-            NProfile.create(it.pubKey, it.relayHint)
-        }
+    fun groupAsNProfileList() =
+        tags
+            .mapNotNull(ReceiverTag::parse)
+            .joinToString {
+                "nostr:" + NProfile.create(it.pubKey, it.relayHint)
+            }
 
     fun chatroomKey(user: HexKey) = groupKeySet() - user
+
+    fun peopleAndContent() = groupAsNProfileList() + " " + content
 
     companion object {
         const val KIND = 24
