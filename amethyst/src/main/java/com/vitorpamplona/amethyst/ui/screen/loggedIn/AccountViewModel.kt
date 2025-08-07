@@ -1249,7 +1249,7 @@ class AccountViewModel(
                 if (isDebug) {
                     Log.d(
                         "Rendering Metrics",
-                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                        "Delete feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
                     )
                 }
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {

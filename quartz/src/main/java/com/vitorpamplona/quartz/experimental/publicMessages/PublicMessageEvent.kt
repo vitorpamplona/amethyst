@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -58,6 +59,19 @@ class PublicMessageEvent(
     fun groupKeys() = tags.mapNotNullTo(mutableListOf(this.pubKey), ReceiverTag::parseKey)
 
     fun groupKeySet() = tags.mapNotNullTo(mutableSetOf(this.pubKey), ReceiverTag::parseKey)
+
+    fun groupKeySetWithoutOwner() = tags.mapNotNullTo(mutableSetOf(), ReceiverTag::parseKey) - this.pubKey
+
+    fun groupAsNProfileList() =
+        tags
+            .mapNotNull(ReceiverTag::parse)
+            .joinToString {
+                "nostr:" + NProfile.create(it.pubKey, it.relayHint)
+            }
+
+    fun chatroomKey(user: HexKey) = groupKeySet() - user
+
+    fun peopleAndContent() = groupAsNProfileList() + " " + content
 
     companion object {
         const val KIND = 24

@@ -142,9 +142,11 @@ sealed class Route {
 
     @Serializable data class NewPublicMessage(
         val to: String,
+        val replyId: HexKey? = null,
     ) : Route() {
-        constructor(users: Set<HexKey>) : this(
+        constructor(users: Set<HexKey>, parentId: HexKey) : this(
             to = users.joinToString(","),
+            replyId = parentId,
         )
 
         fun toKey(): Set<HexKey> = to.split(",").toSet()
@@ -253,6 +255,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.GeoPost>() -> entry.toRoute<Route.GeoPost>()
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
         dest.hasRoute<Route.GenericCommentPost>() -> entry.toRoute<Route.GenericCommentPost>()
+        dest.hasRoute<Route.NewPublicMessage>() -> entry.toRoute<Route.NewPublicMessage>()
 
         else -> {
             null

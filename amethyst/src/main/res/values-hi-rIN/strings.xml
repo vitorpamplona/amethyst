@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। अनुचरण रोकने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। शब्द अथवा वाक्य छिपाने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। शब्द अथवा वाक्य आच्छादन हटाने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। स्थापना विकल्पों का परिवर्तन करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। आरोहण करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">आप ख्याप्य कुंचिका का प्रयोग कर रहे हैं जिससे केवल पढ सकते हैं। घटनाओं पर हस्ताक्षर करने के लिए गुप्त कुंचिका के साथ प्रवेशांकन करें</string>
+    <string name="unauthorized_exception">अनधिकृत अपरहस्यीकरण</string>
+    <string name="unauthorized_exception_description">हस्ताक्षरकर्ता ने इस कार्य करने के लिए अपरहस्यीकरण का अधिकार नहीं दिया। आपके हस्ताक्षर क्रमक में निप॰-४४ अपरहस्यीकरण सक्रिय करें तथा पुनः प्रयास करें</string>
+    <string name="signer_not_found_exception">हस्ताक्षरकर्ता अप्राप्त</string>
+    <string name="signer_not_found_exception_description">क्या हस्ताक्षर क्रमक अस्थापित किया गया। जाँच करें कि यदि हस्ताक्षरकर्ता स्थापित है तथा यह लेखा वहाँ है। यदि हस्ताक्षर क्रमक में परिवर्तन है तो निर्गमनांकन तथा प्रवेशांकन पुनः करें।</string>
     <string name="zaps">ज्साप</string>
     <string name="view_count">दृष्ट संख्या</string>
     <string name="boost">उद्धृत करें</string>
@@ -98,6 +105,7 @@
     <string name="my_awesome_group">मेरा बढिया झुण्ड</string>
     <string name="picture_url">चित्र जालपता</string>
     <string name="description">विवरण</string>
+    <string name="no_description">विवरण अप्राप्त</string>
     <string name="about_us">"हमारा परिचय…"</string>
     <string name="what_s_on_your_mind">आपके मन में क्या है?</string>
     <string name="write_a_message">सन्देश लिखें …</string>
@@ -139,6 +147,10 @@
     <string name="video_saved_to_the_gallery">चलचित्र को संचारयन्त्र के चलचित्रालय में सुरक्षित रखा गया</string>
     <string name="failed_to_save_the_video">चलचित्र को सुरक्षित रखने में असफल</string>
     <string name="upload_image">चित्र आरोहण</string>
+    <string name="take_a_picture">एक चित्र लें</string>
+    <string name="record_a_message">ऐक संदेश का अभिलेखन करें</string>
+    <string name="record_a_message_title">ऐक संदेश का अभिलेखन करें</string>
+    <string name="record_a_message_description">टाँकें तथा दबाए रखें संदेश का अभिलेखन करने के लिए</string>
     <string name="uploading">आरोहण चल रहा है…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता का कोई लैटनिंग पता स्थापित नहीं जिसपर साट्स प्राप्त कर सके</string>
     <string name="reply_here">"उत्तर यहाँ दें.. "</string>
@@ -231,6 +243,8 @@
     <string name="public_chat_relays_title">पुनःप्रसारक</string>
     <string name="public_chat_relays_explainer">इस समुदाय के निवास के लिए १ - ३ पुनःप्रसारकों को जोडें।
         नोस्टर ग्राहक इस स्थापना विकल्प का प्रयोग करेंगे यह जानने के लिए कि कहाँ से सन्देशों का अवरोहण करना है तथा कहाँ आपके सन्देश भेजने हैं।</string>
+    <string name="paid_relay">सशुल्क पुनःप्रसारक</string>
+    <string name="tor_relay">संयोजन के समय टोर का प्रयोग अवश्य करें</string>
     <string name="posts_received">पत्र प्राप्त</string>
     <string name="remove">हटाएँ</string>
     <string name="translations_auto">स्वचालित</string>
@@ -275,6 +289,7 @@
     <string name="biometric_error">अपक्रम</string>
     <string name="badge_created_by">"%1$s के द्वारा बनाया गया"</string>
     <string name="badge_award_image_for">"पदक पुरस्कार चित्र %1$s के लिए"</string>
+    <string name="badge_award_image">\"पदक पुरस्कार चित्र</string>
     <string name="new_badge_award_notif">आपको नया पदक पुरस्कार प्राप्त हुआ</string>
     <string name="award_granted_to">पदक पुरस्कार इनको दिया गया</string>
     <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति किया गया टाँकाफलक में</string>
@@ -422,6 +437,7 @@
     <string name="no">नहीं</string>
     <string name="follow_list_selection">अनुचरण सूची</string>
     <string name="follow_list_kind3follows">सभी अनुचरित</string>
+    <string name="follow_list_kind3follows_proxy">प्रतिनिधि द्वारा अनुचरित</string>
     <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
     <string name="follow_list_mute_list">मौन सूची</string>
@@ -693,6 +709,7 @@
     <string name="wallet_number">धनकोष %1$s</string>
     <string name="error_opening_external_signer">हस्ताक्षर क्रमक खोलने में अपक्रम</string>
     <string name="error_opening_external_signer_description">हस्ताक्षर क्रमक ढूँढने में असफल। जाँच करें यदि क्रमक को अस्थापित नहीं किया गया हो</string>
+    <string name="sign_request_rejected2">हस्ताक्षर अनुरोध अस्वीकृत</string>
     <string name="sign_request_rejected">हस्ताक्षर क्रमक अस्वीकार किया</string>
     <string name="sign_request_rejected_description">सुनिश्चित करें हस्ताक्षर क्रमक ने इस व्यापार को अनुमति दिया</string>
     <string name="no_wallet_found_with_error">कोई धनकोष प्राप्त नहीं लैटनिंग चालान चुकाने के लिए (अपक्रम : %1$s)। कृपया एक लैटनिंग धनकोष की स्थापना करें ज्सापों का प्रयोग करने के लिए</string>
@@ -876,12 +893,29 @@
     <string name="private_outbox_section_explainer">१ - ३ पुनःप्रसारकों को जोडें उन घटनाओं को रखने के लिए जो कोई अन्य नहीं देख सकता जैसे कि पाण्डुलिपियाँ अथवा क्रमक के स्थापना विकल्प। आदर्शतः ये पुनःप्रसारक स्थानीय होने चाहिए अथवा प्रत्येक उपयोगकर्ता के विषयवस्तु अवरोहण के पूर्व परिचय प्रमाणीकरण अनिवार्य होना चाहिए।</string>
     <string name="kind_3_section">सामान्य पुनःप्रसारक</string>
     <string name="kind_3_section_description">अमेथिस्ट इन पुनःप्रसारकों का प्रयोग करता है आपके पत्रों का अवरोहण करने के लिए।</string>
+    <string name="connected_section">संयोजित पुनःप्रसारक</string>
+    <string name="connected_section_description">वर्तमान उपयुक्त पुनःप्रसारकों की सूची</string>
     <string name="kind_3_recommended_section">अनुशंसित पुनःप्रसारक</string>
     <string name="kind_3_recommended_section_description">सूचित उपयोगकर्ताओं के पत्र प्राप्त करने के लिए निम्नलिखित पुनःप्रसारकों को अपने सामान्य पुनःप्रसारक सूची में जोडें।</string>
     <string name="search_section">खोज पुनःप्रसारक</string>
     <string name="search_section_explainer">पुनःप्रसारकों की सूची जिनको किसी विषयवस्तु अथवा उपयोगकर्ताओं को खोजने में प्रयोग करना चाहिए। कोई विकल्प नहीं तो उपयोगकर्ता सूचक जोडना तथा खोज निष्क्रिय होंगे। सुनिश्चित करें कि वे निप॰-५० को कार्यान्वित किये हैं।</string>
     <string name="local_section">स्थानीय पुनःप्रसारक</string>
     <string name="local_section_explainer">पुनःप्रसारकों की सूची जो इस यन्त्र पर चल रहे हैं।</string>
+    <string name="trusted_relays_title">विश्वसनीय पुनःप्रसारक</string>
+    <string name="trusted_section">विश्वसनीय पुनःप्रसारक</string>
+    <string name="trusted_section_explainer">विश्वसनीय पुनःप्रसारक जिनके लिए टोर संयोजन आवश्यक नहीं</string>
+    <string name="proxy_relays_title">प्रतिनिधि पुनःप्रसारक</string>
+    <string name="proxy_section">प्रतिनिधि पुनःप्रसारक</string>
+    <string name="proxy_section_explainer">संग्रहकर्ता पुनःप्रसारक जो क्रमक द्वारा उपयुक्त होना चाहिए आपके सूचनावलियों का अवरोहण करने के लिए। जैसे कि filter.nostr.wine । यह निर्गतपेटिका प्रतिरूप को प्रतिस्थापित करेगा तथा क्रमक आपके सूचियों में पुनःप्रसारकों के साथ ही जुडेगा।</string>
+    <string name="broadcast_relays_title">प्रसारण पुनःप्रसारक</string>
+    <string name="broadcast_section">प्रसारण पुनःप्रसारक</string>
+    <string name="broadcast_section_explainer">पुनःप्रसारक जो आपके पत्रों को अन्य सभी पुनःप्रसारकों को भेजने का विशेष कार्य करते हैं। जैसे कि sendit.nosflare.com । अमेथिस्ट इस पुनःप्रसारक को जोडेगा आपके द्वारा कृत सभी नए घटनाओं के लिए</string>
+    <string name="indexer_relays_title">अनुक्रमणीकार पुनःप्रसारक</string>
+    <string name="indexer_section">अनुक्रमणीकार पुनःप्रसारक</string>
+    <string name="indexer_section_explainer">पुनःप्रसारक जो सभी के उपतथ्य तथा पुनःप्रसारक सूचियों की जानकारी रखने का विशेष कार्य करते हैं। जैसे कि purplepag.es । अमेथिस्ट इन पुनःप्रसारकों का उपयोग करेगा उन प्रयोक्ताओं को ढूँढने के लिए जो आपके सूचियों में नहीं हैं।</string>
+    <string name="blocked_relays_title">बाधित पुनःप्रसारक</string>
+    <string name="blocked_section">बाधित पुनःप्रसारक</string>
+    <string name="blocked_section_explainer">अमेथिस्ट इन पुनःप्रसारकों से कभी नहीं जुडेगा</string>
     <string name="zap_the_devs_title">क्रमलेखकों को ज्साप करें!</string>
     <string name="zap_the_devs_description">आपका दान हमारा सहायक है परिवर्तन लाने में। प्रत्येक साट गणनीय है!</string>
     <string name="donate_now">दान करें अभी</string>
@@ -971,6 +1005,7 @@
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
     <string name="temporary_account">यन्त्र ताला लगने पर निर्गमनांकन करें</string>
     <string name="private_message">निजी सन्देश</string>
+    <string name="public_message">सार्वजनिक संदेश</string>
     <string name="group_relay">चर्चा पुनःप्रसारक</string>
     <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
     <string name="share_image">चित्र बाँटें…</string>

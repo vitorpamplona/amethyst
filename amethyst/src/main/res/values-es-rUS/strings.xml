@@ -51,6 +51,12 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder dejar de seguir a otros usuarios.</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder ocultar una palabra o frase.</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder mostrar una palabra o frase.</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder subir contenido.</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder firmar eventos.</string>
+    <string name="unauthorized_exception">Descifrado no autorizado</string>
+    <string name="unauthorized_exception_description">El firmante no autorizó un descifrado necesario para realizar esta operación. Activa el descifrado NIP-44 en tu aplicación de firmante e inténtalo de nuevo</string>
+    <string name="signer_not_found_exception">No se ha encontrado el firmante.</string>
+    <string name="signer_not_found_exception_description">¿Se desinstaló la app del firmante? Comprueba si el firmante está instalado y tiene esta cuenta. Cierra sesión y vuelve a iniciar sesión en la app del firmante si cambió.</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Total vistas</string>
     <string name="boost">Impulsar</string>
@@ -71,6 +77,8 @@
     <string name="error_parsing_error_message">Error al analizar el mensaje de error</string>
     <string name="following">" Siguiendo"</string>
     <string name="followers">" Seguidores"</string>
+    <string name="number_following">"%1$s siguiendo"</string>
+    <string name="number_followers">"%1$s seguidores"</string>
     <string name="profile">Perfil</string>
     <string name="security_filters">Filtros de seguridad</string>
     <string name="log_out">Cerrar sesión</string>
@@ -96,6 +104,7 @@
     <string name="my_awesome_group">Mi grupo genial</string>
     <string name="picture_url">URL de imagen</string>
     <string name="description">Descripción</string>
+    <string name="no_description">No se encontró la descripción</string>
     <string name="about_us">"Quiénes somos…"</string>
     <string name="what_s_on_your_mind">¿Qué estás pensando?</string>
     <string name="write_a_message">Escribir un mensaje…</string>
@@ -137,6 +146,10 @@
     <string name="video_saved_to_the_gallery">Video guardado en la galería de videos del teléfono</string>
     <string name="failed_to_save_the_video">Error al guardar el video</string>
     <string name="upload_image">Subir imagen</string>
+    <string name="take_a_picture">Tomar una foto</string>
+    <string name="record_a_message">Grabar un mensaje</string>
+    <string name="record_a_message_title">Grabar un mensaje</string>
+    <string name="record_a_message_description">Haz clic y mantén presionado para grabar un mensaje</string>
     <string name="uploading">Subiendo…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">El usuario no tiene configurada una dirección de Lightning para recibir sats</string>
     <string name="reply_here">"responde aquí… "</string>
@@ -155,6 +168,7 @@
     <string name="gallery">Galería</string>
     <string name="follows">"Seguidos"</string>
     <string name="reports">"Reportes"</string>
+    <string name="number_reports">"%1$s informes"</string>
     <string name="more_options">Más opciones</string>
     <string name="relays">" Relés"</string>
     <string name="website">Sitio web</string>
@@ -213,6 +227,13 @@
     <string name="unfollow">Dejar de seguir</string>
     <string name="channel_created">Canal creado</string>
     <string name="channel_information_changed_to">"La información del canal cambió a"</string>
+    <string name="ephemeral_relay_chat">Chat temporal</string>
+    <string name="relay_chat">Chat en relé</string>
+    <string name="relay_chat_title">Chats en relé</string>
+    <string name="relay_chat_explainer">Los chats en relé son grupos de chat controlados por su relé de origen.
+        Son visibles para todos los usuarios de Nostr y cualquiera puede participar en ellos.
+        Son ideales para comunidades abiertas en torno a temas específicos. Algunos de estos grupos son efímeros
+    y, por lo tanto, los mensajes del chat desaparecen con el tiempo</string>
     <string name="public_chat">Chat público</string>
     <string name="public_chat_title">Metadatos públicos del chat</string>
     <string name="public_chat_explainer">Los chats públicos son visibles para todos en Nostr y cualquiera
@@ -221,6 +242,8 @@
     <string name="public_chat_relays_title">Relés</string>
     <string name="public_chat_relays_explainer">Inserta entre 1 y 3 relés que alojan este grupo.
         Los clientes de Nostr utilizan esta configuración para saber de dónde descargar y adónde enviar los mensajes.</string>
+    <string name="paid_relay">Relé de pago</string>
+    <string name="tor_relay">Fuerza Tor al conectarse</string>
     <string name="posts_received">publicaciones recibidas</string>
     <string name="remove">Eliminar</string>
     <string name="translations_auto">Automático</string>
@@ -265,6 +288,7 @@
     <string name="biometric_error">Error</string>
     <string name="badge_created_by">"Creado por %1$s"</string>
     <string name="badge_award_image_for">"Imagen de premio de insignia por %1$s"</string>
+    <string name="badge_award_image">\"Imagen de premio de insignia</string>
     <string name="new_badge_award_notif">Recibiste un nuevo premio de insignia</string>
     <string name="award_granted_to">Premio de insignia otorgado a</string>
     <string name="copied_note_text_to_clipboard">Texto de la nota copiado al portapapeles</string>
@@ -290,6 +314,7 @@
     <string name="quick_action_unfollow">Dejar de seguir</string>
     <string name="quick_action_follow">Seguir</string>
     <string name="quick_action_request_deletion_gallery_title">Eliminar de la galería</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Elimina este contenido multimedia de la galería.</string>
     <string name="quick_action_request_deletion_alert_title">Solicitar eliminación</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que se elimine la nota de los relés con los que tienes conexión actualmente. No hay garantía de que la nota se elimine permanentemente de esos relés o de otros donde pueda estar guardada.</string>
     <string name="quick_action_block_dialog_btn">Bloquear</string>
@@ -411,6 +436,7 @@
     <string name="no">No</string>
     <string name="follow_list_selection">Lista de seguidos</string>
     <string name="follow_list_kind3follows">Todos los seguidos</string>
+    <string name="follow_list_kind3follows_proxy">Siguiendo a través de proxy</string>
     <string name="follow_list_aroundme">A mi alrededor</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista de silenciados</string>
@@ -485,9 +511,18 @@
     <string name="content_warning_hide_all_sensitive_content">Ocultar siempre el contenido delicado</string>
     <string name="content_warning_show_all_sensitive_content">Mostrar siempre el contenido delicado</string>
     <string name="content_warning_see_warnings">Mostrar siempre advertencias sobre contenido</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Ocultar</string>
+    <string name="content_warning_show_all_sensitive_content_option">Mostrar</string>
+    <string name="content_warning_see_warnings_option">Advertir</string>
     <string name="recommended_apps">Recomendaciones:</string>
     <string name="filter_spam_from_strangers">Filtrar el spam de desconocidos</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Avisar cuando las publicaciones tengan reportes de tus seguidos</string>
+    <string name="filter_spam_from_strangers_title">Filtrar spam</string>
+    <string name="filter_spam_from_strangers_explainer">Oculta las publicaciones de desconocidos que sean exactamente iguales 5 o más veces.</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Advertir sobre reportes</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Muestra un mensaje de advertencia cuando los mensajes tienen 5 o más reportes de los usuarios que sigues.</string>
+    <string name="show_sensitive_content_title">Mostrar contenido delicado</string>
+    <string name="show_sensitive_content_explainer">Muestra un mensaje de advertencia cuando el autor de la publicación la marca como contenido delicado.</string>
     <string name="new_reaction_symbol">Nuevo símbolo de reacción</string>
     <string name="no_reaction_type_setup_long_press_to_change">No hay tipos de reacción preseleccionados para este usuario. Deja presionado el botón de corazón para cambiarlos.</string>
     <string name="zapraiser">Recaudación de zaps</string>
@@ -539,7 +574,12 @@
     <string name="are_you_sure_you_want_to_log_out">Al cerrar la sesión se borra toda tu información local. Asegúrate de tener una copia de seguridad de tus claves privadas para que no pierdas la cuenta. ¿Quieres continuar?</string>
     <string name="followed_tags">Etiquetas seguidas</string>
     <string name="relay_setup">Relés</string>
+    <string name="discover_follows">Paquetes de seguimiento</string>
+    <string name="discover_reads">Lecturas</string>
+    <string name="discover_content_v2">Algoritmos del feed</string>
     <string name="discover_marketplace">Mercado</string>
+    <string name="discover_live_v2">Transmisiones en vivo</string>
+    <string name="discover_community_v2">Comunidades</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Publicaciones aprobadas</string>
     <string name="groups_no_descriptor">Este grupo no tiene descripción ni reglas. Habla con el propietario para agregar una.</string>
@@ -547,6 +587,7 @@
     <string name="add_sensitive_content_label">Contenido delicado</string>
     <string name="add_sensitive_content_description">Agrega una advertencia de contenido sensible antes de mostrarlo</string>
     <string name="preferences">Preferencias de la app</string>
+    <string name="user_preferences">Preferencias de usuario</string>
     <string name="settings">Configuración</string>
     <string name="connectivity_type_always">Siempre</string>
     <string name="connectivity_type_wifi_only">Solo Wi-Fi</string>
@@ -591,6 +632,8 @@
     <string name="geohash_explainer">Agrega un Geohash de tu ubicación al mensaje. El público sabrá que te encuentras a menos de 5 km (3 mi) de la ubicación actual.</string>
     <string name="geohash_exclusive">Publicación con ubicación exclusiva</string>
     <string name="geohash_exclusive_explainer">Solo los seguidores de la ubicación la verán. Tus seguidores generales no la verán.</string>
+    <string name="hashtag_exclusive">Publicación exclusiva de hashtag</string>
+    <string name="hashtag_exclusive_explainer">Solo los seguidores del hashtag la verán. Tus seguidores generales no la verán.</string>
     <string name="loading_location">Cargando ubicación</string>
     <string name="lack_location_permissions">Sin permisos de ubicación</string>
     <string name="add_sensitive_content_explainer">Agrega una advertencia de contenido delicado antes de mostrarlo. Esto es ideal para cualquier contenido NSFW o que a algunas personas les pueda resultar ofensivo o perturbador.</string>
@@ -599,6 +642,7 @@
     <string name="new_feature_nip17_activate">Activar</string>
     <string name="messages_create_public_chat">Público</string>
     <string name="messages_create_public_private_chat_description">Nuevo grupo público o privado</string>
+    <string name="messages_relay_based">Relé</string>
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Asunto</string>
@@ -664,6 +708,7 @@
     <string name="wallet_number">Billetera %1$s</string>
     <string name="error_opening_external_signer">Error al abrir la aplicación firmante</string>
     <string name="error_opening_external_signer_description">No se pudo encontrar la aplicación firmante. Comprueba si no se desinstaló la aplicación.</string>
+    <string name="sign_request_rejected2">Solicitud de firma rechazada</string>
     <string name="sign_request_rejected">Solicitud de firma rechazada</string>
     <string name="sign_request_rejected_description">Asegúrate de que la aplicación firmante haya autorizado esta transacción.</string>
     <string name="no_wallet_found_with_error">No se encontraron billeteras para pagar una factura de Lightning (error: %1$s). Instala una billetera de Lightning para usar zaps.</string>
@@ -791,6 +836,8 @@
     <string name="new_post">Nueva publicación</string>
     <string name="new_short">Nuevos cortos: imágenes o videos</string>
     <string name="new_community_note">Nueva nota comunitaria</string>
+    <string name="new_product">Nuevo producto</string>
+    <string name="new_exclusive_geo_note">Nueva publicación geoexclusiva</string>
     <string name="open_all_reactions_to_this_post">Abrir todas las reacciones a esta publicación</string>
     <string name="close_all_reactions_to_this_post">Cerrar todas las reacciones a esta publicación</string>
     <string name="reply_description">Responder</string>
@@ -845,12 +892,29 @@
     <string name="private_outbox_section_explainer">Inserta entre 1 y 3 relés para almacenar eventos que nadie más pueda ver, como los borradores o la configuración de la app. Lo ideal es que estos relés sean locales o requieran autenticación antes de descargar el contenido de cada usuario.</string>
     <string name="kind_3_section">Relés generales</string>
     <string name="kind_3_section_description">Amethyst usa estos relés para descargar publicaciones por ti.</string>
+    <string name="connected_section">Relés conectados</string>
+    <string name="connected_section_description">Lista actual de relés en uso</string>
     <string name="kind_3_recommended_section">Relés recomendados</string>
     <string name="kind_3_recommended_section_description">Agrega los siguientes relés a la lista de relés generales para recibir publicaciones de los usuarios de la lista.</string>
     <string name="search_section">Relés de búsqueda</string>
     <string name="search_section_explainer">Lista de relés que se usarán al buscar contenido o usuarios. El etiquetado y la búsqueda no funcionarán si no hay opciones disponibles. Asegúrate de que implementen NIP-50.</string>
     <string name="local_section">Relés locales</string>
     <string name="local_section_explainer">Lista de relés que se utilizan en este dispositivo.</string>
+    <string name="trusted_relays_title">Relés de confianza</string>
+    <string name="trusted_section">Relés de confianza</string>
+    <string name="trusted_section_explainer">Relés en que confías para no necesitar una conexión Tor para</string>
+    <string name="proxy_relays_title">Relés de proxy</string>
+    <string name="proxy_section">Relés de proxy</string>
+    <string name="proxy_section_explainer">Relés recopiladores que la app debe usar para descargar tus feeds, como filter.nostr.wine. Esto reemplaza el modelo de bandeja de salida y hará que la app se conecte solo a los relés de tus listas.</string>
+    <string name="broadcast_relays_title">Relés de transmisión</string>
+    <string name="broadcast_section">Relés de transmisión</string>
+    <string name="broadcast_section_explainer">Relés que se especializan en enviar tus notas a todos los demás relés, como sendit.nosflare.com. Amethyst agregará este relé a todos los eventos nuevos que crees.</string>
+    <string name="indexer_relays_title">Relés de indexador</string>
+    <string name="indexer_section">Relés de indexador</string>
+    <string name="indexer_section_explainer">Relés que se especializan en alojar los metadatos y las listas de retransmisión de todos, como purplepag.es. Amethyst usará estos relés para encontrar usuarios que no estén en tus listas.</string>
+    <string name="blocked_relays_title">Relés bloqueados</string>
+    <string name="blocked_section">Relés bloqueados</string>
+    <string name="blocked_section_explainer">Amethyst nunca se conectará a estos relés</string>
     <string name="zap_the_devs_title">¡Zapea a los desarrolladores!</string>
     <string name="zap_the_devs_description">Tu donación nos ayuda a marcar la diferencia. ¡Cada sat cuenta!</string>
     <string name="donate_now">Donar ahora</string>
@@ -940,4 +1004,11 @@
     <string name="select_list_to_filter">Selecciona una lista para filtrar el feed</string>
     <string name="temporary_account">Cerrar sesión al bloquear dispositivo</string>
     <string name="private_message">Mensaje privado</string>
+    <string name="public_message">Mensaje público</string>
+    <string name="group_relay">Relé de chat</string>
+    <string name="group_relay_explanation">Relé al que todos los usuarios de este chat se conectan</string>
+    <string name="share_image">Compartir imagen…</string>
+    <string name="search_by_hashtag">Buscar hashtag: #%1$s</string>
+    <string name="dont_translate_from">No traducir del</string>
+    <string name="dont_translate_from_description">Los idiomas que se muestran aquí no se traducirán. Selecciona un idioma para eliminarlo y traducirlo de nuevo.</string>
 </resources>

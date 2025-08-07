@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -67,6 +68,7 @@ class UserProfileConversationsFeedFilter(
                     it.event is LiveActivitiesChatMessageEvent ||
                     it.event is CommentEvent ||
                     it.event is VoiceReplyEvent ||
+                    it.event is PublicMessageEvent ||
                     it.event is TorrentCommentEvent
             ) &&
             !it.isNewThread() &&

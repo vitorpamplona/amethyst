@@ -315,6 +315,7 @@ fun GroupDMScreenContent(
 fun MessageFieldRow(
     postViewModel: IMessageField,
     accountViewModel: AccountViewModel,
+    requestFocus: Boolean = false,
 ) {
     Row {
         BaseUserPicture(
@@ -322,7 +323,7 @@ fun MessageFieldRow(
             Size35dp,
             accountViewModel,
         )
-        MessageField(R.string.write_a_message, postViewModel, false)
+        MessageField(R.string.write_a_message, postViewModel, requestFocus)
     }
 }
 

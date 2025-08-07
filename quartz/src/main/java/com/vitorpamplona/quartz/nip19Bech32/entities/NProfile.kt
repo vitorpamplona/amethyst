@@ -53,6 +53,19 @@ data class NProfile(
 
         fun create(
             authorPubKeyHex: String,
+            relay: NormalizedRelayUrl?,
+        ): String =
+            TlvBuilder()
+                .apply {
+                    addHex(TlvTypes.SPECIAL, authorPubKeyHex)
+                    if (relay != null) {
+                        addStringIfNotNull(TlvTypes.RELAY, relay.url)
+                    }
+                }.build()
+                .toNProfile()
+
+        fun create(
+            authorPubKeyHex: String,
             relays: List<NormalizedRelayUrl>,
         ): String =
             TlvBuilder()

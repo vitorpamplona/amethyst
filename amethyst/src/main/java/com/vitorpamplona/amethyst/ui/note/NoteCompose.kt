@@ -399,17 +399,17 @@ fun calculateBackgroundColor(
                             newItemColor.compositeOver(defaultBackgroundColor)
                         }
                     } else {
-                        parentBackgroundColor?.value ?: Color.Transparent
+                        parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
                     }
                 } else {
-                    parentBackgroundColor?.value ?: Color.Transparent
+                    parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
                 },
             )
         }
 
     LaunchedEffect(createdAt) {
         delay(5000)
-        bgColor.value = parentBackgroundColor?.value ?: Color.Transparent
+        bgColor.value = parentBackgroundColor?.value ?: defaultBackgroundColor.copy(alpha = 0f)
     }
 
     return bgColor

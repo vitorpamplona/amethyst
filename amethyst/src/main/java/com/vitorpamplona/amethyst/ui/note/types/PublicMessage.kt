@@ -20,22 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.HalfHalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
@@ -52,10 +59,11 @@ fun RenderPublicMessage(
     nav: INav,
 ) {
     val noteEvent = note.event as? PublicMessageEvent ?: return
+    val content = remember(noteEvent) { noteEvent.peopleAndContent() }
 
     if (makeItShort && accountViewModel.isLoggedUser(note.author)) {
         Text(
-            text = noteEvent.content,
+            text = content,
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -68,7 +76,7 @@ fun RenderPublicMessage(
             accountViewModel = accountViewModel,
         ) {
             TranslatableRichTextViewer(
-                content = noteEvent.content,
+                content = content,
                 canPreview = canPreview && !makeItShort,
                 quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
@@ -83,6 +91,34 @@ fun RenderPublicMessage(
 
         if (noteEvent.hasHashtags()) {
             DisplayUncitedHashtags(noteEvent, noteEvent.content, callbackUri, accountViewModel, nav)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DisplayUncitedUsers(
+    event: PublicMessageEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val uncitedUsers by produceState(initialValue = emptyList<User>()) {
+        val users = event.groupKeySetWithoutOwner() - event.citedUsers()
+        if (users.isNotEmpty()) {
+            val newUsers = accountViewModel.loadUsersSync(users.toList())
+
+            if (newUsers.isNotEmpty()) {
+                value = newUsers
+            }
+        }
+    }
+
+    if (uncitedUsers.isNotEmpty()) {
+        FlowRow(HalfHalfTopPadding) {
+            uncitedUsers.forEach { user ->
+                RenderUserAsClickableText(user, "", accountViewModel, nav)
+            }
         }
     }
 }
