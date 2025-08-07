@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om te ontvolgen</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om woorden en zinnen te verbergen</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om woorden of zinnen te tonen</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om instellingen aan te passen</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om te uploaden</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Je gebruikt een publieke sleutel en publieke sleutels zijn alleen-lezen. Login met een geheime sleutel om events te tekenen</string>
+    <string name="unauthorized_exception">Ongeautoriseerde decodering</string>
+    <string name="unauthorized_exception_description">De ondertekenaar heeft geen decodering toegestaan die nodig is om dit in werking te stellen. Activeer NIP-44 decodering in uw signer app en probeer het opnieuw</string>
+    <string name="signer_not_found_exception">Signer niet gevonden</string>
+    <string name="signer_not_found_exception_description">Is de signer app gedeïnstalleerd? Controleer of de ondertekenaar is geïnstalleerd en dit account heeft. Log opnieuw in want de signer app is gewijzigd.</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Aantal keer bekeken</string>
     <string name="boost">Boost</string>
@@ -71,6 +78,8 @@
     <string name="error_parsing_error_message">Fout bij het parsen van foutberichten</string>
     <string name="following">" Volgend"</string>
     <string name="followers">" Volgers"</string>
+    <string name="number_following">"%1$s volgend"</string>
+    <string name="number_followers">"%1$s volgers"</string>
     <string name="profile">Profiel</string>
     <string name="security_filters">Veiligheidsfilter</string>
     <string name="log_out">Uitloggen</string>
@@ -96,6 +105,7 @@
     <string name="my_awesome_group">Mijn geweldige groep</string>
     <string name="picture_url">Afbeelding URL</string>
     <string name="description">Omschrijving</string>
+    <string name="no_description">Beschrijving niet gevonden</string>
     <string name="about_us">"Over ons…"</string>
     <string name="what_s_on_your_mind">Waar denk je aan?</string>
     <string name="write_a_message">Schrijf een bericht…</string>
@@ -137,6 +147,10 @@
     <string name="video_saved_to_the_gallery">Video\'s opgeslagen in galerij</string>
     <string name="failed_to_save_the_video">De video is niet opgeslagen</string>
     <string name="upload_image">Afbeelding uploaden</string>
+    <string name="take_a_picture">Neem een foto</string>
+    <string name="record_a_message">Neem een bericht op</string>
+    <string name="record_a_message_title">Neem een bericht op</string>
+    <string name="record_a_message_description">Klik en houd vast om een bericht te opnemen</string>
     <string name="uploading">Uploaden…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Gebruiker heeft geen Lightning Adress ingesteld om sats te ontvangen</string>
     <string name="reply_here">"hier reageren.. "</string>
@@ -155,6 +169,7 @@
     <string name="gallery">Galerij</string>
     <string name="follows">"Volgend"</string>
     <string name="reports">"Rapporten"</string>
+    <string name="number_reports">"%1$s rapporten"</string>
     <string name="more_options">Meer opties</string>
     <string name="relays">"Relays"</string>
     <string name="website">Website</string>
@@ -213,6 +228,13 @@
     <string name="unfollow">Ontvolgen</string>
     <string name="channel_created">Kanaal gemaakt</string>
     <string name="channel_information_changed_to">"Kanaalinformatie veranderd naar"</string>
+    <string name="ephemeral_relay_chat">Verdwijnende chat</string>
+    <string name="relay_chat">Relay chat</string>
+    <string name="relay_chat_title">Relay chats</string>
+    <string name="relay_chat_explainer">Relay chats zijn chatgroepen die beheerd worden door hun thuisrelay.
+        Ze zijn zichtbaar voor iedereen op Nostr en iedereen kan eraan deelnemen.
+        Ze zijn geschikt voor open communities rond specifieke onderwerpen. Sommige van deze groepen zijn tijdelijk
+    en daardoor verdwijnen berichten na verloop van tijd</string>
     <string name="public_chat">Publieke chat</string>
     <string name="public_chat_title">Publieke chat metadata</string>
     <string name="public_chat_explainer">Publieke chats zijn zichtbaar voor iedereen op Nostr en iedereen
@@ -221,6 +243,8 @@
     <string name="public_chat_relays_title">Relays</string>
     <string name="public_chat_relays_explainer">Voeg een 1–3 relays toe die deze groep hosten.
         Nostr clients gebruiken deze instelling om te weten waar berichten van moeten worden gedownload en waarnaar uw berichten worden verzonden.</string>
+    <string name="paid_relay">Betaald relays</string>
+    <string name="tor_relay">Forceert Tor tijdens verbinden</string>
     <string name="posts_received">berichten ontvangen</string>
     <string name="remove">verwijderen</string>
     <string name="translations_auto">Automatisch</string>
@@ -265,6 +289,7 @@
     <string name="biometric_error">Fout</string>
     <string name="badge_created_by">"Gemaakt door %1$s"</string>
     <string name="badge_award_image_for">"Badge award afbeelding voor %1$s"</string>
+    <string name="badge_award_image">\"Badge award afbeelding</string>
     <string name="new_badge_award_notif">Je hebt een nieuwe Badge award ontvangen</string>
     <string name="award_granted_to">Badge award gegeven aan</string>
     <string name="copied_note_text_to_clipboard">Note tekst gekopieerd naar klembord</string>
@@ -290,6 +315,7 @@
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Verwijder deze media uit je galerij.</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
@@ -411,6 +437,7 @@
     <string name="no">Nee</string>
     <string name="follow_list_selection">Volgerslijst</string>
     <string name="follow_list_kind3follows">Iedereen</string>
+    <string name="follow_list_kind3follows_proxy">Volgt via proxy</string>
     <string name="follow_list_aroundme">In de buurt</string>
     <string name="follow_list_global">Globaal</string>
     <string name="follow_list_mute_list">Mute-lijst</string>
@@ -485,9 +512,18 @@
     <string name="content_warning_hide_all_sensitive_content">Verberg altijd gevoelige inhoud</string>
     <string name="content_warning_show_all_sensitive_content">Toon altijd gevoelige inhoud</string>
     <string name="content_warning_see_warnings">Toon altijd content waarshuwingen</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Verberg</string>
+    <string name="content_warning_show_all_sensitive_content_option">Tonen</string>
+    <string name="content_warning_see_warnings_option">Waarschuwen</string>
     <string name="recommended_apps">Raadt aan: </string>
     <string name="filter_spam_from_strangers">Filter spam van onbekenden</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Waarschuw wanneer berichten meldingen hebben van je volgers</string>
+    <string name="filter_spam_from_strangers_title">Spam filteren</string>
+    <string name="filter_spam_from_strangers_explainer">Verbergt posts van onbekenden die 5 of meer keer precies hetzelfde waren</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Waarschuwen bij meldingen</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Toont een waarschuwingsbericht wanneer berichten 5 of meer meldingen heeft van je volgers</string>
+    <string name="show_sensitive_content_title">Toon gevoelige inhoud</string>
+    <string name="show_sensitive_content_explainer">Toont een waarschuwingsbericht wanneer de auteur van het bericht als gevoelig gemarkeerd heeft</string>
     <string name="new_reaction_symbol">Nieuwe reactie symbool</string>
     <string name="no_reaction_type_setup_long_press_to_change">Geen reactietypes geselecteerd. Lang indrukken om te wijzigen</string>
     <string name="zapraiser">Zapraiser</string>
@@ -539,7 +575,12 @@
     <string name="are_you_sure_you_want_to_log_out">Uitloggen verwijdert al je lokale informatie. Zorg ervoor dat je een back-up hebt van je geheime sleutels om te voorkomen dat je je account kwijtraakt. Wilt u doorgaan?</string>
     <string name="followed_tags">Gevolgde tags</string>
     <string name="relay_setup">Relays</string>
+    <string name="discover_follows">Volg pakketten</string>
+    <string name="discover_reads">Gelezen</string>
+    <string name="discover_content_v2">Feed algoritmes</string>
     <string name="discover_marketplace">Marktplaats</string>
+    <string name="discover_live_v2">Livestream</string>
+    <string name="discover_community_v2">Communities</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Goedgekeurde berichten</string>
     <string name="groups_no_descriptor">Deze groep heeft geen beschrijving of regels. Praat met de eigenaar om er een toe te voegen</string>
@@ -547,6 +588,7 @@
     <string name="add_sensitive_content_label">Gevoelige content</string>
     <string name="add_sensitive_content_description">Voegt waarschuwing voor gevoelige content toe voordat deze content wordt weergegeven</string>
     <string name="preferences">App-voorkeuren</string>
+    <string name="user_preferences">Gebruikersvoorkeuren</string>
     <string name="settings">Instellingen</string>
     <string name="connectivity_type_always">Altijd</string>
     <string name="connectivity_type_wifi_only">Alleen wifi</string>
@@ -591,6 +633,8 @@
     <string name="geohash_explainer">Voegt een Geohash van je locatie toe aan het bericht. Het publiek weet dat je binnen 5 km (3mi) van de huidige locatie bent.</string>
     <string name="geohash_exclusive">Locatie-exclusief bericht</string>
     <string name="geohash_exclusive_explainer">Alleen volgers van de locatie zien het. Je volgers zien het niet.</string>
+    <string name="hashtag_exclusive">Hastag exclusieve post</string>
+    <string name="hashtag_exclusive_explainer">Alleen volgers van de hashtag zullen het zien. Je normale volgers zien het niet.</string>
     <string name="loading_location">Locatie laden</string>
     <string name="lack_location_permissions">Geen locatiemachtigingen</string>
     <string name="add_sensitive_content_explainer">Voegt een waarschuwing voor gevoelige inhoud toe voordat je inhoud wordt weergegeven. Dit is ideaal voor NSFW-inhoud of inhoud die sommige mensen beledigend of verontrustend vinden.</string>
@@ -599,6 +643,7 @@
     <string name="new_feature_nip17_activate">Activeren</string>
     <string name="messages_create_public_chat">Publiek</string>
     <string name="messages_create_public_private_chat_description">Nieuwe openbare of besloten groep</string>
+    <string name="messages_relay_based">Relay</string>
     <string name="messages_new_message">Privé</string>
     <string name="messages_new_message_to">Aan</string>
     <string name="messages_new_message_subject">Onderwerp</string>
@@ -664,6 +709,7 @@
     <string name="wallet_number">Wallet %1$s</string>
     <string name="error_opening_external_signer">Fout bij openen ondertekenapp</string>
     <string name="error_opening_external_signer_description">De teken-app kan niet worden gevonden. Controleer of de app niet is verwijderd</string>
+    <string name="sign_request_rejected2">Ondertekenverzoek afgewezen</string>
     <string name="sign_request_rejected">Ondertekenverzoek afgewezen</string>
     <string name="sign_request_rejected_description">Zorg ervoor dat de teken-app deze transactie heeft geautoriseerd</string>
     <string name="no_wallet_found_with_error">Geen wallets gevonden om een Lightning Invoice te betalen (Error: %1$s). Installeer een Lightning wallet om zaps te gebruiken</string>
@@ -791,6 +837,8 @@
     <string name="new_post">Nieuw bericht</string>
     <string name="new_short">Nieuwe shorts: afbeeldingen of video\'s</string>
     <string name="new_community_note">Nieuwe community note</string>
+    <string name="new_product">Nieuw product</string>
+    <string name="new_exclusive_geo_note">Nieuw Geo-exclusieve post</string>
     <string name="open_all_reactions_to_this_post">Open alle reacties op dit bericht</string>
     <string name="close_all_reactions_to_this_post">Sluit alle reacties op dit bericht</string>
     <string name="reply_description">Antwoorden</string>
@@ -845,12 +893,29 @@
     <string name="private_outbox_section_explainer">Plaats tussen de 1 tot 3 relays om gebeurtenissen op te slaan die niemand anders kan zien, zoals uw Concepten en/of app instellingen. Idealiter zijn deze relays lokaal of vereist authenticatie voordat de inhoud van elke gebruiker wordt gedownload.</string>
     <string name="kind_3_section">Algemene relays</string>
     <string name="kind_3_section_description">Amethyst gebruikt deze relays om berichten voor jou te downloaden.</string>
+    <string name="connected_section">Verbonden relays</string>
+    <string name="connected_section_description">Huidige lijst van relays die worden gebruikt</string>
     <string name="kind_3_recommended_section">Aanbevolen relays</string>
     <string name="kind_3_recommended_section_description">Voeg de volgende relays toe aan je algemene relay-lijst om berichten van de vermelde gebruikers te ontvangen.</string>
     <string name="search_section">Relays zoeken</string>
     <string name="search_section_explainer">Lijst van relays om te gebruiken bij het zoeken naar inhoud of gebruikers. Taggen en zoeken werkt niet als er geen opties beschikbaar zijn. Zorg ervoor dat ze NIP-50 implementeren.</string>
     <string name="local_section">Lokale relays</string>
     <string name="local_section_explainer">Lijst van relays die worden uitgevoerd op dit apparaat.</string>
+    <string name="trusted_relays_title">Vertrouwde relays</string>
+    <string name="trusted_section">Vertrouwde relays</string>
+    <string name="trusted_section_explainer">Relays die je vertrouwd om geen Tor te gebruiken</string>
+    <string name="proxy_relays_title">Proxy relays</string>
+    <string name="proxy_section">Proxy relays</string>
+    <string name="proxy_section_explainer">Aggregator relays die de app moet gebruiken om je feeds te downloaden, zoals filter.nostr.wine. Dit vervangt het outbox-model en zorgt ervoor dat de app alleen verbinding maakt met de relays in jouw lijsten.</string>
+    <string name="broadcast_relays_title">Verzend relays</string>
+    <string name="broadcast_section">Verzend relays</string>
+    <string name="broadcast_section_explainer">Relays die gespecialiseerd zijn in het doorsturen van jouw notities naar alle andere relays, zoals sendit.nosflare.com. Amethyst zal dit relays toevoegen aan alle nieuwe evenementen die door jou worden gemaakt</string>
+    <string name="indexer_relays_title">Indexeer relays</string>
+    <string name="indexer_section">Indexeer relays</string>
+    <string name="indexer_section_explainer">Relays die gespecialiseerd zijn in het hosten van ieders metadata en relaylijsten, zoals purplepag.es. Amethyst zal deze relays gebruiken om gebruikers te vinden die niet in jouw lijsten staan.</string>
+    <string name="blocked_relays_title">Geblokkeerde relays</string>
+    <string name="blocked_section">Geblokkeerde relays</string>
+    <string name="blocked_section_explainer">Amethyst zal nooit verbinding maken met deze relays</string>
     <string name="zap_the_devs_title">Zap de devs!</string>
     <string name="zap_the_devs_description">Jouw donatie helpt ons om een verschil te maken. Elke sat telt!</string>
     <string name="donate_now">Nu doneren</string>
@@ -940,4 +1005,11 @@
     <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
     <string name="temporary_account">Afmelden bij apparaatvergrendeling</string>
     <string name="private_message">Privébericht</string>
+    <string name="public_message">Openbaar bericht</string>
+    <string name="group_relay">Chat relay</string>
+    <string name="group_relay_explanation">De relay die alle gebruikers van deze chat gebruiken om verbinding te maken</string>
+    <string name="share_image">Afbeelding delen…</string>
+    <string name="search_by_hashtag">Zoek hashtag: #%1$s</string>
+    <string name="dont_translate_from">Niet vertalen van</string>
+    <string name="dont_translate_from_description">Talen die hier getoond worden worden worden niet vertaald. Selecteer een taal om te verwijderen en het opnieuw te laten vertalen.</string>
 </resources>
