@@ -906,10 +906,13 @@
     <string name="trusted_section_explainer">विश्वसनीय पुनःप्रसारक जिनके लिए टोर संयोजन आवश्यक नहीं</string>
     <string name="proxy_relays_title">प्रतिनिधि पुनःप्रसारक</string>
     <string name="proxy_section">प्रतिनिधि पुनःप्रसारक</string>
+    <string name="proxy_section_explainer">संग्रहकर्ता पुनःप्रसारक जो क्रमक द्वारा उपयुक्त होना चाहिए आपके सूचनावलियों का अवरोहण करने के लिए। जैसे कि filter.nostr.wine । यह निर्गतपेटिका प्रतिरूप को प्रतिस्थापित करेगा तथा क्रमक आपके सूचियों में पुनःप्रसारकों के साथ ही जुडेगा।</string>
     <string name="broadcast_relays_title">प्रसारण पुनःप्रसारक</string>
     <string name="broadcast_section">प्रसारण पुनःप्रसारक</string>
+    <string name="broadcast_section_explainer">पुनःप्रसारक जो आपके पत्रों को अन्य सभी पुनःप्रसारकों को भेजने का विशेष कार्य करते हैं। जैसे कि sendit.nosflare.com । अमेथिस्ट इस पुनःप्रसारक को जोडेगा आपके द्वारा कृत सभी नए घटनाओं के लिए</string>
     <string name="indexer_relays_title">अनुक्रमणीकार पुनःप्रसारक</string>
     <string name="indexer_section">अनुक्रमणीकार पुनःप्रसारक</string>
+    <string name="indexer_section_explainer">पुनःप्रसारक जो सभी के उपतथ्य तथा पुनःप्रसारक सूचियों की जानकारी रखने का विशेष कार्य करते हैं। जैसे कि purplepag.es । अमेथिस्ट इन पुनःप्रसारकों का उपयोग करेगा उन प्रयोक्ताओं को ढूँढने के लिए जो आपके सूचियों में नहीं हैं।</string>
     <string name="blocked_relays_title">बाधित पुनःप्रसारक</string>
     <string name="blocked_section">बाधित पुनःप्रसारक</string>
     <string name="blocked_section_explainer">अमेथिस्ट इन पुनःप्रसारकों से कभी नहीं जुडेगा</string>
