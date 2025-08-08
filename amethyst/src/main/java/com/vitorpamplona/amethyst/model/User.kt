@@ -56,6 +56,8 @@ class User(
     var latestMetadata: MetadataEvent? = null
     var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
+    var followSetNotes: Set<AddressableNote> = setOf()
+        private set
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -141,6 +143,10 @@ class User(
         }
 
         flowSet?.relays?.invalidateData()
+    }
+
+    fun updateFollowSetNotes(setNotes: List<AddressableNote>) {
+        followSetNotes = followSetNotes + setNotes
     }
 
     fun addReport(note: Note) {
@@ -345,6 +351,7 @@ class UserFlowSet(
     val relayInfo = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
+    val followSets = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
         metadata.hasObservers() ||
@@ -354,7 +361,8 @@ class UserFlowSet(
             reports.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            statuses.hasObservers()
+            statuses.hasObservers() ||
+            followSets.hasObservers()
 }
 
 @Immutable
