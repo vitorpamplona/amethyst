@@ -25,13 +25,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.toMutableStateList
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileActions(
@@ -41,6 +45,8 @@ fun ProfileActions(
 ) {
     val tempFollowLists = remember { generateFollowLists().toMutableStateList() }
     val actualFollowLists by accountViewModel.followSetsFlow.collectAsState()
+    val (isMenuOpen, setMenuValue) = remember { mutableStateOf(false) }
+    val uiScope = rememberCoroutineScope()
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
@@ -57,6 +63,13 @@ fun ProfileActions(
     }
 
     FollowSetsActionMenu(
+        isMenuOpen = isMenuOpen,
+        setMenuOpenState = {
+            uiScope.launch {
+                delay(100)
+                setMenuValue(!isMenuOpen)
+            }
+        },
         userHex = baseUser.pubkeyHex,
         followLists = actualFollowLists,
         addUser = { index, list ->

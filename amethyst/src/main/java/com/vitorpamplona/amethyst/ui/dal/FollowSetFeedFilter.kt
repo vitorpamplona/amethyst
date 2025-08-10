@@ -23,31 +23,24 @@ package com.vitorpamplona.amethyst.ui.dal
 import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
-import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.runBlocking
 
 class FollowSetFeedFilter(
     val account: Account,
 ) : FeedFilter<FollowSet>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-followsets"
 
-    override fun feed(): List<FollowSet> {
-        val followSetCache = mutableListOf<FollowSet>()
-        account.scope.launch {
-            val userFollowSets = account.userProfile().followSetNotes
-            if (userFollowSets.isEmpty()) {
-                try {
-                    account.getFollowSetNotes()
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.e("HiddenAccountsFeedFilter", "Failed to load follow lists: ${e.message}")
-                    null
-                }
-            }
-            userFollowSets.map { account.mapNoteToFollowSet(it) }.forEach {
-                followSetCache.add(it)
+    override fun feed(): List<FollowSet> =
+        runBlocking(account.scope.coroutineContext) {
+            try {
+                val fetchedSets = account.getFollowSetNotes()
+                val followSets = fetchedSets.map { account.mapNoteToFollowSet(it) }
+                println("Updated follow set size for feed filter: ${followSets.size}")
+                followSets
+            } catch (e: Exception) {
+                // if (e is CancellationException) throw e
+                Log.e(this@FollowSetFeedFilter.javaClass.simpleName, "Failed to load follow lists: ${e.message}")
+                throw e
             }
         }
-        return followSetCache.toList()
-    }
 }

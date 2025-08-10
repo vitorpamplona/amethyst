@@ -49,9 +49,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,23 +64,21 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import kotlinx.coroutines.launch
 import java.util.UUID
 
 @Composable
 fun FollowSetsActionMenu(
+    isMenuOpen: Boolean,
+    setMenuOpenState: () -> Unit,
     userHex: String,
     followLists: List<FollowSet>,
     modifier: Modifier = Modifier,
     addUser: (followListItemIndex: Int, list: FollowSet) -> Unit,
     removeUser: (followListItemIndex: Int) -> Unit,
 ) {
-    val (isMenuOpen, setMenuValue) = remember { mutableStateOf(false) }
-    val uiScope = rememberCoroutineScope()
-
     Column {
         TextButton(
-            onClick = { setMenuValue(true) },
+            onClick = setMenuOpenState,
             shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
             colors =
                 ButtonDefaults
@@ -118,11 +113,7 @@ fun FollowSetsActionMenu(
 
         DropdownMenu(
             expanded = isMenuOpen,
-            onDismissRequest = {
-                uiScope.launch {
-                    setMenuValue(false)
-                }
-            },
+            onDismissRequest = setMenuOpenState,
             modifier = Modifier.fillMaxWidth(),
             properties = PopupProperties(usePlatformDefaultWidth = true),
         ) {

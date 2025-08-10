@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import kotlinx.coroutines.runBlocking
 
 @Stable
 data class FollowSet(
@@ -34,7 +35,7 @@ data class FollowSet(
     val profileList: Set<String>,
 ) : NostrList(listVisibility = visibility, content = profileList) {
     companion object {
-        suspend fun mapEventToSet(
+        fun mapEventToSet(
             event: PeopleListEvent,
             signer: NostrSigner,
         ): FollowSet {
@@ -44,8 +45,7 @@ data class FollowSet(
             val listDescription = event.description() ?: ""
             val publicFollows = event.publicPeople().map { it.toTagArray() }.map { it.value() }
             val privateFollows =
-                event
-                    .privatePeople(signer)
+                runBlocking { event.privatePeople(signer) }
                     ?.map { it.toTagArray() }
                     ?.map { it.value() } ?: emptyList()
             return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
