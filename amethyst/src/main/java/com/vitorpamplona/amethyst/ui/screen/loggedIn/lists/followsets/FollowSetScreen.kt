@@ -161,7 +161,7 @@ private fun FollowSetListView(
             Row {
                 IconButton(
                     onClick = {
-                        onDeleteUser(item.info?.name.toString())
+                        onDeleteUser(item.pubkeyHex)
                     },
                 ) {
                     Icon(

@@ -56,8 +56,6 @@ class User(
     var latestMetadata: MetadataEvent? = null
     var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
-    var followSetNotes: Set<AddressableNote> = setOf()
-        private set
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -143,10 +141,6 @@ class User(
         }
 
         flowSet?.relays?.invalidateData()
-    }
-
-    fun updateFollowSetNotes(setNotes: List<AddressableNote>) {
-        followSetNotes = followSetNotes + setNotes
     }
 
     fun addReport(note: Note) {

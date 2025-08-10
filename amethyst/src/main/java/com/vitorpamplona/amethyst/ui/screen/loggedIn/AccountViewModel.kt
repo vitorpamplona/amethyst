@@ -188,14 +188,13 @@ class AccountViewModel(
             .followSets.stateFlow
             .map { followSetsState ->
                 checkNotInMainThread()
-                account.getFollowSetNotes()
-                followSetsState.user.followSetNotes.map {
+                account.getFollowSetNotes().map {
                     account.mapNoteToFollowSet(it)
                 }
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 viewModelScope,
-                SharingStarted.WhileSubscribed(10000, 10000),
+                SharingStarted.WhileSubscribed(5000, 5000),
                 emptyList(),
             )
 

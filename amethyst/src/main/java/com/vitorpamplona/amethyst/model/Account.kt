@@ -844,12 +844,11 @@ class Account(
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.Default) {
             val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
-            userProfile().updateFollowSetNotes(followSetNotes)
-//            userProfile().followSets = followSetNotes
-            println("Number of follow sets: ${followSetNotes.size}")
+            Log.d(this@Account.javaClass.simpleName, "Number of follow sets: ${followSetNotes.size}")
+            return@withContext followSetNotes
         }
 
-    suspend fun mapNoteToFollowSet(note: Note): FollowSet =
+    fun mapNoteToFollowSet(note: Note): FollowSet =
         FollowSet
             .mapEventToSet(
                 event = note.event as PeopleListEvent,
