@@ -206,7 +206,7 @@ class NostrClient(
         return false
     }
 
-    fun sendRequest(
+    fun openReqSubscription(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
@@ -239,7 +239,7 @@ class NostrClient(
         }
     }
 
-    fun sendCount(
+    fun openCountSubscription(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {

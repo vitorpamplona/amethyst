@@ -56,7 +56,7 @@ fun NostrClient.downloadFirstEvent(
 
     subscribe(listener)
 
-    sendRequest(subscriptionId, filters)
+    openReqSubscription(subscriptionId, filters)
 
     GlobalScope.launch(Dispatchers.IO) {
         delay(30000)
