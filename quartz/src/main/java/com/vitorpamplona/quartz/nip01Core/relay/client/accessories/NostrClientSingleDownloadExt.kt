@@ -49,7 +49,6 @@ fun NostrClient.downloadFirstEvent(
                 if (subId == subscriptionId) {
                     unsubscribe(this)
                     close(subscriptionId)
-
                     onResponse(event)
                 }
             }
@@ -61,6 +60,8 @@ fun NostrClient.downloadFirstEvent(
 
     GlobalScope.launch(Dispatchers.IO) {
         delay(30000)
+
+        close(subscriptionId)
         unsubscribe(listener)
     }
 }
