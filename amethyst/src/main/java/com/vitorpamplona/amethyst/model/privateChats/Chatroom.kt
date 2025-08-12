@@ -29,7 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.lang.ref.WeakReference
 
 @Stable
 class Chatroom : NotesGatherer {
@@ -39,6 +42,16 @@ class Chatroom : NotesGatherer {
     var subjectCreatedAt: Long? = null
     var ownerSentMessage: Boolean = false
     var newestMessage: Note? = null
+
+    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+
+    fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
+        val current = changesFlow.get()
+        if (current != null) return current
+        val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
+        changesFlow = WeakReference(new)
+        return new
+    }
 
     override fun removeNote(note: Note) {
         removeMessageSync(note)
@@ -67,6 +80,9 @@ class Chatroom : NotesGatherer {
                 subject.tryEmit(newSubject)
                 subjectCreatedAt = msg.createdAt()
             }
+
+            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
+
             return true
         }
         return false
@@ -97,6 +113,8 @@ class Chatroom : NotesGatherer {
                     }
             }
 
+            changesFlow.get()?.tryEmit(ListChange.Deletion(msg))
+
             return true
         }
         return false
@@ -118,6 +136,9 @@ class Chatroom : NotesGatherer {
 
         val toRemove = messages.minus(toKeep)
         messages = toKeep
+
+        changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+
         return toRemove
     }
 }

@@ -100,22 +100,6 @@ class AccountFeedContentStates(
     }
 
     fun destroy() {
-        homeNewThreads.destroy()
-        homeReplies.destroy()
-
-        dmKnown.destroy()
-        dmNew.destroy()
-
-        videoFeed.destroy()
-
-        discoverMarketplace.destroy()
-        discoverFollowSets.destroy()
-        discoverReads.destroy()
-        discoverDVMs.destroy()
-        discoverLive.destroy()
-        discoverCommunities.destroy()
-        discoverPublicChats.destroy()
-
         notifications.destroy()
         notificationSummary.destroy()
 

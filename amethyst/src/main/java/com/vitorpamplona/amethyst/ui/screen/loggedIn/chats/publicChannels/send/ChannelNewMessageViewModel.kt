@@ -259,7 +259,7 @@ open class ChannelNewMessageViewModel :
         urlPreview = findUrlInMessage()
     }
 
-    fun sendPost(onDone: () -> Unit) {
+    fun sendPost(onDone: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             sendPostSync()
             onDone()
@@ -293,7 +293,7 @@ open class ChannelNewMessageViewModel :
     fun upload(
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: () -> Unit,
+        onceUploaded: suspend () -> Unit,
     ) = try {
         uploadUnsafe(onError, context, onceUploaded)
     } catch (_: SignerExceptions.ReadOnlyException) {
@@ -306,7 +306,7 @@ open class ChannelNewMessageViewModel :
     fun uploadUnsafe(
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: () -> Unit,
+        onceUploaded: suspend () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val uploadState = uploadState ?: return@launch

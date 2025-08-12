@@ -20,21 +20,57 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal
 
+import android.util.Log
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.privateChats.ListChange
+import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class ChatroomFeedViewModel(
     val user: ChatroomKey,
     val account: Account,
-) : FeedViewModel(ChatroomFeedFilter(user, account)) {
+) : ListChangeFeedViewModel(ChatroomFeedFilter(user, account)) {
     class Factory(
         val user: ChatroomKey,
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = ChatroomFeedViewModel(user, account) as T
+    }
+}
+
+@Stable
+abstract class ListChangeFeedViewModel(
+    localFilter: ChangesFlowFilter<Note>,
+) : ViewModel(),
+    InvalidatableContent {
+    val feedState = FeedContentState(localFilter, viewModelScope)
+
+    override val isRefreshing = feedState.isRefreshing
+
+    override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
+
+    init {
+        Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
+        viewModelScope.launch(Dispatchers.Default) {
+            localFilter.changesFlow().collect {
+                Log.d("Init", "Collecting changes to: ${this@ListChangeFeedViewModel.javaClass.simpleName}")
+                when (it) {
+                    is ListChange.Addition -> feedState.updateFeedWith(setOf(it.item))
+                    is ListChange.Deletion -> feedState.deleteFromFeed(setOf(it.item))
+                    is ListChange.SetAddition -> feedState.updateFeedWith(it.item)
+                    is ListChange.SetDeletion -> feedState.deleteFromFeed(it.item)
+                }
+            }
+        }
     }
 }

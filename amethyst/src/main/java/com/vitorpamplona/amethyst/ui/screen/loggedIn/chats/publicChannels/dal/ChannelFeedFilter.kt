@@ -24,21 +24,20 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
+import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 
 class ChannelFeedFilter(
     val channel: Channel,
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    ChangesFlowFilter<Note> {
     override fun feedKey() = channel
 
+    override fun changesFlow() = channel.changesFlow()
+
     // returns the last Note of each user.
-    override fun feed(): List<Note> =
-        sort(
-            channel.notes.filterIntoSet { key, it ->
-                account.isAcceptable(it)
-            },
-        )
+    override fun feed(): List<Note> = sort(channel.notes.filterIntoSet { key, it -> account.isAcceptable(it) })
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> =
         newItems

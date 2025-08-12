@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.logTime
 
-abstract class FeedFilter<T> {
-    fun loadTop(): List<T> {
+abstract class FeedFilter<T> : IFeedFilter<T> {
+    override fun loadTop(): List<T> {
         val feed =
             logTime(
                 debugMessage = { "${this.javaClass.simpleName} FeedFilter returning ${it.size} objects" },
@@ -31,13 +31,17 @@ abstract class FeedFilter<T> {
             )
         return feed.take(limit())
     }
+}
 
-    open fun limit() = 500
+interface IFeedFilter<T> {
+    fun loadTop(): List<T>
+
+    fun limit(): Int = 500
 
     /** Returns a string that serves as the key to invalidate the list if it changes. */
-    abstract fun feedKey(): Any
+    fun feedKey(): Any
 
-    open fun showHiddenKey(): Boolean = false
+    fun showHiddenKey(): Boolean = false
 
-    abstract fun feed(): List<T>
+    fun feed(): List<T>
 }

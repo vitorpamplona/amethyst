@@ -285,7 +285,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        SaveableFeedState(resultFeedViewModel, null) { listState ->
+        SaveableFeedState(resultFeedViewModel.feedState, null) { listState ->
             // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
             RenderFeedState(
                 resultFeedViewModel,
