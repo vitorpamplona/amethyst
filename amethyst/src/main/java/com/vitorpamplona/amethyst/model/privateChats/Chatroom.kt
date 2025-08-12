@@ -38,7 +38,7 @@ class Chatroom : NotesGatherer {
     var subject = MutableStateFlow<String?>(null)
     var subjectCreatedAt: Long? = null
     var ownerSentMessage: Boolean = false
-    var lastMessage: Note? = null
+    var newestMessage: Note? = null
 
     override fun removeNote(note: Note) {
         removeMessageSync(note)
@@ -57,8 +57,8 @@ class Chatroom : NotesGatherer {
             }
 
             val createdAt = msg.createdAt() ?: 0
-            if (createdAt > (lastMessage?.createdAt() ?: 0)) {
-                lastMessage = msg
+            if (createdAt > (newestMessage?.createdAt() ?: 0)) {
+                newestMessage = msg
             }
 
             val newSubject = msg.event?.subject()
@@ -78,8 +78,8 @@ class Chatroom : NotesGatherer {
             messages = messages - msg
             msg.removeGatherer(this)
 
-            if (msg == lastMessage) {
-                lastMessage = messages.maxByOrNull { it.createdAt() ?: 0 }
+            if (msg == newestMessage) {
+                newestMessage = messages.maxByOrNull { it.createdAt() ?: 0 }
             }
 
             if (msg.event?.subject() == subject.value) {
