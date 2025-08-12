@@ -56,7 +56,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -97,7 +96,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import kotlinx.coroutines.Dispatchers
+import com.vitorpamplona.amethyst.ui.theme.Size8dp
 import kotlinx.coroutines.launch
 
 @Composable
@@ -112,12 +111,9 @@ fun ProfileScreen(
 
     if (userBase == null) {
         LaunchedEffect(userId) {
-            // waits to resolve.
-            launch(Dispatchers.IO) {
-                val newUserBase = LocalCache.checkGetOrCreateUser(userId)
-                if (newUserBase != userBase) {
-                    userBase = newUserBase
-                }
+            val newUserBase = LocalCache.checkGetOrCreateUser(userId)
+            if (newUserBase != userBase) {
+                userBase = newUserBase
             }
         }
     }
@@ -395,7 +391,7 @@ private fun RenderScreen(
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,
             selectedTabIndex = pagerState.currentPage,
-            edgePadding = 8.dp,
+            edgePadding = Size8dp,
             modifier = tabRowModifier,
             divider = { HorizontalDivider(thickness = DividerThickness) },
         ) {

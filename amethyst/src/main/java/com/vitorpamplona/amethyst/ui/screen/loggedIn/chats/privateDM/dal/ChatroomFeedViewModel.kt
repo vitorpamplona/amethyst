@@ -27,8 +27,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.privateChats.ListChange
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
+import com.vitorpamplona.amethyst.ui.dal.ListChange
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
