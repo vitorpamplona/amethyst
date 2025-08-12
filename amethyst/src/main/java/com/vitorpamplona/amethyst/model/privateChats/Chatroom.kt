@@ -78,14 +78,25 @@ class Chatroom : NotesGatherer {
             messages = messages - msg
             msg.removeGatherer(this)
 
-            messages
-                .filter { it.event?.subject() != null }
-                .sortedBy { it.createdAt() }
-                .lastOrNull()
-                ?.let {
-                    subject.tryEmit(it.event?.subject())
-                    subjectCreatedAt = it.createdAt()
-                }
+            if (msg == lastMessage) {
+                lastMessage = messages.maxByOrNull { it.createdAt() ?: 0 }
+            }
+
+            if (msg.event?.subject() == subject.value) {
+                messages
+                    .maxByOrNull {
+                        val noteEvent = it.event
+                        if (noteEvent?.subject() != null) {
+                            noteEvent.createdAt
+                        } else {
+                            0
+                        }
+                    }?.let {
+                        subject.tryEmit(it.event?.subject())
+                        subjectCreatedAt = it.createdAt()
+                    }
+            }
+
             return true
         }
         return false
