@@ -40,7 +40,7 @@ class DMsFromUserFilterSubAssembler(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        key.account.outboxRelays.flow.value.map {
+        key.account.homeRelays.flow.value.map {
             filterNip04DMsFromMe(key.account.userProfile(), it, since?.get(it)?.time)
         } +
             key.account.dmRelays.flow.value.map {
@@ -58,7 +58,7 @@ class DMsFromUserFilterSubAssembler(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.outboxRelays.flow.collectLatest {
+                    key.account.homeRelays.flow.collectLatest {
                         invalidateFilters()
                     }
                 },
