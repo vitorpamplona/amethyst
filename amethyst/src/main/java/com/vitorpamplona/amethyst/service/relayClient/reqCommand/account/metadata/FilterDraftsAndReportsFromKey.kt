@@ -24,13 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
 val ReportsAndBookmarksFromKeyKinds =
     listOf(
-        DraftEvent.KIND,
+        DraftWrapEvent.KIND,
         ReportEvent.KIND,
         BookmarkListEvent.KIND,
     )

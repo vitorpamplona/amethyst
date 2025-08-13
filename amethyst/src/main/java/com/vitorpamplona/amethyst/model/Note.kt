@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import coil3.util.CoilUtils.result
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -53,7 +52,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
@@ -236,7 +235,7 @@ open class Note(
 
     open fun createdAt() = event?.createdAt
 
-    fun isDraft() = event is DraftEvent
+    fun isDraft() = event is DraftWrapEvent
 
     fun loadEvent(
         event: Event,

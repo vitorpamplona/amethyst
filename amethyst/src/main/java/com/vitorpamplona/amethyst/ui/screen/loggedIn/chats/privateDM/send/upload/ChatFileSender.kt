@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
@@ -48,7 +49,7 @@ class ChatFileSender(
         contentWarningReason: String?,
         cipher: AESGCM,
     ) {
-        account.sendNIP17EncryptedFile(
+        account.sendNip17EncryptedFile(
             ChatMessageEncryptedFileHeaderEvent.build(
                 url = result.url,
                 to = chatroom.users.map { LocalCache.getOrCreateUser(it).toPTag() },
@@ -89,18 +90,18 @@ class ChatFileSender(
         val iMetaAttachments = IMetaAttachments()
         iMetaAttachments.add(result, caption, contentWarningReason)
 
-        account.sendPrivateMessage(
-            message = result.url,
-            toUser = chatroom.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
-            replyingTo = null,
-            zapReceiver = null,
-            contentWarningReason = null,
-            zapRaiserAmount = null,
-            geohash = null,
-            imetas = iMetaAttachments.iMetaAttachments,
-            emojis = null,
-            draftTag = null,
-        )
+        val toUser = chatroom.users.first().let { LocalCache.getOrCreateUser(it).toPTag() }
+
+        val template =
+            PrivateDmEvent.build(
+                toUser = toUser,
+                message = result.url,
+                imetas = iMetaAttachments.iMetaAttachments,
+                replyingTo = null,
+                signer = account.signer,
+            )
+
+        account.sendNip04PrivateMessage(template)
     }
 
     suspend fun sendAll(uploads: List<SuccessfulUploads>) {

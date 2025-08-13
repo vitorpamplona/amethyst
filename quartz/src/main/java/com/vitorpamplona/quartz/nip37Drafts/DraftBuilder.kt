@@ -35,11 +35,11 @@ class DraftBuilder {
             draft: T,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): DraftEvent {
+        ): DraftWrapEvent {
             val encryptedContent = signer.nip44Encrypt(draft.toJson(), signer.pubKey)
             val template =
-                eventTemplate<DraftEvent>(DraftEvent.KIND, encryptedContent, createdAt) {
-                    alt(DraftEvent.ALT_DESCRIPTION)
+                eventTemplate<DraftWrapEvent>(DraftWrapEvent.KIND, encryptedContent, createdAt) {
+                    alt(DraftWrapEvent.ALT_DESCRIPTION)
                     dTag(dTag)
                     kind(draft.kind)
 

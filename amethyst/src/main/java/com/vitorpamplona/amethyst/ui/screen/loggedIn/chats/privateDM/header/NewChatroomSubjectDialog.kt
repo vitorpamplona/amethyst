@@ -107,7 +107,7 @@ fun NewChatroomSubjectDialog(
                                         groupName.value.ifBlank { null }?.let { changeSubject(it) }
                                     }
 
-                                accountViewModel.account.sendNIP17PrivateMessage(template)
+                                accountViewModel.account.sendNip17PrivateMessage(template)
                             }
 
                             onClose()

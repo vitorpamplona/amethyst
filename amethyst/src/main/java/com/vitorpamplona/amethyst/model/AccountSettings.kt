@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -89,7 +89,7 @@ val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Co
 val DefaultSignerPermissions =
     listOf(
         Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
-        Permission(CommandType.SIGN_EVENT, DraftEvent.KIND),
+        Permission(CommandType.SIGN_EVENT, DraftWrapEvent.KIND),
         Permission(CommandType.NIP04_ENCRYPT),
         Permission(CommandType.NIP04_DECRYPT),
         Permission(CommandType.NIP44_DECRYPT),

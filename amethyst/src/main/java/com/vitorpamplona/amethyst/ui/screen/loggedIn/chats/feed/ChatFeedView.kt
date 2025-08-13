@@ -42,7 +42,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
 @Composable
 fun RefreshingChatroomFeedView(
@@ -129,7 +129,7 @@ fun ChatFeedLoaded(
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
             val noteEvent = item.event
-            if (avoidDraft == null || noteEvent !is DraftEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
+            if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 ChatroomMessageCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,

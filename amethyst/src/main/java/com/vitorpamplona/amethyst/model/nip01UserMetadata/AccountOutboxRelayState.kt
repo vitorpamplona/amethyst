@@ -44,8 +44,8 @@ class AccountOutboxRelayState(
             privateStorage.flow,
             local.flow,
             broadcast.flow,
-        ) { nip65Inbox, privateOutBox, localRelays, broadcastRelays ->
-            nip65Inbox + privateOutBox + localRelays + broadcastRelays
+        ) { nip65Outbox, privateOutBox, localRelays, broadcastRelays ->
+            nip65Outbox + privateOutBox + localRelays + broadcastRelays
         }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

@@ -82,7 +82,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 
@@ -162,7 +162,7 @@ fun NormalChatNote(
 
     ChatBubbleLayout(
         isLoggedInUser = isLoggedInUser,
-        isDraft = note.event is DraftEvent,
+        isDraft = note.event is DraftWrapEvent,
         innerQuote = innerQuote,
         isComplete = accountViewModel.settings.featureSet == FeatureSetType.COMPLETE,
         hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
@@ -289,7 +289,7 @@ private fun MessageBubbleLines(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (baseNote.event !is DraftEvent) {
+    if (baseNote.event !is DraftWrapEvent) {
         RenderReplyRow(
             note = baseNote,
             innerQuote = innerQuote,
@@ -388,7 +388,7 @@ fun NoteRow(
         when (note.event) {
             is ChannelCreateEvent -> RenderCreateChannelNote(note, bgColor, accountViewModel, nav)
             is ChannelMetadataEvent -> RenderChangeChannelMetadataNote(note, bgColor, accountViewModel, nav)
-            is DraftEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
+            is DraftWrapEvent -> RenderDraftEvent(note, canPreview, innerQuote, onWantsToReply, onWantsToEditDraft, bgColor, accountViewModel, nav)
             is ChatMessageEncryptedFileHeaderEvent -> RenderEncryptedFile(note, bgColor, accountViewModel, nav)
             else -> RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
         }
