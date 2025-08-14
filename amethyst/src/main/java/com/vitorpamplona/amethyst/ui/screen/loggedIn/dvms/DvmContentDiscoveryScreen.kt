@@ -20,30 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
@@ -61,25 +52,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.components.ReusableZapButton
+import com.vitorpamplona.amethyst.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
-import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
-import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
-import com.vitorpamplona.amethyst.ui.note.ZapIcon
-import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
-import com.vitorpamplona.amethyst.ui.note.elements.customZapClick
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
@@ -88,9 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.SimpleImage75Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
@@ -98,12 +80,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun DvmContentDiscoveryScreen(
@@ -453,160 +429,23 @@ fun ZapDVMButton(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     iconSize: Dp = Size35dp,
-    iconSizeModifier: Modifier = Size20Modifier,
-    animationSize: Dp = 14.dp,
     nav: INav,
 ) {
-    val noteAuthor = baseNote.author ?: return
+    val config =
+        ZapButtonConfig(
+            grayTint = grayTint,
+            iconSize = iconSize,
+            showUserFinderSubscription = true,
+            zapAmountChoices = listOf(amount / 1000),
+            buttonText = "Zap ${(amount / 1000)} sats to the DVM",
+        )
 
-    var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
-    var wantsToPay by
-        remember(baseNote) {
-            mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
-                persistentListOf(),
-            )
-        }
-
-    // Makes sure the user is loaded to get his ln address ahead of time.
-    UserFinderFilterAssemblerSubscription(noteAuthor, accountViewModel)
-
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    var zappingProgress by remember { mutableFloatStateOf(0f) }
-    var zapStartingTime by remember { mutableLongStateOf(0L) }
-    var hasZapped by remember { mutableStateOf(false) }
-
-    Button(
-        onClick = {
-            customZapClick(
-                baseNote,
-                accountViewModel,
-                context,
-                onZapStarts = { zapStartingTime = TimeUtils.now() },
-                onZappingProgress = { progress: Float ->
-                    scope.launch { zappingProgress = progress }
-                },
-                onMultipleChoices = { options -> wantsToZap = options },
-                onError = { _, message, toUser ->
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, toUser)
-                    }
-                },
-                onPayViaIntent = { wantsToPay = it },
-            )
-        },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        if (wantsToZap != null) {
-            ZapAmountChoicePopup(
-                baseNote = baseNote,
-                zapAmountChoices = persistentListOf(amount / 1000),
-                popupYOffset = iconSize,
-                accountViewModel = accountViewModel,
-                onZapStarts = { zapStartingTime = TimeUtils.now() },
-                onDismiss = {
-                    wantsToZap = null
-                    zappingProgress = 0f
-                },
-                onChangeAmount = {
-                    wantsToZap = null
-                },
-                onError = { _, message, user ->
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
-                    }
-                },
-                onProgress = {
-                    scope.launch(Dispatchers.Main) { zappingProgress = it }
-                },
-                onPayViaIntent = { wantsToPay = it },
-            )
-        }
-
-        if (wantsToPay.isNotEmpty()) {
-            PayViaIntentDialog(
-                payingInvoices = wantsToPay,
-                accountViewModel = accountViewModel,
-                onClose = { wantsToPay = persistentListOf() },
-                onError = {
-                    wantsToPay = persistentListOf()
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
-                justShowError = {
-                    scope.launch {
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = iconSizeModifier,
-        ) {
-            if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
-                Spacer(ModifierWidth3dp)
-
-                val animatedProgress by animateFloatAsState(
-                    targetValue = zappingProgress,
-                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                    label = "ZapIconIndicator",
-                )
-
-                ObserveZapIcon(
-                    baseNote,
-                    accountViewModel,
-                    zapStartingTime,
-                ) { wasZappedByLoggedInUser ->
-                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
-                        if (it) {
-                            ZappedIcon(iconSizeModifier)
-                        } else {
-                            CircularProgressIndicator(
-                                progress = { animatedProgress },
-                                modifier = remember { Modifier.size(animationSize) },
-                                strokeWidth = 2.dp,
-                                color = grayTint,
-                            )
-                        }
-                    }
-                }
-            } else {
-                ObserveZapIcon(
-                    baseNote,
-                    accountViewModel,
-                ) { wasZappedByLoggedInUser ->
-                    LaunchedEffect(wasZappedByLoggedInUser.value) {
-                        hasZapped = wasZappedByLoggedInUser.value
-                        if (wasZappedByLoggedInUser.value && !accountViewModel.account.hasDonatedInThisVersion()) {
-                            delay(1000)
-                            accountViewModel.markDonatedInThisVersion()
-                        }
-                    }
-
-                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
-                        if (it) {
-                            ZappedIcon(iconSizeModifier)
-                        } else {
-                            ZapIcon(iconSizeModifier, grayTint)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (hasZapped) {
-            Text(text = stringRes(id = R.string.thank_you))
-        } else {
-            Text(text = "Zap " + (amount / 1000).toString() + " sats to the DVM") // stringRes(id = R.string.donate_now))
-        }
-    }
+    ReusableZapButton(
+        baseNote = baseNote,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        config = config,
+    )
 }
 
 @Composable
