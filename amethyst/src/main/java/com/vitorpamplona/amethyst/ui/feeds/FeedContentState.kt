@@ -107,9 +107,10 @@ class FeedContentState(
 
     private fun updateFeed(notes: ImmutableList<Note>) {
         if (notes.size >= localFilter.limit()) {
-            val lastNomeTime = notes.lastOrNull { it.event != null }?.createdAt()
-            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
-                lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNomeTime)
+            // feeds might not be sorted by created at, so full search
+            val lastNoteTime = notes.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE }
+            if (lastNoteTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNoteTime)
             }
         }
 
