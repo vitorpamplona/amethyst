@@ -32,7 +32,16 @@ class PublishedAtTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1].toLongOrNull()
+            val timestamp = tag[1].toLongOrNull()
+
+            if (timestamp == null) return null
+
+            if (timestamp > 3_000_000_000) {
+                // like in milliseconds
+                return timestamp / 1000
+            } else {
+                return timestamp
+            }
         }
 
         @JvmStatic
