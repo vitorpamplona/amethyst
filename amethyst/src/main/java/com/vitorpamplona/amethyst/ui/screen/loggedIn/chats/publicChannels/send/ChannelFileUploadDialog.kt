@@ -52,7 +52,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 fun ChannelFileUploadDialog(
     channelScreenModel: ChannelNewMessageViewModel,
     state: ChatFileUploadState,
-    onUpload: () -> Unit,
+    onUpload: suspend () -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,

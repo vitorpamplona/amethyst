@@ -28,7 +28,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
@@ -50,7 +52,7 @@ fun RefresheableFeedView(
     nav: INav,
 ) {
     RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel, scrollStateKey) { listState ->
+        SaveableFeedState(viewModel.feedState, scrollStateKey) { listState ->
             RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
         }
     }
@@ -58,7 +60,7 @@ fun RefresheableFeedView(
 
 @Composable
 fun SaveableFeedState(
-    viewModel: FeedViewModel,
+    feedContentState: FeedContentState,
     scrollStateKey: String? = null,
     content: @Composable (LazyListState) -> Unit,
 ) {
@@ -69,7 +71,7 @@ fun SaveableFeedState(
             rememberLazyListState()
         }
 
-    WatchScrollToTop(viewModel.feedState, listState)
+    WatchScrollToTop(feedContentState, listState)
 
     content(listState)
 }

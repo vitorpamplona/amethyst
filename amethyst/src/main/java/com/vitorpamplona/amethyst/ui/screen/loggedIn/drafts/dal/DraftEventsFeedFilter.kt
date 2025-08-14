@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
 class DraftEventsFeedFilter(
     val account: Account,
@@ -48,7 +48,7 @@ class DraftEventsFeedFilter(
 
     fun acceptableEvent(it: Note): Boolean {
         val noteEvent = it.event
-        return noteEvent is DraftEvent && noteEvent.pubKey == account.userProfile().pubkeyHex
+        return noteEvent is DraftWrapEvent && noteEvent.pubKey == account.userProfile().pubkeyHex
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)

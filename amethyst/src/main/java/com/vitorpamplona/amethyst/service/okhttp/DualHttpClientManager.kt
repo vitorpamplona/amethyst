@@ -44,7 +44,7 @@ class DualHttpClientManager(
             factory.buildHttpClient(proxy, mobile, userAgent)
         }.stateIn(
             scope,
-            SharingStarted.Lazily,
+            SharingStarted.WhileSubscribed(1000),
             factory.buildHttpClient(proxyPortProvider.value, isMobileDataProvider.value, userAgent),
         )
 
@@ -54,7 +54,7 @@ class DualHttpClientManager(
                 factory.buildHttpClient(mobile, userAgent)
             }.stateIn(
                 scope,
-                SharingStarted.Lazily,
+                SharingStarted.WhileSubscribed(1000),
                 factory.buildHttpClient(isMobileDataProvider.value, userAgent),
             )
 

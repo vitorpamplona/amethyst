@@ -92,6 +92,7 @@ val HalfDoubleVertSpacer = Modifier.height(7.dp)
 val Size0dp = 0.dp
 val Size5dp = 5.dp
 val Size6dp = 6.dp
+val Size8dp = 8.dp
 val Size10dp = 10.dp
 val Size12dp = 12.dp
 val Size13dp = 13.dp
@@ -148,6 +149,7 @@ val MaxWidthWithHorzPadding = Modifier.fillMaxWidth().padding(horizontal = 10.dp
 
 val Size5Modifier = Modifier.size(5.dp)
 val Size10Modifier = Modifier.size(10.dp)
+val Size14Modifier = Modifier.size(14.dp)
 val Size15Modifier = Modifier.size(15.dp)
 val Size16Modifier = Modifier.size(16.dp)
 val Size17Modifier = Modifier.size(17.dp)

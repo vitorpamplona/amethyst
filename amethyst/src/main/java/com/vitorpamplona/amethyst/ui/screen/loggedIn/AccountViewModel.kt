@@ -115,7 +115,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -412,12 +412,11 @@ class AccountViewModel(
 
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
-        onWasZapped: (Boolean) -> Unit,
-    ) {
+        afterTimeInSeconds: Long,
+    ): Boolean =
         withContext(Dispatchers.IO) {
-            account.calculateIfNoteWasZappedByAccount(zappedNote) { onWasZapped(true) }
+            account.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
         }
-    }
 
     suspend fun calculateZapAmount(zappedNote: Note): String =
         if (zappedNote.zapPayments.isNotEmpty()) {
@@ -675,7 +674,7 @@ class AccountViewModel(
             showErrorIfNoLnAddress = showErrorIfNoLnAddress,
             okHttpClient = ::okHttpClientForMoney,
             onError = onError,
-            onProgress = { onProgress(it) },
+            onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
             zapType = zapType ?: defaultZapType(),
         )
@@ -1528,7 +1527,7 @@ class AccountViewModel(
         account.deleteDraft(draftTag)
     }
 
-    suspend fun createTempDraftNote(noteEvent: DraftEvent): Note? = draftNoteCache.update(noteEvent)
+    suspend fun createTempDraftNote(noteEvent: DraftWrapEvent): Note? = draftNoteCache.update(noteEvent)
 
     fun createTempDraftNote(
         innerEvent: Event,
@@ -1709,8 +1708,8 @@ class AccountViewModel(
 
     class CachedDraftNotes(
         val accountViewModel: AccountViewModel,
-    ) : GenericBaseCacheAsync<DraftEvent, Note>(20) {
-        override suspend fun compute(key: DraftEvent): Note? =
+    ) : GenericBaseCacheAsync<DraftWrapEvent, Note>(20) {
+        override suspend fun compute(key: DraftWrapEvent): Note? =
             withContext(Dispatchers.IO) {
                 val decrypted = accountViewModel.account.draftsDecryptionCache.cachedDraft(key)
                 if (decrypted != null) {

@@ -153,7 +153,7 @@ class NwcSignerState(
         val walletService = settings.zapPaymentRequest.value
         if (walletService == null) throw IllegalArgumentException("No NIP47 setup")
 
-        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, signer)
+        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value)
 
         val filter =
             NWCPaymentQueryState(

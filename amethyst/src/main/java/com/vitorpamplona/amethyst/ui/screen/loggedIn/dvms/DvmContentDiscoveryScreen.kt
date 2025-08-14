@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -97,6 +98,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -283,7 +285,7 @@ fun RenderNostrNIP90ContentDiscoveryScreen(
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        SaveableFeedState(resultFeedViewModel, null) { listState ->
+        SaveableFeedState(resultFeedViewModel.feedState, null) { listState ->
             // TODO (Optional) Instead of a like reaction, do a Kind 31989 NIP89 App recommendation
             RenderFeedState(
                 resultFeedViewModel,
@@ -472,6 +474,7 @@ fun ZapDVMButton(
     val scope = rememberCoroutineScope()
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
+    var zapStartingTime by remember { mutableLongStateOf(0L) }
     var hasZapped by remember { mutableStateOf(false) }
 
     Button(
@@ -480,6 +483,7 @@ fun ZapDVMButton(
                 baseNote,
                 accountViewModel,
                 context,
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onZappingProgress = { progress: Float ->
                     scope.launch { zappingProgress = progress }
                 },
@@ -501,6 +505,7 @@ fun ZapDVMButton(
                 zapAmountChoices = persistentListOf(amount / 1000),
                 popupYOffset = iconSize,
                 accountViewModel = accountViewModel,
+                onZapStarts = { zapStartingTime = TimeUtils.now() },
                 onDismiss = {
                     wantsToZap = null
                     zappingProgress = 0f
@@ -554,12 +559,24 @@ fun ZapDVMButton(
                     label = "ZapIconIndicator",
                 )
 
-                CircularProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = remember { Modifier.size(animationSize) },
-                    strokeWidth = 2.dp,
-                    color = grayTint,
-                )
+                ObserveZapIcon(
+                    baseNote,
+                    accountViewModel,
+                    zapStartingTime,
+                ) { wasZappedByLoggedInUser ->
+                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
+                        if (it) {
+                            ZappedIcon(iconSizeModifier)
+                        } else {
+                            CircularProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = remember { Modifier.size(animationSize) },
+                                strokeWidth = 2.dp,
+                                color = grayTint,
+                            )
+                        }
+                    }
+                }
             } else {
                 ObserveZapIcon(
                     baseNote,

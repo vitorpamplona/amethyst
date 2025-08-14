@@ -57,7 +57,7 @@ import kotlinx.coroutines.FlowPreview
 fun EditFieldRow(
     channelScreenModel: ChannelNewMessageViewModel,
     accountViewModel: AccountViewModel,
-    onSendNewMessage: () -> Unit,
+    onSendNewMessage: suspend () -> Unit,
     nav: INav,
 ) {
     channelScreenModel.replyTo.value?.let {

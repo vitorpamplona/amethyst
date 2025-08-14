@@ -187,7 +187,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -552,7 +552,7 @@ fun InnerNoteWithReactions(
         }
     }
 
-    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && baseNote.event !is DraftEvent
+    val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent && baseNote.event !is DraftWrapEvent
 
     if (isNotRepost) {
         if (makeItShort) {
@@ -568,7 +568,7 @@ fun InnerNoteWithReactions(
             )
         }
     } else {
-        if (baseNote.event is DraftEvent) {
+        if (baseNote.event is DraftWrapEvent) {
             Spacer(modifier = DoubleVertSpacer)
         }
     }
@@ -647,7 +647,7 @@ private fun RenderNoteRow(
         is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
         is AudioTrackEvent -> RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         is AudioHeaderEvent -> RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-        is DraftEvent -> RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
+        is DraftWrapEvent -> RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
         is ReactionEvent -> RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is RepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is GenericRepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -901,7 +901,7 @@ fun ObserveDraftEvent(
     accountViewModel: AccountViewModel,
     render: @Composable (Note) -> Unit,
 ) {
-    val noteEvent by observeNoteEvent<DraftEvent>(note, accountViewModel)
+    val noteEvent by observeNoteEvent<DraftWrapEvent>(note, accountViewModel)
 
     noteEvent?.let {
         val innerNote by produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = it)

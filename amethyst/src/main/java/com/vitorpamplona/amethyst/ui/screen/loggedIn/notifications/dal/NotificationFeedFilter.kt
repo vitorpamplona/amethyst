@@ -40,6 +40,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
@@ -129,6 +131,8 @@ class NotificationFeedFilter(
             it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
             it.event !is PrivateTagArrayEvent &&
+            it.event !is LnZapPaymentRequestEvent &&
+            it.event !is LnZapPaymentResponseEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&

@@ -79,7 +79,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
@@ -252,7 +252,7 @@ class ChatNewMessageViewModel :
         val noteEvent = draft.event
         val noteAuthor = draft.author
 
-        if (noteEvent is DraftEvent && noteAuthor != null) {
+        if (noteEvent is DraftWrapEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -421,7 +421,7 @@ class ChatNewMessageViewModel :
         }
     }
 
-    private suspend fun innerSendPost(dTag: String?) {
+    private suspend fun innerSendPost(draftTag: String?) {
         val room = room ?: return
 
         val urls = findURLs(message.text)
@@ -468,19 +468,31 @@ class ChatNewMessageViewModel :
                     }
                 }
 
-            accountViewModel.account.sendNIP17PrivateMessage(template, dTag)
+            if (draftTag != null) {
+                accountViewModel.account.createAndSendDraft(draftTag, template)
+            } else {
+                accountViewModel.account.sendNip17PrivateMessage(template)
+            }
         } else {
-            accountViewModel.account.sendPrivateMessage(
-                message = message,
-                toUser = room.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
-                replyingTo = replyTo.value,
-                contentWarningReason = null,
-                imetas = usedAttachments,
-                draftTag = dTag,
-            )
+            val toUser = room.users.first().let { LocalCache.getOrCreateUser(it).toPTag() }
+
+            val template =
+                PrivateDmEvent.build(
+                    toUser = toUser,
+                    message = message,
+                    imetas = usedAttachments,
+                    replyingTo = replyTo.value?.toEId(),
+                    signer = accountViewModel.account.signer,
+                )
+
+            if (draftTag != null) {
+                accountViewModel.account.createAndSendDraft(draftTag, template)
+            } else {
+                accountViewModel.account.sendNip04PrivateMessage(template)
+            }
         }
 
-        if (dTag == null) {
+        if (draftTag == null) {
             ChatFileSender(room, accountViewModel.account).sendAll(uploadsWaitingToBeSent)
         }
     }

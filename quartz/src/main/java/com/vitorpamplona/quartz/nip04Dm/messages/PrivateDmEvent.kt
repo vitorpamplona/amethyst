@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -121,16 +122,37 @@ class PrivateDmEvent(
             }
         }
 
-        fun build(
-            to: PTag,
-            encryptedMessage: String,
+        suspend fun build(
+            toUser: PTag,
+            message: String,
+            imetas: List<IMetaTag>? = null,
+            replyingTo: EventReference? = null,
             createdAt: Long = TimeUtils.now(),
+            signer: NostrSigner,
             initializer: TagArrayBuilder<PrivateDmEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, encryptedMessage, createdAt) {
+        ) = eventTemplate(
+            kind = KIND,
+            description =
+                signer.nip04Encrypt(
+                    prepareMessageToEncrypt(message, imetas),
+                    toUser.pubKey,
+                ),
+            createdAt = createdAt,
+        ) {
             alt(ALT)
-            pTag(to)
+            pTag(toUser)
+            replyingTo?.let { reply(it) }
 
             initializer()
         }
+
+        suspend fun create(
+            to: PTag,
+            message: String,
+            imetas: List<IMetaTag>? = null,
+            replyingTo: EventReference?,
+            createdAt: Long = TimeUtils.now(),
+            signer: NostrSigner,
+        ) = signer.sign(build(to, message, imetas, replyingTo, createdAt, signer))
     }
 }

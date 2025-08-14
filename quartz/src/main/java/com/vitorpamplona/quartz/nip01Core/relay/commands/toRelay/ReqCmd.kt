@@ -50,7 +50,7 @@ class ReqCmd(
             }
 
         @JvmStatic
-        fun parse(msgArray: JsonNode): com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd {
+        fun parse(msgArray: JsonNode): ReqCmd {
             val filters = mutableListOf<Filter>()
 
             for (i in 2 until msgArray.size()) {
@@ -60,7 +60,7 @@ class ReqCmd(
                 }
             }
 
-            return com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd(
+            return ReqCmd(
                 msgArray.get(1).asText(),
                 filters,
             )

@@ -103,6 +103,7 @@ class ZapOptionViewModel : ViewModel() {
 
 @Composable
 fun ZapCustomDialog(
+    onZapStarts: () -> Unit,
     onClose: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
@@ -172,6 +173,7 @@ fun ZapCustomDialog(
                     ZapButton(
                         isActive = postViewModel.canSend() && !baseNote.isDraft(),
                     ) {
+                        onZapStarts()
                         accountViewModel.zap(
                             baseNote,
                             postViewModel.value()!! * 1000L,

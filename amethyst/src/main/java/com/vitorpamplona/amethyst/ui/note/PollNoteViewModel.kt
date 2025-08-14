@@ -103,10 +103,8 @@ class PollNoteViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.Default) {
             totalZapped = totalZapped()
             wasZappedByLoggedInAccount = false
-            account?.calculateIfNoteWasZappedByAccount(pollNote) {
-                wasZappedByLoggedInAccount = true
-                canZap.value = checkIfCanZap()
-            }
+            wasZappedByLoggedInAccount = account.calculateIfNoteWasZappedByAccount(pollNote, 0)
+            canZap.value = checkIfCanZap()
 
             tallies.forEach {
                 val zappedValue = zappedPollOptionAmount(it.option)
@@ -210,10 +208,8 @@ class PollNoteViewModel : ViewModel() {
     suspend fun isPollOptionZappedBy(
         option: Int,
         user: User,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        pollNote?.isZappedBy(option, user, account!!, onWasZappedByAuthor)
-    }
+        afterTimeInSeconds: Long,
+    ): Boolean = pollNote?.isZappedBy(option, user, afterTimeInSeconds, account) == true
 
     fun cachedIsPollOptionZappedBy(
         option: Int,

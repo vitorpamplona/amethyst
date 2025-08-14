@@ -120,7 +120,7 @@ private fun RenderDraftListScreen(
     ) {
         Column(Modifier.padding(it).fillMaxHeight()) {
             RefresheableBox(feedViewModel) {
-                SaveableFeedState(feedViewModel, DRAFTS) { listState ->
+                SaveableFeedState(feedViewModel.feedState, DRAFTS) { listState ->
                     RenderFeedState(
                         viewModel = feedViewModel,
                         accountViewModel = accountViewModel,

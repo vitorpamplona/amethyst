@@ -208,7 +208,7 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -641,7 +641,7 @@ private fun FullBleedNoteCompose(
                     RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
-                } else if (noteEvent is DraftEvent) {
+                } else if (noteEvent is DraftWrapEvent) {
                     RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)

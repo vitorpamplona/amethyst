@@ -132,7 +132,7 @@ fun ChatroomViewUI(
                     .weight(1f, true),
         ) {
             RefreshingChatroomFeedView(
-                viewModel = feedViewModel,
+                feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = "Room/${room.hashCode()}",
@@ -152,7 +152,7 @@ fun ChatroomViewUI(
             accountViewModel,
             onSendNewMessage = {
                 scope.launch {
-                    feedViewModel.sendToTop()
+                    feedViewModel.feedState.sendToTop()
                 }
             },
             nav,

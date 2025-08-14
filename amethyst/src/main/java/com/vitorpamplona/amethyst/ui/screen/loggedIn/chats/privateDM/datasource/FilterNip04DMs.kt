@@ -37,7 +37,7 @@ fun filterNip04DMs(
 ): List<RelayBasedFilter>? {
     if (group == null || group.isEmpty() || account == null) return null
 
-    val userOutboxRelays = account.outboxRelays.flow.value
+    val userOutboxRelays = account.homeRelays.flow.value
     val userInboxRelays = account.dmRelays.flow.value
 
     val groupOutboxRelays = mutableSetOf<NormalizedRelayUrl>()

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
@@ -809,9 +808,6 @@ private fun verifyHash(content: MediaUrlContent): Boolean? {
 
     Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
         val hash = sha256(snapshot.data.toFile().readBytes()).toHexKey()
-
-        Log.d("Image Hash Verification", "$hash == ${content.hash}")
-
         return hash == content.hash
     }
 

@@ -96,7 +96,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
@@ -241,7 +241,7 @@ open class ShortNotePostViewModel :
         val noteEvent = draft?.event
         val noteAuthor = draft?.author
 
-        if (draft != null && noteEvent is DraftEvent && noteAuthor != null) {
+        if (draft != null && noteEvent is DraftWrapEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -483,18 +483,17 @@ open class ShortNotePostViewModel :
     }
 
     suspend fun sendDraftSync() {
-        val accountViewModel = accountViewModel
-
         if (message.text.isBlank()) {
             accountViewModel.account.deleteDraft(draftTag.current)
         } else {
-            val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag.current, template)
-
+            val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
-                account.sendToPrivateOutboxAndLocal(it.first)
-                account.sendToPrivateOutboxAndLocal(it.second)
+                attachments.add(it.first)
+                attachments.add(it.second)
             }
+
+            val template = createTemplate() ?: return
+            accountViewModel.account.createAndSendDraft(draftTag.current, template, attachments)
         }
     }
 

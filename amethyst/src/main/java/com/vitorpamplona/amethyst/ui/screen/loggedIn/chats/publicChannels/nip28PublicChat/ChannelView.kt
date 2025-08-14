@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,7 +40,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dataso
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import kotlinx.coroutines.launch
 
 @Composable
 fun PublicChatChannelView(
@@ -111,7 +109,7 @@ fun ChannelView(
                 },
         ) {
             RefreshingChatroomFeedView(
-                viewModel = feedViewModel,
+                feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = "Channel/${channel.idHex}",
@@ -123,17 +121,11 @@ fun ChannelView(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        val scope = rememberCoroutineScope()
-
         // LAST ROW
         EditFieldRow(
             newPostModel,
             accountViewModel,
-            onSendNewMessage = {
-                scope.launch {
-                    feedViewModel.sendToTop()
-                }
-            },
+            onSendNewMessage = feedViewModel.feedState::sendToTop,
             nav,
         )
     }

@@ -76,8 +76,11 @@ class AdvertisedRelayInfo(
 
         @JvmStatic
         fun parseReadNorm(tag: Array<String>): NormalizedRelayUrl? {
-            ensure(match(tag)) { return null }
-            ensure(AdvertisedRelayType.isRead(tag.getOrNull(2))) { return null }
+            ensure(tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()) { return null }
+
+            if (tag.has(2)) {
+                ensure(AdvertisedRelayType.isRead(tag[2])) { return null }
+            }
 
             val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
 
@@ -88,8 +91,11 @@ class AdvertisedRelayInfo(
 
         @JvmStatic
         fun parseWriteNorm(tag: Array<String>): NormalizedRelayUrl? {
-            ensure(match(tag)) { return null }
-            ensure(AdvertisedRelayType.isWrite(tag.getOrNull(2))) { return null }
+            ensure(tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()) { return null }
+
+            if (tag.has(2)) {
+                ensure(AdvertisedRelayType.isWrite(tag[2])) { return null }
+            }
 
             val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
 

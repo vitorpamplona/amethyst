@@ -50,6 +50,25 @@ class BundledUpdate(
 
     val scope = CoroutineScope(dispatcher + SupervisorJob() + exceptionHandler)
 
+    val bundledUpdate = BasicBundledUpdate(delay, dispatcher, scope)
+
+    fun invalidate(
+        ignoreIfDoing: Boolean = false,
+        onUpdate: suspend () -> Unit,
+    ) = bundledUpdate.invalidate(ignoreIfDoing, onUpdate)
+
+    fun cancel() {
+        scope.cancel()
+    }
+}
+
+/** This class is designed to have a waiting time between two calls of invalidate */
+@Stable
+class BasicBundledUpdate(
+    val delay: Long,
+    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    val scope: CoroutineScope,
+) {
     private var onlyOneInBlock = AtomicBoolean()
     private var invalidatesAgain = false
 
@@ -79,10 +98,6 @@ class BundledUpdate(
             }
         }
     }
-
-    fun cancel() {
-        scope.cancel()
-    }
 }
 
 /** This class is designed to have a waiting time between two calls of invalidate */
@@ -99,6 +114,25 @@ class BundledInsert<T>(
 
     val scope = CoroutineScope(dispatcher + SupervisorJob() + exceptionHandler)
 
+    val bundledInsert = BasicBundledInsert<T>(delay, dispatcher, scope)
+
+    fun invalidateList(
+        newObject: T,
+        onUpdate: suspend (Set<T>) -> Unit,
+    ) = bundledInsert.invalidateList(newObject, onUpdate)
+
+    fun cancel() {
+        scope.cancel()
+    }
+}
+
+/** This class is designed to have a waiting time between two calls of invalidate */
+@Stable
+class BasicBundledInsert<T>(
+    val delay: Long,
+    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    val scope: CoroutineScope,
+) {
     private var onlyOneInBlock = AtomicBoolean()
     private var queue = LinkedBlockingQueue<T>()
 
@@ -109,32 +143,30 @@ class BundledInsert<T>(
         checkNotInMainThread()
 
         queue.put(newObject)
+
         if (onlyOneInBlock.getAndSet(true)) {
+            // if it was true already, returns.
             return
         }
 
         scope.launch(dispatcher) {
             try {
-                val mySet = mutableSetOf<T>()
-                queue.drainTo(mySet)
-                if (mySet.isNotEmpty()) {
-                    onUpdate(mySet)
-                }
+                while (true) {
+                    val batch = mutableSetOf<T>()
+                    queue.drainTo(batch)
+                    if (batch.isNotEmpty()) {
+                        onUpdate(batch)
+                    } else {
+                        break
+                    }
 
-                delay(delay)
-
-                val mySet2 = mutableSetOf<T>()
-                queue.drainTo(mySet2)
-                if (mySet2.isNotEmpty()) {
-                    onUpdate(mySet2)
+                    delay(delay)
                 }
             } finally {
-                withContext(NonCancellable) { onlyOneInBlock.set(false) }
+                withContext(NonCancellable) {
+                    onlyOneInBlock.set(false)
+                }
             }
         }
-    }
-
-    fun cancel() {
-        scope.cancel()
     }
 }

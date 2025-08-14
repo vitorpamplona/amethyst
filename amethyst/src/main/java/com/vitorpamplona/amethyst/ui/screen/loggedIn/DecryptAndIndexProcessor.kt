@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -74,7 +74,7 @@ class EventProcessor(
         when (event) {
             is ChatroomKeyable -> chatHandler.add(event, eventNote, publicNote)
             is OtsEvent -> otsHandler.add(event, eventNote, publicNote)
-            is DraftEvent -> draftHandler.add(event, eventNote, publicNote)
+            is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
             is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
             is LnZapRequestEvent -> zapRequest.add(event, eventNote, publicNote)
@@ -98,7 +98,7 @@ class EventProcessor(
         when (event) {
             is ChatroomKeyable -> chatHandler.delete(event, note)
             is OtsEvent -> otsHandler.delete(event, note)
-            is DraftEvent -> draftHandler.delete(event, note)
+            is DraftWrapEvent -> draftHandler.delete(event, note)
             is GiftWrapEvent -> giftWrapHandler.delete(event, note)
             is SealedRumorEvent -> sealHandler.delete(event, note)
             is LnZapRequestEvent -> zapRequest.delete(event, note)
@@ -129,7 +129,7 @@ class EventProcessor(
         val deletedDrafts =
             newNotes.mapNotNull { note ->
                 val event = note.event
-                if (event is DraftEvent &&
+                if (event is DraftWrapEvent &&
                     event.isDeleted() &&
                     !cache.deletionIndex.hasBeenDeleted(event)
                 ) {
@@ -193,9 +193,9 @@ class OtsEventHandler(
 class DraftEventHandler(
     private val account: Account,
     private val cache: LocalCache,
-) : EventHandler<DraftEvent> {
+) : EventHandler<DraftWrapEvent> {
     override suspend fun add(
-        event: DraftEvent,
+        event: DraftWrapEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
