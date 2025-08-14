@@ -320,7 +320,7 @@ open class BasicRelayClient(
     }
 
     private fun processAuth(msg: AuthMessage) {
-        // Log.d(logTag, "Auth $newMessage")
+        Log.d(logTag, "Auth ${msg.challenge}")
         listener.onAuth(this@BasicRelayClient, msg.challenge)
     }
 
