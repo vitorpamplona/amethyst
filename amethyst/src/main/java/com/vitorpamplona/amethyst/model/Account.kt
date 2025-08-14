@@ -214,6 +214,7 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
 import kotlin.collections.forEach
+import kotlin.collections.ifEmpty
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -536,7 +537,7 @@ class Account(
         val zapRequest =
             LnZapRequestEvent.create(
                 userHex = user.pubkeyHex,
-                relays = nip65RelayList.inboxFlow.value + user.inboxRelays(),
+                relays = nip65RelayList.inboxFlow.value + (user.inboxRelays() ?: emptyList()),
                 signer = signer,
                 message = message,
                 zapType = zapType,
@@ -657,7 +658,8 @@ class Account(
                         if (replyToAuthor == userProfile()) {
                             outboxRelays.flow.value
                         } else {
-                            replyToAuthor.outboxRelays().ifEmpty { null }?.toSet()
+                            replyToAuthor.inboxRelays()?.ifEmpty { null }?.toSet()
+                                ?: replyToAuthor.relaysBeingUsed.keys.ifEmpty { null }
                                 ?: cache.relayHints
                                     .hintsForKey(replyToAuthor.pubkeyHex)
                                     .ifEmpty { null }
@@ -683,7 +685,7 @@ class Account(
         if (user == userProfile()) {
             notificationRelays.flow.value
         } else {
-            user.inboxRelays().ifEmpty { null }?.toSet()
+            user.inboxRelays()?.ifEmpty { null }?.toSet()
                 ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.relaysBeingUsed.keys)
         }
 
@@ -736,10 +738,12 @@ class Account(
             if (author == userProfile()) {
                 relayList.addAll(outboxRelays.flow.value)
             } else {
-                relayList.addAll(
-                    author.outboxRelays().ifEmpty { null }
-                        ?: cache.relayHints.hintsForKey(author.pubkeyHex),
-                )
+                val relays =
+                    author.outboxRelays()?.ifEmpty { null }
+                        ?: author.relaysBeingUsed.keys.ifEmpty { null }
+                        ?: cache.relayHints.hintsForKey(author.pubkeyHex)
+
+                relayList.addAll(relays)
             }
         } else {
             relayList.addAll(cache.relayHints.hintsForKey(event.pubKey))
@@ -1548,11 +1552,8 @@ class Account(
         val request = NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey.pubkeyHex, signer.pubKey, relays, signer)
 
         val relayList =
-            dvmPublicKey
-                .inboxRelays()
-                .ifEmpty {
-                    cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex) + dvmPublicKey.relaysBeingUsed.keys
-                }.toSet()
+            dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }
+                ?: (dvmPublicKey.relaysBeingUsed.keys + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
 
         cache.justConsumeMyOwnEvent(request)
         onReady(request)
