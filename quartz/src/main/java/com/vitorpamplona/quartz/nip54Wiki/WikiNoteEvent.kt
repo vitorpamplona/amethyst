@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -62,6 +63,7 @@ class WikiNoteEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
+    PublishedAtProvider,
     SearchableEvent {
     override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
 
@@ -127,7 +129,7 @@ class WikiNoteEvent(
 
     fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
 
-    fun publishedAt() =
+    override fun publishedAt() =
         try {
             tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
         } catch (_: Exception) {

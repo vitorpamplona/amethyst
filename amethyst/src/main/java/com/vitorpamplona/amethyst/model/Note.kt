@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -49,7 +50,6 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -58,15 +58,12 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
-import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
@@ -95,19 +92,9 @@ class AddressableNote(
 
     override fun createdAt(): Long? {
         val currentEvent = event
-
         if (currentEvent == null) return null
-
-        val publishedAt =
-            when (currentEvent) {
-                is LongTextNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                is WikiNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                is VideoEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                is ClassifiedsEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                else -> Long.MAX_VALUE
-            }
-
-        return minOf(publishedAt, currentEvent.createdAt)
+        if (currentEvent is PublishedAtProvider) return currentEvent.publishedAt() ?: currentEvent.createdAt
+        return currentEvent.createdAt
     }
 
     fun dTag(): String = address.dTag

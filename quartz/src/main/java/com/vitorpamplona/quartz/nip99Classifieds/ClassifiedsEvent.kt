@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.containsAllTagNamesWithValues
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
@@ -49,7 +50,8 @@ class ClassifiedsEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PublishedAtProvider {
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
@@ -68,7 +70,7 @@ class ClassifiedsEvent(
 
     fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
 
-    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
     fun categories() = tags.hashtags()
 
