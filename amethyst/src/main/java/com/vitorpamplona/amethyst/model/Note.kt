@@ -189,15 +189,15 @@ open class Note(
     }
 
     fun relayUrls(): List<NormalizedRelayUrl> {
-        val authorRelay = author?.relayHints()?.ifEmpty { null }
+        val authorRelay = author?.relayHints() ?: emptyList()
 
-        return authorRelay ?: relays
+        return authorRelay + relays
     }
 
     fun relayUrlsForReactions(): List<NormalizedRelayUrl> {
-        val authorRelay = author?.inboxRelays()?.ifEmpty { null }
+        val authorRelay = author?.inboxRelays() ?: emptyList()
 
-        return authorRelay ?: relays
+        return authorRelay + relays
     }
 
     fun relayHintUrl(): NormalizedRelayUrl? {
