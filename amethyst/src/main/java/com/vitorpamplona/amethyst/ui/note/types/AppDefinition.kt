@@ -91,16 +91,16 @@ fun RenderAppDefinition(
         withContext(Dispatchers.Default) { metadata = noteEvent.appMetaData() }
     }
 
-    metadata?.let {
+    metadata?.let { theAppMetadata ->
         Box {
             val clipboardManager = LocalClipboardManager.current
             val uri = LocalUriHandler.current
 
-            if (!it.banner.isNullOrBlank()) {
+            if (!theAppMetadata.banner.isNullOrBlank()) {
                 var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
                 AsyncImage(
-                    model = it.banner,
+                    model = theAppMetadata.banner,
                     contentDescription = stringRes(id = R.string.profile_image),
                     contentScale = ContentScale.FillWidth,
                     modifier =
@@ -109,13 +109,13 @@ fun RenderAppDefinition(
                             .height(125.dp)
                             .combinedClickable(
                                 onClick = {},
-                                onLongClick = { clipboardManager.setText(AnnotatedString(it.banner!!)) },
+                                onLongClick = { clipboardManager.setText(AnnotatedString(theAppMetadata.banner!!)) },
                             ),
                 )
 
                 if (zoomImageDialogOpen) {
                     ZoomableImageDialog(
-                        imageUrl = RichTextParser.parseImageOrVideo(it.banner!!),
+                        imageUrl = RichTextParser.parseImageOrVideo(theAppMetadata.banner!!),
                         onDismiss = { zoomImageDialogOpen = false },
                         accountViewModel = accountViewModel,
                     )
@@ -144,12 +144,11 @@ fun RenderAppDefinition(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     var zoomImageDialogOpen by remember { mutableStateOf(false) }
-
                     Box(Modifier.size(100.dp)) {
-                        it.picture?.let { picture ->
+                        theAppMetadata.picture?.let { picture ->
                             AsyncImage(
                                 model = picture,
-                                contentDescription = it.name,
+                                contentDescription = theAppMetadata.name,
                                 contentScale = ContentScale.FillWidth,
                                 modifier =
                                     Modifier
@@ -165,15 +164,15 @@ fun RenderAppDefinition(
                                             onLongClick = { clipboardManager.setText(AnnotatedString(picture)) },
                                         ),
                             )
-                        }
-                    }
 
-                    if (zoomImageDialogOpen) {
-                        ZoomableImageDialog(
-                            imageUrl = RichTextParser.parseImageOrVideo(it.banner!!),
-                            onDismiss = { zoomImageDialogOpen = false },
-                            accountViewModel = accountViewModel,
-                        )
+                            if (zoomImageDialogOpen) {
+                                ZoomableImageDialog(
+                                    imageUrl = RichTextParser.parseImageOrVideo(theAppMetadata.picture!!),
+                                    onDismiss = { zoomImageDialogOpen = false },
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
+                        }
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -186,7 +185,7 @@ fun RenderAppDefinition(
                     ) {}
                 }
 
-                val name = remember(it) { it.anyName() }
+                val name = remember(theAppMetadata) { theAppMetadata.anyName() }
                 name?.let {
                     Row(
                         verticalAlignment = Alignment.Bottom,
@@ -204,7 +203,7 @@ fun RenderAppDefinition(
                     }
                 }
 
-                val website = remember(it) { it.website }
+                val website = remember(theAppMetadata) { theAppMetadata.website }
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
@@ -217,7 +216,7 @@ fun RenderAppDefinition(
                     }
                 }
 
-                it.about?.let {
+                theAppMetadata.about?.let {
                     Row(
                         modifier = Modifier.padding(top = 5.dp, bottom = 5.dp),
                     ) {
