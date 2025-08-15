@@ -207,7 +207,8 @@ open class BasicRelayClient(
             code: Int?,
             response: String?,
         ) {
-            socket?.disconnect() // 1000, "Normal close"
+            // socket is already closed
+            // socket?.disconnect()
 
             // checks if this is an actual failure. Closing the socket generates an onFailure as well.
             if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
