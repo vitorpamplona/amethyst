@@ -438,8 +438,7 @@ open class BasicRelayClient(
                 writeToSocket(EventCmd.Companion.toJson(event))
             }
         } else {
-            // automatically sends all filters after connection is successful.
-            connect()
+            connectAndSyncFiltersIfDisconnected()
         }
     }
 
