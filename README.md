@@ -251,10 +251,10 @@ dependencyResolutionManagement {
 }
 ```
 
-Add the dependency
+Add the dependency by using one of the versions [here](https://jitpack.io/#vitorpamplona/amethyst/)
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:v0.85.1')
+implementation('com.github.vitorpamplona.amethyst:quartz:<tag, commit, -SNAPSHOT>')
 ```
 
 Manage logged in users with the `KeyPair` class
