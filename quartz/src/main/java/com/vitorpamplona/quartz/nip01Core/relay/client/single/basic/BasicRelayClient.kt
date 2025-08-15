@@ -219,11 +219,9 @@ open class BasicRelayClient(
             markConnectionAsClosed()
 
             Log.w(logTag, "OnFailure $code $response ${t.message} $socket")
-            listener.onError(
-                this@BasicRelayClient,
-                "",
-                Error("WebSocket Failure. Response: $code $response. Exception: ${t.message}", t),
-            )
+
+            listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTED)
+            listener.onError(this@BasicRelayClient, "", Error("WebSocket Failure. Response: $code $response. Exception: ${t.message}", t))
         }
     }
 
