@@ -67,7 +67,7 @@ class LargeCache<K, V> : CacheOperations<K, V> {
         key: K,
         builder: (key: K) -> V,
     ): Boolean {
-        val value = cache[key]
+        val value = cache.get(key)
         return if (value != null) {
             false
         } else {
