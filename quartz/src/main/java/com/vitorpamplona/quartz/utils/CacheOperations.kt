@@ -123,20 +123,8 @@ interface CacheOperations<K, V> {
         return runner.results
     }
 
-    fun <T, U> associateNotNull(transform: (K, V) -> Pair<T, U>?): Map<T, U> {
-        val runner = CacheCollectors.BiAssociateNotNullCollector(size(), transform)
-        forEach(runner)
-        return runner.results
-    }
-
     fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?> {
         val runner = CacheCollectors.BiAssociateWithCollector(size(), transform)
-        forEach(runner)
-        return runner.results
-    }
-
-    fun <U> associateNotNullWith(transform: (K, V) -> U): Map<K, U> {
-        val runner = CacheCollectors.BiAssociateNotNullWithCollector(size(), transform)
         forEach(runner)
         return runner.results
     }

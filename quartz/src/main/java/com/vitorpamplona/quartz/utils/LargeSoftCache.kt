@@ -78,7 +78,7 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
         key: K,
         builder: (key: K) -> V,
     ): V {
-        val softRef = cache.get(key)
+        val softRef = cache[key]
         val value = softRef?.get()
 
         return if (value != null) {
@@ -86,20 +86,6 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
         } else {
             val newObject = builder(key)
             cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
-        }
-    }
-
-    fun createIfAbsent(
-        key: K,
-        builder: (key: K) -> V,
-    ): Boolean {
-        val softRef = cache.get(key)
-        val value = softRef?.get()
-        return if (value != null) {
-            false
-        } else {
-            val newObject = builder(key)
-            cache.putIfAbsent(key, WeakReference(newObject)) == null
         }
     }
 
