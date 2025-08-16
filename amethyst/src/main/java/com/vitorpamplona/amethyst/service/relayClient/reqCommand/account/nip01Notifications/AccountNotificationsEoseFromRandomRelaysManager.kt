@@ -27,12 +27,12 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class AccountNotificationsEoseFromRandomRelaysManager(
@@ -49,11 +49,18 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
-        (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
-            val since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo()
-            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
+    ): List<RelayBasedFilter>? {
+        // only loads this after the feed is built
+        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
+        return if (defaultSince != null) {
+            (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
+                val since = since?.get(it)?.time ?: defaultSince
+                filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
+            }
+        } else {
+            emptyList()
         }
+    }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -66,6 +73,11 @@ class AccountNotificationsEoseFromRandomRelaysManager(
                 key.account.scope.launch(Dispatchers.Default) {
                     // no need to hurry here. we can wait the app stabilize
                     key.account.followsPerRelay.debounce(5000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

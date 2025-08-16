@@ -36,7 +36,7 @@ fun NormalizedRelayUrl.toHttp() =
     if (url.startsWith("wss://")) {
         "https${url.drop(3)}"
     } else if (url.startsWith("ws://")) {
-        "https${url.drop(2)}"
+        "http${url.drop(2)}"
     } else {
         "https://$url"
     }

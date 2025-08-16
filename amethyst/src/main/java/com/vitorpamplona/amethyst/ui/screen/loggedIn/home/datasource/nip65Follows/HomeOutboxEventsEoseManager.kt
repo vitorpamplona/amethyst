@@ -102,12 +102,12 @@ class HomeOutboxEventsEoseManager(
                     }
                 },
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.feedState.homeNewThreads.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
+                    key.feedState.homeNewThreads.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.feedState.homeReplies.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
+                    key.feedState.homeReplies.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

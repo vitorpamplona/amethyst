@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -31,8 +32,13 @@ val UserProfileFollowersKinds = listOf(ContactListEvent.KIND)
 fun filterUserProfileFollowers(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    user.inboxRelays().map {
+): List<RelayBasedFilter> {
+    val relays =
+        user.inboxRelays()?.ifEmpty { null }
+            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+
+    return relays.map {
         RelayBasedFilter(
             relay = it,
             filter =
@@ -43,3 +49,4 @@ fun filterUserProfileFollowers(
                 ),
         )
     }
+}

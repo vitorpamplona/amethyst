@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.isTaggedKind
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -46,7 +47,8 @@ class AppDefinitionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PublishedAtProvider {
     override fun countMemory(): Long = super.countMemory() + (cachedMetadata?.countMemory() ?: 8L)
 
     @Transient private var cachedMetadata: AppMetadata? = null
@@ -77,7 +79,7 @@ class AppDefinitionEvent(
 
     fun includeKind(kind: Int) = tags.isTaggedKind(kind)
 
-    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
     companion object {
         const val KIND = 31990

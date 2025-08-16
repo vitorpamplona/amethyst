@@ -77,7 +77,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                     }
                 },
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
+                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

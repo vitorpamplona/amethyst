@@ -78,11 +78,11 @@ class User(
 
     fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
 
-    fun outboxRelays() = authorRelayList()?.writeRelaysNorm() ?: listOfNotNull(latestMetadataRelay)
+    fun outboxRelays() = authorRelayList()?.writeRelaysNorm()
 
     fun relayHints() = authorRelayList()?.writeRelaysNorm()?.take(3) ?: listOfNotNull(latestMetadataRelay)
 
-    fun inboxRelays() = authorRelayList()?.readRelaysNorm() ?: listOfNotNull(latestMetadataRelay)
+    fun inboxRelays() = authorRelayList()?.readRelaysNorm()
 
     fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
 

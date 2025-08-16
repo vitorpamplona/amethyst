@@ -50,7 +50,7 @@ class FeedContentState(
     // Simple counter that changes when it needs to invalidate everything
     private val _scrollToTop = MutableStateFlow<Int>(0)
     val scrollToTop = _scrollToTop.asStateFlow()
-    var scrolltoTopPending = false
+    var scrollToTopPending = false
 
     private var lastFeedKey: Any? = null
 
@@ -59,14 +59,14 @@ class FeedContentState(
     val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
 
     fun sendToTop() {
-        if (scrolltoTopPending) return
+        if (scrollToTopPending) return
 
-        scrolltoTopPending = true
+        scrollToTopPending = true
         viewModelScope.launch(Dispatchers.IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
     }
 
     suspend fun sentToTop() {
-        scrolltoTopPending = false
+        scrollToTopPending = false
     }
 
     private fun refresh() {
@@ -107,9 +107,10 @@ class FeedContentState(
 
     private fun updateFeed(notes: ImmutableList<Note>) {
         if (notes.size >= localFilter.limit()) {
-            val lastNomeTime = notes.lastOrNull { it.event != null }?.createdAt()
-            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
-                lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNomeTime)
+            // feeds might not be sorted by created at, so full search
+            val lastNoteTime = notes.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE }
+            if (lastNoteTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNoteTime)
             }
         }
 
@@ -128,7 +129,8 @@ class FeedContentState(
     fun deleteFromFeed(deletedNotes: Set<Note>) {
         val feed = _feedContent.value
         if (feed is FeedState.Loaded) {
-            updateFeed((feed.feed.value.list - deletedNotes).toImmutableList())
+            val notes = (feed.feed.value.list - deletedNotes).toImmutableList()
+            updateFeed(notes)
         }
     }
 

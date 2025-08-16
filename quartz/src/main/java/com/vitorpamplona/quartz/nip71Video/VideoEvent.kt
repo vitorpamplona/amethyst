@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -45,12 +46,13 @@ abstract class VideoEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    PublishedAtProvider,
     RootScope {
     @Transient var iMetas: List<VideoMeta>? = null
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
     fun duration() = tags.firstNotNullOfOrNull(DurationTag::parse)
 

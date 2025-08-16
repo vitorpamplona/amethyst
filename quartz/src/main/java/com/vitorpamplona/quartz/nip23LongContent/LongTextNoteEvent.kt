@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
@@ -68,6 +69,7 @@ class LongTextNoteEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
+    PublishedAtProvider,
     RootScope,
     SearchableEvent {
     override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
@@ -130,7 +132,7 @@ class LongTextNoteEvent(
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
     companion object {
         const val KIND = 30023

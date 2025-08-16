@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.utils.mapOfSet
+import kotlin.collections.ifEmpty
 
 class UserProfileMetadataFilterSubAssembler(
     client: NostrClient,
@@ -37,7 +39,12 @@ class UserProfileMetadataFilterSubAssembler(
         val userPerRelay =
             mapOfSet {
                 keys.mapTo(mutableSetOf()) { key -> key.user }.forEach { user ->
-                    user.outboxRelays().forEach { relay ->
+                    val relays =
+                        user.outboxRelays()?.ifEmpty { null }
+                            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+                            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+
+                    relays.forEach { relay ->
                         add(relay, user.pubkeyHex)
                     }
                 }

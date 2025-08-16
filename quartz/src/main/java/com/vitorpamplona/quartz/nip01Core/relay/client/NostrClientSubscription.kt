@@ -18,38 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.quartz.nip01Core.relay.client
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.markAsSeen
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.RandomInstance
 
-class CacheClientConnector(
+class NostrClientSubscription(
     val client: NostrClient,
-    val cache: LocalCache,
-) {
-    val receiver =
-        EventCollector(client) { event, relay ->
-            cache.justConsume(event, relay, false)
-        }
+    val filter: () -> Map<NormalizedRelayUrl, List<Filter>> = { emptyMap() },
+    val onEvent: (event: Event) -> Unit = {},
+) : IRelayClientListener {
+    private val subId = RandomInstance.randomChars(10)
 
-    val confirmationWatcher =
-        RelayInsertConfirmationCollector(client) { eventId, relay ->
-            cache.markAsSeen(eventId, relay.url)
-            markAsSeen(eventId, relay.url)
-        }
-
-    fun destroy() {
-        receiver.destroy()
-        confirmationWatcher.destroy()
+    init {
+        client.subscribe(this)
     }
 
-    private fun markAsSeen(
-        eventId: HexKey,
-        info: NormalizedRelayUrl,
-    ) = LocalCache.getNoteIfExists(eventId)?.addRelay(info)
+    override fun onEvent(
+        relay: IRelayClient,
+        subId: String,
+        event: Event,
+        arrivalTime: Long,
+        afterEOSE: Boolean,
+    ) {
+        if (this.subId == subId) {
+            onEvent(event)
+        }
+    }
+
+    /**
+     * Creates or Updates the filter with relays. This method should be called
+     * everytime the filter changes.
+     */
+    fun updateFilter() = client.openReqSubscription(subId, filter())
+
+    fun closeSubscription() = client.close(subId)
 }

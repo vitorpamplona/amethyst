@@ -89,7 +89,7 @@ class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
                         key.feedStates.discoverMarketplace.lastNoteCreatedAtWhenFullyLoaded,
                     ) {
                         Any()
-                    }.sample(1000).collectLatest {
+                    }.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

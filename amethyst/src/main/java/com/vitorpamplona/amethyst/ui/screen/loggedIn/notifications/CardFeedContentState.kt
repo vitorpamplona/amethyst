@@ -78,6 +78,9 @@ class CardFeedContentState(
 
     val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
 
+    private var lastAccount: Account? = null
+    private var lastNotes: Set<Note>? = null
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -89,8 +92,14 @@ class CardFeedContentState(
         scrolltoTopPending = false
     }
 
-    private var lastAccount: Account? = null
-    private var lastNotes: Set<Note>? = null
+    fun visibleNotes(): List<Card> {
+        val currentState = _feedContent.value
+        return if (currentState is CardFeedState.Loaded) {
+            currentState.feed.value.list
+        } else {
+            emptyList()
+        }
+    }
 
     fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
@@ -305,8 +314,16 @@ class CardFeedContentState(
 
     private fun updateFeed(notes: ImmutableList<Card>) {
         if (notes.size >= localFilter.limit()) {
-            val lastNomeTime = notes.lastOrNull()?.createdAt()
-            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+            val lastNoteTime =
+                notes.minOfOrNull {
+                    val createdAt = it.createdAt()
+                    if (createdAt > 0L) {
+                        createdAt
+                    } else {
+                        Long.MAX_VALUE
+                    }
+                }
+            if (lastNoteTime != lastNoteCreatedAtWhenFullyLoaded.value) {
                 lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull()?.createdAt())
             }
         }

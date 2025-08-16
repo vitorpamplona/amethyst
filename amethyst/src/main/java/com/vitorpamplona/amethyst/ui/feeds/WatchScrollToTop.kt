@@ -37,7 +37,7 @@ fun WatchScrollToTop(
     val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && feedContentState.scrolltoTopPending) {
+        if (scrollToTop > 0 && feedContentState.scrollToTopPending) {
             listState.scrollToItem(index = 0)
             feedContentState.sentToTop()
         }
@@ -52,7 +52,7 @@ fun WatchScrollToTop(
     val scrollToTop by feedContentState.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && feedContentState.scrolltoTopPending) {
+        if (scrollToTop > 0 && feedContentState.scrollToTopPending) {
             listState.scrollToItem(index = 0)
             feedContentState.sentToTop()
         }
@@ -82,7 +82,7 @@ fun WatchScrollToTop(
     val scrollToTop by videoFeedContentState.scrollToTop.collectAsStateWithLifecycle()
 
     LaunchedEffect(scrollToTop) {
-        if (scrollToTop > 0 && videoFeedContentState.scrolltoTopPending) {
+        if (scrollToTop > 0 && videoFeedContentState.scrollToTopPending) {
             pagerState.scrollToPage(page = 0)
             videoFeedContentState.sentToTop()
         }

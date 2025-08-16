@@ -85,7 +85,7 @@ class DiscoveryPublicChatsAndCommunitiesSubAssembler3(
                         key.feedStates.discoverCommunities.lastNoteCreatedAtWhenFullyLoaded,
                     ) {
                         Any()
-                    }.sample(1000).collectLatest {
+                    }.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -111,7 +112,7 @@ class Amethyst : Application() {
     val relayProxyClientConnector = RelayProxyClientConnector(torProxySettingsAnchor, okHttpClients, connManager, client, applicationIOScope)
 
     // Verifies and inserts in the cache from all relays, all subscriptions
-    val cacheClientConnector = CacheClientConnector(client, cache, applicationIOScope)
+    val cacheClientConnector = CacheClientConnector(client, cache)
 
     // Show messages from the Relay and controls their dismissal
     val notifyCoordinator = NotifyCoordinator(client)
@@ -119,7 +120,7 @@ class Amethyst : Application() {
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
-    // val logger = if (isDebug) RelaySpeedLogger(client) else null
+    val logger = if (isDebug) RelaySpeedLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, applicationIOScope)
