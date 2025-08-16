@@ -24,7 +24,7 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
 
-class LargeSoftCache<K, V> {
+class LargeSoftCache<K, V> : CacheOperations<K, V> {
     private val cache = ConcurrentSkipListMap<K, WeakReference<V>>()
 
     fun keys() = cache.keys
@@ -43,7 +43,7 @@ class LargeSoftCache<K, V> {
 
     fun remove(key: K) = cache.remove(key)
 
-    fun size() = cache.size
+    override fun size() = cache.size
 
     fun isEmpty() = cache.isEmpty()
 
@@ -122,156 +122,8 @@ class LargeSoftCache<K, V> {
         println("Cache cleanup completed. Remaining size: ${cache.size}")
     }
 
-    fun forEach(consumer: BiConsumer<K, V>) {
-        innerForEach(consumer)
-    }
-
-    fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> {
-        val runner = CacheCollectors.BiFilterCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun filterIntoSet(consumer: CacheCollectors.BiFilter<K, V>): Set<V> {
-        val runner = CacheCollectors.BiFilterUniqueCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> map(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): List<R> {
-        val runner = CacheCollectors.BiNotNullMapCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> mapNotNull(consumer: CacheCollectors.BiMapper<K, V, R?>): List<R> {
-        val runner = CacheCollectors.BiMapCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> mapNotNullIntoSet(consumer: CacheCollectors.BiMapper<K, V, R?>): Set<R> {
-        val runner = CacheCollectors.BiMapUniqueCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> mapFlatten(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): List<R> {
-        val runner = CacheCollectors.BiMapFlattenCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> mapFlattenIntoSet(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): Set<R> {
-        val runner = CacheCollectors.BiMapFlattenUniqueCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun maxOrNullOf(
-        filter: CacheCollectors.BiFilter<K, V>,
-        comparator: Comparator<V>,
-    ): V? {
-        val runner = CacheCollectors.BiMaxOfCollector(filter, comparator)
-        innerForEach(runner)
-        return runner.maxV
-    }
-
-    fun sumOf(consumer: CacheCollectors.BiSumOf<K, V>): Int {
-        val runner = CacheCollectors.BiSumOfCollector(consumer)
-        innerForEach(runner)
-        return runner.sum
-    }
-
-    fun sumOfLong(consumer: CacheCollectors.BiSumOfLong<K, V>): Long {
-        val runner = CacheCollectors.BiSumOfLongCollector(consumer)
-        innerForEach(runner)
-        return runner.sum
-    }
-
-    fun <R> groupBy(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, List<V>> {
-        val runner = CacheCollectors.BiGroupByCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> countByGroup(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, Int> {
-        val runner = CacheCollectors.BiCountByGroupCollector(consumer)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <R> sumByGroup(
-        groupMap: CacheCollectors.BiNotNullMapper<K, V, R>,
-        sumOf: CacheCollectors.BiNotNullMapper<K, V, Long>,
-    ): Map<R, Long> {
-        val runner = CacheCollectors.BiSumByGroupCollector(groupMap, sumOf)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun count(consumer: CacheCollectors.BiFilter<K, V>): Int {
-        val runner = CacheCollectors.BiCountIfCollector(consumer)
-        innerForEach(runner)
-        return runner.count
-    }
-
-    fun <T, U> associate(transform: (K, V) -> Pair<T, U>): Map<T, U> {
-        val runner = CacheCollectors.BiAssociateCollector(size(), transform)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <T, U> associateNotNull(transform: (K, V) -> Pair<T, U>?): Map<T, U> {
-        val runner = CacheCollectors.BiAssociateNotNullCollector(size(), transform)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?> {
-        val runner = CacheCollectors.BiAssociateWithCollector(size(), transform)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    fun <U> associateNotNullWith(transform: (K, V) -> U): Map<K, U> {
-        val runner = CacheCollectors.BiAssociateNotNullWithCollector(size(), transform)
-        innerForEach(runner)
-        return runner.results
-    }
-
-    private fun innerForEach(runner: BiConsumer<K, V>) {
-        cache.forEach(BiConsumerWrapper(this, runner))
-    }
-
-    fun joinToString(
-        separator: CharSequence = ", ",
-        prefix: CharSequence = "",
-        postfix: CharSequence = "",
-        limit: Int = -1,
-        truncated: CharSequence = "...",
-        transform: ((K, V) -> CharSequence)? = null,
-    ): String {
-        val buffer = StringBuilder()
-        buffer.append(prefix)
-        var count = 0
-        forEach { key, value ->
-            val str = if (transform != null) transform(key, value) else ""
-            if (str.isNotEmpty()) {
-                if (++count > 1) buffer.append(separator)
-                if (limit < 0 || count <= limit) {
-                    when {
-                        transform != null -> buffer.append(str)
-                        else -> buffer.append("$key $value")
-                    }
-                } else {
-                    return@forEach
-                }
-            }
-        }
-        if (limit >= 0 && count > limit) buffer.append(truncated)
-        buffer.append(postfix)
-        return buffer.toString()
+    override fun forEach(consumer: BiConsumer<K, V>) {
+        cache.forEach(BiConsumerWrapper(this, consumer))
     }
 
     class BiConsumerWrapper<K, V>(
