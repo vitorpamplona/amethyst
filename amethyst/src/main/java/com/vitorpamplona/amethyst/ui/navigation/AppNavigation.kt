@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -121,6 +122,8 @@ fun AppNavigation(
             composable<Route.Video> { VideoScreen(accountViewModel, nav) }
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+
+            composableFromEnd<Route.Lists> { ListsScreen(accountViewModel, nav) }
 
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
