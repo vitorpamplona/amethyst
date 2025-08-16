@@ -22,26 +22,37 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache.users
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.Height25Modifier
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -53,6 +64,7 @@ fun BasicRelaySetupInfoClickableRow(
     onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val clipboardManager = LocalClipboardManager.current
     Column(
@@ -90,6 +102,8 @@ fun BasicRelaySetupInfoClickableRow(
                     ReactionRowHeightChatMaxWidth,
                 )
 
+                UsedBy(item, accountViewModel, nav)
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = ReactionRowHeightChatMaxWidth,
@@ -104,5 +118,58 @@ fun BasicRelaySetupInfoClickableRow(
         }
 
         HorizontalDivider(thickness = DividerThickness)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun UsedBy(
+    item: BasicRelaySetupInfo,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (item.users.isNotEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            item.users.getOrNull(0)?.let {
+                UserPicture(
+                    user = it,
+                    size = Size25dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+            item.users.getOrNull(1)?.let {
+                UserPicture(
+                    user = it,
+                    size = Size25dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+            item.users.getOrNull(2)?.let {
+                UserPicture(
+                    user = it,
+                    size = Size25dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+            item.users.getOrNull(3)?.let {
+                UserPicture(
+                    user = it,
+                    size = Size25dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+            if (item.users.size > 4) {
+                Box(contentAlignment = Alignment.Center, modifier = Height25Modifier) {
+                    Text(
+                        text = stringRes(R.string.and_more, item.users.size - 4),
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }

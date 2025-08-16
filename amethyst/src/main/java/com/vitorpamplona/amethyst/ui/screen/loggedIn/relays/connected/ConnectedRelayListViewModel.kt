@@ -20,10 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
+    override fun relayListBuilder(): List<BasicRelaySetupInfo> {
+        val relayList = getRelayList()
+
+        return relayList
+            .map {
+                BasicRelaySetupInfo(
+                    relay = it,
+                    relayStat = RelayStats.get(it),
+                    forcesTor =
+                        account.torRelayState.flow.value
+                            .useTor(it),
+                    users =
+                        account.followsPerRelay.value[it]?.mapNotNull { hex ->
+                            LocalCache.checkGetOrCreateUser(hex)
+                        } ?: emptyList(),
+                )
+            }.distinctBy { it.relay }
+            .sortedBy { it.relayStat.receivedBytes }
+            .reversed()
+    }
+
     override fun getRelayList(): List<NormalizedRelayUrl> =
         account.client
             .relayStatusFlow()
