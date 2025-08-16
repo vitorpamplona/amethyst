@@ -20,7 +20,307 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.quartz.utils.CacheCollectors.BiFilter
+import com.vitorpamplona.quartz.utils.CacheCollectors.BiMapper
+import com.vitorpamplona.quartz.utils.CacheCollectors.BiMapperNotNull
+import com.vitorpamplona.quartz.utils.CacheCollectors.BiNotNullMapper
+import com.vitorpamplona.quartz.utils.CacheCollectors.BiSumOfLong
 import java.util.function.BiConsumer
+
+class BiFilterCollector<K, V>(
+    private val filter: BiFilter<K, V>,
+) : BiConsumer<K, V> {
+    val results: ArrayList<V> = ArrayList()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        if (filter.filter(k, v)) {
+            results.add(v)
+        }
+    }
+}
+
+class BiFilterUniqueCollector<K, V>(
+    private val filter: BiFilter<K, V>,
+) : BiConsumer<K, V> {
+    val results: HashSet<V> = HashSet()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        if (filter.filter(k, v)) {
+            results.add(v)
+        }
+    }
+}
+
+class BiMapCollector<K, V, R>(
+    private val mapper: BiMapper<K, V, R?>,
+) : BiConsumer<K, V> {
+    val results: ArrayList<R> = ArrayList()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val result = mapper.map(k, v)
+        if (result != null) {
+            results.add(result)
+        }
+    }
+}
+
+class BiMapUniqueCollector<K, V, R>(
+    private val mapper: BiMapper<K, V, R?>,
+) : BiConsumer<K, V> {
+    val results: HashSet<R> = HashSet()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val result = mapper.map(k, v)
+        if (result != null) {
+            results.add(result)
+        }
+    }
+}
+
+class BiMapFlattenCollector<K, V, R>(
+    private val mapper: BiMapper<K, V, Collection<R>?>,
+) : BiConsumer<K, V> {
+    val results: ArrayList<R> = ArrayList()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val result = mapper.map(k, v)
+        if (result != null) {
+            results.addAll(result)
+        }
+    }
+}
+
+class BiMapFlattenUniqueCollector<K, V, R>(
+    private val mapper: BiMapper<K, V, Collection<R>?>,
+) : BiConsumer<K, V> {
+    val results: HashSet<R> = HashSet()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val result = mapper.map(k, v)
+        if (result != null) {
+            results.addAll(result)
+        }
+    }
+}
+
+class BiNotNullMapCollector<K, V, R>(
+    private val mapper: BiNotNullMapper<K, V, R>,
+) : BiConsumer<K, V> {
+    val results: ArrayList<R> = ArrayList()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        results.add(mapper.map(k, v))
+    }
+}
+
+class BiMaxOfCollector<K, V>(
+    private val filter: BiFilter<K, V>,
+    private val comparator: Comparator<V>,
+) : BiConsumer<K, V> {
+    private var _maxK: K? = null
+    private var _maxV: V? = null
+
+    val maxK: K? get() = _maxK
+    val maxV: V? get() = _maxV
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        if (filter.filter(k, v)) {
+            if (_maxK == null || comparator.compare(v, _maxV) > 0) {
+                _maxK = k
+                _maxV = v
+            }
+        }
+    }
+}
+
+class BiSumOfCollector<K, V>(
+    private val mapper: CacheCollectors.BiSumOf<K, V>,
+) : BiConsumer<K, V> {
+    private var _sum = 0
+    val sum: Int get() = _sum
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        _sum += mapper.map(k, v)
+    }
+}
+
+class BiSumOfLongCollector<K, V>(
+    private val mapper: BiSumOfLong<K, V>,
+) : BiConsumer<K, V> {
+    private var _sum = 0L
+    val sum: Long get() = _sum
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        _sum += mapper.map(k, v)
+    }
+}
+
+class BiGroupByCollector<K, V, R>(
+    private val mapper: BiNotNullMapper<K, V, R>,
+) : BiConsumer<K, V> {
+    val results = HashMap<R, ArrayList<V>>()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val group = mapper.map(k, v)
+        val list = results[group]
+        if (list == null) {
+            val answer = ArrayList<V>()
+            answer.add(v)
+            results[group] = answer
+        } else {
+            list.add(v)
+        }
+    }
+}
+
+class BiCountByGroupCollector<K, V, R>(
+    private val mapper: BiNotNullMapper<K, V, R>,
+) : BiConsumer<K, V> {
+    val results = HashMap<R, Int>()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val group = mapper.map(k, v)
+        val count = results[group]
+        if (count == null) {
+            results[group] = 1
+        } else {
+            results[group] = count + 1
+        }
+    }
+}
+
+class BiSumByGroupCollector<K, V, R>(
+    private val mapper: BiNotNullMapper<K, V, R>,
+    private val sumOf: BiNotNullMapper<K, V, Long>,
+) : BiConsumer<K, V> {
+    val results = HashMap<R, Long>()
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val group = mapper.map(k, v)
+        val sum = results[group]
+        if (sum == null) {
+            results[group] = sumOf.map(k, v)
+        } else {
+            results[group] = sum + sumOf.map(k, v)
+        }
+    }
+}
+
+class BiCountIfCollector<K, V>(
+    private val filter: BiFilter<K, V>,
+) : BiConsumer<K, V> {
+    private var _count = 0
+    val count: Int get() = _count
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        if (filter.filter(k, v)) _count++
+    }
+}
+
+class BiAssociateCollector<K, V, T, U>(
+    size: Int,
+    private val mapper: BiMapperNotNull<K, V, Pair<T, U>>,
+) : BiConsumer<K, V> {
+    val results: LinkedHashMap<T, U> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val pair = mapper.map(k, v)
+        results[pair.first] = pair.second
+    }
+}
+
+class BiAssociateNotNullCollector<K, V, T, U>(
+    size: Int,
+    private val mapper: BiMapper<K, V, Pair<T, U>?>,
+) : BiConsumer<K, V> {
+    val results: LinkedHashMap<T, U> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val pair = mapper.map(k, v)
+        if (pair != null) {
+            results[pair.first] = pair.second
+        }
+    }
+}
+
+class BiAssociateWithCollector<K, V, U>(
+    size: Int,
+    private val mapper: BiMapper<K, V, U?>,
+) : BiConsumer<K, V> {
+    val results: LinkedHashMap<K, U?> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        results[k] = mapper.map(k, v)
+    }
+}
+
+class BiAssociateNotNullWithCollector<K, V, U>(
+    size: Int,
+    private val mapper: BiMapper<K, V, U>,
+) : BiConsumer<K, V> {
+    val results: LinkedHashMap<K, U> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val newValue = mapper.map(k, v)
+        if (newValue != null) {
+            results[k] = newValue
+        }
+    }
+}
 
 object CacheCollectors {
     fun interface BiFilter<K, V> {
@@ -28,36 +328,6 @@ object CacheCollectors {
             k: K,
             v: V,
         ): Boolean
-    }
-
-    class BiFilterCollector<K, V>(
-        val filter: BiFilter<K, V>,
-    ) : BiConsumer<K, V> {
-        val results: ArrayList<V> = ArrayList()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            if (filter.filter(k, v)) {
-                results.add(v)
-            }
-        }
-    }
-
-    class BiFilterUniqueCollector<K, V>(
-        val filter: BiFilter<K, V>,
-    ) : BiConsumer<K, V> {
-        val results: HashSet<V> = HashSet()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            if (filter.filter(k, v)) {
-                results.add(v)
-            }
-        }
     }
 
     fun interface BiMapper<K, V, R> {
@@ -74,151 +344,11 @@ object CacheCollectors {
         ): R
     }
 
-    class BiMapCollector<K, V, R>(
-        val mapper: BiMapper<K, V, R?>,
-    ) : BiConsumer<K, V> {
-        val results: ArrayList<R> = ArrayList()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val result = mapper.map(k, v)
-            if (result != null) {
-                results.add(result)
-            }
-        }
-    }
-
-    class BiAssociateCollector<K, V, T, U>(
-        val size: Int,
-        val mapper: BiMapperNotNull<K, V, Pair<T, U>>,
-    ) : BiConsumer<K, V> {
-        val results: LinkedHashMap<T, U> = LinkedHashMap(size)
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val pair = mapper.map(k, v)
-            results.put(pair.first, pair.second)
-        }
-    }
-
-    class BiAssociateNotNullCollector<K, V, T, U>(
-        val size: Int,
-        val mapper: BiMapper<K, V, Pair<T, U>?>,
-    ) : BiConsumer<K, V> {
-        val results: LinkedHashMap<T, U> = LinkedHashMap(size)
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val pair = mapper.map(k, v)
-            if (pair != null) {
-                results.put(pair.first, pair.second)
-            }
-        }
-    }
-
-    class BiAssociateWithCollector<K, V, U>(
-        val size: Int,
-        val mapper: BiMapper<K, V, U?>,
-    ) : BiConsumer<K, V> {
-        val results: LinkedHashMap<K, U?> = LinkedHashMap(size)
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            results.put(k, mapper.map(k, v))
-        }
-    }
-
-    class BiAssociateNotNullWithCollector<K, V, U>(
-        val size: Int,
-        val mapper: BiMapper<K, V, U>,
-    ) : BiConsumer<K, V> {
-        val results: LinkedHashMap<K, U> = LinkedHashMap(size)
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val newValue = mapper.map(k, v)
-            if (newValue != null) {
-                results.put(k, newValue)
-            }
-        }
-    }
-
-    class BiMapUniqueCollector<K, V, R>(
-        val mapper: BiMapper<K, V, R?>,
-    ) : BiConsumer<K, V> {
-        val results: HashSet<R> = HashSet()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val result = mapper.map(k, v)
-            if (result != null) {
-                results.add(result)
-            }
-        }
-    }
-
-    class BiMapFlattenCollector<K, V, R>(
-        val mapper: BiMapper<K, V, Collection<R>?>,
-    ) : BiConsumer<K, V> {
-        val results: ArrayList<R> = ArrayList()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val result = mapper.map(k, v)
-            if (result != null) {
-                results.addAll(result)
-            }
-        }
-    }
-
-    class BiMapFlattenUniqueCollector<K, V, R>(
-        val mapper: BiMapper<K, V, Collection<R>?>,
-    ) : BiConsumer<K, V> {
-        val results: HashSet<R> = HashSet()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val result = mapper.map(k, v)
-            if (result != null) {
-                results.addAll(result)
-            }
-        }
-    }
-
     fun interface BiNotNullMapper<K, V, R> {
         fun map(
             k: K,
             v: V,
         ): R
-    }
-
-    class BiNotNullMapCollector<K, V, R>(
-        val mapper: BiNotNullMapper<K, V, R>,
-    ) : BiConsumer<K, V> {
-        val results: ArrayList<R> = ArrayList()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            results.add(mapper.map(k, v))
-        }
     }
 
     fun interface BiSumOf<K, V> {
@@ -228,132 +358,10 @@ object CacheCollectors {
         ): Int
     }
 
-    class BiMaxOfCollector<K, V>(
-        val filter: BiFilter<K, V>,
-        val comparator: Comparator<V>,
-    ) : BiConsumer<K, V> {
-        var maxK: K? = null
-        var maxV: V? = null
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            if (filter.filter(k, v)) {
-                if (maxK == null || comparator.compare(v, maxV) > 0) {
-                    maxK = k
-                    maxV = v
-                }
-            }
-        }
-    }
-
-    class BiSumOfCollector<K, V>(
-        val mapper: BiSumOf<K, V>,
-    ) : BiConsumer<K, V> {
-        var sum = 0
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            sum += mapper.map(k, v)
-        }
-    }
-
     fun interface BiSumOfLong<K, V> {
         fun map(
             k: K,
             v: V,
         ): Long
-    }
-
-    class BiSumOfLongCollector<K, V>(
-        val mapper: BiSumOfLong<K, V>,
-    ) : BiConsumer<K, V> {
-        var sum = 0L
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            sum += mapper.map(k, v)
-        }
-    }
-
-    class BiGroupByCollector<K, V, R>(
-        val mapper: BiNotNullMapper<K, V, R>,
-    ) : BiConsumer<K, V> {
-        val results = HashMap<R, ArrayList<V>>()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val group = mapper.map(k, v)
-
-            val list = results[group]
-            if (list == null) {
-                val answer = ArrayList<V>()
-                answer.add(v)
-                results[group] = answer
-            } else {
-                list.add(v)
-            }
-        }
-    }
-
-    class BiCountByGroupCollector<K, V, R>(
-        val mapper: BiNotNullMapper<K, V, R>,
-    ) : BiConsumer<K, V> {
-        val results = HashMap<R, Int>()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val group = mapper.map(k, v)
-
-            val count = results[group]
-            if (count == null) {
-                results[group] = 1
-            } else {
-                results[group] = count + 1
-            }
-        }
-    }
-
-    class BiSumByGroupCollector<K, V, R>(
-        val mapper: BiNotNullMapper<K, V, R>,
-        val sumOf: BiNotNullMapper<K, V, Long>,
-    ) : BiConsumer<K, V> {
-        val results = HashMap<R, Long>()
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            val group = mapper.map(k, v)
-
-            val sum = results[group]
-            if (sum == null) {
-                results[group] = sumOf.map(k, v)
-            } else {
-                results[group] = sum + sumOf.map(k, v)
-            }
-        }
-    }
-
-    class BiCountIfCollector<K, V>(
-        val filter: BiFilter<K, V>,
-    ) : BiConsumer<K, V> {
-        var count = 0
-
-        override fun accept(
-            k: K,
-            v: V,
-        ) {
-            if (filter.filter(k, v)) count++
-        }
     }
 }

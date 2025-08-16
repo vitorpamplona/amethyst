@@ -28,43 +28,43 @@ interface CacheOperations<K, V> {
     fun size(): Int
 
     fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> {
-        val runner = CacheCollectors.BiFilterCollector(consumer)
+        val runner = BiFilterCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun filterIntoSet(consumer: CacheCollectors.BiFilter<K, V>): Set<V> {
-        val runner = CacheCollectors.BiFilterUniqueCollector(consumer)
+        val runner = BiFilterUniqueCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun <R> map(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): List<R> {
-        val runner = CacheCollectors.BiNotNullMapCollector(consumer)
+        val runner = BiNotNullMapCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun <R> mapNotNull(consumer: CacheCollectors.BiMapper<K, V, R?>): List<R> {
-        val runner = CacheCollectors.BiMapCollector(consumer)
+        val runner = BiMapCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun <R> mapNotNullIntoSet(consumer: CacheCollectors.BiMapper<K, V, R?>): Set<R> {
-        val runner = CacheCollectors.BiMapUniqueCollector(consumer)
+        val runner = BiMapUniqueCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun <R> mapFlatten(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): List<R> {
-        val runner = CacheCollectors.BiMapFlattenCollector(consumer)
+        val runner = BiMapFlattenCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun <R> mapFlattenIntoSet(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): Set<R> {
-        val runner = CacheCollectors.BiMapFlattenUniqueCollector(consumer)
+        val runner = BiMapFlattenUniqueCollector(consumer)
         forEach(runner)
         return runner.results
     }
@@ -73,31 +73,31 @@ interface CacheOperations<K, V> {
         filter: CacheCollectors.BiFilter<K, V>,
         comparator: Comparator<V>,
     ): V? {
-        val runner = CacheCollectors.BiMaxOfCollector(filter, comparator)
+        val runner = BiMaxOfCollector(filter, comparator)
         forEach(runner)
         return runner.maxV
     }
 
     fun sumOf(consumer: CacheCollectors.BiSumOf<K, V>): Int {
-        val runner = CacheCollectors.BiSumOfCollector(consumer)
+        val runner = BiSumOfCollector(consumer)
         forEach(runner)
         return runner.sum
     }
 
     fun sumOfLong(consumer: CacheCollectors.BiSumOfLong<K, V>): Long {
-        val runner = CacheCollectors.BiSumOfLongCollector(consumer)
+        val runner = BiSumOfLongCollector(consumer)
         forEach(runner)
         return runner.sum
     }
 
     fun <R> groupBy(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, List<V>> {
-        val runner = CacheCollectors.BiGroupByCollector(consumer)
+        val runner = BiGroupByCollector(consumer)
         forEach(runner)
         return runner.results
     }
 
     fun <R> countByGroup(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, Int> {
-        val runner = CacheCollectors.BiCountByGroupCollector(consumer)
+        val runner = BiCountByGroupCollector(consumer)
         forEach(runner)
         return runner.results
     }
@@ -106,25 +106,25 @@ interface CacheOperations<K, V> {
         groupMap: CacheCollectors.BiNotNullMapper<K, V, R>,
         sumOf: CacheCollectors.BiNotNullMapper<K, V, Long>,
     ): Map<R, Long> {
-        val runner = CacheCollectors.BiSumByGroupCollector(groupMap, sumOf)
+        val runner = BiSumByGroupCollector(groupMap, sumOf)
         forEach(runner)
         return runner.results
     }
 
     fun count(consumer: CacheCollectors.BiFilter<K, V>): Int {
-        val runner = CacheCollectors.BiCountIfCollector(consumer)
+        val runner = BiCountIfCollector(consumer)
         forEach(runner)
         return runner.count
     }
 
     fun <T, U> associate(transform: (K, V) -> Pair<T, U>): Map<T, U> {
-        val runner = CacheCollectors.BiAssociateCollector(size(), transform)
+        val runner = BiAssociateCollector(size(), transform)
         forEach(runner)
         return runner.results
     }
 
     fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?> {
-        val runner = CacheCollectors.BiAssociateWithCollector(size(), transform)
+        val runner = BiAssociateWithCollector(size(), transform)
         forEach(runner)
         return runner.results
     }
