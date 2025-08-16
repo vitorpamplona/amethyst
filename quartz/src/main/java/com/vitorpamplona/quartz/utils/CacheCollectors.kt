@@ -33,7 +33,7 @@ object CacheCollectors {
     class BiFilterCollector<K, V>(
         val filter: BiFilter<K, V>,
     ) : BiConsumer<K, V> {
-        var results: ArrayList<V> = ArrayList()
+        val results: ArrayList<V> = ArrayList()
 
         override fun accept(
             k: K,
@@ -48,7 +48,7 @@ object CacheCollectors {
     class BiFilterUniqueCollector<K, V>(
         val filter: BiFilter<K, V>,
     ) : BiConsumer<K, V> {
-        var results: HashSet<V> = HashSet()
+        val results: HashSet<V> = HashSet()
 
         override fun accept(
             k: K,
@@ -77,7 +77,7 @@ object CacheCollectors {
     class BiMapCollector<K, V, R>(
         val mapper: BiMapper<K, V, R?>,
     ) : BiConsumer<K, V> {
-        var results: ArrayList<R> = ArrayList()
+        val results: ArrayList<R> = ArrayList()
 
         override fun accept(
             k: K,
@@ -94,7 +94,7 @@ object CacheCollectors {
         val size: Int,
         val mapper: BiMapperNotNull<K, V, Pair<T, U>>,
     ) : BiConsumer<K, V> {
-        var results: LinkedHashMap<T, U> = LinkedHashMap(size)
+        val results: LinkedHashMap<T, U> = LinkedHashMap(size)
 
         override fun accept(
             k: K,
@@ -109,7 +109,7 @@ object CacheCollectors {
         val size: Int,
         val mapper: BiMapper<K, V, Pair<T, U>?>,
     ) : BiConsumer<K, V> {
-        var results: LinkedHashMap<T, U> = LinkedHashMap(size)
+        val results: LinkedHashMap<T, U> = LinkedHashMap(size)
 
         override fun accept(
             k: K,
@@ -126,7 +126,7 @@ object CacheCollectors {
         val size: Int,
         val mapper: BiMapper<K, V, U?>,
     ) : BiConsumer<K, V> {
-        var results: LinkedHashMap<K, U?> = LinkedHashMap(size)
+        val results: LinkedHashMap<K, U?> = LinkedHashMap(size)
 
         override fun accept(
             k: K,
@@ -140,7 +140,7 @@ object CacheCollectors {
         val size: Int,
         val mapper: BiMapper<K, V, U>,
     ) : BiConsumer<K, V> {
-        var results: LinkedHashMap<K, U> = LinkedHashMap(size)
+        val results: LinkedHashMap<K, U> = LinkedHashMap(size)
 
         override fun accept(
             k: K,
@@ -156,7 +156,7 @@ object CacheCollectors {
     class BiMapUniqueCollector<K, V, R>(
         val mapper: BiMapper<K, V, R?>,
     ) : BiConsumer<K, V> {
-        var results: HashSet<R> = HashSet()
+        val results: HashSet<R> = HashSet()
 
         override fun accept(
             k: K,
@@ -172,7 +172,7 @@ object CacheCollectors {
     class BiMapFlattenCollector<K, V, R>(
         val mapper: BiMapper<K, V, Collection<R>?>,
     ) : BiConsumer<K, V> {
-        var results: ArrayList<R> = ArrayList()
+        val results: ArrayList<R> = ArrayList()
 
         override fun accept(
             k: K,
@@ -188,7 +188,7 @@ object CacheCollectors {
     class BiMapFlattenUniqueCollector<K, V, R>(
         val mapper: BiMapper<K, V, Collection<R>?>,
     ) : BiConsumer<K, V> {
-        var results: HashSet<R> = HashSet()
+        val results: HashSet<R> = HashSet()
 
         override fun accept(
             k: K,
@@ -211,7 +211,7 @@ object CacheCollectors {
     class BiNotNullMapCollector<K, V, R>(
         val mapper: BiNotNullMapper<K, V, R>,
     ) : BiConsumer<K, V> {
-        var results: ArrayList<R> = ArrayList()
+        val results: ArrayList<R> = ArrayList()
 
         override fun accept(
             k: K,
@@ -284,7 +284,7 @@ object CacheCollectors {
     class BiGroupByCollector<K, V, R>(
         val mapper: BiNotNullMapper<K, V, R>,
     ) : BiConsumer<K, V> {
-        var results = HashMap<R, ArrayList<V>>()
+        val results = HashMap<R, ArrayList<V>>()
 
         override fun accept(
             k: K,
@@ -306,7 +306,7 @@ object CacheCollectors {
     class BiCountByGroupCollector<K, V, R>(
         val mapper: BiNotNullMapper<K, V, R>,
     ) : BiConsumer<K, V> {
-        var results = HashMap<R, Int>()
+        val results = HashMap<R, Int>()
 
         override fun accept(
             k: K,
@@ -327,7 +327,7 @@ object CacheCollectors {
         val mapper: BiNotNullMapper<K, V, R>,
         val sumOf: BiNotNullMapper<K, V, Long>,
     ) : BiConsumer<K, V> {
-        var results = HashMap<R, Long>()
+        val results = HashMap<R, Long>()
 
         override fun accept(
             k: K,
