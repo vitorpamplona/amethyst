@@ -179,3 +179,22 @@ interface ExtendedHintProvider : StandardHintProvider {
         return event.tags.mapNotNull(ATag::parseAddressId)
     }
 }
+
+interface BasicHintProvider :
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    private val event: Event get() = this as Event
+
+    override fun eventHints(): List<EventIdHint> = event.tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds(): List<HexKey> = event.tags.mapNotNull(ETag::parseId)
+
+    override fun addressHints(): List<AddressHint> = event.tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds(): List<String> = event.tags.mapNotNull(ATag::parseAddressId)
+
+    override fun pubKeyHints(): List<PubKeyHint> = event.tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys(): List<HexKey> = event.tags.mapNotNull(PTag::parseKey)
+}
