@@ -23,28 +23,14 @@ package com.vitorpamplona.quartz.nip34Git.reply
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.ETagHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareMarkedETagsAsReplyTo
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
-import com.vitorpamplona.quartz.nip19Bech32.addressHints
-import com.vitorpamplona.quartz.nip19Bech32.addressIds
-import com.vitorpamplona.quartz.nip19Bech32.eventHints
-import com.vitorpamplona.quartz.nip19Bech32.eventIds
-import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
-import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -60,55 +46,7 @@ class GitReplyEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider,
-    EventHintProvider,
-    AddressHintProvider {
-    override fun eventHints(): List<EventIdHint> {
-        val eHints = tags.mapNotNull(ETag::parseAsHint)
-        val qHints = tags.mapNotNull(QTag::parseEventAsHint)
-        val nip19Hints = citedNIP19().eventHints()
-
-        return eHints + qHints + nip19Hints
-    }
-
-    override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(ETag::parseId)
-        val qHints = tags.mapNotNull(QTag::parseEventId)
-        val nip19Hints = citedNIP19().eventIds()
-
-        return eHints + qHints + nip19Hints
-    }
-
-    override fun addressHints(): List<AddressHint> {
-        val aHints = tags.mapNotNull(ATag::parseAsHint)
-        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
-        val nip19Hints = citedNIP19().addressHints()
-
-        return aHints + qHints + nip19Hints
-    }
-
-    override fun linkedAddressIds(): List<String> {
-        val aHints = tags.mapNotNull(ATag::parseAddressId)
-        val qHints = tags.mapNotNull(QTag::parseAddressId)
-        val nip19Hints = citedNIP19().addressIds()
-
-        return aHints + qHints + nip19Hints
-    }
-
-    override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = tags.mapNotNull(PTag::parseAsHint)
-        val nip19Hints = citedNIP19().pubKeyHints()
-
-        return pHints + nip19Hints
-    }
-
-    override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
-
-        return pHints + nip19Hints
-    }
-
+    ETagHintProvider {
     fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)
