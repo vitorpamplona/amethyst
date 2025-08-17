@@ -60,49 +60,47 @@ interface StandardHintProvider :
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
-    private val event: Event get() = this as Event
-
     private val baseNoteEvent: BaseNoteEvent get() = this as BaseNoteEvent
 
     override fun eventHints(): List<EventIdHint> {
-        val eHints = event.tags.mapNotNull(MarkedETag::parseAsHint)
-        val qHints = event.tags.mapNotNull(QTag::parseEventAsHint)
+        val eHints = baseNoteEvent.tags.mapNotNull(MarkedETag::parseAsHint)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseEventAsHint)
         val nip19Hints = baseNoteEvent.citedNIP19().eventHints()
 
         return eHints + qHints + nip19Hints
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = event.tags.mapNotNull(MarkedETag::parseId)
-        val qHints = event.tags.mapNotNull(QTag::parseEventId)
+        val eHints = baseNoteEvent.tags.mapNotNull(MarkedETag::parseId)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseEventId)
         val nip19Hints = baseNoteEvent.citedNIP19().eventIds()
 
         return eHints + qHints + nip19Hints
     }
 
     override fun addressHints(): List<AddressHint> {
-        val qHints = event.tags.mapNotNull(QTag::parseAddressAsHint)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseAddressAsHint)
         val nip19Hints = baseNoteEvent.citedNIP19().addressHints()
 
         return qHints + nip19Hints + getAdditionalAddressHints()
     }
 
     override fun linkedAddressIds(): List<String> {
-        val qHints = event.tags.mapNotNull(QTag::parseAddressId)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseAddressId)
         val nip19Hints = baseNoteEvent.citedNIP19().addressIds()
 
         return qHints + nip19Hints + getAdditionalAddressIds()
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = event.tags.mapNotNull(PTag::parseAsHint)
+        val pHints = baseNoteEvent.tags.mapNotNull(PTag::parseAsHint)
         val nip19Hints = baseNoteEvent.citedNIP19().pubKeyHints()
 
         return pHints + nip19Hints
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = event.tags.mapNotNull(PTag::parseKey)
+        val pHints = baseNoteEvent.tags.mapNotNull(PTag::parseKey)
         val nip19Hints = baseNoteEvent.citedNIP19().pubKeys()
 
         return pHints + nip19Hints
@@ -117,51 +115,49 @@ interface ETagHintProvider :
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
-    private val event: Event get() = this as Event
-
     private val baseNoteEvent: BaseNoteEvent get() = this as BaseNoteEvent
 
     override fun eventHints(): List<EventIdHint> {
-        val eHints = event.tags.mapNotNull(ETag::parseAsHint)
-        val qHints = event.tags.mapNotNull(QTag::parseEventAsHint)
+        val eHints = baseNoteEvent.tags.mapNotNull(ETag::parseAsHint)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseEventAsHint)
         val nip19Hints = baseNoteEvent.citedNIP19().eventHints()
 
         return eHints + qHints + nip19Hints
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = event.tags.mapNotNull(ETag::parseId)
-        val qHints = event.tags.mapNotNull(QTag::parseEventId)
+        val eHints = baseNoteEvent.tags.mapNotNull(ETag::parseId)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseEventId)
         val nip19Hints = baseNoteEvent.citedNIP19().eventIds()
 
         return eHints + qHints + nip19Hints
     }
 
     override fun addressHints(): List<AddressHint> {
-        val aHints = event.tags.mapNotNull(ATag::parseAsHint)
-        val qHints = event.tags.mapNotNull(QTag::parseAddressAsHint)
+        val aHints = baseNoteEvent.tags.mapNotNull(ATag::parseAsHint)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseAddressAsHint)
         val nip19Hints = baseNoteEvent.citedNIP19().addressHints()
 
         return aHints + qHints + nip19Hints
     }
 
     override fun linkedAddressIds(): List<String> {
-        val aHints = event.tags.mapNotNull(ATag::parseAddressId)
-        val qHints = event.tags.mapNotNull(QTag::parseAddressId)
+        val aHints = baseNoteEvent.tags.mapNotNull(ATag::parseAddressId)
+        val qHints = baseNoteEvent.tags.mapNotNull(QTag::parseAddressId)
         val nip19Hints = baseNoteEvent.citedNIP19().addressIds()
 
         return aHints + qHints + nip19Hints
     }
 
     override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = event.tags.mapNotNull(PTag::parseAsHint)
+        val pHints = baseNoteEvent.tags.mapNotNull(PTag::parseAsHint)
         val nip19Hints = baseNoteEvent.citedNIP19().pubKeyHints()
 
         return pHints + nip19Hints
     }
 
     override fun linkedPubKeys(): List<HexKey> {
-        val pHints = event.tags.mapNotNull(PTag::parseKey)
+        val pHints = baseNoteEvent.tags.mapNotNull(PTag::parseKey)
         val nip19Hints = baseNoteEvent.citedNIP19().pubKeys()
 
         return pHints + nip19Hints
@@ -169,15 +165,11 @@ interface ETagHintProvider :
 }
 
 interface ExtendedHintProvider : StandardHintProvider {
-    override fun getAdditionalAddressHints(): List<AddressHint> {
-        val event = this as Event
-        return event.tags.mapNotNull(ATag::parseAsHint)
-    }
+    private val event: Event get() = this as Event
 
-    override fun getAdditionalAddressIds(): List<String> {
-        val event = this as Event
-        return event.tags.mapNotNull(ATag::parseAddressId)
-    }
+    override fun getAdditionalAddressHints(): List<AddressHint> = event.tags.mapNotNull(ATag::parseAsHint)
+
+    override fun getAdditionalAddressIds(): List<String> = event.tags.mapNotNull(ATag::parseAddressId)
 }
 
 interface BasicHintProvider :
