@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip22Comments.tags
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.books.BookId
@@ -34,8 +34,8 @@ import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastFeedId
 import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastPublisherId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
+import com.vitorpamplona.quartz.utils.TagParsingUtils
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class RootIdentifierTag<T : ExternalId> {
@@ -43,23 +43,23 @@ class RootIdentifierTag<T : ExternalId> {
         const val TAG_NAME = "I"
 
         @JvmStatic
-        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun match(tag: Tag) = TagParsingUtils.matchesTag(tag, TAG_NAME)
 
         fun isTagged(
             tag: Array<String>,
             encodedScope: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == encodedScope
+        ) = TagParsingUtils.isTaggedWith(tag, TAG_NAME, encodedScope)
 
         fun isTagged(
             tag: Array<String>,
             encodedScope: Set<String>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in encodedScope
+        ) = TagParsingUtils.isTaggedWithAny(tag, TAG_NAME, encodedScope)
 
         fun matchOrNull(
             tag: Array<String>,
             encodedScope: Set<String>,
-        ) = if (tag.has(1) && tag[0] == TAG_NAME && tag[1] in encodedScope) {
-            tag[1]
+        ) = if (TagParsingUtils.isTaggedWithAny(tag, TAG_NAME, encodedScope)) {
+            tag.value()
         } else {
             null
         }
@@ -67,35 +67,31 @@ class RootIdentifierTag<T : ExternalId> {
         fun isTagged(
             tag: Array<String>,
             test: (String) -> Boolean,
-        ) = tag.has(1) && tag[0] == TAG_NAME && test(tag[1])
+        ) = TagParsingUtils.validateBasicTag(tag, TAG_NAME) && test(tag.value())
 
         fun isTagged(
             tag: Array<String>,
             value: String,
             match: (String, String) -> Boolean,
-        ) = tag.has(1) && tag[0] == TAG_NAME && match(tag[1], value)
+        ) = TagParsingUtils.validateBasicTag(tag, TAG_NAME) && match(tag.value(), value)
 
         fun isTagged(
             tag: Array<String>,
             value: Set<String>,
             match: (String, Set<String>) -> Boolean,
-        ) = tag.has(1) && tag[0] == TAG_NAME && match(tag[1], value)
+        ) = TagParsingUtils.validateBasicTag(tag, TAG_NAME) && match(tag.value(), value)
 
         @JvmStatic
         fun parse(tag: Tag): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
+            return tag.value()
         }
 
         @JvmStatic
         fun parseExternalId(tag: Tag): ExternalId? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
 
-            val value = tag[1]
+            val value = tag.value()
             val hint = tag.getOrNull(2)
 
             return BookId.parse(value, hint)
