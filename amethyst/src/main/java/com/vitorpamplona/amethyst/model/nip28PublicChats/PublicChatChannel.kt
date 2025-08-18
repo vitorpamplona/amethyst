@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip28PublicChats
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -39,6 +40,7 @@ class PublicChatChannel(
 ) : Channel() {
     var creator: User? = null
     var event: ChannelCreateEvent? = null
+    var eventNote: Note? = null
 
     var info = ChannelDataNorm(null, null, null, null)
     var infoTags = EmptyTagList
@@ -61,13 +63,15 @@ class PublicChatChannel(
     fun updateChannelInfo(
         creator: User,
         event: ChannelCreateEvent,
+        eventNote: Note? = null,
     ) {
         this.creator = creator
         this.event = event
-
         this.info = event.channelInfo()
+
         this.infoTags = event.tags.toImmutableListOfLists()
         this.updatedMetadataAt = event.createdAt
+        this.eventNote = eventNote
 
         updateChannelInfo()
     }
@@ -77,8 +81,8 @@ class PublicChatChannel(
         event: ChannelMetadataEvent,
     ) {
         this.creator = creator
-
         this.info = event.channelInfo()
+
         this.infoTags = event.tags.toImmutableListOfLists()
         this.updatedMetadataAt = event.createdAt
 

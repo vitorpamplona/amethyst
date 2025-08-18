@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip53LiveActivities
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -35,6 +36,7 @@ class LiveActivitiesChannel(
 ) : Channel() {
     var creator: User? = null
     var info: LiveActivitiesEvent? = null
+    var infoNote: Note? = null
 
     fun address() = address
 
@@ -47,9 +49,11 @@ class LiveActivitiesChannel(
     fun updateChannelInfo(
         creator: User,
         channelInfo: LiveActivitiesEvent,
+        channelInfoNote: Note,
     ) {
         this.info = channelInfo
         this.creator = creator
+        this.infoNote = channelInfoNote
         super.updateChannelInfo()
     }
 

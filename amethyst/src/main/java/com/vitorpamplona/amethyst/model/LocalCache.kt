@@ -852,7 +852,7 @@ object LocalCache : ILocalCache {
 
             val creator = event.host()?.let { checkGetOrCreateUser(it.pubKey) } ?: author
 
-            channel.updateChannelInfo(creator, event)
+            channel.updateChannelInfo(creator, event, note)
 
             refreshNewNoteObservers(note)
 
@@ -1548,7 +1548,7 @@ object LocalCache : ILocalCache {
 
         if (oldChannel.creator == null || oldChannel.creator == author) {
             if (isVerified || justVerify(event)) {
-                oldChannel.updateChannelInfo(author, event)
+                oldChannel.updateChannelInfo(author, event, note)
             }
         }
 
@@ -1567,6 +1567,8 @@ object LocalCache : ILocalCache {
         val oldChannel = checkGetOrCreatePublicChatChannel(channelId) ?: return false
 
         val author = getOrCreateUser(event.pubKey)
+        val note = getOrCreateNote(event.id)
+
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
                 if (wasVerified || justVerify(event)) {
@@ -1579,7 +1581,6 @@ object LocalCache : ILocalCache {
                 wasVerified
             }
 
-        val note = getOrCreateNote(event.id)
         if (note.event == null && (isVerified || justVerify(event))) {
             oldChannel.addNote(note, relay)
             note.loadEvent(event, author, emptyList())
