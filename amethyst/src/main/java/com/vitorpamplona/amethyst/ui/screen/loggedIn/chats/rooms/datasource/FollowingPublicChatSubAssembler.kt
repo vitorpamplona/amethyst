@@ -43,7 +43,7 @@ class FollowingPublicChatSubAssembler(
     ): List<RelayBasedFilter>? =
         listOfNotNull(
             filterLastMessageFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
-            filterFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
+            filterFollowingPublicChatsCreationEvent(key.account.publicChatList.flowSet.value, since),
         ).flatten()
 
     override fun user(key: ChatroomListState) = key.account.userProfile()

@@ -40,7 +40,7 @@ fun filterLastMessageFollowingPublicChats(
         mapOfSet {
             followingChannels.forEach { channelId ->
                 val relays =
-                    LocalCache.getPublicChatChannelIfExists(channelId)?.relays()
+                    LocalCache.getPublicChatChannelIfExists(channelId)?.relays()?.ifEmpty { null }
                         ?: LocalCache.relayHints.hintsForEvent(channelId).ifEmpty { null }
                         ?: Constants.eventFinderRelays
 
