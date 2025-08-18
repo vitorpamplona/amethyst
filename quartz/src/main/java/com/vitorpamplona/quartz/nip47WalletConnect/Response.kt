@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 // RESPONSE OBJECTS
 abstract class Response(
-    @JsonProperty("result_type") val resultType: String,
+    @field:JsonProperty("result_type") val resultType: String,
 ) {
     abstract fun countMemory(): Long
 }
