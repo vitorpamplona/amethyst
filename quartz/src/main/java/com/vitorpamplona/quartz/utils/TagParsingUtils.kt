@@ -22,48 +22,46 @@ package com.vitorpamplona.quartz.utils
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.core.hasValue
+import com.vitorpamplona.quartz.nip01Core.core.name
+import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 object TagParsingUtils {
     fun validateBasicTag(
-        tag: Array<String>,
+        tag: Tag,
         expectedTagName: String,
-    ): Boolean {
-        if (!tag.has(1)) return false
-        if (tag[0] != expectedTagName) return false
-        if (tag[1].isEmpty()) return false
-        return true
-    }
+    ): Boolean = tag.has(1) && tag.name() == expectedTagName && tag.hasValue()
 
     fun validateHexKeyTag(
-        tag: Array<String>,
+        tag: Tag,
         expectedTagName: String,
     ): Boolean {
         if (!validateBasicTag(tag, expectedTagName)) return false
-        if (tag[1].length != 64) return false
+        if (tag.value().length != 64) return false
         return true
     }
 
     fun parseRelayHint(
-        tag: Array<String>,
+        tag: Tag,
         index: Int = 2,
     ): NormalizedRelayUrl? = tag.getOrNull(index)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
 
     fun matchesTag(
         tag: Tag,
         expectedTagName: String,
-    ): Boolean = tag.has(1) && tag[0] == expectedTagName && tag[1].isNotEmpty()
+    ): Boolean = tag.has(1) && tag.name() == expectedTagName && tag.hasValue()
 
     fun isTaggedWith(
-        tag: Array<String>,
+        tag: Tag,
         expectedTagName: String,
         expectedValue: String,
-    ): Boolean = tag.has(1) && tag[0] == expectedTagName && tag[1] == expectedValue
+    ): Boolean = tag.has(1) && tag.name() == expectedTagName && tag.value() == expectedValue
 
     fun isTaggedWithAny(
-        tag: Array<String>,
+        tag: Tag,
         expectedTagName: String,
         expectedValues: Set<String>,
-    ): Boolean = tag.has(1) && tag[0] == expectedTagName && tag[1] in expectedValues
+    ): Boolean = tag.has(1) && tag.name() == expectedTagName && tag.value() in expectedValues
 }

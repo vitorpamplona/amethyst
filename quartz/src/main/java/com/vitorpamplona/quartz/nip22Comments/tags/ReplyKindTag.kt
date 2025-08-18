@@ -21,40 +21,37 @@
 package com.vitorpamplona.quartz.nip22Comments.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.utils.TagParsingUtils
 
 class ReplyKindTag {
     companion object {
         const val TAG_NAME = "k"
 
         @JvmStatic
-        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun match(tag: Tag) = TagParsingUtils.matchesTag(tag, TAG_NAME)
 
         @JvmStatic
         fun isKind(
             tag: Tag,
             kind: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == kind
+        ) = TagParsingUtils.isTaggedWith(tag, TAG_NAME, kind)
 
         @JvmStatic
         fun isTagged(
             tag: Tag,
             kind: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == kind
+        ) = TagParsingUtils.isTaggedWith(tag, TAG_NAME, kind)
 
         @JvmStatic
         fun isIn(
             tag: Tag,
             kinds: Set<String>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in kinds
+        ) = TagParsingUtils.isTaggedWithAny(tag, TAG_NAME, kinds)
 
         @JvmStatic
         fun parse(tag: Tag): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
             return tag[1]
         }
 
