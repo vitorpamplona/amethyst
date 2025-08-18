@@ -74,7 +74,7 @@ class RelayPool(
     var lastReconnectCall = TimeUtils.now()
 
     fun reconnectIfNeedsToORIfItIsTime() {
-        if (lastReconnectCall < TimeUtils.tenSecondsAgo()) {
+        if (lastReconnectCall < TimeUtils.oneMinuteAgo()) {
             relays.forEach { url, relay ->
                 if (relay.isConnected()) {
                     if (relay.needsToReconnect()) {
