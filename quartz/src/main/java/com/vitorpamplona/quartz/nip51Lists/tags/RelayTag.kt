@@ -23,23 +23,21 @@ package com.vitorpamplona.quartz.nip51Lists.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.utils.TagParsingUtils
 
 class RelayTag {
     companion object {
         const val TAG_NAME = "r"
 
         @JvmStatic
-        fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun match(tag: Array<String>) = TagParsingUtils.matchesTag(tag, TAG_NAME)
 
         @JvmStatic
         fun notMatch(tag: Array<String>) = tag.has(0) && tag[0] == TAG_NAME
 
         @JvmStatic
         fun parse(tag: Array<String>): NormalizedRelayUrl? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
 
             val relay = RelayUrlNormalizer.normalizeOrNull(tag[1]) ?: return null
 
