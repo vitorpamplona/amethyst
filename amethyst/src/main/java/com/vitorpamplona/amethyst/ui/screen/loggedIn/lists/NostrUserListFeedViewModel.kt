@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 // TODO Update: Rename this to be used only for follow sets, and create separate VMs for bookmark sets, etc.
@@ -62,12 +63,12 @@ class NostrUserListFeedViewModel(
         }
     }
 
-    fun getFollowSetNote(
+    suspend fun getFollowSetNote(
         noteIdentifier: String,
         account: Account,
     ): AddressableNote? {
         checkNotInMainThread()
-        val potentialNote = account.userProfile().followSetNotes.find { it.dTag() == noteIdentifier }
+        val potentialNote = account.getFollowSetNotes().find { it.dTag() == noteIdentifier }
         return potentialNote
     }
 
@@ -77,9 +78,7 @@ class NostrUserListFeedViewModel(
     ): Boolean {
         checkNotInMainThread()
         val potentialNote =
-            account
-                .userProfile()
-                .followSetNotes
+            runBlocking(viewModelScope.coroutineContext) { account.getFollowSetNotes() }
                 .find { (it.event as PeopleListEvent).nameOrTitle() == setName }
         return potentialNote != null
     }
@@ -264,6 +263,9 @@ class NostrUserListFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = NostrUserListFeedViewModel(FollowSetFeedFilter(account)) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            NostrUserListFeedViewModel(
+                FollowSetFeedFilter(account),
+            ) as T
     }
 }
