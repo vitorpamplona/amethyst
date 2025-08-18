@@ -27,11 +27,9 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 data class UploadResult(
     val status: String? = null,
     val message: String? = null,
-    @JsonProperty("processing_url")
-    val processingUrl: String? = null,
+    @field:JsonProperty("processing_url") val processingUrl: String? = null,
     val percentage: Int? = null,
-    @JsonProperty("nip94_event")
-    val nip94Event: PartialEvent? = null,
+    @field:JsonProperty("nip94_event") val nip94Event: PartialEvent? = null,
 ) {
     companion object {
         fun parse(body: String): UploadResult {

@@ -44,5 +44,6 @@ fun BasicRelaySetupInfoDialog(
         onDelete = onDelete,
         accountViewModel = accountViewModel,
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
+        nav = nav,
     )
 }

@@ -23,36 +23,20 @@ package com.vitorpamplona.quartz.experimental.limits
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class Limits(
-    @JsonProperty("can_write")
-    val canWrite: Boolean?,
-    @JsonProperty("can_read")
-    val canRead: Boolean?,
-    @JsonProperty("accepted_event_kinds")
-    val acceptedEventKinds: Set<Int>?,
-    @JsonProperty("blocked_event_kinds")
-    val blockedEventKinds: Set<Int>?,
-    @JsonProperty("min_pow_difficulty")
-    val minPoW: Int?,
-    @JsonProperty("max_message_length")
-    val maxMessageLength: Int?,
-    @JsonProperty("max_subscriptions")
-    val maxSubscriptions: Int?,
-    @JsonProperty("max_filters")
-    val maxFilters: Int?,
-    @JsonProperty("max_limit")
-    val maxLimit: Int?,
-    @JsonProperty("max_event_tags")
-    val maxEventTags: Int?,
-    @JsonProperty("max_content_length")
-    val maxContentLength: Int?,
-    @JsonProperty("created_at_msecs_ago")
-    val createdAtMillisecsAgo: Long?,
-    @JsonProperty("created_at_msecs_ahead")
-    val createdAtMillisecsAhead: Long?,
-    @JsonProperty("filter_rate_limit")
-    val filterRateLimit: Long?,
-    @JsonProperty("publishing_rate_limit")
-    val publishingRateLimit: Long?,
-    @JsonProperty("required_tags")
-    val requiredTags: Array<Array<String>>?,
+    @field:JsonProperty("can_write") val canWrite: Boolean?,
+    @field:JsonProperty("can_read") val canRead: Boolean?,
+    @field:JsonProperty("accepted_event_kinds") val acceptedEventKinds: Set<Int>?,
+    @field:JsonProperty("blocked_event_kinds") val blockedEventKinds: Set<Int>?,
+    @field:JsonProperty("min_pow_difficulty") val minPoW: Int?,
+    @field:JsonProperty("max_message_length") val maxMessageLength: Int?,
+    @field:JsonProperty("max_subscriptions") val maxSubscriptions: Int?,
+    @field:JsonProperty("max_filters") val maxFilters: Int?,
+    @field:JsonProperty("max_limit") val maxLimit: Int?,
+    @field:JsonProperty("max_event_tags") val maxEventTags: Int?,
+    @field:JsonProperty("max_content_length") val maxContentLength: Int?,
+    @field:JsonProperty("created_at_msecs_ago") val createdAtMillisecsAgo: Long?,
+    @field:JsonProperty("created_at_msecs_ahead") val createdAtMillisecsAhead: Long?,
+    @field:JsonProperty("filter_rate_limit") val filterRateLimit: Long?,
+    @field:JsonProperty("publishing_rate_limit") val publishingRateLimit: Long?,
+    @field:JsonProperty("required_tags") val requiredTags: Array<Array<String>>?,
 )

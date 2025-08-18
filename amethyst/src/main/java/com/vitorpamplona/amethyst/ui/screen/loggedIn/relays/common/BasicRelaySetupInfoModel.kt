@@ -83,22 +83,24 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         }
     }
 
-    fun clear() {
-        _relays.update {
-            val relayList = getRelayList() ?: emptyList()
+    open fun relayListBuilder(): List<BasicRelaySetupInfo> {
+        val relayList = getRelayList() ?: emptyList()
 
-            relayList
-                .map {
-                    relaySetupInfoBuilder(
-                        normalized = it,
-                        forcesTor =
-                            account.torRelayState.flow.value
-                                .useTor(it),
-                    )
-                }.distinctBy { it.relay }
-                .sortedBy { it.relayStat.receivedBytes }
-                .reversed()
-        }
+        return relayList
+            .map {
+                relaySetupInfoBuilder(
+                    normalized = it,
+                    forcesTor =
+                        account.torRelayState.flow.value
+                            .useTor(it),
+                )
+            }.distinctBy { it.relay }
+            .sortedBy { it.relayStat.receivedBytes }
+            .reversed()
+    }
+
+    fun clear() {
+        _relays.update { relayListBuilder() }
     }
 
     fun addRelay(relay: BasicRelaySetupInfo) {

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.addressables
 
+import android.os.Parcelable
 import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
@@ -28,12 +29,15 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class Address(
     val kind: Kind,
     val pubKeyHex: HexKey,
     val dTag: String = "",
-) : Comparable<Address> {
+) : Comparable<Address>,
+    Parcelable {
     fun toValue() = assemble(kind, pubKeyHex, dTag)
 
     fun countMemory(): Long =
