@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nipA0VoiceMessages.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.utils.TagParsingUtils
 
@@ -53,7 +52,7 @@ class ReplyKindTag {
         @JvmStatic
         fun parse(tag: Tag): String? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            return tag.value()
+            return tag[1]
         }
 
         @JvmStatic

@@ -59,7 +59,7 @@ class RootIdentifierTag<T : ExternalId> {
             tag: Array<String>,
             encodedScope: Set<String>,
         ) = if (TagParsingUtils.isTaggedWithAny(tag, TAG_NAME, encodedScope)) {
-            tag.value()
+            tag[1]
         } else {
             null
         }
@@ -84,14 +84,14 @@ class RootIdentifierTag<T : ExternalId> {
         @JvmStatic
         fun parse(tag: Tag): String? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            return tag.value()
+            return tag[1]
         }
 
         @JvmStatic
         fun parseExternalId(tag: Tag): ExternalId? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
 
-            val value = tag.value()
+            val value = tag[1]
             val hint = tag.getOrNull(2)
 
             return BookId.parse(value, hint)

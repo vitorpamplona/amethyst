@@ -86,38 +86,38 @@ class CommunityTag(
         @JvmStatic
         fun parse(tag: Array<String>): CommunityTag? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            return parse(tag.value(), tag.getOrNull(2))
+            return parse(tag[1], tag.getOrNull(2))
         }
 
         @JvmStatic
         fun parseValidAddress(tag: Array<String>): String? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            return Address.parse(tag.value())?.toValue()
+            return Address.parse(tag[1])?.toValue()
         }
 
         @JvmStatic
         fun parseAddress(tag: Array<String>): Address? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            return Address.parse(tag.value())
+            return Address.parse(tag[1])
         }
 
         @JvmStatic
         fun parseAddressId(tag: Array<String>): String? {
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            return tag.value()
+            return tag[1]
         }
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
-            ensure(tag.value().contains(':')) { return null }
+            ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
-            return AddressHint(tag.value(), relayHint)
+            return AddressHint(tag[1], relayHint)
         }
 
         @JvmStatic

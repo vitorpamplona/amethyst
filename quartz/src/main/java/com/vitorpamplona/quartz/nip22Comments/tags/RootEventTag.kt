@@ -64,7 +64,6 @@ class RootEventTag(
             if (!TagParsingUtils.validateHexKeyTag(tag, TAG_NAME)) return null
 
             val relayHint = TagParsingUtils.parseRelayHint(tag, 2)
-            // RootEventTag requires a valid relay hint
             ensure(relayHint != null) { return null }
 
             return RootEventTag(tag[1], relayHint, tag.getOrNull(3))
