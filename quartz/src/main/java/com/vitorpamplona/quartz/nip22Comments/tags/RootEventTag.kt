@@ -26,9 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TagParsingUtils
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -36,7 +36,8 @@ import com.vitorpamplona.quartz.utils.ensure
 class RootEventTag(
     val ref: EventReference,
 ) {
-    constructor(eventId: String, relayHint: NormalizedRelayUrl?, pubkey: String?) : this(EventReference(eventId, pubkey, relayHint))
+    constructor(eventId: String, relayHint: NormalizedRelayUrl?, pubkey: String?) :
+        this(EventReference(eventId, pubkey, relayHint))
 
     fun toTagArray() = assemble(ref)
 
@@ -44,56 +45,51 @@ class RootEventTag(
         const val TAG_NAME = "E"
 
         @JvmStatic
-        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun match(tag: Tag) = TagParsingUtils.matchesTag(tag, TAG_NAME)
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             eventId: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == eventId
+        ) = TagParsingUtils.isTaggedWith(tag, TAG_NAME, eventId)
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
             eventIds: Set<String>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in eventIds
+        ) = TagParsingUtils.isTaggedWithAny(tag, TAG_NAME, eventIds)
 
         @JvmStatic
         fun parse(tag: Array<String>): RootEventTag? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            if (!TagParsingUtils.validateHexKeyTag(tag, TAG_NAME)) return null
 
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val relayHint = TagParsingUtils.parseRelayHint(tag, 2)
+            // RootEventTag requires a valid relay hint
+            ensure(relayHint != null) { return null }
 
             return RootEventTag(tag[1], relayHint, tag.getOrNull(3))
         }
 
         @JvmStatic
         fun parseKey(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            if (!TagParsingUtils.validateHexKeyTag(tag, TAG_NAME)) return null
             return tag[1]
         }
 
         @JvmStatic
         fun parseValidKey(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
-            ensure(Hex.isHex(tag[1])) { return null }
+            if (!TagParsingUtils.validateHexKeyTag(tag, TAG_NAME)) return null
+            if (!Hex.isHex(tag[1])) return null
             return tag[1]
         }
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): EventIdHint? {
             ensure(tag.has(2)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            if (!TagParsingUtils.validateHexKeyTag(tag, TAG_NAME)) return null
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val relayHint = TagParsingUtils.parseRelayHint(tag, 2)
             ensure(relayHint != null) { return null }
 
             return EventIdHint(tag[1], relayHint)
