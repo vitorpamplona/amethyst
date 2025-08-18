@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import java.util.UUID
 
 @Composable
 fun FollowSetsActionMenu(
@@ -73,8 +72,8 @@ fun FollowSetsActionMenu(
     userHex: String,
     followLists: List<FollowSet>,
     modifier: Modifier = Modifier,
-    addUser: (followListItemIndex: Int, list: FollowSet) -> Unit,
-    removeUser: (followListItemIndex: Int) -> Unit,
+    addUser: (index: Int, userPubkey: String, list: FollowSet) -> Unit,
+    removeUser: (index: Int, userPubkey: String, list: FollowSet) -> Unit,
 ) {
     Column {
         TextButton(
@@ -90,26 +89,6 @@ fun FollowSetsActionMenu(
                 contentDescription = "",
             )
         }
-
-//        Icon(
-//            imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-//            contentDescription = "",
-//            modifier =
-//                Modifier
-//                    .fillMaxHeight()
-//                    .background(
-//                        color = MaterialTheme.colorScheme.primary,
-//                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-//                    ).border(
-//                        width = Dp.Hairline,
-//                        color = MaterialTheme.colorScheme.primary,
-//                        shape =
-//                            ButtonBorder
-//                                .copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-//                    ).clickable(role = Role.DropdownList) {
-//                        isMenuOpen.value = !isMenuOpen.value
-//                    },
-//        )
 
         DropdownMenu(
             expanded = isMenuOpen,
@@ -128,13 +107,10 @@ fun FollowSetsActionMenu(
                             listVisibility = list.visibility,
                             isUserInList = list.profileList.contains(userHex),
                             onRemoveUser = {
-                                removeUser(index)
+                                removeUser(index, userHex, list)
                             },
                             onAddUser = {
-                                println("List contains user -> ${list.profileList.contains(userHex)}")
-                                println("Adding user to List -> ${list.title}")
-                                addUser(index, list)
-                                println("List contains user -> ${list.profileList.contains(userHex)}")
+                                addUser(index, userHex, list)
                             },
                         )
                     },
@@ -162,21 +138,6 @@ private fun DropDownMenuHeader(
         HorizontalDivider()
     }
 }
-
-fun generateFollowLists(): List<FollowSet> =
-    List(10) { index: Int ->
-        FollowSet(
-            identifierTag = UUID.randomUUID().toString(),
-            title = "List No $index",
-            description = null,
-            visibility =
-                when {
-                    index % 2 == 0 -> ListVisibility.Private
-                    else -> ListVisibility.Public
-                },
-            profileList = emptySet(),
-        )
-    }
 
 @Composable
 fun FollowSetItem(

@@ -181,23 +181,6 @@ class AccountViewModel(
 
     val feedStates = AccountFeedContentStates(this)
 
-    val followSetsFlow =
-        account
-            .userProfile()
-            .flow()
-            .followSets.stateFlow
-            .map { followSetsState ->
-                checkNotInMainThread()
-                account.getFollowSetNotes().map {
-                    account.mapNoteToFollowSet(it)
-                }
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000, 5000),
-                emptyList(),
-            )
-
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
         combineTransform(

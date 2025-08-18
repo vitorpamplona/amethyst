@@ -345,7 +345,6 @@ class UserFlowSet(
     val relayInfo = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
-    val followSets = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
         metadata.hasObservers() ||
@@ -355,8 +354,7 @@ class UserFlowSet(
             reports.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            statuses.hasObservers() ||
-            followSets.hasObservers()
+            statuses.hasObservers()
 }
 
 @Immutable
