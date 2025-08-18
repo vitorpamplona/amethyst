@@ -22,10 +22,12 @@ package com.vitorpamplona.quartz.nip72ModCommunities.follow.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.utils.TagParsingUtils
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
@@ -47,31 +49,31 @@ class CommunityTag(
         const val TAG_NAME = "a"
 
         @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = TagParsingUtils.matchesTag(tag, TAG_NAME)
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             addressId: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == addressId
+        ) = TagParsingUtils.isTaggedWith(tag, TAG_NAME, addressId)
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             address: CommunityTag,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == address.toTag()
+        ) = TagParsingUtils.isTaggedWith(tag, TAG_NAME, address.toTag())
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
             addressIds: Set<String>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
+        ) = TagParsingUtils.isTaggedWithAny(tag, TAG_NAME, addressIds)
 
         @JvmStatic
         fun isTaggedWithKind(
             tag: Array<String>,
             kind: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && Address.isOfKind(tag[1], kind)
+        ) = TagParsingUtils.validateBasicTag(tag, TAG_NAME) && Address.isOfKind(tag.value(), kind)
 
         @JvmStatic
         fun parse(
@@ -83,48 +85,39 @@ class CommunityTag(
 
         @JvmStatic
         fun parse(tag: Array<String>): CommunityTag? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return parse(tag[1], tag.getOrNull(2))
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
+            return parse(tag.value(), tag.getOrNull(2))
         }
 
         @JvmStatic
         fun parseValidAddress(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return Address.parse(tag[1])?.toValue()
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
+            return Address.parse(tag.value())?.toValue()
         }
 
         @JvmStatic
         fun parseAddress(tag: Array<String>): Address? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return Address.parse(tag[1])
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
+            return Address.parse(tag.value())
         }
 
         @JvmStatic
         fun parseAddressId(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
+            return tag.value()
         }
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            if (!TagParsingUtils.validateBasicTag(tag, TAG_NAME)) return null
+            ensure(tag.value().contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
-            return AddressHint(tag[1], relayHint)
+            return AddressHint(tag.value(), relayHint)
         }
 
         @JvmStatic
