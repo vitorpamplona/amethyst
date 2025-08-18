@@ -30,8 +30,8 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 
 class Rumor(
     val id: HexKey?,
-    @JsonProperty("pubkey") val pubKey: HexKey?,
-    @JsonProperty("created_at") val createdAt: Long?,
+    @field:JsonProperty("pubkey") val pubKey: HexKey?,
+    @field:JsonProperty("created_at") val createdAt: Long?,
     val kind: Int?,
     val tags: Array<Array<String>>?,
     val content: String?,

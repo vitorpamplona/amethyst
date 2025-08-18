@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class EventTemplate<T : Event>(
-    @JsonProperty("created_at")
+    @field:JsonProperty("created_at")
     val createdAt: Long,
     val kind: Int,
     val tags: TagArray,
