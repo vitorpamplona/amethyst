@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient.Companion.DELAY_TO_RECONNECT_IN_MSECS
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -84,7 +83,7 @@ open class BasicRelayClient(
 ) : IRelayClient {
     companion object {
         // waits 3 minutes to reconnect once things fail
-        const val DELAY_TO_RECONNECT_IN_MSECS = 500L
+        const val DELAY_TO_RECONNECT_IN_SECS = 1
         const val EVENT_MESSAGE_PREFIX = "[\"${EventMessage.LABEL}\""
     }
 
@@ -94,8 +93,8 @@ open class BasicRelayClient(
     private var isReady: Boolean = false
     private var usingCompression: Boolean = false
 
-    private var lastConnectTentative: Long = 0L // the beginning of time.
-    private var delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
+    private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
+    private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
 
     private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
@@ -138,7 +137,7 @@ open class BasicRelayClient(
 
             Log.d(logTag, "Connecting...")
 
-            lastConnectTentative = TimeUtils.now()
+            lastConnectTentativeInSeconds = TimeUtils.now()
 
             socket = socketBuilder.build(url, MyWebsocketListener(onConnected))
             socket?.connect()
@@ -207,22 +206,30 @@ open class BasicRelayClient(
             code: Int?,
             response: String?,
         ) {
-            socket?.disconnect() // 1000, "Normal close"
+            // socket is already closed
+            // socket?.disconnect()
 
-            // checks if this is an actual failure. Closing the socket generates an onFailure as well.
-            if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
-                stats.newError(response ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
+            if (socket == null) {
+                // comes from the disconnect action.
+                listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTED)
+            } else {
+                // checks if this is an actual failure. Closing the socket generates an onFailure as well.
+                if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
+                    stats.newError(response ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
+                }
+
+                // Failures disconnect the relay.
+                markConnectionAsClosed()
+
+                Log.w(logTag, "OnFailure $code $response ${t.message}")
+
+                if (code == 403 || code == 502 || code == 503 || code == 402 || code == 410 || t.message == "SOCKS: Host unreachable") {
+                    dontTryAgainForALongTime()
+                }
+
+                listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTED)
+                listener.onError(this@BasicRelayClient, "", Error("WebSocket Failure. Response: $code $response. Exception: ${t.message}", t))
             }
-
-            // Failures disconnect the relay.
-            markConnectionAsClosed()
-
-            Log.w(logTag, "OnFailure $code $response ${t.message} $socket")
-            listener.onError(
-                this@BasicRelayClient,
-                "",
-                Error("WebSocket Failure. Response: $code $response. Exception: ${t.message}", t),
-            )
         }
     }
 
@@ -261,7 +268,7 @@ open class BasicRelayClient(
         this.usingCompression = usingCompression
 
         // resets any extra delays added during on offline state
-        this.delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
+        this.delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
 
         stats.pingInMs = pingInMs
     }
@@ -320,7 +327,7 @@ open class BasicRelayClient(
     }
 
     private fun processAuth(msg: AuthMessage) {
-        // Log.d(logTag, "Auth $newMessage")
+        Log.d(logTag, "Auth ${msg.challenge}")
         listener.onAuth(this@BasicRelayClient, msg.challenge)
     }
 
@@ -344,8 +351,8 @@ open class BasicRelayClient(
 
     override fun disconnect() {
         Log.d(logTag, "Disconnecting...")
-        lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
-        delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
+        lastConnectTentativeInSeconds = 0L // this is not an error, so prepare to reconnect as soon as requested.
+        delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
         socket?.disconnect()
         socket = null
         isReady = false
@@ -372,12 +379,7 @@ open class BasicRelayClient(
                 }
             }
         } else {
-            // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + delayToConnect) {
-                delayToConnect = delayToConnect * 2
-                // sends all filters after connection is successful.
-                connect()
-            }
+            connectAndSyncFiltersIfDisconnected()
         }
     }
 
@@ -393,23 +395,28 @@ open class BasicRelayClient(
                 }
             }
         } else {
+            connectAndSyncFiltersIfDisconnected()
+        }
+    }
+
+    override fun connectAndSyncFiltersIfDisconnected() {
+        if (!isConnectionStarted() && !connectingMutex.get()) {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + delayToConnect) {
-                // sends all filters after connection is successful.
-                delayToConnect = delayToConnect * 2
+            if (TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+                upRelayDelayToConnect()
                 connect()
             }
         }
     }
 
-    override fun connectAndSyncFiltersIfDisconnected() {
-        if (socket == null) {
-            // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + delayToConnect) {
-                delayToConnect = delayToConnect * 2
-                connect()
-            }
+    fun upRelayDelayToConnect() {
+        if (delayToConnectInSeconds < TimeUtils.FIVE_MINUTES) {
+            delayToConnectInSeconds = delayToConnectInSeconds * 2
         }
+    }
+
+    fun dontTryAgainForALongTime() {
+        delayToConnectInSeconds = TimeUtils.ONE_DAY
     }
 
     override fun send(event: Event) {
@@ -439,8 +446,7 @@ open class BasicRelayClient(
                 writeToSocket(EventCmd.Companion.toJson(event))
             }
         } else {
-            // automatically sends all filters after connection is successful.
-            connect()
+            connectAndSyncFiltersIfDisconnected()
         }
     }
 

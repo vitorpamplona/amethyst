@@ -131,9 +131,9 @@ class FollowListOutboxOrProxyRelays(
     val flowSet: StateFlow<Set<String>> =
         flow
             .map { relayList ->
-                relayList.map { it.url }.toSet()
+                relayList.mapTo(mutableSetOf()) { it.url }
             }.onStart {
-                emit(flow.value.map { it.url }.toSet())
+                emit(flow.value.mapTo(mutableSetOf()) { it.url })
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

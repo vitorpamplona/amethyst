@@ -93,7 +93,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfFeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -455,7 +454,7 @@ fun ReactionsColumn(
             accountViewModel = accountViewModel,
             iconSize = Size40dp,
             iconSizeModifier = Size40Modifier,
-            animationSize = Size35dp,
+            animationModifier = Size35Modifier,
             nav = nav,
         )
     }

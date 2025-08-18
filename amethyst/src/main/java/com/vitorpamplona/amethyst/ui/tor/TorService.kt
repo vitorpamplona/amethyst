@@ -27,7 +27,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -55,7 +54,7 @@ class TorService(
                         name: ComponentName,
                         service: IBinder,
                     ) {
-                        launch {
+                        launch(Dispatchers.IO) {
                             // moved torService to a local variable, since we only need it once
                             val torService = (service as LocalBinder).service
 
@@ -77,7 +76,6 @@ class TorService(
             )
 
             awaitClose {
-                checkNotInMainThread()
                 Log.d("TorService", "Stopping Tor Service")
                 launch {
                     context.stopService(currentIntent)

@@ -76,6 +76,9 @@ dependencies {
     // Normalizes URLs
     api libs.rfc3986.normalizer
 
+    // Websockets API
+    implementation libs.okhttp
+
     testImplementation libs.junit
     testImplementation libs.secp256k1.kmp.jni.jvm
     androidTestImplementation platform(libs.androidx.compose.bom)

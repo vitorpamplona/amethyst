@@ -32,22 +32,21 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
 @Composable
 fun RefreshingChatroomFeedView(
-    viewModel: FeedViewModel,
+    feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
     routeForLastRead: String,
@@ -55,27 +54,24 @@ fun RefreshingChatroomFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     scrollStateKey: String? = null,
-    enablePullRefresh: Boolean = true,
 ) {
-    RefresheableBox(viewModel, enablePullRefresh) {
-        SaveableFeedState(viewModel, scrollStateKey) { listState ->
-            RenderChatFeedView(
-                viewModel,
-                accountViewModel,
-                listState,
-                nav,
-                routeForLastRead,
-                onWantsToReply,
-                onWantsToEditDraft,
-                avoidDraft,
-            )
-        }
+    SaveableFeedState(feedContentState, scrollStateKey) { listState ->
+        RenderChatFeedView(
+            feedContentState,
+            accountViewModel,
+            listState,
+            nav,
+            routeForLastRead,
+            onWantsToReply,
+            onWantsToEditDraft,
+            avoidDraft,
+        )
     }
 }
 
 @Composable
 fun RenderChatFeedView(
-    viewModel: FeedViewModel,
+    feed: FeedContentState,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
     nav: INav,
@@ -84,13 +80,13 @@ fun RenderChatFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
 ) {
-    val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
+    val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
         when (state) {
             is FeedState.Loading -> LoadingFeed()
-            is FeedState.Empty -> FeedEmpty { viewModel.invalidateData() }
-            is FeedState.FeedError -> FeedError(state.errorMessage) { viewModel.invalidateData() }
+            is FeedState.Empty -> FeedEmpty { feed.invalidateData() }
+            is FeedState.FeedError -> FeedError(state.errorMessage) { feed.invalidateData() }
             is FeedState.Loaded ->
                 ChatFeedLoaded(
                     state,
@@ -133,7 +129,7 @@ fun ChatFeedLoaded(
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
             val noteEvent = item.event
-            if (avoidDraft == null || noteEvent !is DraftEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
+            if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 ChatroomMessageCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,

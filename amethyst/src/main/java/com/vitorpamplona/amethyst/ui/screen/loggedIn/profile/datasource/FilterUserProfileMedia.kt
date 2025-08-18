@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
@@ -40,8 +41,13 @@ val UserProfileMediaKinds =
 fun filterUserProfileMedia(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    user.outboxRelays().map { relay ->
+): List<RelayBasedFilter> {
+    val relays =
+        user.outboxRelays()?.ifEmpty { null }
+            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+
+    return relays.map { relay ->
         RelayBasedFilter(
             relay = relay,
             filter =
@@ -53,3 +59,4 @@ fun filterUserProfileMedia(
                 ),
         )
     }
+}

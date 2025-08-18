@@ -179,7 +179,6 @@ class AddBountyAmountViewModel : ViewModel() {
                         myAccount.sendAddBounty(
                             newValue,
                             bountyInner,
-                            draftTag = null,
                         )
                     }
                 }

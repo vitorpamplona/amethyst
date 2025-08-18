@@ -36,6 +36,8 @@ object TimeUtils {
 
     fun tenSecondsFromNow() = now() + TEN_SECONDS
 
+    fun tenSecondsAgo() = now() - TEN_SECONDS
+
     fun oneMinuteFromNow() = now() + ONE_MINUTE
 
     fun oneMinuteAgo() = now() - ONE_MINUTE

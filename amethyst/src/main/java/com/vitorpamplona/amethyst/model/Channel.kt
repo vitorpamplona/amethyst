@@ -22,10 +22,14 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.ListChange
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.lang.ref.WeakReference
 
 @Stable
 abstract class Channel : NotesGatherer {
@@ -33,6 +37,16 @@ abstract class Channel : NotesGatherer {
     var lastNote: Note? = null
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
+
+    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+
+    fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
+        val current = changesFlow.get()
+        if (current != null) return current
+        val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
+        changesFlow = WeakReference(new)
+        return new
+    }
 
     abstract fun toBestDisplayName(): String
 
@@ -80,6 +94,8 @@ abstract class Channel : NotesGatherer {
                 addRelay(relay)
             }
 
+            changesFlow.get()?.tryEmit(ListChange.Addition(note))
+
             flowSet?.notes?.invalidateData()
         }
     }
@@ -92,6 +108,8 @@ abstract class Channel : NotesGatherer {
             if (note == lastNote) {
                 lastNote = notes.values().sortedWith(DefaultFeedOrder).firstOrNull()
             }
+
+            changesFlow.get()?.tryEmit(ListChange.Deletion(note))
 
             flowSet?.notes?.invalidateData()
         }
@@ -109,6 +127,8 @@ abstract class Channel : NotesGatherer {
 
         toBeRemoved.forEach { notes.remove(it.idHex) }
 
+        changesFlow.get()?.tryEmit(ListChange.SetDeletion(toBeRemoved.toSet()))
+
         flowSet?.notes?.invalidateData()
 
         return toBeRemoved.toSet()
@@ -122,6 +142,8 @@ abstract class Channel : NotesGatherer {
                 }.toSet()
 
         hidden.forEach { notes.remove(it.idHex) }
+
+        changesFlow.get()?.tryEmit(ListChange.SetDeletion(hidden))
 
         flowSet?.notes?.invalidateData()
 

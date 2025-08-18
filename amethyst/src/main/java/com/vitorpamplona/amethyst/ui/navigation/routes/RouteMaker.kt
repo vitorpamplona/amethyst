@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
@@ -63,7 +63,7 @@ fun routeFor(
     noteEvent: Event,
     loggedIn: Account,
 ): Route? {
-    if (noteEvent is DraftEvent) {
+    if (noteEvent is DraftWrapEvent) {
         val innerEvent = loggedIn.draftsDecryptionCache.preCachedDraft(noteEvent)
 
         if (innerEvent is IsInPublicChatChannel) {

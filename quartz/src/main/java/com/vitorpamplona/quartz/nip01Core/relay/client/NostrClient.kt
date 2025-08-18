@@ -122,8 +122,6 @@ class NostrClient(
             }
         }
 
-    fun allAvailableRelays() = relayPool.getAll()
-
     // Reconnects all relays that may have disconnected
     fun connect() {
         isActive = true
@@ -138,10 +136,7 @@ class NostrClient(
     @Synchronized
     fun reconnect(onlyIfChanged: Boolean = false) {
         if (onlyIfChanged) {
-            relayPool.getAllNeedsToReconnect().forEach {
-                it.disconnect()
-            }
-            relayPool.connect()
+            relayPool.reconnectIfNeedsToORIfItIsTime()
         } else {
             relayPool.disconnect()
             relayPool.connect()
@@ -206,7 +201,7 @@ class NostrClient(
         return false
     }
 
-    fun sendRequest(
+    fun openReqSubscription(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
@@ -236,10 +231,13 @@ class NostrClient(
                     relayPool.connectIfDisconnected(relay)
                 }
             }
+
+            // wakes up all the other relays
+            relayPool.reconnectIfNeedsToORIfItIsTime()
         }
     }
 
-    fun sendCount(
+    fun openCountSubscription(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
@@ -269,6 +267,9 @@ class NostrClient(
                     relayPool.connectIfDisconnected(relay)
                 }
             }
+
+            // wakes up all the other relays
+            relayPool.reconnectIfNeedsToORIfItIsTime()
         }
     }
 
@@ -278,6 +279,9 @@ class NostrClient(
     ) {
         if (isActive) {
             relayPool.getRelay(connectedRelay)?.send(event)
+
+            // wakes up all the other relays
+            relayPool.reconnectIfNeedsToORIfItIsTime()
         }
     }
 
@@ -288,6 +292,9 @@ class NostrClient(
         eventOutbox.markAsSending(event, relayList)
         if (isActive) {
             relayPool.send(event, relayList)
+
+            // wakes up all the other relays
+            relayPool.reconnectIfNeedsToORIfItIsTime()
         }
     }
 

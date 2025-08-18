@@ -86,7 +86,7 @@ class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
                         key.feedStates.discoverLive.lastNoteCreatedAtWhenFullyLoaded,
                     ) {
                         Any()
-                    }.sample(1000).collectLatest {
+                    }.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

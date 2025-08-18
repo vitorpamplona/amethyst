@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -49,24 +50,20 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
-import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
@@ -95,19 +92,9 @@ class AddressableNote(
 
     override fun createdAt(): Long? {
         val currentEvent = event
-
         if (currentEvent == null) return null
-
-        val publishedAt =
-            when (currentEvent) {
-                is LongTextNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                is WikiNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                is VideoEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                is ClassifiedsEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
-                else -> Long.MAX_VALUE
-            }
-
-        return minOf(publishedAt, currentEvent.createdAt)
+        if (currentEvent is PublishedAtProvider) return currentEvent.publishedAt() ?: currentEvent.createdAt
+        return currentEvent.createdAt
     }
 
     fun dTag(): String = address.dTag
@@ -202,15 +189,15 @@ open class Note(
     }
 
     fun relayUrls(): List<NormalizedRelayUrl> {
-        val authorRelay = author?.relayHints()?.ifEmpty { null }
+        val authorRelay = author?.relayHints() ?: emptyList()
 
-        return authorRelay ?: relays
+        return authorRelay + relays
     }
 
     fun relayUrlsForReactions(): List<NormalizedRelayUrl> {
-        val authorRelay = author?.inboxRelays()?.ifEmpty { null }
+        val authorRelay = author?.inboxRelays() ?: emptyList()
 
-        return authorRelay ?: relays
+        return authorRelay + relays
     }
 
     fun relayHintUrl(): NormalizedRelayUrl? {
@@ -235,7 +222,7 @@ open class Note(
 
     open fun createdAt() = event?.createdAt
 
-    fun isDraft() = event is DraftEvent
+    fun isDraft() = event is DraftWrapEvent
 
     fun loadEvent(
         event: Event,
@@ -472,28 +459,28 @@ open class Note(
     }
 
     private suspend fun isPaidByCalculation(
+        zapPayments: List<Pair<Note, Note?>>,
+        afterTimeInSeconds: Long,
         account: Account,
-        zapEvents: List<Pair<Note, Note?>>,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        if (zapEvents.isEmpty()) {
-            return
+    ): Boolean {
+        if (zapPayments.isEmpty()) {
+            return false
         }
 
-        var hasSentOne = false
-
-        launchAndWaitAll(zapEvents) { next ->
+        return anyAsync(zapPayments) { next ->
             val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
 
             if (zapResponseEvent != null) {
-                account.nip47SignerState.decryptResponse(zapResponseEvent)?.let { response ->
-                    val result = response is PayInvoiceSuccessResponse && account.nip47SignerState.isNIP47Author(zapResponseEvent.requestAuthor())
-
-                    if (!hasSentOne && result == true) {
-                        hasSentOne = true
-                        onWasZappedByAuthor()
-                    }
+                val response = account.nip47SignerState.decryptResponse(zapResponseEvent)
+                if (response != null) {
+                    response is PayInvoiceSuccessResponse &&
+                        account.nip47SignerState.isNIP47Author(zapResponseEvent.requestAuthor()) &&
+                        zapResponseEvent.createdAt > afterTimeInSeconds
+                } else {
+                    false
                 }
+            } else {
+                false
             }
         }
     }
@@ -501,75 +488,81 @@ open class Note(
     private suspend fun isZappedByCalculation(
         option: Int?,
         user: User,
+        afterTimeInSeconds: Long,
         account: Account,
         zapEvents: Map<Note, Note?>,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
+    ): Boolean {
         if (zapEvents.isEmpty()) {
-            return
+            return false
         }
 
-        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent?>>()
+        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent>>()
 
         zapEvents.forEach { next ->
             val zapRequest = next.key.event as LnZapRequestEvent
             val zapEvent = next.value?.event as? LnZapEvent
 
-            if (!zapRequest.isPrivateZap()) {
-                // public events
-                if (zapRequest.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
-                    onWasZappedByAuthor()
-                    return
-                }
-            } else {
-                // private events
-
-                // if has already decrypted
-                val privateZap = account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)
-                if (privateZap != null) {
-                    if (privateZap.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
-                        onWasZappedByAuthor()
-                        return
+            if (zapEvent != null) {
+                if (!zapRequest.isPrivateZap()) {
+                    // public events
+                    if (zapRequest.pubKey == user.pubkeyHex &&
+                        zapEvent.createdAt > afterTimeInSeconds &&
+                        (option == null || option == zapEvent.zappedPollOption())
+                    ) {
+                        return true
                     }
                 } else {
-                    if (account.isWriteable()) {
-                        parallelDecrypt.add(Pair(zapRequest, zapEvent))
+                    // private events
+
+                    // if has already decrypted
+                    val privateZap = account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)
+                    if (privateZap != null) {
+                        if (privateZap.pubKey == user.pubkeyHex &&
+                            zapEvent.createdAt > afterTimeInSeconds &&
+                            (option == null || option == zapEvent.zappedPollOption())
+                        ) {
+                            return true
+                        }
+                    } else {
+                        if (account.isWriteable()) {
+                            parallelDecrypt.add(Pair(zapRequest, zapEvent))
+                        }
                     }
                 }
             }
         }
 
-        val result =
-            anyAsync(parallelDecrypt) { pair ->
-                val result = account.privateZapsDecryptionCache.decryptPrivateZap(pair.first)
+        if (parallelDecrypt.isEmpty()) {
+            return false
+        }
 
-                result?.pubKey == user.pubkeyHex && (option == null || option == pair.second?.zappedPollOption())
-            }
-
-        if (result) {
-            onWasZappedByAuthor()
+        return anyAsync(parallelDecrypt) { pair ->
+            val result = account.privateZapsDecryptionCache.decryptPrivateZap(pair.first)
+            result?.pubKey == user.pubkeyHex &&
+                pair.second.createdAt > afterTimeInSeconds &&
+                (option == null || option == pair.second.zappedPollOption())
         }
     }
 
     suspend fun isZappedBy(
         user: User,
+        afterTimeInSeconds: Long,
         account: Account,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        isZappedByCalculation(null, user, account, zaps, onWasZappedByAuthor)
+    ): Boolean {
+        val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
+        if (first) return true
         if (account.userProfile() == user) {
-            isPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
+            return isPaidByCalculation(zapPayments.toList(), afterTimeInSeconds, account)
         }
+        return false
     }
 
     suspend fun isZappedBy(
         option: Int?,
         user: User,
+        afterTimeInSeconds: Long,
         account: Account,
-        onWasZappedByAuthor: () -> Unit,
-    ) {
-        isZappedByCalculation(option, user, account, zaps, onWasZappedByAuthor)
-    }
+    ): Boolean = isZappedByCalculation(option, user, afterTimeInSeconds, account, zaps)
 
     fun getReactionBy(user: User): String? =
         reactions.firstNotNullOfOrNull {

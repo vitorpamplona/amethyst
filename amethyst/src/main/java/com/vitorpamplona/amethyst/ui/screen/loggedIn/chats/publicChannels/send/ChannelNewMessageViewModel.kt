@@ -82,7 +82,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.notify
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -191,7 +191,7 @@ open class ChannelNewMessageViewModel :
         val noteEvent = draft.event
         val noteAuthor = draft.author
 
-        if (noteEvent is DraftEvent && noteAuthor != null) {
+        if (noteEvent is DraftWrapEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
                     val oldTag = (draft.event as? AddressableEvent)?.dTag()
@@ -259,7 +259,7 @@ open class ChannelNewMessageViewModel :
         urlPreview = findUrlInMessage()
     }
 
-    fun sendPost(onDone: () -> Unit) {
+    fun sendPost(onDone: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             sendPostSync()
             onDone()
@@ -281,8 +281,14 @@ open class ChannelNewMessageViewModel :
         if (message.text.isBlank()) {
             account.deleteDraft(draftTag.current)
         } else {
+            val attachments = mutableSetOf<Event>()
+            nip95attachments.forEach {
+                attachments.add(it.first)
+                attachments.add(it.second)
+            }
+
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag.current, template)
+            accountViewModel.account.createAndSendDraft(draftTag.current, template, attachments)
         }
     }
 
@@ -293,7 +299,7 @@ open class ChannelNewMessageViewModel :
     fun upload(
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: () -> Unit,
+        onceUploaded: suspend () -> Unit,
     ) = try {
         uploadUnsafe(onError, context, onceUploaded)
     } catch (_: SignerExceptions.ReadOnlyException) {
@@ -306,7 +312,7 @@ open class ChannelNewMessageViewModel :
     fun uploadUnsafe(
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: () -> Unit,
+        onceUploaded: suspend () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val uploadState = uploadState ?: return@launch

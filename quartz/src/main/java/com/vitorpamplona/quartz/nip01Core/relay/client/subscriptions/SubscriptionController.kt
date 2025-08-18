@@ -126,14 +126,14 @@ class SubscriptionController(
                 // was active and is not active anymore, just close.
                 client.close(subId)
             } else {
-                client.sendRequest(subId, updatedFilters)
+                client.openReqSubscription(subId, updatedFilters)
             }
         } else {
             if (updatedFilters == null) {
                 // was not active and is still not active, does nothing
             } else {
                 // was not active and becomes active, sends the entire filter.
-                client.sendRequest(subId, updatedFilters)
+                client.openReqSubscription(subId, updatedFilters)
             }
         }
     }

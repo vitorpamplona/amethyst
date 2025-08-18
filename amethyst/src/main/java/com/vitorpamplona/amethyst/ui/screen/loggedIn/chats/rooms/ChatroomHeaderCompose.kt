@@ -86,7 +86,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -113,7 +113,7 @@ fun ChatroomComposeChannelOrUser(
     nav: INav,
 ) {
     val baseNoteEvent = baseNote.event
-    if (baseNoteEvent is DraftEvent) {
+    if (baseNoteEvent is DraftWrapEvent) {
         ObserveDraftEvent(baseNote, accountViewModel) { innerNote ->
             ChatroomEntry(innerNote, accountViewModel, nav)
         }

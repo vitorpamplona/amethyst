@@ -113,8 +113,8 @@ class AppMetadata {
     fun toJson() = assemble(this)
 
     companion object {
-        fun assemble(data: AppMetadata) = JsonMapper.mapper.writeValueAsString(data)
+        fun assemble(data: AppMetadata): String = JsonMapper.mapper.writeValueAsString(data)
 
-        fun parse(content: String) = JsonMapper.mapper.readValue(content, AppMetadata::class.java)
+        fun parse(content: String): AppMetadata = JsonMapper.mapper.readValue(content, AppMetadata::class.java)
     }
 }

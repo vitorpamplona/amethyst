@@ -29,8 +29,8 @@ class DraftEventCache(
     signer: NostrSigner,
 ) {
     private val decryptionCache =
-        object : LruCache<DraftEvent, DraftEventDecryptCache>(1000) {
-            override fun create(key: DraftEvent): DraftEventDecryptCache? =
+        object : LruCache<DraftWrapEvent, DraftEventDecryptCache>(1000) {
+            override fun create(key: DraftWrapEvent): DraftEventDecryptCache? =
                 if (!key.isDeleted() && key.pubKey == signer.pubKey) {
                     DraftEventDecryptCache(signer)
                 } else {
@@ -38,23 +38,23 @@ class DraftEventCache(
                 }
         }
 
-    fun delete(event: DraftEvent) = decryptionCache.remove(event)
+    fun delete(event: DraftWrapEvent) = decryptionCache.remove(event)
 
     fun preload(
-        event: DraftEvent,
+        event: DraftWrapEvent,
         result: Event,
     ) = decryptionCache[event]?.preload(result)
 
-    fun preCachedDraft(event: DraftEvent): Event? = decryptionCache[event]?.cached()
+    fun preCachedDraft(event: DraftWrapEvent): Event? = decryptionCache[event]?.cached()
 
-    suspend fun cachedDraft(event: DraftEvent) = decryptionCache[event]?.decrypt(event)
+    suspend fun cachedDraft(event: DraftWrapEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class DraftEventDecryptCache(
     signer: NostrSigner,
-) : DecryptCache<DraftEvent, Event>(signer) {
+) : DecryptCache<DraftWrapEvent, Event>(signer) {
     override suspend fun decryptAndParse(
-        event: DraftEvent,
+        event: DraftWrapEvent,
         signer: NostrSigner,
     ): Event = event.decryptInnerEvent(signer)
 }

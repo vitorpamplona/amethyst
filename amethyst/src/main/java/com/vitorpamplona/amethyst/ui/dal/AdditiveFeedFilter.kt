@@ -22,11 +22,9 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.logTime
 
-abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
-    abstract fun applyFilter(newItems: Set<T>): Set<T>
-
-    abstract fun sort(items: Set<T>): List<T>
-
+abstract class AdditiveFeedFilter<T> :
+    FeedFilter<T>(),
+    IAdditiveFeedFilter<T> {
     open fun updateListWith(
         oldList: List<T>,
         newItems: Set<T>,
@@ -42,4 +40,15 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
                 oldList
             }
         }
+
+    fun removeNotes(
+        oldList: List<T>,
+        deletedNotes: Set<T>,
+    ): List<T> = oldList - deletedNotes
+}
+
+interface IAdditiveFeedFilter<T> : IFeedFilter<T> {
+    fun applyFilter(newItems: Set<T>): Set<T>
+
+    fun sort(items: Set<T>): List<T>
 }

@@ -25,11 +25,15 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NotesGatherer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.ListChange
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.lang.ref.WeakReference
 
 @Stable
 class Chatroom : NotesGatherer {
@@ -38,7 +42,17 @@ class Chatroom : NotesGatherer {
     var subject = MutableStateFlow<String?>(null)
     var subjectCreatedAt: Long? = null
     var ownerSentMessage: Boolean = false
-    var lastMessage: Note? = null
+    var newestMessage: Note? = null
+
+    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+
+    fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
+        val current = changesFlow.get()
+        if (current != null) return current
+        val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
+        changesFlow = WeakReference(new)
+        return new
+    }
 
     override fun removeNote(note: Note) {
         removeMessageSync(note)
@@ -57,8 +71,8 @@ class Chatroom : NotesGatherer {
             }
 
             val createdAt = msg.createdAt() ?: 0
-            if (createdAt > (lastMessage?.createdAt() ?: 0)) {
-                lastMessage = msg
+            if (createdAt > (newestMessage?.createdAt() ?: 0)) {
+                newestMessage = msg
             }
 
             val newSubject = msg.event?.subject()
@@ -67,6 +81,9 @@ class Chatroom : NotesGatherer {
                 subject.tryEmit(newSubject)
                 subjectCreatedAt = msg.createdAt()
             }
+
+            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
+
             return true
         }
         return false
@@ -78,14 +95,27 @@ class Chatroom : NotesGatherer {
             messages = messages - msg
             msg.removeGatherer(this)
 
-            messages
-                .filter { it.event?.subject() != null }
-                .sortedBy { it.createdAt() }
-                .lastOrNull()
-                ?.let {
-                    subject.tryEmit(it.event?.subject())
-                    subjectCreatedAt = it.createdAt()
-                }
+            if (msg == newestMessage) {
+                newestMessage = messages.maxByOrNull { it.createdAt() ?: 0 }
+            }
+
+            if (msg.event?.subject() == subject.value) {
+                messages
+                    .maxByOrNull {
+                        val noteEvent = it.event
+                        if (noteEvent?.subject() != null) {
+                            noteEvent.createdAt
+                        } else {
+                            0
+                        }
+                    }?.let {
+                        subject.tryEmit(it.event?.subject())
+                        subjectCreatedAt = it.createdAt()
+                    }
+            }
+
+            changesFlow.get()?.tryEmit(ListChange.Deletion(msg))
+
             return true
         }
         return false
@@ -107,6 +137,9 @@ class Chatroom : NotesGatherer {
 
         val toRemove = messages.minus(toKeep)
         messages = toKeep
+
+        changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+
         return toRemove
     }
 }

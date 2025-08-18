@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.C
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import kotlinx.coroutines.launch
 
 @Composable
 fun LiveActivityChannelView(
@@ -113,7 +111,7 @@ fun LiveActivityChannelView(
         ) {
             ShowVideoStreaming(channel, accountViewModel)
             RefreshingChatroomFeedView(
-                viewModel = feedViewModel,
+                feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = "Channel/${channel.address.toValue()}",
@@ -125,17 +123,11 @@ fun LiveActivityChannelView(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        val scope = rememberCoroutineScope()
-
         // LAST ROW
         EditFieldRow(
             newPostModel,
             accountViewModel,
-            onSendNewMessage = {
-                scope.launch {
-                    feedViewModel.sendToTop()
-                }
-            },
+            onSendNewMessage = feedViewModel.feedState::sendToTop,
             nav,
         )
     }

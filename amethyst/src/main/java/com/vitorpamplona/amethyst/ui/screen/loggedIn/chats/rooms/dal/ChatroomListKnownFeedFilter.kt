@@ -47,7 +47,7 @@ class ChatroomListKnownFeedFilter(
                 if ((chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
                     !account.isAllHidden(key.users)
                 ) {
-                    chatroom.lastMessage
+                    chatroom.newestMessage
                 } else {
                     null
                 }

@@ -120,7 +120,7 @@ import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
@@ -2549,7 +2549,7 @@ object LocalCache : ILocalCache {
     }
 
     fun consume(
-        event: DraftEvent,
+        event: DraftWrapEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean = !event.isDeleted() && consumeBaseReplaceable(event, relay, wasVerified)
@@ -2757,7 +2757,7 @@ object LocalCache : ILocalCache {
                 is CommunityPostApprovalEvent -> consume(event, relay, wasVerified)
                 is ContactListEvent -> consume(event, relay, wasVerified)
                 is DeletionEvent -> consume(event, relay, wasVerified)
-                is DraftEvent -> consume(event, relay, wasVerified)
+                is DraftWrapEvent -> consume(event, relay, wasVerified)
                 is EmojiPackEvent -> consume(event, relay, wasVerified)
                 is EmojiPackSelectionEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatEvent -> consume(event, relay, wasVerified)

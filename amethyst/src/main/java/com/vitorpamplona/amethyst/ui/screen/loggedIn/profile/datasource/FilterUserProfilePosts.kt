@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -66,9 +67,13 @@ val UserProfilePostKinds2 =
 fun filterUserProfilePosts(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> =
-    user
-        .outboxRelays()
+): List<RelayBasedFilter> {
+    val relays =
+        user.outboxRelays()?.ifEmpty { null }
+            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+
+    return relays
         .map { relay ->
             listOf(
                 RelayBasedFilter(
@@ -93,3 +98,4 @@ fun filterUserProfilePosts(
                 ),
             )
         }.flatten()
+}

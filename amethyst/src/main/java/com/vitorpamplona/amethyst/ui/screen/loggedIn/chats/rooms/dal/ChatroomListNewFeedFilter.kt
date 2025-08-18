@@ -41,7 +41,7 @@ class ChatroomListNewFeedFilter(
         val privateMessages =
             chatList.rooms.mapNotNull { key, chatroom ->
                 if (!chatroom.senderIntersects(followingKeySet) && !chatList.hasSentMessagesTo(key) && !account.isAllHidden(key.users)) {
-                    chatroom.lastMessage
+                    chatroom.newestMessage
                 } else {
                     null
                 }

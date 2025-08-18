@@ -251,10 +251,84 @@ dependencyResolutionManagement {
 }
 ```
 
-Add the dependency
+Add the dependency by using one of the versions [here](https://jitpack.io/#vitorpamplona/amethyst/)
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:v0.85.1')
+implementation('com.github.vitorpamplona.amethyst:quartz:<tag, commit, -SNAPSHOT>')
+```
+
+Manage logged in users with the `KeyPair` class
+
+```kt
+val keys = KeyPair() // creates a random key
+val keys = KeyPair("hex...".hexToByteArray())
+val keys = KeyPair("nsec1...".bechToBytes())
+val keys = KeyPair(Nip06().privateKeyFromMnemonic("<mnemonic>"))
+val readOnly = KeyPair(pubKey = "hex...".hexToByteArray())
+val readOnly = KeyPair(pubKey = "npub1...".bechToBytes())
+```
+
+Create signers that can be internal, when you have the private key or when it is a read-only user
+or external, when it is controlled by Amber in NIP-55
+
+the `NostrSignerInternal` and `NostrSignerExternal` classes.
+
+```kt
+val signer = NostrSignerInternal(keyPair)
+val amberSigner = NostrSignerExternal(
+    pubKey = keyPair.pubKey.toHexKey(),
+    packageName = signerPackageName,
+    contentResolver = appContext.contentResolver,
+)
+```
+
+Create a single NostrClient for the entire application and control which relays it will access by
+registering subscriptions and sending events. The pool will automatically changed based on filters +
+outbox events.
+
+You will need a coroutine scope to process events and if you are using OKHttp, we offer a basic
+wrapper to create the socket connections themselves.
+
+```kt
+val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+val rootClient = OkHttpClient.Builder().build()
+val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
+
+val client = NostrClient(socketBuilder, appScope)
+```
+
+If you want to auth, given a logged-in `signer`:
+
+```kt
+val authCoordinator = RelayAuthenticator(client, applicationIOScope) { challenge, relay ->
+    val authedEvent = RelayAuthEvent.create(relayUrl, challenge, signer)
+    client.sendIfExists(authedEvent, relay.url)
+}
+```
+
+To manage subscriptions, the suggested approach is to use subscriptions in the Application class.
+
+```kt
+val metadataSub = RelayClientSubscription(
+    client = client,
+    filter = {
+        val filters = listOf(
+            Filter(
+                kinds = listOf(MetadataEvent.KIND),
+                authors = listOf(signer.pubkey)
+            )
+        )
+
+        val signerOutboxRelays = listOfNotNull(
+            RelayUrlNormalizer.normalizeOrNull("wss://relay1.com"),
+            RelayUrlNormalizer.normalizeOrNull("wss://relay2.com")
+        )
+
+        signerOutboxRelays.associateWith { filters }
+    }
+) { event ->
+    /* consume event */
+}
 ```
 
 ## Contributing

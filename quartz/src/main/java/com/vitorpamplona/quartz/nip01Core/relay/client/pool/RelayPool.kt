@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,16 +71,24 @@ class RelayPool(
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
-    fun getAll() = statusFlow.value.connected
+    var lastReconnectCall = TimeUtils.now()
 
-    fun getAllNeedsToReconnect() = relays.filter { url, relay -> relay.needsToReconnect() }
-
-    fun reconnectsRelaysThatNeedTo() {
-        relays.forEach { url, relay ->
-            if (relay.needsToReconnect()) {
-                relay.disconnect()
-                relay.connect()
+    fun reconnectIfNeedsToORIfItIsTime() {
+        if (lastReconnectCall < TimeUtils.tenSecondsAgo()) {
+            relays.forEach { url, relay ->
+                if (relay.isConnected()) {
+                    if (relay.needsToReconnect()) {
+                        // network has changed, force reconnect
+                        relay.disconnect()
+                        relay.connect()
+                    }
+                } else {
+                    // relay is not connected. Connect if it is time
+                    relay.connectAndSyncFiltersIfDisconnected()
+                }
             }
+
+            lastReconnectCall = TimeUtils.now()
         }
     }
 

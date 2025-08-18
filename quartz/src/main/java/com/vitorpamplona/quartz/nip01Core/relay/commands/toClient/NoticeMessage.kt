@@ -29,9 +29,6 @@ class NoticeMessage(
         const val LABEL = "NOTICE"
 
         @JvmStatic
-        fun parse(msgArray: JsonNode): NoticeMessage =
-            NoticeMessage(
-                msgArray.get(1).asText(),
-            )
+        fun parse(msgArray: JsonNode) = NoticeMessage(msgArray.get(1).asText())
     }
 }

@@ -112,7 +112,7 @@ class Amethyst : Application() {
     val relayProxyClientConnector = RelayProxyClientConnector(torProxySettingsAnchor, okHttpClients, connManager, client, applicationIOScope)
 
     // Verifies and inserts in the cache from all relays, all subscriptions
-    val cacheClientConnector = CacheClientConnector(client, cache, applicationIOScope)
+    val cacheClientConnector = CacheClientConnector(client, cache)
 
     // Show messages from the Relay and controls their dismissal
     val notifyCoordinator = NotifyCoordinator(client)
