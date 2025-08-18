@@ -394,7 +394,7 @@ fun EmojiCollectionGallery(
     LazyColumn(
         state = listState,
     ) {
-        itemsIndexed(emojiCollections, key = { _, item -> item.pubKeyHex }) { _, item ->
+        itemsIndexed(emojiCollections, key = { _, item -> item }) { _, item ->
             LoadAddressableNote(item, accountViewModel) {
                 it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
             }
