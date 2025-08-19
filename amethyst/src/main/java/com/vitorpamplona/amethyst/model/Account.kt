@@ -159,7 +159,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
-import com.vitorpamplona.quartz.nip37Drafts.DraftBuilder
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -1151,7 +1150,7 @@ class Account(
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
         val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
-        val draftEvent = DraftBuilder.encryptAndSign(draftTag, rumor, signer)
+        val draftEvent = DraftWrapEvent.create(draftTag, rumor, signer)
         draftsDecryptionCache.preload(draftEvent, rumor)
 
         cache.justConsumeMyOwnEvent(draftEvent)
