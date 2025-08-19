@@ -86,7 +86,9 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
+import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -544,12 +546,47 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         } else {
-            TextNoteEvent.build(
-                note = tagger.message,
-                replyingTo = originalNote?.toEventHint<TextNoteEvent>(),
-                forkingFrom = forkedFromNote?.toEventHint<TextNoteEvent>(),
-            ) {
-                tagger.pTags?.let { pTagList -> notify(pTagList.map { it.toPTag() }) }
+            TextNoteEvent.build(tagger.message) {
+                val replyingTo = originalNote?.toEventHint<TextNoteEvent>()
+                val forkingFrom = forkedFromNote?.toEventHint<TextNoteEvent>()
+
+                if (replyingTo != null || forkingFrom != null) {
+                    val tags = prepareETagsAsReplyTo(replyingTo, forkingFrom)
+                    // fixes wrong tags from previous clients
+                    tags.forEach {
+                        val note = accountViewModel.getNoteIfExists(it.eventId)
+                        val ourAuthor = note?.author?.pubkeyHex
+                        val ourHint = note?.relayHintUrl()
+                        if (it.author == null || it.author?.isBlank() == true) {
+                            it.author = ourAuthor
+                        } else {
+                            if (ourAuthor != null && it.author != ourAuthor) {
+                                it.author = ourAuthor
+                            }
+                        }
+                        if (it.relay == null) {
+                            it.relay = ourHint
+                        } else {
+                            if (ourHint != null && it.relay != ourHint) {
+                                it.relay = ourHint
+                            }
+                        }
+                    }
+                    markedETags(tags)
+                }
+
+                tagger.pTags?.let { userList ->
+                    val tags =
+                        userList.map {
+                            val tag = it.toPTag()
+                            if (tag.relayHint == null) {
+                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                            } else {
+                                tag
+                            }
+                        }
+                    notify(tags)
+                }
 
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
