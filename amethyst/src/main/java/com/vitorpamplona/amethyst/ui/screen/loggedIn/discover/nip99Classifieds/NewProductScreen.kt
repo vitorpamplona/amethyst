@@ -101,7 +101,7 @@ fun NewProductScreen(
 
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.reloadRelaySet()
         draft?.let {
             postViewModel.editFromDraft(it)

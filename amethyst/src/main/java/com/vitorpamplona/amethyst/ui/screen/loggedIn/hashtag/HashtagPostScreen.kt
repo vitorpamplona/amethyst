@@ -53,7 +53,7 @@ fun HashtagPostScreen(
 
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         hashtag?.let {
             postViewModel.newPostFor(HashtagId(it))
         }

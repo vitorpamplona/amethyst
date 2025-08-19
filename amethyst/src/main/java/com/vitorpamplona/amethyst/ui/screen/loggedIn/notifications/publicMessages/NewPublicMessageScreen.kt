@@ -111,7 +111,7 @@ fun NewPublicMessageScreen(
     val postViewModel: NewPublicMessageViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         withContext(Dispatchers.IO) {
             to?.let {
                 postViewModel.load(it)
