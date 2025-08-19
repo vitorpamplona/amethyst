@@ -199,7 +199,7 @@ class DraftEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        if (event.pubKey == account.signer.pubKey && !event.isDeleted()) {
+        if (event.pubKey == account.signer.pubKey && !event.isDeleted() && !LocalCache.deletionIndex.hasBeenDeleted(event)) {
             val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event)
             rumor?.let { indexDraftAsRealEvent(eventNote, it) }
         }
