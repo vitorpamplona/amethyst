@@ -57,7 +57,7 @@ fun NewCommunityNoteButton(
     FloatingActionButton(
         onClick = {
             val route =
-                Route.NewPost(
+                Route.NewShortNote(
                     baseReplyTo = note.idHex,
                 )
             nav.nav(route)

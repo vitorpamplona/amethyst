@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephem
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -33,6 +35,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 @Composable
 fun EphemeralChatScreen(
     channelId: RoomId,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -45,8 +48,8 @@ fun EphemeralChatScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            EphemeralChatChannelView(channelId, accountViewModel, nav)
+        Column(Modifier.padding(it).statusBarsPadding()) {
+            EphemeralChatChannelView(channelId, draft, accountViewModel, nav)
         }
     }
 }

@@ -84,7 +84,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
@@ -169,11 +169,9 @@ fun NoteQuickActionMenu(
         note = note,
         onDismiss = onDismiss,
         onWantsToEditDraft = {
-            nav.nav(
-                Route.NewPost(
-                    draft = note.idHex,
-                ),
-            )
+            nav.nav {
+                routeEditDraftTo(note, accountViewModel.account)
+            }
         },
         accountViewModel = accountViewModel,
         nav = nav,

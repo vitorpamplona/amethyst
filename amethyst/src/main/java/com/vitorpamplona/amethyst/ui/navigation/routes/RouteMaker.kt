@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -49,6 +51,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 fun routeFor(
     note: Note,
@@ -77,6 +80,10 @@ fun routeFor(
         } else if (innerEvent is LiveActivitiesChatMessageEvent) {
             innerEvent.activityAddress()?.let {
                 return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
+            }
+        } else if (innerEvent is EphemeralChatEvent) {
+            innerEvent.roomId()?.let {
+                return Route.EphemeralChat(it.id, it.relayUrl.url)
             }
         } else if (innerEvent is ChatroomKeyable) {
             val room = innerEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
@@ -206,7 +213,7 @@ fun routeReplyTo(
                 users = noteEvent.groupKeySet() - account.userProfile().pubkeyHex,
                 parentId = noteEvent.id,
             )
-        is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
+        is TextNoteEvent -> Route.NewShortNote(baseReplyTo = note.idHex)
         is PrivateDmEvent ->
             routeToMessage(
                 room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
@@ -234,5 +241,51 @@ fun routeReplyTo(
         }
 
         else -> Route.GenericCommentPost(replyTo = note.idHex)
+    }
+}
+
+suspend fun routeEditDraftTo(
+    note: Note,
+    account: Account,
+): Route? {
+    val noteEvent = note.event as DraftWrapEvent
+    val draft = account.draftsDecryptionCache.cachedDraft(noteEvent)
+
+    return when (draft) {
+        is ChannelMessageEvent -> draft.channelId()?.let { Route.PublicChatChannel(it, draftId = note.idHex) }
+        is LiveActivitiesChatMessageEvent -> {
+            draft.activityAddress()?.let { Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag, draftId = note.idHex) }
+        }
+        is EphemeralChatEvent -> {
+            draft.roomId()?.let { Route.EphemeralChat(it.id, it.relayUrl.url, draftId = note.idHex) }
+        }
+
+        is ChatroomKeyable -> {
+            val room = draft.chatroomKey(account.userProfile().pubkeyHex)
+            account.chatroomList.getOrCreatePrivateChatroom(room)
+            return Route.Room(room, draftId = note.idHex)
+        }
+
+        is TextNoteEvent -> Route.NewShortNote(draft = note.idHex)
+        is ClassifiedsEvent -> Route.NewProduct(draft = note.idHex)
+
+        is PublicMessageEvent ->
+            Route.NewPublicMessage(
+                users = draft.groupKeySet() - account.userProfile().pubkeyHex,
+                parentId = noteEvent.id,
+                draftId = note.idHex,
+            )
+
+        is CommentEvent -> {
+            if (draft.isGeohashedScoped()) {
+                Route.GeoPost(draft = note.idHex)
+            } else if (draft.isHashtagScoped()) {
+                Route.HashtagPost(draft = note.idHex)
+            } else {
+                Route.GenericCommentPost(draft = note.idHex)
+            }
+        }
+
+        else -> null
     }
 }

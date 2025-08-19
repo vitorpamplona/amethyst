@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 fun NewNoteButton(nav: INav) {
     FloatingActionButton(
         onClick = {
-            nav.nav(Route.NewPost())
+            nav.nav(Route.NewShortNote())
         },
         modifier = Size55Modifier,
         shape = CircleShape,

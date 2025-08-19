@@ -207,10 +207,10 @@ open class ChannelNewMessageViewModel :
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
 
-        val localfowardZapTo = draftEvent.tags.zapSplitSetup()
-        val totalWeight = localfowardZapTo.sumOf { it.weight }
+        val localForwardZapTo = draftEvent.tags.zapSplitSetup()
+        val totalWeight = localForwardZapTo.sumOf { it.weight }
         forwardZapTo = SplitBuilder()
-        localfowardZapTo.forEach {
+        localForwardZapTo.forEach {
             if (it is ZapSplitSetup) {
                 val user = LocalCache.getOrCreateUser(it.pubKeyHex)
                 forwardZapTo.addItem(user, (it.weight / totalWeight).toFloat())
@@ -218,7 +218,7 @@ open class ChannelNewMessageViewModel :
             // don't support edditing old-style splits.
         }
         forwardZapToEditting = TextFieldValue("")
-        wantsForwardZapTo = localfowardZapTo.isNotEmpty()
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
 

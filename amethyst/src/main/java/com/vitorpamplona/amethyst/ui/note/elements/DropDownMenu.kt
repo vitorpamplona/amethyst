@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -240,11 +240,9 @@ fun NoteDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.edit_draft)) },
                 onClick = {
-                    val route =
-                        Route.NewPost(
-                            draft = note.idHex,
-                        )
-                    nav.nav(route)
+                    nav.nav {
+                        routeEditDraftTo(note, accountViewModel.account)
+                    }
                 },
             )
         }

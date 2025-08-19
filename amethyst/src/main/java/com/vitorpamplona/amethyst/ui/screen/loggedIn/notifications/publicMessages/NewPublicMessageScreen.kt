@@ -105,6 +105,7 @@ import kotlinx.coroutines.withContext
 fun NewPublicMessageScreen(
     to: Set<HexKey>? = null,
     reply: Note? = null,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -118,6 +119,9 @@ fun NewPublicMessageScreen(
             }
             reply?.let {
                 postViewModel.reply(it)
+            }
+            draft?.let {
+                postViewModel.editFromDraft(it)
             }
         }
     }

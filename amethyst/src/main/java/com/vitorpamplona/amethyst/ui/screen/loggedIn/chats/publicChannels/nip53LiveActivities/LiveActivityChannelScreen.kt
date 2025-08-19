@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
@@ -34,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 @Composable
 fun LiveActivityChannelScreen(
     channelId: Address?,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -48,8 +51,8 @@ fun LiveActivityChannelScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            LiveActivityChannelView(channelId, accountViewModel, nav)
+        Column(Modifier.padding(it).statusBarsPadding()) {
+            LiveActivityChannelView(channelId, draft, accountViewModel, nav)
         }
     }
 }

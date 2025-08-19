@@ -25,10 +25,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -45,6 +47,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 @Composable
 fun LiveActivityChannelView(
     channelId: Address?,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -53,6 +56,7 @@ fun LiveActivityChannelView(
     LoadLiveActivityChannel(channelId, accountViewModel) {
         PrepareChannelViewModels(
             baseChannel = it,
+            draft = draft,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -62,6 +66,7 @@ fun LiveActivityChannelView(
 @Composable
 fun PrepareChannelViewModels(
     baseChannel: LiveActivitiesChannel,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -78,6 +83,12 @@ fun PrepareChannelViewModels(
     val channelScreenModel: ChannelNewMessageViewModel = viewModel()
     channelScreenModel.init(accountViewModel)
     channelScreenModel.load(baseChannel)
+
+    if (draft != null) {
+        LaunchedEffect(draft, channelScreenModel, accountViewModel) {
+            channelScreenModel.editFromDraft(draft)
+        }
+    }
 
     LiveActivityChannelView(
         channel = baseChannel,
