@@ -21,14 +21,20 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import android.util.Log
+import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.ProxySettingsAnchor
+import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
@@ -36,14 +42,24 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import net.freehaven.tor.control.TorControlCommands
+import okhttp3.OkHttpClient
 
 class RelayProxyClientConnector(
     val torProxySettingsAnchor: ProxySettingsAnchor,
     val okHttpClients: DualHttpClientManager,
     val connManager: ConnectivityManager,
     val client: NostrClient,
+    val torManager: TorManager,
     val scope: CoroutineScope,
 ) {
+    data class RelayServiceInfra(
+        val torSettings: StateFlow<TorRelayEvaluation>,
+        val torConnection: OkHttpClient,
+        val clearConnection: OkHttpClient,
+        val connectivity: ConnectivityStatus,
+    )
+
     @OptIn(FlowPreview::class)
     val relayServices =
         combine(
@@ -52,11 +68,35 @@ class RelayProxyClientConnector(
             okHttpClients.defaultHttpClientWithoutProxy,
             connManager.status,
         ) { torSettings, torConnection, clearConnection, connectivity ->
-            torSettings.hashCode() + torConnection.hashCode() + clearConnection.hashCode() + connectivity.hashCode()
+            RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity)
         }.debounce(100)
             .onEach {
-                Log.d("ManageRelayServices", "Relay Services have changed")
-                client.reconnect(true)
+                if (it.connectivity is ConnectivityStatus.Off) {
+                    Log.d("ManageRelayServices", "Pausing Relay Services ${it.connectivity}")
+                    if (client.isActive()) {
+                        client.disconnect()
+                    }
+                    val torStatus = torManager.status.value
+                    if (torStatus is TorServiceStatus.Active) {
+                        torStatus.torControlConnection.signal(TorControlCommands.SIGNAL_DORMANT)
+                        Log.d("ManageRelayServices", "Pausing Tor Activity")
+                    }
+                } else if (it.connectivity is ConnectivityStatus.Active && !client.isActive()) {
+                    Log.d("ManageRelayServices", "Resuming Relay Services")
+
+                    val torStatus = torManager.status.value
+                    if (torStatus is TorServiceStatus.Active) {
+                        torStatus.torControlConnection.signal(TorControlCommands.SIGNAL_ACTIVE)
+                        torStatus.torControlConnection.signal(TorControlCommands.SIGNAL_NEWNYM)
+                        Log.d("ManageRelayServices", "Resuming Tor Activity with new nym")
+                    }
+
+                    // only calls this if the client is not active. Otherwise goes to the else below
+                    client.connect()
+                } else {
+                    Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to")
+                    client.reconnect(true)
+                }
             }.onStart {
                 Log.d("ManageRelayServices", "Resuming Relay Services")
                 client.connect()

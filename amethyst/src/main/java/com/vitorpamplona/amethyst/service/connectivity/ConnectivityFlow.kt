@@ -63,6 +63,12 @@ class ConnectivityFlow(
                         Log.d("ConnectivityFlow", "onCapabilitiesChanged ${network.networkHandle} $isMobile")
                         trySend(ConnectivityStatus.Active(network.networkHandle, isMobile))
                     }
+
+                    override fun onLost(network: Network) {
+                        super.onLost(network)
+                        Log.d("ConnectivityFlow", "onLost ${network.networkHandle} ")
+                        trySend(ConnectivityStatus.Off)
+                    }
                 }
 
             connectivityManager.registerDefaultNetworkCallback(networkCallback)

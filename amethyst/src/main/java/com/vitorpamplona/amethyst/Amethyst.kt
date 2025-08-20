@@ -75,8 +75,9 @@ class Amethyst : Application() {
 
     // App services that should be run as soon as there are subscribers to their flows
     val locationManager = LocationState(this, applicationIOScope)
-    val torManager = TorManager(this, applicationIOScope)
     val connManager = ConnectivityManager(this, applicationIOScope)
+
+    val torManager = TorManager(this, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
@@ -109,7 +110,7 @@ class Amethyst : Application() {
     val client: NostrClient = NostrClient(websocketBuilder, applicationIOScope)
 
     // Watches for changes on Tor and Relay List Settings
-    val relayProxyClientConnector = RelayProxyClientConnector(torProxySettingsAnchor, okHttpClients, connManager, client, applicationIOScope)
+    val relayProxyClientConnector = RelayProxyClientConnector(torProxySettingsAnchor, okHttpClients, connManager, client, torManager, applicationIOScope)
 
     // Verifies and inserts in the cache from all relays, all subscriptions
     val cacheClientConnector = CacheClientConnector(client, cache)

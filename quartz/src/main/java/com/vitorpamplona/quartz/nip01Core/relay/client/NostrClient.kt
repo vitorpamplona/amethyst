@@ -133,6 +133,8 @@ class NostrClient(
         relayPool.disconnect()
     }
 
+    fun isActive() = isActive
+
     @Synchronized
     fun reconnect(onlyIfChanged: Boolean = false) {
         if (onlyIfChanged) {
