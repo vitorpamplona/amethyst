@@ -120,6 +120,15 @@ class TextNoteEvent(
 
         fun build(
             note: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<TextNoteEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, note, createdAt) {
+            alt(shortedMessageForAlt(note))
+            initializer()
+        }
+
+        fun build(
+            note: String,
             replyingTo: EventHintBundle<TextNoteEvent>? = null,
             forkingFrom: EventHintBundle<TextNoteEvent>? = null,
             createdAt: Long = TimeUtils.now(),

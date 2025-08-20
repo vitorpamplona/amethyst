@@ -29,4 +29,4 @@ fun TagArrayBuilder<AudioHeaderEvent>.downloadUrl(downloadUrlTag: String) = addU
 
 fun TagArrayBuilder<AudioHeaderEvent>.streamUrl(streamUrl: String) = addUnique(StreamUrlTag.assemble(streamUrl))
 
-fun TagArrayBuilder<AudioHeaderEvent>.wavefront(wave: List<Int>) = addUnique(WaveformTag.assemble(wave))
+fun TagArrayBuilder<AudioHeaderEvent>.wavefront(wave: List<Float>) = addUnique(WaveformTag.assemble(wave))

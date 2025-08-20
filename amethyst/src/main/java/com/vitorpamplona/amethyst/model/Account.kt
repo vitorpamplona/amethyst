@@ -160,7 +160,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
-import com.vitorpamplona.quartz.nip37Drafts.DraftBuilder
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -185,9 +184,9 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.nip68Picture.pictureIMeta
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -215,8 +214,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.Locale
-import kotlin.collections.forEach
-import kotlin.collections.ifEmpty
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -985,7 +982,7 @@ class Account(
         mimeType: String?,
         hash: String,
         duration: Int,
-        waveform: List<Int>,
+        waveform: List<Float>,
     ) {
         signAndComputeBroadcast(VoiceEvent.build(url, mimeType, hash, duration, waveform))
     }
@@ -995,7 +992,7 @@ class Account(
         mimeType: String?,
         hash: String,
         duration: Int,
-        waveform: List<Int>,
+        waveform: List<Float>,
         replyTo: EventHintBundle<VoiceEvent>,
     ) {
         signAndComputeBroadcast(VoiceReplyEvent.build(url, mimeType, hash, duration, waveform, replyTo))
@@ -1088,11 +1085,11 @@ class Account(
                     )
 
                 if (headerInfo.dim.height > headerInfo.dim.width) {
-                    VideoVerticalEvent.build(videoMeta, alt ?: "") {
+                    VideoShortEvent.build(videoMeta, alt ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
                 } else {
-                    VideoHorizontalEvent.build(videoMeta, alt ?: "") {
+                    VideoNormalEvent.build(videoMeta, alt ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
                 }
@@ -1169,7 +1166,7 @@ class Account(
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
         val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
-        val draftEvent = DraftBuilder.encryptAndSign(draftTag, rumor, signer)
+        val draftEvent = DraftWrapEvent.create(draftTag, rumor, signer)
         draftsDecryptionCache.preload(draftEvent, rumor)
 
         cache.justConsumeMyOwnEvent(draftEvent)

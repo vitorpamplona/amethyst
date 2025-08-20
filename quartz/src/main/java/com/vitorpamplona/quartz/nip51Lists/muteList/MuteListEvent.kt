@@ -139,7 +139,7 @@ class MuteListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ) = resign(
-            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            content = PrivateTagsInContent.encryptNip44(privateTags, signer),
             tags = publicTags,
             signer = signer,
             createdAt = createdAt,
@@ -179,7 +179,7 @@ class MuteListEvent(
             initializer: TagArrayBuilder<MuteListEvent>.() -> Unit = {},
         ) = eventTemplate<MuteListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateMutes.map { it.toTagArray() }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateMutes.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)

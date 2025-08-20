@@ -128,7 +128,7 @@ class EphemeralChatListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ) = resign(
-            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            content = PrivateTagsInContent.encryptNip44(privateTags, signer),
             tags = tags,
             signer = signer,
             createdAt = createdAt,
@@ -168,7 +168,7 @@ class EphemeralChatListEvent(
             initializer: TagArrayBuilder<EphemeralChatListEvent>.() -> Unit = {},
         ) = eventTemplate<EphemeralChatListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateRooms.map { it.toTagArray() }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateRooms.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)

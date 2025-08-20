@@ -92,16 +92,14 @@ sealed class Route {
 
     @Serializable data class PublicChatChannel(
         val id: String,
+        val draftId: HexKey? = null,
     ) : Route()
 
     @Serializable data class LiveActivityChannel(
         val kind: Int,
         val pubKeyHex: HexKey,
         val dTag: String,
-    ) : Route()
-
-    @Serializable data class EphemeralChatChannel(
-        val id: String,
+        val draftId: HexKey? = null,
     ) : Route()
 
     @Serializable data class RelayInfo(
@@ -111,6 +109,7 @@ sealed class Route {
     @Serializable data class EphemeralChat(
         val id: String,
         val relayUrl: String,
+        val draftId: HexKey? = null,
     ) : Route()
 
     @Serializable object NewEphemeralChat : Route()
@@ -143,10 +142,12 @@ sealed class Route {
     @Serializable data class NewPublicMessage(
         val to: String,
         val replyId: HexKey? = null,
+        val draftId: HexKey? = null,
     ) : Route() {
-        constructor(users: Set<HexKey>, parentId: HexKey) : this(
+        constructor(users: Set<HexKey>, parentId: HexKey, draftId: HexKey? = null) : this(
             to = users.joinToString(","),
             replyId = parentId,
+            draftId = draftId,
         )
 
         fun toKey(): Set<HexKey> = to.split(",").toSet()
@@ -198,7 +199,7 @@ sealed class Route {
     ) : Route()
 
     @Serializable
-    data class NewPost(
+    data class NewShortNote(
         val message: String? = null,
         val attachment: String? = null,
         val baseReplyTo: String? = null,
@@ -250,7 +251,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.EditMediaServers>() -> entry.toRoute<Route.EditMediaServers>()
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
-        dest.hasRoute<Route.NewPost>() -> entry.toRoute<Route.NewPost>()
+        dest.hasRoute<Route.NewShortNote>() -> entry.toRoute<Route.NewShortNote>()
         dest.hasRoute<Route.NewProduct>() -> entry.toRoute<Route.NewProduct>()
         dest.hasRoute<Route.GeoPost>() -> entry.toRoute<Route.GeoPost>()
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()

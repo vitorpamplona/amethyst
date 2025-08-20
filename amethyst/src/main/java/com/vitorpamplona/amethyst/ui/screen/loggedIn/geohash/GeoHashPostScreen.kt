@@ -53,7 +53,7 @@ fun GeoHashPostScreen(
 
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         geohash?.let {
             postViewModel.newPostFor(GeohashId(it))
         }

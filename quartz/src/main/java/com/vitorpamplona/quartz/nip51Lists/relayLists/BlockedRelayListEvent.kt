@@ -108,7 +108,7 @@ class BlockedRelayListEvent(
             initializer: TagArrayBuilder<BlockedRelayListEvent>.() -> Unit = {},
         ) = eventTemplate<BlockedRelayListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)

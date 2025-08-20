@@ -30,7 +30,7 @@ import okhttp3.Response
 
 class BasicOkHttpWebSocket(
     val url: NormalizedRelayUrl,
-    val httpClient: OkHttpClient,
+    val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
 ) : WebSocket {
     private var socket: okhttp3.WebSocket? = null
@@ -74,7 +74,7 @@ class BasicOkHttpWebSocket(
                 ) = out.onFailure(t, r?.code, r?.message)
             }
 
-        socket = httpClient.newWebSocket(request, listener)
+        socket = httpClient(url).newWebSocket(request, listener)
     }
 
     override fun disconnect() {
@@ -85,7 +85,7 @@ class BasicOkHttpWebSocket(
     override fun send(msg: String): Boolean = socket?.send(msg) ?: false
 
     class Builder(
-        val httpClient: OkHttpClient,
+        val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     ) : WebsocketBuilder {
         // Called when connecting.
         override fun build(

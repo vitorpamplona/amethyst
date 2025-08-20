@@ -18,37 +18,52 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip37Drafts
+package com.vitorpamplona.quartz.nip71Video
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
-import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
+import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.UUID
 
-class DraftBuilder {
+@Immutable
+class VideoShortEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : VideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     companion object {
-        suspend fun <T : Event> encryptAndSign(
-            dTag: String,
-            draft: T,
-            signer: NostrSigner,
+        const val KIND = 22
+        const val ALT_DESCRIPTION = "Vertical Video"
+
+        fun build(
+            video: VideoMeta,
+            description: String,
+            dTag: String = UUID.randomUUID().toString(),
             createdAt: Long = TimeUtils.now(),
-        ): DraftWrapEvent {
-            val encryptedContent = signer.nip44Encrypt(draft.toJson(), signer.pubKey)
-            val template =
-                eventTemplate<DraftWrapEvent>(DraftWrapEvent.KIND, encryptedContent, createdAt) {
-                    alt(DraftWrapEvent.ALT_DESCRIPTION)
-                    dTag(dTag)
-                    kind(draft.kind)
+            initializer: TagArrayBuilder<VideoShortEvent>.() -> Unit = {},
+        ) = build(description, dTag, createdAt) {
+            videoIMeta(video)
+            initializer()
+        }
 
-                    if (draft is ExposeInDraft) {
-                        addAll(draft.exposeInDraft())
-                    }
-                }
-
-            return signer.sign(template)
+        fun build(
+            description: String,
+            dTag: String = UUID.randomUUID().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<VideoShortEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            dTag(dTag)
+            alt(ALT_DESCRIPTION)
+            initializer()
         }
     }
 }

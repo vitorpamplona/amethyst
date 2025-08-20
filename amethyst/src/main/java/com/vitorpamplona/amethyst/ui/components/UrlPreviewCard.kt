@@ -104,7 +104,7 @@ fun UrlPreviewCard(
         AsyncImage(
             model = previewInfo.imageUrlFullPath,
             contentDescription = previewInfo.title,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.FillWidth,
             modifier = previewCardImageModifier,
         )
 

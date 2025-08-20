@@ -105,19 +105,23 @@ import kotlinx.coroutines.withContext
 fun NewPublicMessageScreen(
     to: Set<HexKey>? = null,
     reply: Note? = null,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     val postViewModel: NewPublicMessageViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         withContext(Dispatchers.IO) {
             to?.let {
                 postViewModel.load(it)
             }
             reply?.let {
                 postViewModel.reply(it)
+            }
+            draft?.let {
+                postViewModel.editFromDraft(it)
             }
         }
     }

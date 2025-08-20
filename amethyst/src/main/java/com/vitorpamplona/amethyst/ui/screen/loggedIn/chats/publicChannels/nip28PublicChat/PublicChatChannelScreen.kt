@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
@@ -34,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 @Composable
 fun PublicChatChannelScreen(
     channelId: HexKey?,
+    draft: Note?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -48,8 +51,8 @@ fun PublicChatChannelScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            PublicChatChannelView(channelId, accountViewModel, nav)
+        Column(Modifier.padding(it).statusBarsPadding()) {
+            PublicChatChannelView(channelId, draft, accountViewModel, nav)
         }
     }
 }

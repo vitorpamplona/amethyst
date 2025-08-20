@@ -75,20 +75,24 @@ class RelayPool(
 
     fun reconnectIfNeedsToORIfItIsTime() {
         if (lastReconnectCall < TimeUtils.oneMinuteAgo()) {
-            relays.forEach { url, relay ->
-                if (relay.isConnected()) {
-                    if (relay.needsToReconnect()) {
-                        // network has changed, force reconnect
-                        relay.disconnect()
-                        relay.connect()
-                    }
-                } else {
-                    // relay is not connected. Connect if it is time
-                    relay.connectAndSyncFiltersIfDisconnected()
-                }
-            }
+            reconnectIfNeedsTo()
 
             lastReconnectCall = TimeUtils.now()
+        }
+    }
+
+    fun reconnectIfNeedsTo() {
+        relays.forEach { url, relay ->
+            if (relay.isConnected()) {
+                if (relay.needsToReconnect()) {
+                    // network has changed, force reconnect
+                    relay.disconnect()
+                    relay.connect()
+                }
+            } else {
+                // relay is not connected. Connect if it is time
+                relay.connectAndSyncFiltersIfDisconnected()
+            }
         }
     }
 

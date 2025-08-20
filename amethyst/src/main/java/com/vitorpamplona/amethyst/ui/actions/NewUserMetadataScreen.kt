@@ -61,7 +61,7 @@ fun NewUserMetadataScreen(
     postViewModel.init(accountViewModel)
     val context = LocalContext.current
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.load()
     }
 

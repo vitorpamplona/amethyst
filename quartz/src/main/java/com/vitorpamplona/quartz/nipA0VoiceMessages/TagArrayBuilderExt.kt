@@ -33,7 +33,7 @@ fun <T : BaseVoiceEvent> TagArrayBuilder<T>.audioIMeta(
     mimeType: String? = null,
     hash: String? = null,
     duration: Int? = null,
-    waveform: List<Int>? = null,
+    waveform: List<Float>? = null,
 ) = audioIMeta(AudioMeta(url, mimeType, hash, duration, waveform))
 
 fun <T : BaseVoiceEvent> TagArrayBuilder<T>.audioIMeta(imeta: AudioMeta): TagArrayBuilder<T> {

@@ -201,16 +201,19 @@ open class Note(
     }
 
     fun relayHintUrl(): NormalizedRelayUrl? {
-        val authorRelay = author?.latestMetadataRelay
+        val currentOutbox = author?.outboxRelays()?.toSet()
 
         return if (relays.isNotEmpty()) {
-            if (authorRelay != null && relays.any { it == authorRelay }) {
-                authorRelay
-            } else {
-                relays.firstOrNull()
+            if (currentOutbox != null && currentOutbox.isNotEmpty()) {
+                val relayMatchesOutbox = relays.firstOrNull { it in currentOutbox }
+                if (relayMatchesOutbox != null) {
+                    return relayMatchesOutbox
+                }
             }
+
+            return relays.firstOrNull()
         } else {
-            null
+            currentOutbox?.firstOrNull() ?: author?.latestMetadataRelay
         }
     }
 

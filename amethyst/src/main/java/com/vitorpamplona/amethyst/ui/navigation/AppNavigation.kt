@@ -149,11 +149,32 @@ fun AppNavigation(
             composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
 
-            composableFromEndArgs<Route.PublicChatChannel> { PublicChatChannelScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.LiveActivityChannel> { LiveActivityChannelScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+            composableFromEndArgs<Route.PublicChatChannel> {
+                PublicChatChannelScreen(
+                    it.id,
+                    it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            composableFromEndArgs<Route.LiveActivityChannel> {
+                LiveActivityChannelScreen(
+                    Address(it.kind, it.pubKeyHex, it.dTag),
+                    draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
             composableFromEndArgs<Route.EphemeralChat> {
                 RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
-                    EphemeralChatScreen(RoomId(it.id, relay), accountViewModel, nav)
+                    EphemeralChatScreen(
+                        channelId = RoomId(it.id, relay),
+                        draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
 
@@ -180,6 +201,7 @@ fun AppNavigation(
                 NewPublicMessageScreen(
                     to = it.toKey(),
                     reply = it.replyId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -221,7 +243,7 @@ fun AppNavigation(
                 )
             }
 
-            composableFromBottomArgs<Route.NewPost> {
+            composableFromBottomArgs<Route.NewShortNote> {
                 ShortNotePostScreen(
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
@@ -262,7 +284,7 @@ private fun NavigateIfIntentRequested(
     if (activity.intent.action == Intent.ACTION_SEND) {
         // avoids restarting the new Post screen when the intent is for the screen.
         // Microsoft's swift key sends Gifs as new actions
-        if (isBaseRoute<Route.NewPost>(nav.controller)) return
+        if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
 
         // saves the intent to avoid processing again
         var message by remember {
@@ -279,7 +301,7 @@ private fun NavigateIfIntentRequested(
             )
         }
 
-        nav.newStack(Route.NewPost(message = message, attachment = media.toString()))
+        nav.newStack(Route.NewShortNote(message = message, attachment = media.toString()))
     } else {
         var newAccount by remember { mutableStateOf<String?>(null) }
 
@@ -338,13 +360,13 @@ private fun NavigateIfIntentRequested(
                     if (intent.action == Intent.ACTION_SEND) {
                         // avoids restarting the new Post screen when the intent is for the screen.
                         // Microsoft's swift key sends Gifs as new actions
-                        if (!isBaseRoute<Route.NewPost>(nav.controller)) {
+                        if (!isBaseRoute<Route.NewShortNote>(nav.controller)) {
                             intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-                                nav.newStack(Route.NewPost(message = it))
+                                nav.newStack(Route.NewShortNote(message = it))
                             }
 
                             (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
-                                nav.newStack(Route.NewPost(attachment = it.toString()))
+                                nav.newStack(Route.NewShortNote(attachment = it.toString()))
                             }
                         }
                     } else {

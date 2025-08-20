@@ -34,6 +34,8 @@ fun IMetaTagBuilder.hash(hash: HexKey) = add(HashSha256Tag.TAG_NAME, hash)
 
 fun IMetaTagBuilder.duration(size: Int) = add(DurationTag.TAG_NAME, size.toString())
 
-fun IMetaTagBuilder.waveform(wave: List<Int>) = add(WaveformTag.TAG_NAME, WaveformTag.assembleWave(wave))
+fun IMetaTagBuilder.waveformInt(wave: List<Int>) = add(WaveformTag.TAG_NAME, WaveformTag.assembleWaveInt(wave))
+
+fun IMetaTagBuilder.waveformFloat(wave: List<Float>) = add(WaveformTag.TAG_NAME, WaveformTag.assembleWaveFloat(wave))
 
 fun IMetaTagBuilder.mimeType(mime: String) = add(MimeTypeTag.TAG_NAME, mime)

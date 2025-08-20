@@ -112,7 +112,7 @@ fun LoginPage(
     val loginViewModel: LoginViewModel = viewModel()
     loginViewModel.init(accountStateViewModel)
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(loginViewModel, isFirstLogin, newAccountKey) {
         loginViewModel.load(isFirstLogin, newAccountKey)
     }
 

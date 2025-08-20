@@ -23,15 +23,31 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
 val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav", "image/avif")
 val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
 
-val PictureAndVideoKinds = listOf(PictureEvent.KIND, VideoHorizontalEvent.KIND, VideoVerticalEvent.KIND)
-val PictureAndVideoKTags = listOf(PictureEvent.KIND.toString(), VideoHorizontalEvent.KIND.toString(), VideoVerticalEvent.KIND.toString())
+val PictureAndVideoKinds =
+    listOf(
+        PictureEvent.KIND,
+        VideoHorizontalEvent.KIND,
+        VideoVerticalEvent.KIND,
+        VideoNormalEvent.KIND,
+        VideoShortEvent.KIND,
+    )
 
+val PictureAndVideoKTags =
+    listOf(
+        PictureEvent.KIND.toString(),
+        VideoHorizontalEvent.KIND.toString(),
+        VideoVerticalEvent.KIND.toString(),
+        VideoNormalEvent.KIND.toString(),
+        VideoShortEvent.KIND.toString(),
+    )
 val PictureAndVideoLegacyKinds = listOf(FileHeaderEvent.KIND, FileStorageHeaderEvent.KIND)
 val PictureAndVideoLegacyKTags = listOf(FileHeaderEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString())
 val LegacyMimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES

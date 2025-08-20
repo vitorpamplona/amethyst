@@ -59,7 +59,7 @@ fun AddDMRelayListDialog(
 
     postViewModel.init(accountViewModel)
 
-    LaunchedEffect(postViewModel, accountViewModel.account) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.load()
     }
 

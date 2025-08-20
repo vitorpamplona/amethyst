@@ -18,38 +18,63 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nipA0VoiceMessages
+package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
+import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.UUID
 
 @Immutable
-class VoiceEvent(
+class VideoNormalEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseVoiceEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : VideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     companion object {
-        const val KIND = 1222
-        const val ALT_DESCRIPTION = "Voice message"
+        const val KIND = 21
+        const val ALT_DESCRIPTION = "Horizontal Video"
 
         fun build(
-            url: String,
-            mimeType: String?,
-            hash: String,
-            duration: Int,
-            waveform: List<Float>,
-        ) = build(AudioMeta(url, mimeType, hash, duration, waveform))
-
-        fun build(
-            voiceMessage: AudioMeta,
+            video: VideoMeta,
+            description: String,
+            dTag: String = UUID.randomUUID().toString(),
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<VoiceEvent>.() -> Unit = {},
-        ) = build(voiceMessage, KIND, ALT_DESCRIPTION, createdAt, initializer)
+            initializer: TagArrayBuilder<VideoNormalEvent>.() -> Unit = {},
+        ) = build(description, dTag, createdAt) {
+            videoIMeta(video)
+            initializer()
+        }
+
+        fun build(
+            video: List<VideoMeta>,
+            description: String,
+            dTag: String = UUID.randomUUID().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<VideoNormalEvent>.() -> Unit = {},
+        ) = build(description, dTag, createdAt) {
+            videoIMetas(video)
+            initializer()
+        }
+
+        fun build(
+            description: String,
+            dTag: String = UUID.randomUUID().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<VideoNormalEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            dTag(dTag)
+            alt(ALT_DESCRIPTION)
+            initializer()
+        }
     }
 }

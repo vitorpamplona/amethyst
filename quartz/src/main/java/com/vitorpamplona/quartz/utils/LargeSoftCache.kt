@@ -31,17 +31,23 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
 
     fun get(key: K): V? {
         val softRef = cache.get(key)
-        val value = softRef?.get()
+        if (softRef == null) return null
+        val value = softRef.get()
 
         return if (value != null) {
             value
         } else {
-            cache.remove(key)
+            cache.remove(key, softRef)
             null
         }
     }
 
     fun remove(key: K) = cache.remove(key)
+
+    fun removeIf(
+        key: K,
+        value: WeakReference<V>,
+    ) = cache.remove(key, value)
 
     override fun size() = cache.size
 
@@ -79,13 +85,21 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
         builder: (key: K) -> V,
     ): V {
         val softRef = cache[key]
-        val value = softRef?.get()
 
-        return if (value != null) {
-            value
-        } else {
+        return if (softRef == null) {
             val newObject = builder(key)
             cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
+        } else {
+            val value = softRef.get()
+            if (value != null) {
+                value
+            } else {
+                // removes first to make sure the putIfAbsent works.
+                // another thread may put in between
+                cache.remove(key, softRef)
+                val newObject = builder(key)
+                return cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
+            }
         }
     }
 
@@ -95,14 +109,14 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
      * this method can be called periodically or when memory pressure is high.
      */
     fun cleanUp() {
-        val keysToRemove = mutableListOf<K>()
-        forEach { key, softRef ->
-            if (softRef == null) {
-                keysToRemove.add(key)
+        val keysToRemove = mutableMapOf<K, WeakReference<V>>()
+        cache.forEach { key, softRef ->
+            if (softRef.get() == null) {
+                keysToRemove.put(key, softRef)
             }
         }
-        keysToRemove.forEach { key ->
-            cache.remove(key)
+        keysToRemove.forEach { key, value ->
+            cache.remove(key, value)
             println("Cleaned up entry for key: $key (object was garbage collected)")
         }
         println("Cache cleanup completed. Remaining size: ${cache.size}")
@@ -122,7 +136,7 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
         ) {
             val value = ref.get()
             if (value == null) {
-                cache.remove(k)
+                cache.removeIf(k, ref)
             } else {
                 inner.accept(k, value)
             }

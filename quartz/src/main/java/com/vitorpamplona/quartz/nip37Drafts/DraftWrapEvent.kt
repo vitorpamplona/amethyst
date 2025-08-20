@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -91,6 +92,11 @@ class DraftWrapEvent(
             alt(ALT_DESCRIPTION)
             dTag(dTag)
             kind(draft.kind)
+            expiration(TimeUtils.ninetyDaysFromNow())
+
+            if (draft is ExposeInDraft) {
+                addAll(draft.exposeInDraft())
+            }
 
             initializer()
         }
@@ -105,6 +111,7 @@ class DraftWrapEvent(
             createdAt = createdAt,
         ) {
             alt(ALT_DESCRIPTION)
+            expiration(TimeUtils.oneMinuteFromNow())
             dTag(dTag)
             initializer()
         }

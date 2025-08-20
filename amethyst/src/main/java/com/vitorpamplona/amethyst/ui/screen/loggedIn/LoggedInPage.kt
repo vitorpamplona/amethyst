@@ -138,7 +138,6 @@ fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
 fun ManageRelayServices(accountViewModel: AccountViewModel) {
     val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
         .collectAsStateWithLifecycle()
-    Log.d("ManageRelayServices", "Relay Services changed $relayServices")
 }
 
 @Composable

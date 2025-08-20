@@ -431,7 +431,7 @@ fun ReactionsColumn(
             iconSize = Size40dp,
             onQuotePress = {
                 nav.nav(
-                    Route.NewPost(
+                    Route.NewShortNote(
                         quote = baseNote.idHex,
                     ),
                 )

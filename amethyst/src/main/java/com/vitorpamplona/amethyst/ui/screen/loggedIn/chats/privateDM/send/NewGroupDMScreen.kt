@@ -151,12 +151,12 @@ fun NewGroupDMScreen(
 
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            message?.ifBlank { null }?.let {
-                postViewModel.updateMessage(TextFieldValue(it))
-            }
-            attachment?.let {
+    LaunchedEffect(postViewModel, accountViewModel) {
+        message?.ifBlank { null }?.let {
+            postViewModel.updateMessage(TextFieldValue(it))
+        }
+        attachment?.let {
+            withContext(Dispatchers.IO) {
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.pickedMedia(persistentListOf(SelectedMedia(it, mediaType)))
             }

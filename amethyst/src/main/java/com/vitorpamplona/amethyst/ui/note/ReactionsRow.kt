@@ -48,7 +48,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -155,7 +154,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -541,7 +539,7 @@ private fun BoostWithDialog(
         accountViewModel,
         onQuotePress = {
             nav.nav {
-                Route.NewPost(
+                Route.NewShortNote(
                     quote = baseNote.idHex,
                     version =
                         (editState.value as? GenericLoadable.Loaded)
@@ -562,7 +560,7 @@ private fun BoostWithDialog(
                         null
                     }
 
-                Route.NewPost(
+                Route.NewShortNote(
                     baseReplyTo = replyTo?.idHex,
                     fork = baseNote.idHex,
                     version =

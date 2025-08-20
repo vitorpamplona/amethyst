@@ -154,7 +154,7 @@ class BookmarkListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ) = resign(
-            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            content = PrivateTagsInContent.encryptNip44(privateTags, signer),
             tags = tags,
             signer = signer,
             createdAt = createdAt,
@@ -198,7 +198,7 @@ class BookmarkListEvent(
             initializer: TagArrayBuilder<BookmarkListEvent>.() -> Unit = {},
         ) = eventTemplate(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateBookmarks.map { it.toTagArray() }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateBookmarks.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             dTag(dTag)

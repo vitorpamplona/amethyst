@@ -70,7 +70,7 @@ fun ChatroomView(
     newPostModel.load(room)
 
     if (replyToNote != null) {
-        LaunchedEffect(key1 = replyToNote) {
+        LaunchedEffect(key1 = replyToNote, newPostModel, accountViewModel) {
             accountViewModel.checkGetOrCreateNote(replyToNote) {
                 if (it != null) {
                     newPostModel.reply(it)
@@ -79,7 +79,7 @@ fun ChatroomView(
         }
     }
     if (editFromDraft != null) {
-        LaunchedEffect(key1 = replyToNote) {
+        LaunchedEffect(replyToNote, newPostModel, accountViewModel) {
             accountViewModel.checkGetOrCreateNote(editFromDraft) {
                 if (it != null) {
                     newPostModel.editFromDraft(it)

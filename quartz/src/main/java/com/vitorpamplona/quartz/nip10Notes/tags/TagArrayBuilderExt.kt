@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip10Notes.tags
 
+import android.R.attr.tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -27,7 +28,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
 fun <T : BaseThreadedEvent> TagArrayBuilder<T>.markedETag(tag: MarkedETag) = add(tag.toTagArray())
 
-fun <T : BaseThreadedEvent> TagArrayBuilder<T>.markedETags(tag: List<MarkedETag>) = addAll(tag.map { it.toTagArray() })
+fun <T : BaseThreadedEvent> TagArrayBuilder<T>.markedETags(tags: List<MarkedETag>) = addAll(tags.map { it.toTagArray() })
 
 fun TagArrayBuilder<TextNoteEvent>.notify(tag: PTag) = add(tag.toTagArray())
 

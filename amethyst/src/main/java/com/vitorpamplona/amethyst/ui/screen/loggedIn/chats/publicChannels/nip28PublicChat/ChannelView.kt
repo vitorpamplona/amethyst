@@ -25,10 +25,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -44,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 @Composable
 fun PublicChatChannelView(
     channelId: String?,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -52,6 +55,7 @@ fun PublicChatChannelView(
     LoadPublicChatChannel(channelId, accountViewModel) {
         PrepareChannelViewModels(
             baseChannel = it,
+            draft = draft,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -61,6 +65,7 @@ fun PublicChatChannelView(
 @Composable
 fun PrepareChannelViewModels(
     baseChannel: PublicChatChannel,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -77,6 +82,12 @@ fun PrepareChannelViewModels(
     val channelScreenModel: ChannelNewMessageViewModel = viewModel()
     channelScreenModel.init(accountViewModel)
     channelScreenModel.load(baseChannel)
+
+    if (draft != null) {
+        LaunchedEffect(draft, channelScreenModel, accountViewModel) {
+            channelScreenModel.editFromDraft(draft)
+        }
+    }
 
     ChannelView(
         channel = baseChannel,

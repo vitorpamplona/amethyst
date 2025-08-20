@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.ensure
 
 class WaveformTag(
-    val wave: List<Int>,
+    val wave: List<Float>,
 ) {
     fun toTagArray() = assemble(wave)
 
@@ -38,12 +38,12 @@ class WaveformTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            val wave = runCatching { JsonMapper.mapper.readValue<List<Int>>(tag[1]) }.getOrNull()
+            val wave = runCatching { JsonMapper.mapper.readValue<List<Float>>(tag[1]) }.getOrNull()
             if (wave.isNullOrEmpty()) return null
             return WaveformTag(wave)
         }
 
         @JvmStatic
-        fun assemble(wave: List<Int>) = arrayOf(TAG_NAME, JsonMapper.mapper.writeValueAsString(wave))
+        fun assemble(wave: List<Float>) = arrayOf(TAG_NAME, JsonMapper.mapper.writeValueAsString(wave))
     }
 }

@@ -1691,7 +1691,7 @@ class AccountViewModel(
 
     class CachedDraftNotes(
         val accountViewModel: AccountViewModel,
-    ) : GenericBaseCacheAsync<DraftWrapEvent, Note>(20) {
+    ) : GenericBaseCacheAsync<DraftWrapEvent, Note>(100) {
         override suspend fun compute(key: DraftWrapEvent): Note? =
             withContext(Dispatchers.IO) {
                 val decrypted = accountViewModel.account.draftsDecryptionCache.cachedDraft(key)

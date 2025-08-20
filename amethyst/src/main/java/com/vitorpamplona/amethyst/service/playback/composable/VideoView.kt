@@ -47,7 +47,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 @Immutable
 class WaveformData(
-    val wave: List<Int>,
+    val wave: List<Float>,
 )
 
 @Composable

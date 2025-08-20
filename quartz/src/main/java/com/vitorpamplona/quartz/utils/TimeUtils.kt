@@ -28,6 +28,7 @@ object TimeUtils {
     const val ONE_HOUR = 60 * ONE_MINUTE
     const val EIGHT_HOURS = 8 * ONE_HOUR
     const val ONE_DAY = 24 * ONE_HOUR
+    const val NINETY_DAYS = 90 * ONE_DAY
     const val ONE_WEEK = 7 * ONE_DAY
     const val ONE_MONTH = 30 * ONE_DAY
     const val ONE_YEAR = 365 * ONE_DAY
@@ -61,4 +62,6 @@ object TimeUtils {
     fun oneMonthAgo() = now() - ONE_MONTH
 
     fun randomWithTwoDays() = now() - RandomInstance.int(twoDays())
+
+    fun ninetyDaysFromNow() = now() + NINETY_DAYS
 }

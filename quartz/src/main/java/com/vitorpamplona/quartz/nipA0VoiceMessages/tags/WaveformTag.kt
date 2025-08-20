@@ -22,11 +22,12 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
+import kotlin.collections.joinToString
 
 class WaveformTag(
-    val wave: List<Int>,
+    val wave: List<Float>,
 ) {
-    fun toTagArray() = assemble(wave)
+    fun toTagArray() = assembleFloat(wave)
 
     companion object {
         const val TAG_NAME = "waveform"
@@ -35,26 +36,32 @@ class WaveformTag(
         fun parse(tag: Array<String>): WaveformTag? = parseWave(tag)?.let { WaveformTag(it) }
 
         @JvmStatic
-        fun parseWave(tag: Array<String>): List<Int>? {
+        fun parseWave(tag: Array<String>): List<Float>? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
-            val wave = tag[1].split(" ").mapNotNull { it.toIntOrNull() }
+            val wave = tag[1].split(" ").mapNotNull { it.toFloatOrNull() }
             if (wave.isEmpty()) return null
             return wave
         }
 
-        fun parseWave(wave: String): List<Int>? {
-            val wave = wave.split(" ").mapNotNull { it.toIntOrNull() }
+        fun parseWave(wave: String): List<Float>? {
+            val wave = wave.split(" ").mapNotNull { it.toFloatOrNull() }
             if (wave.isEmpty()) return null
             return wave
         }
 
         @JvmStatic
-        fun assembleWave(wave: List<Int>) = wave.joinToString(" ")
+        fun assembleWaveInt(wave: List<Int>) = wave.joinToString(" ")
 
         @JvmStatic
-        fun assemble(wave: List<Int>) = arrayOf(TAG_NAME, assembleWave(wave))
+        fun assembleInt(wave: List<Int>) = arrayOf(TAG_NAME, assembleWaveInt(wave))
+
+        @JvmStatic
+        fun assembleWaveFloat(wave: List<Float>) = wave.joinToString(" ")
+
+        @JvmStatic
+        fun assembleFloat(wave: List<Float>) = arrayOf(TAG_NAME, assembleWaveFloat(wave))
     }
 }

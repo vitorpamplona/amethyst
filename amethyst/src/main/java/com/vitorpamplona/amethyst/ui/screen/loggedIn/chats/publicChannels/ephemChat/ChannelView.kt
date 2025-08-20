@@ -25,10 +25,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -44,6 +46,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 @Composable
 fun EphemeralChatChannelView(
     channelId: RoomId?,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -52,6 +55,7 @@ fun EphemeralChatChannelView(
     LoadEphemeralChatChannel(channelId, accountViewModel) { ephem ->
         PrepareChannelViewModels(
             baseChannel = ephem,
+            draft = draft,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -61,6 +65,7 @@ fun EphemeralChatChannelView(
 @Composable
 private fun PrepareChannelViewModels(
     baseChannel: EphemeralChatChannel,
+    draft: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -77,6 +82,12 @@ private fun PrepareChannelViewModels(
     val channelScreenModel: ChannelNewMessageViewModel = viewModel()
     channelScreenModel.init(accountViewModel)
     channelScreenModel.load(baseChannel)
+
+    if (draft != null) {
+        LaunchedEffect(draft, channelScreenModel, accountViewModel) {
+            channelScreenModel.editFromDraft(draft)
+        }
+    }
 
     ChannelView(
         channel = baseChannel,

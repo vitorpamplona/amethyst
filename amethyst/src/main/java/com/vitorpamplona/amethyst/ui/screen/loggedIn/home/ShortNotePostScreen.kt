@@ -99,7 +99,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -120,13 +120,13 @@ fun ShortNotePostScreen(
     val context = LocalContext.current
     val activity = context.getActivity()
 
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            postViewModel.load(baseReplyTo, quote, fork, version, draft)
-            message?.ifBlank { null }?.let {
-                postViewModel.updateMessage(TextFieldValue(it))
-            }
-            attachment?.let {
+    LaunchedEffect(postViewModel, accountViewModel) {
+        postViewModel.load(baseReplyTo, quote, fork, version, draft)
+        message?.ifBlank { null }?.let {
+            postViewModel.updateMessage(TextFieldValue(it))
+        }
+        attachment?.let {
+            withContext(Dispatchers.IO) {
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
             }

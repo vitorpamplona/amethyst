@@ -104,7 +104,7 @@ fun ReplyCommentPostScreen(
 
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(postViewModel, accountViewModel) {
         reply?.let {
             postViewModel.reply(it)
         }
