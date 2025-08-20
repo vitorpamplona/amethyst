@@ -35,7 +35,7 @@ import java.io.File
 class RecordingResult(
     val file: File,
     val mimeType: String,
-    val amplitudes: List<Int>,
+    val amplitudes: List<Float>,
     val duration: Int,
 )
 
@@ -44,7 +44,7 @@ class VoiceMessageRecorder {
     private var outputFile: File? = null
     private var startTime: Long = 0
     private var job: Job? = null
-    private var amplitudes: MutableList<Int> = mutableListOf()
+    private var amplitudes: MutableList<Float> = mutableListOf()
 
     private fun createRecorder(context: Context): MediaRecorder =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -80,7 +80,7 @@ class VoiceMessageRecorder {
         job =
             scope.launch {
                 while (recorder != null) {
-                    amplitudes.add(((recorder?.maxAmplitude ?: 0) / 100).toInt())
+                    amplitudes.add(recorder?.maxAmplitude?.toFloat() ?: 0f)
                     delay(1000)
                 }
             }

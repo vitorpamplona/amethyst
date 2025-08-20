@@ -64,7 +64,7 @@ class VoiceReplyEvent(
             mimeType: String?,
             hash: String,
             duration: Int,
-            waveform: List<Int>,
+            waveform: List<Float>,
             replyingTo: EventHintBundle<VoiceEvent>,
         ) = build(AudioMeta(url, mimeType, hash, duration, waveform), replyingTo)
 

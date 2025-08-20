@@ -54,7 +54,7 @@ class AudioHeaderEvent(
             description: String,
             downloadUrl: String,
             streamUrl: String? = null,
-            wavefront: List<Int>? = null,
+            wavefront: List<Float>? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<AudioHeaderEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {

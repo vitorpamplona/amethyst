@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.R.attr.maxHeight
+import android.R.attr.minHeight
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -48,6 +50,7 @@ import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import com.linc.audiowaveform.model.AmplitudeType
 import com.linc.audiowaveform.model.WaveformAlignment
+import com.vitorpamplona.amethyst.ui.components.toDrawableAmplitudes
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -77,7 +80,7 @@ fun AudioWaveformReadOnly(
     spikeRadius: Dp = 2.dp,
     spikePadding: Dp = 2.dp,
     progress: Float = 0F,
-    amplitudes: List<Int>,
+    amplitudes: List<Float>,
     onProgressChange: (Float) -> Unit,
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
@@ -101,6 +104,7 @@ fun AudioWaveformReadOnly(
                 maxHeight = canvasSize.height.coerceAtLeast(MIN_SPIKE_HEIGHT),
             )
         }.map { animateFloatAsState(it, spikeAnimationSpec).value }
+
     Canvas(
         modifier =
             Modifier
@@ -145,14 +149,13 @@ fun AudioWaveformReadOnly(
     }
 }
 
-private fun List<Int>.toDrawableAmplitudes(
+private fun List<Float>.toDrawableAmplitudes(
     amplitudeType: AmplitudeType,
     spikes: Int,
     minHeight: Float,
     maxHeight: Float,
 ): List<Float> {
-    val amplitudes = map(Int::toFloat)
-    if (amplitudes.isEmpty() || spikes == 0) {
+    if (this.isEmpty() || spikes == 0) {
         return List(spikes) { minHeight }
     }
     val transform = { data: List<Float> ->
@@ -161,11 +164,10 @@ private fun List<Int>.toDrawableAmplitudes(
             AmplitudeType.Max -> data.max()
             AmplitudeType.Min -> data.min()
         }.toFloat()
-            .coerceIn(minHeight, maxHeight)
     }
     return when {
-        spikes > amplitudes.count() -> amplitudes.fillToSize(spikes, transform)
-        else -> amplitudes.chunkToSize(spikes, transform)
+        spikes > this.count() -> this.fillToSize(spikes, transform)
+        else -> this.chunkToSize(spikes, transform)
     }.normalize(minHeight, maxHeight)
 }
 

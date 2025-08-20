@@ -964,7 +964,7 @@ class Account(
         mimeType: String?,
         hash: String,
         duration: Int,
-        waveform: List<Int>,
+        waveform: List<Float>,
     ) {
         signAndComputeBroadcast(VoiceEvent.build(url, mimeType, hash, duration, waveform))
     }
@@ -974,7 +974,7 @@ class Account(
         mimeType: String?,
         hash: String,
         duration: Int,
-        waveform: List<Int>,
+        waveform: List<Float>,
         replyTo: EventHintBundle<VoiceEvent>,
     ) {
         signAndComputeBroadcast(VoiceReplyEvent.build(url, mimeType, hash, duration, waveform, replyTo))

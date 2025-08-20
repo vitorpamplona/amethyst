@@ -43,7 +43,7 @@ class VoiceEvent(
             mimeType: String?,
             hash: String,
             duration: Int,
-            waveform: List<Int>,
+            waveform: List<Float>,
         ) = build(AudioMeta(url, mimeType, hash, duration, waveform))
 
         fun build(

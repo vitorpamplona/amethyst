@@ -29,7 +29,7 @@ data class AudioMeta(
     val mimeType: String? = null,
     val hash: String? = null,
     val duration: Int? = null,
-    val waveform: List<Int>? = null,
+    val waveform: List<Float>? = null,
 ) {
     fun toIMetaArray(): Array<String> =
         IMetaTagBuilder(url)
@@ -37,7 +37,7 @@ data class AudioMeta(
                 mimeType?.let { mimeType(it) }
                 hash?.let { hash(it) }
                 duration?.let { duration(it) }
-                waveform?.let { waveform(it) }
+                waveform?.let { waveformFloat(it) }
             }.build()
             .toTagArray()
 
