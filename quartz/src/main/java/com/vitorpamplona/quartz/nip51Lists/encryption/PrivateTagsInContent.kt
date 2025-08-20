@@ -48,15 +48,6 @@ class PrivateTagsInContent {
             }
         }
 
-        suspend fun encryptNip04(
-            privateTags: Array<Array<String>>? = null,
-            signer: NostrSigner,
-        ): String =
-            signer.nip04Encrypt(
-                if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
-                signer.pubKey,
-            )
-
         suspend fun encryptNip44(
             privateTags: Array<Array<String>>? = null,
             signer: NostrSigner,
@@ -73,15 +64,6 @@ class PrivateTagsInContent {
             val json = signer.decrypt(content, signer.pubKey)
             return decode(json)
         }
-
-        fun encryptNip04(
-            privateTags: Array<Array<String>>? = null,
-            signer: NostrSignerSync,
-        ): String =
-            signer.nip04Encrypt(
-                if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
-                signer.pubKey,
-            )
 
         fun encryptNip44(
             privateTags: Array<Array<String>>? = null,

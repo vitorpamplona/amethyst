@@ -154,7 +154,7 @@ class HashtagListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ) = resign(
-            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            content = PrivateTagsInContent.encryptNip44(privateTags, signer),
             tags = tags,
             signer = signer,
             createdAt = createdAt,
@@ -205,7 +205,7 @@ class HashtagListEvent(
             initializer: TagArrayBuilder<HashtagListEvent>.() -> Unit = {},
         ) = eventTemplate<HashtagListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateHashtags.map { HashtagTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)

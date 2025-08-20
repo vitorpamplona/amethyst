@@ -157,7 +157,7 @@ class GeohashListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ) = resign(
-            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            content = PrivateTagsInContent.encryptNip44(privateTags, signer),
             tags = tags,
             signer = signer,
             createdAt = createdAt,
@@ -208,7 +208,7 @@ class GeohashListEvent(
             initializer: TagArrayBuilder<GeohashListEvent>.() -> Unit = {},
         ) = eventTemplate<GeohashListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateGeohashes.map { GeoHashTag.assembleSingle(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)

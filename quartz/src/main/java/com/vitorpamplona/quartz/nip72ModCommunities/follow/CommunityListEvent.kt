@@ -178,7 +178,7 @@ class CommunityListEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ) = resign(
-            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            content = PrivateTagsInContent.encryptNip44(privateTags, signer),
             tags = tags,
             signer = signer,
             createdAt = createdAt,
@@ -218,7 +218,7 @@ class CommunityListEvent(
             initializer: TagArrayBuilder<CommunityListEvent>.() -> Unit = {},
         ) = eventTemplate<CommunityListEvent>(
             kind = KIND,
-            description = PrivateTagsInContent.encryptNip04(privateCommunities.map { it.toTagArray() }.toTypedArray(), signer),
+            description = PrivateTagsInContent.encryptNip44(privateCommunities.map { it.toTagArray() }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)

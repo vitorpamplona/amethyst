@@ -33,7 +33,7 @@ class PrivateTagArrayBuilder {
         ): Pair<String, Array<Array<String>>> =
             if (toPrivate) {
                 val encryptedTags =
-                    PrivateTagsInContent.encryptNip04(
+                    PrivateTagsInContent.encryptNip44(
                         privateTags = tags,
                         signer = signer,
                     )
@@ -51,7 +51,7 @@ class PrivateTagArrayBuilder {
             if (toPrivate) {
                 val privateTags = current.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
                 val encryptedTags =
-                    PrivateTagsInContent.encryptNip04(
+                    PrivateTagsInContent.encryptNip44(
                         privateTags = privateTags.plus(newTag),
                         signer = signer,
                     )
@@ -69,7 +69,7 @@ class PrivateTagArrayBuilder {
             if (toPrivate) {
                 val privateTags = current.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
                 val encryptedTags =
-                    PrivateTagsInContent.encryptNip04(
+                    PrivateTagsInContent.encryptNip44(
                         privateTags = privateTags.plus(newTag),
                         signer = signer,
                     )
@@ -112,7 +112,7 @@ class PrivateTagArrayBuilder {
         ): Pair<String, Array<Array<String>>> {
             val privateTags = current.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             val encryptedTags =
-                PrivateTagsInContent.encryptNip04(
+                PrivateTagsInContent.encryptNip44(
                     privateTags = privateTags.replaceAll(oldTagStartsWith, newTag),
                     signer = signer,
                 )
@@ -127,7 +127,7 @@ class PrivateTagArrayBuilder {
         ): Pair<String, Array<Array<String>>> {
             val privateTags = current.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             val encryptedTags =
-                PrivateTagsInContent.encryptNip04(
+                PrivateTagsInContent.encryptNip44(
                     privateTags = privateTags.remove(oldTagStartsWith),
                     signer = signer,
                 )
@@ -141,7 +141,7 @@ class PrivateTagArrayBuilder {
         ): Pair<String, Array<Array<String>>> {
             val privateTags = current.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             val encryptedTags =
-                PrivateTagsInContent.encryptNip04(
+                PrivateTagsInContent.encryptNip44(
                     privateTags = privateTags.remove(oldTagStartsWith),
                     signer = signer,
                 )
@@ -161,7 +161,7 @@ class PrivateTagArrayBuilder {
         ): Pair<String, Array<Array<String>>> {
             val privateTags = current.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             val encryptedTags =
-                PrivateTagsInContent.encryptNip04(
+                PrivateTagsInContent.encryptNip44(
                     privateTags = privateTags.remove(oldTagStartsWith),
                     signer = signer,
                 )
@@ -174,7 +174,7 @@ class PrivateTagArrayBuilder {
             signer: NostrSigner,
         ): Pair<String, Array<Array<String>>> {
             val encryptedTags =
-                PrivateTagsInContent.encryptNip04(
+                PrivateTagsInContent.encryptNip44(
                     privateTags = arrayOf(newTag),
                     signer = signer,
                 )
