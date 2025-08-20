@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
@@ -97,6 +99,10 @@ class VideoFeedFilter(
 
     fun acceptanceEvent(noteEvent: VideoHorizontalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
+    fun acceptanceEvent(noteEvent: VideoNormalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
+
+    fun acceptanceEvent(noteEvent: VideoShortEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
+
     fun acceptableEvent(
         note: Note,
         params: FilterByListParams,
@@ -111,6 +117,8 @@ class VideoFeedFilter(
             (noteEvent is FileHeaderEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoVerticalEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoHorizontalEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is VideoNormalEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is VideoShortEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
                 (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
         ) &&

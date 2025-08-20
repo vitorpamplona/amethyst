@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 val UserProfileMediaKinds =
@@ -36,6 +38,8 @@ val UserProfileMediaKinds =
         ProfileGalleryEntryEvent.KIND,
         VideoVerticalEvent.KIND,
         VideoHorizontalEvent.KIND,
+        VideoNormalEvent.KIND,
+        VideoShortEvent.KIND,
     )
 
 fun filterUserProfileMedia(

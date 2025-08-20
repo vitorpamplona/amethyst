@@ -161,6 +161,8 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -1032,6 +1034,18 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: VideoHorizontalEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: VideoNormalEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: VideoShortEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2809,7 +2823,9 @@ object LocalCache : ILocalCache {
                 is TorrentCommentEvent -> consume(event, relay, wasVerified)
                 is TrustedRelayListEvent -> consume(event, relay, wasVerified)
                 is VideoHorizontalEvent -> consume(event, relay, wasVerified)
+                is VideoNormalEvent -> consume(event, relay, wasVerified)
                 is VideoVerticalEvent -> consume(event, relay, wasVerified)
+                is VideoShortEvent -> consume(event, relay, wasVerified)
                 is VoiceEvent -> consume(event, relay, wasVerified)
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
