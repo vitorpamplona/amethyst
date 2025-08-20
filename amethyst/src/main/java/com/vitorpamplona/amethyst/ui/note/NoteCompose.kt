@@ -208,6 +208,8 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -793,6 +795,8 @@ private fun RenderNoteRow(
         is FileHeaderEvent -> FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        is VideoNormalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        is VideoShortEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
         is BaseVoiceEvent -> RenderVoiceTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)

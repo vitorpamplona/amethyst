@@ -108,6 +108,8 @@ import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -286,6 +288,8 @@ class EventFactory {
                 TrustedRelayListEvent.KIND -> TrustedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoHorizontalEvent.KIND -> VideoHorizontalEvent(id, pubKey, createdAt, tags, content, sig)
                 VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
+                VideoNormalEvent.KIND -> VideoNormalEvent(id, pubKey, createdAt, tags, content, sig)
+                VideoShortEvent.KIND -> VideoShortEvent(id, pubKey, createdAt, tags, content, sig)
                 VoiceEvent.KIND -> VoiceEvent(id, pubKey, createdAt, tags, content, sig)
                 VoiceReplyEvent.KIND -> VoiceReplyEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
