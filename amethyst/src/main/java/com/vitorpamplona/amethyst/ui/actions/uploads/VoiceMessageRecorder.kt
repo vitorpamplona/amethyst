@@ -65,7 +65,9 @@ class VoiceMessageRecorder {
         this.amplitudes.clear()
 
         createRecorder(context).apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setAudioEncodingBitRate(16 * 44100)
+            setAudioSamplingRate(44100) // Set the desired audio sampling rate (e.g., 44.1 kHz)
+            setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             setOutputFile(outputFile)
