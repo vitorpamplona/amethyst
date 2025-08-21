@@ -667,9 +667,7 @@ class AccountViewModel(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) {
-        runIOCatching { account.report(note, type, content) }
-    }
+    ) = runIOCatching { account.report(note, type, content) }
 
     fun report(
         user: User,
@@ -681,17 +679,11 @@ class AccountViewModel(
         }
     }
 
-    fun boost(note: Note) {
-        runIOCatching { account.boost(note) }
-    }
+    fun boost(note: Note) = runIOCatching { account.boost(note) }
 
-    fun removeEmojiPack(emojiPack: Note) {
-        runIOCatching { account.removeEmojiPack(emojiPack) }
-    }
+    fun removeEmojiPack(emojiPack: Note) = runIOCatching { account.removeEmojiPack(emojiPack) }
 
-    fun addEmojiPack(emojiPack: Note) {
-        runIOCatching { account.addEmojiPack(emojiPack) }
-    }
+    fun addEmojiPack(emojiPack: Note) = runIOCatching { account.addEmojiPack(emojiPack) }
 
     fun addMediaToGallery(
         hex: String,
@@ -701,13 +693,9 @@ class AccountViewModel(
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
-    ) {
-        runIOCatching { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
-    }
+    ) = runIOCatching { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
 
-    fun removeFromMediaGallery(note: Note) {
-        runIOCatching { account.removeFromGallery(note) }
-    }
+    fun removeFromMediaGallery(note: Note) = runIOCatching { account.removeFromGallery(note) }
 
     fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
@@ -736,13 +724,9 @@ class AccountViewModel(
         }
     }
 
-    fun delete(notes: List<Note>) {
-        runIOCatching { account.delete(notes) }
-    }
+    fun delete(notes: List<Note>) = runIOCatching { account.delete(notes) }
 
-    fun delete(note: Note) {
-        runIOCatching { account.delete(note) }
-    }
+    fun delete(note: Note) = runIOCatching { account.delete(note) }
 
     fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
@@ -790,61 +774,33 @@ class AccountViewModel(
         }
     }
 
-    fun follow(community: AddressableNote) {
-        runIOCatching { account.follow(community) }
-    }
+    fun follow(community: AddressableNote) = runIOCatching { account.follow(community) }
 
-    fun follow(channel: PublicChatChannel) {
-        runIOCatching { account.follow(channel) }
-    }
+    fun follow(channel: PublicChatChannel) = runIOCatching { account.follow(channel) }
 
-    fun follow(channel: EphemeralChatChannel) {
-        runIOCatching { account.follow(channel) }
-    }
+    fun follow(channel: EphemeralChatChannel) = runIOCatching { account.follow(channel) }
 
-    fun unfollow(community: AddressableNote) {
-        runIOCatching { account.unfollow(community) }
-    }
+    fun unfollow(community: AddressableNote) = runIOCatching { account.unfollow(community) }
 
-    fun unfollow(channel: PublicChatChannel) {
-        runIOCatching { account.unfollow(channel) }
-    }
+    fun unfollow(channel: PublicChatChannel) = runIOCatching { account.unfollow(channel) }
 
-    fun unfollow(channel: EphemeralChatChannel) {
-        runIOCatching { account.unfollow(channel) }
-    }
+    fun unfollow(channel: EphemeralChatChannel) = runIOCatching { account.unfollow(channel) }
 
-    fun follow(user: User) {
-        runIOCatching { account.follow(user) }
-    }
+    fun follow(user: User) = runIOCatching { account.follow(user) }
 
-    fun unfollow(user: User) {
-        runIOCatching { account.unfollow(user) }
-    }
+    fun unfollow(user: User) = runIOCatching { account.unfollow(user) }
 
-    fun followGeohash(tag: String) {
-        runIOCatching { account.followGeohash(tag) }
-    }
+    fun followGeohash(tag: String) = runIOCatching { account.followGeohash(tag) }
 
-    fun unfollowGeohash(tag: String) {
-        runIOCatching { account.unfollowGeohash(tag) }
-    }
+    fun unfollowGeohash(tag: String) = runIOCatching { account.unfollowGeohash(tag) }
 
-    fun followHashtag(tag: String) {
-        runIOCatching { account.followHashtag(tag) }
-    }
+    fun followHashtag(tag: String) = runIOCatching { account.followHashtag(tag) }
 
-    fun unfollowHashtag(tag: String) {
-        runIOCatching { account.unfollowHashtag(tag) }
-    }
+    fun unfollowHashtag(tag: String) = runIOCatching { account.unfollowHashtag(tag) }
 
-    fun showWord(word: String) {
-        runIOCatching { account.showWord(word) }
-    }
+    fun showWord(word: String) = runIOCatching { account.showWord(word) }
 
-    fun hideWord(word: String) {
-        runIOCatching { account.hideWord(word) }
-    }
+    fun hideWord(word: String) = runIOCatching { account.hideWord(word) }
 
     fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 
@@ -927,17 +883,14 @@ class AccountViewModel(
     fun updateStatus(
         address: Address,
         newStatus: String,
-    ) {
-        runIOCatching {
-            account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
-        }
+    ) = runIOCatching {
+        account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
     }
 
-    fun deleteStatus(address: Address) {
+    fun deleteStatus(address: Address) =
         runIOCatching {
             account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
         }
-    }
 
     fun urlPreview(
         url: String,
@@ -1578,7 +1531,7 @@ class AccountViewModel(
         root: InteractiveStoryBaseEvent,
         readingScene: InteractiveStoryBaseEvent,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        runIOCatching {
             val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
 
             val readingState = getInteractiveStoryReadingState(root.addressTag())
