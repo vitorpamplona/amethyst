@@ -44,9 +44,9 @@ class PlaybackService : MediaSessionService() {
         MediaSessionPool(
             ExoPlayerPool(ExoPlayerBuilder(okHttp)),
             okHttpClient = okHttp,
-            reset = { session ->
+            reset = { session, keepPlaying ->
                 (session.player as ExoPlayer).apply {
-                    repeatMode = Player.REPEAT_MODE_ONE
+                    repeatMode = if (keepPlaying) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                     videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                     volume = 0f
                 }
@@ -145,7 +145,8 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         val id = controllerInfo.connectionHints.getString("id") ?: return null
         val proxyPort = controllerInfo.connectionHints.getInt("proxyPort")
+        val keepPlaying = controllerInfo.connectionHints.getBoolean("keepPlaying", true)
         val manager = lazyPool(proxyPort)
-        return manager.getSession(id, applicationContext)
+        return manager.getSession(id, keepPlaying, applicationContext)
     }
 }

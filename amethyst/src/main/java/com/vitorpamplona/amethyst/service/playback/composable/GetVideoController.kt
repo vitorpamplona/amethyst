@@ -67,10 +67,11 @@ fun GetVideoController(
                 scope.launch {
                     Log.d("PlaybackService", "Preparing Video ${controllerId.id} ${mediaItem.src.videoUri}")
                     PlaybackServiceClient.prepareController(
-                        controllerId,
-                        mediaItem.src.videoUri,
-                        mediaItem.src.proxyPort,
-                        context,
+                        mediaControllerState = controllerId,
+                        videoUri = mediaItem.src.videoUri,
+                        proxyPort = mediaItem.src.proxyPort,
+                        keepPlaying = mediaItem.src.keepPlaying,
+                        context = context,
                     ) { controllerId ->
                         scope.launch(Dispatchers.Main) {
                             // checks if the player is still active after requesting to load
@@ -174,10 +175,11 @@ fun GetVideoController(
                             scope.launch(Dispatchers.Main) {
                                 Log.d("PlaybackService", "Preparing Video from Resume ${controllerId.id} ${mediaItem.src.videoUri} ")
                                 PlaybackServiceClient.prepareController(
-                                    controllerId,
-                                    mediaItem.src.videoUri,
-                                    mediaItem.src.proxyPort,
-                                    context,
+                                    mediaControllerState = controllerId,
+                                    videoUri = mediaItem.src.videoUri,
+                                    proxyPort = mediaItem.src.proxyPort,
+                                    keepPlaying = mediaItem.src.keepPlaying,
+                                    context = context,
                                 ) { controllerId ->
                                     scope.launch(Dispatchers.Main) {
                                         // checks if the player is still active after requesting to load

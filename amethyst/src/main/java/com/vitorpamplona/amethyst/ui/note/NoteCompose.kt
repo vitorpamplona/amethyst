@@ -798,7 +798,7 @@ private fun RenderNoteRow(
         is VideoNormalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is VideoShortEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
-        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, accountViewModel, nav)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(

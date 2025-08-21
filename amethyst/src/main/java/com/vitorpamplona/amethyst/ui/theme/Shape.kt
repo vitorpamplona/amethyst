@@ -165,6 +165,7 @@ val Size39Modifier = Modifier.size(39.dp)
 val Size40Modifier = Modifier.size(40.dp)
 val Size50Modifier = Modifier.size(50.dp)
 val Size55Modifier = Modifier.size(55.dp)
+val Size75Modifier = Modifier.size(75.dp)
 
 val TinyBorders = Modifier.padding(2.dp)
 val NoSoTinyBorders = Modifier.padding(start = 5.dp, end = 5.dp, top = 2.dp, bottom = 2.dp)
@@ -351,3 +352,7 @@ val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
 val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
 
 val BadgePictureModifier = Modifier.size(35.dp).clip(shape = CutCornerShape(20))
+
+val MaxWidthPaddingTop5dp = Modifier.fillMaxWidth().padding(top = 5.dp)
+
+val VoiceHeightModifier = Modifier.fillMaxWidth().height(100.dp)

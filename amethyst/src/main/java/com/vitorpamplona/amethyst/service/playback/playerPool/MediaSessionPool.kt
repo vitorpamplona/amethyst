@@ -56,7 +56,7 @@ class SessionListener(
 class MediaSessionPool(
     val exoPlayerPool: ExoPlayerPool,
     val okHttpClient: OkHttpClient,
-    val reset: (MediaSession) -> Unit,
+    val reset: (MediaSession, Boolean) -> Unit,
 ) {
     val globalCallback = MediaSessionCallback(this)
     var lastCleanup = TimeUtils.now()
@@ -65,7 +65,7 @@ class MediaSessionPool(
     private val playingMap = mutableMapOf<String, SessionListener>()
 
     private val cache =
-        object : LruCache<String, SessionListener>(SimultaneousPlaybackCalculator.max()) { // up to 10 videos in the screen at the same time
+        object : LruCache<String, SessionListener>(10) { // up to 10 videos in the screen at the same time
             override fun entryRemoved(
                 evicted: Boolean,
                 key: String?,
@@ -87,6 +87,7 @@ class MediaSessionPool(
     @OptIn(UnstableApi::class)
     fun newSession(
         id: String,
+        keepPlaying: Boolean,
         context: Context,
     ): MediaSession {
         val mediaSession =
@@ -107,7 +108,7 @@ class MediaSessionPool(
 
         mediaSession.player.addListener(listener)
 
-        reset(mediaSession)
+        reset(mediaSession, keepPlaying)
 
         cache.put(mediaSession.id, SessionListener(mediaSession, listener))
 
@@ -167,6 +168,7 @@ class MediaSessionPool(
 
     fun getSession(
         id: String,
+        keepPlaying: Boolean,
         context: Context,
     ): MediaSession {
         val existingSession = playingMap.get(id) ?: cache.get(id)
@@ -174,7 +176,7 @@ class MediaSessionPool(
             return existingSession.session
         }
 
-        return newSession(id, context)
+        return newSession(id, keepPlaying, context)
     }
 
     fun playingContent() = playingMap.values
