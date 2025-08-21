@@ -64,40 +64,42 @@ class AppSpecificState(
     }
 
     init {
-        settings.backupAppSpecificData?.let { event ->
-            Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
-            @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
-                try {
-                    val decrypted = signer.decrypt(event.content, event.pubKey)
-                    val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
-                    settings.syncedSettings.updateFrom(syncedSettings)
-                } catch (e: Throwable) {
-                    if (e is CancellationException) throw e
-                    Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value", e)
+        if (settings.isWriteable()) {
+            settings.backupAppSpecificData?.let { event ->
+                Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
+                @OptIn(DelicateCoroutinesApi::class)
+                GlobalScope.launch(Dispatchers.IO) {
+                    LocalCache.justConsumeMyOwnEvent(event)
+                    try {
+                        val decrypted = signer.decrypt(event.content, event.pubKey)
+                        val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                        settings.syncedSettings.updateFrom(syncedSettings)
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value", e)
+                    }
                 }
             }
-        }
 
-        scope.launch(Dispatchers.Default) {
-            Log.d("AccountRegisterObservers", "AppSpecificData Collector Start")
-            getAppSpecificDataFlow().collect {
-                try {
-                    Log.d("AccountRegisterObservers", "Updating AppSpecificData for ${signer.pubKey}")
-                    (it.note.event as? AppSpecificDataEvent)?.let {
-                        val decrypted = signer.decrypt(it.content, it.pubKey)
-                        try {
-                            val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
-                            settings.updateAppSpecificData(it, syncedSettings)
-                        } catch (e: Throwable) {
-                            if (e is CancellationException) throw e
-                            Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
+            scope.launch(Dispatchers.Default) {
+                Log.d("AccountRegisterObservers", "AppSpecificData Collector Start")
+                getAppSpecificDataFlow().collect {
+                    try {
+                        Log.d("AccountRegisterObservers", "Updating AppSpecificData for ${signer.pubKey}")
+                        (it.note.event as? AppSpecificDataEvent)?.let {
+                            val decrypted = signer.decrypt(it.content, it.pubKey)
+                            try {
+                                val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                                settings.updateAppSpecificData(it, syncedSettings)
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
+                            }
                         }
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w("LocalPreferences", "Error Decrypting latestAppSpecificData from Preferences", e)
                     }
-                } catch (e: Throwable) {
-                    if (e is CancellationException) throw e
-                    Log.w("LocalPreferences", "Error Decrypting latestAppSpecificData from Preferences", e)
                 }
             }
         }
