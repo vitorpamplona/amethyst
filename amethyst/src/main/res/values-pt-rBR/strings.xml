@@ -1010,4 +1010,6 @@
     <string name="search_by_hashtag">Pesquisar hashtag: #%1$s</string>
     <string name="dont_translate_from">Não Traduzir de</string>
     <string name="dont_translate_from_description">Os idiomas mostrados aqui não serão traduzidos. Selecione um idioma para removê-lo e traduzi-lo novamente.</string>
+    <string name="pause">Pausar</string>
+    <string name="play">Reproduzir</string>
 </resources>
