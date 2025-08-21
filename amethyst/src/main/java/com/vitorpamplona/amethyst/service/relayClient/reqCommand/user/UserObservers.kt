@@ -429,56 +429,47 @@ fun observeUserIsFollowing(
     return flow.collectAsStateWithLifecycle(user1.isFollowing(user2))
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingHashtag(
-    user: User,
     hashtag: String,
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(user) {
-            user
-                .flow()
-                .follows.stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.isFollowingHashtag(hashtag)
+        remember(accountViewModel) {
+            accountViewModel.account.hashtagList.flow
+                .mapLatest { hashtags ->
+                    hashtag in hashtags
+                }.onStart {
+                    emit(hashtag in accountViewModel.account.hashtagList.flow.value)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
-    return flow.collectAsStateWithLifecycle(user.isFollowingHashtag(hashtag))
+    return flow.collectAsStateWithLifecycle(hashtag in accountViewModel.account.hashtagList.flow.value)
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingGeohash(
-    user: User,
     geohash: String,
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(user) {
-            user
-                .flow()
-                .follows.stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.isFollowingGeohash(geohash)
+        remember(accountViewModel) {
+            accountViewModel.account.geohashList.flow
+                .mapLatest { geohashes ->
+                    geohash in geohashes
+                }.onStart {
+                    emit(geohash in accountViewModel.account.geohashList.flow.value)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
-    return flow.collectAsStateWithLifecycle(user.isFollowingGeohash(geohash))
+    return flow.collectAsStateWithLifecycle(geohash in accountViewModel.account.geohashList.flow.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)

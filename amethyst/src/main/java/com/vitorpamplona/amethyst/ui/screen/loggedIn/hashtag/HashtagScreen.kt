@@ -145,7 +145,7 @@ fun HashtagActionOptions(
     tag: String,
     accountViewModel: AccountViewModel,
 ) {
-    val isFollowingTag by observeUserIsFollowingHashtag(accountViewModel.userProfile(), tag, accountViewModel)
+    val isFollowingTag by observeUserIsFollowingHashtag(tag, accountViewModel)
 
     if (isFollowingTag) {
         UnfollowButton {
