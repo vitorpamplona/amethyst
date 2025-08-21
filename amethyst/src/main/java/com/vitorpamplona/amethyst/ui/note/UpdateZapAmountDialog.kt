@@ -536,7 +536,7 @@ fun authenticate(
     fun keyguardPrompt() {
         val intent =
             keyguardManager.createConfirmDeviceCredentialIntent(
-                stringRes(context, R.string.app_name_release),
+                stringRes(context, R.string.app_name),
                 title,
             )
 
@@ -556,7 +556,7 @@ fun authenticate(
     val promptInfo =
         BiometricPrompt.PromptInfo
             .Builder()
-            .setTitle(stringRes(context, R.string.app_name_release))
+            .setTitle(stringRes(context, R.string.app_name))
             .setSubtitle(title)
             .setAllowedAuthenticators(authenticators)
             .build()
