@@ -82,6 +82,12 @@ fun Waveform(
             pollCurrentDuration(it).collect { value -> waveformProgress.floatValue = value }
         }
     }
+
+    LaunchedEffect(Unit) {
+        delay(500)
+        val position = mediaControllerState.controller?.let { it.currentPosition / it.duration.toFloat() } ?: 0f
+        waveformProgress.floatValue = position
+    }
 }
 
 private fun pollCurrentDuration(controller: MediaController) =
