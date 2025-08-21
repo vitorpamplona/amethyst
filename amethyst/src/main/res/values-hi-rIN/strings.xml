@@ -1012,4 +1012,6 @@
     <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
     <string name="dont_translate_from">अनुवाद ना करें</string>
     <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>
+    <string name="pause">विराम</string>
+    <string name="play">चलाएँ</string>
 </resources>
