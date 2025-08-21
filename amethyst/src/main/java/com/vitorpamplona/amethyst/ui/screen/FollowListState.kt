@@ -66,7 +66,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 
 @Stable
 class FollowListState(
@@ -160,12 +159,12 @@ class FollowListState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<List<FeedDefinition>> =
-        account.kind3FollowList.flow.transformLatest {
+        combineTransform(account.kind3FollowList.flow, account.hashtagList.flow, account.geohashList.flow, account.communityList.flow) { kind3List, hashtagList, geotagList, communityList ->
             checkNotInMainThread()
 
             val communities =
-                it.communities.mapNotNull {
-                    LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
+                communityList.mapNotNull {
+                    LocalCache.getOrCreateAddressableNote(it.address).let { communityNote ->
                         TagFeedDefinition(
                             "Community/${communityNote.idHex}",
                             CommunityName(communityNote),
@@ -178,7 +177,7 @@ class FollowListState(
                 }
 
             val hashtags =
-                it.hashtags.map {
+                hashtagList.map {
                     TagFeedDefinition(
                         "Hashtag/$it",
                         HashtagName(it),
@@ -190,7 +189,7 @@ class FollowListState(
                 }
 
             val geotags =
-                it.geotags.map {
+                geotagList.map {
                     TagFeedDefinition(
                         "Geohash/$it",
                         GeoHashName(it),
