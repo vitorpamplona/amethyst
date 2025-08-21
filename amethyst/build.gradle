@@ -21,7 +21,7 @@ def getCurrentBranch() {
 def generateVersionName(String baseVersion) {
     def currentBranch = getCurrentBranch()
 
-    if (currentBranch == "main" || currentBranch == "master") {
+    if (currentBranch == "main" || currentBranch == "master" || currentBranch == "unknown") {
         return baseVersion
     } else {
         // Clean branch name for version (replace special characters)
