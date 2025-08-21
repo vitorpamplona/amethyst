@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.service.retryIfException
@@ -35,12 +36,16 @@ object PushNotificationUtils {
         accounts: List<AccountInfo>,
         okHttpClient: (String) -> OkHttpClient,
     ) = with(Dispatchers.IO) {
-        val token = FirebaseMessaging.getInstance().token.await()
-        if (hasInit?.equals(accounts) == true && lastToken == token) {
-            return@with
-        }
+        try {
+            val token = FirebaseMessaging.getInstance().token.await()
+            if (hasInit?.equals(accounts) == true && lastToken == token) {
+                return@with
+            }
 
-        registerToken(token, accounts, okHttpClient)
+            registerToken(token, accounts, okHttpClient)
+        } catch (e: Exception) {
+            Log.e("PushNotificationUtils", "Failed to get Firebase token", e)
+        }
     }
 
     suspend fun checkAndInit(
