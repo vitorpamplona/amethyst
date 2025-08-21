@@ -112,7 +112,9 @@ class ChatNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    sendDraftSync()
+                    accountViewModel.runIOCatching {
+                        sendDraftSync()
+                    }
                 }
             }
         }
@@ -349,7 +351,7 @@ class ChatNewMessageViewModel :
         val version = draftTag.current
         innerSendPost(null)
         cancel()
-        accountViewModel.deleteDraft(version)
+        accountViewModel.account.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {

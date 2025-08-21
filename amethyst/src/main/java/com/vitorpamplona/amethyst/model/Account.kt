@@ -1145,6 +1145,8 @@ class Account(
         template: EventTemplate<out Event>,
         broadcast: Set<Event> = emptySet(),
     ) {
+        if (!isWriteable()) return
+
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
         val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
@@ -1163,6 +1165,8 @@ class Account(
     }
 
     suspend fun deleteDraft(draftTag: String) {
+        if (!isWriteable()) return
+
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)

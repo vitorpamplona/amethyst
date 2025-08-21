@@ -1506,10 +1506,6 @@ class AccountViewModel(
 
     fun dataSources() = app.sources
 
-    suspend fun deleteDraft(draftTag: String) {
-        account.deleteDraft(draftTag)
-    }
-
     suspend fun createTempDraftNote(noteEvent: DraftWrapEvent): Note? = draftNoteCache.update(noteEvent)
 
     fun createTempDraftNote(

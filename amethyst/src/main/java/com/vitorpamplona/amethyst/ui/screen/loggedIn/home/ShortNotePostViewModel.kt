@@ -146,7 +146,9 @@ open class ShortNotePostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    sendDraftSync()
+                    accountViewModel.runIOCatching {
+                        sendDraftSync()
+                    }
                 }
             }
         }
@@ -481,7 +483,7 @@ open class ShortNotePostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.deleteDraft(version)
+        accountViewModel.account.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {

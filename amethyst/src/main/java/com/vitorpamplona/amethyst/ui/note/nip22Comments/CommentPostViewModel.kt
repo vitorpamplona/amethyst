@@ -317,7 +317,7 @@ open class CommentPostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.deleteDraft(version)
+        accountViewModel.account.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {

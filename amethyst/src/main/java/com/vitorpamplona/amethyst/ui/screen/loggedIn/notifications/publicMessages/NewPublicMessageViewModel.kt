@@ -127,7 +127,9 @@ class NewPublicMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    sendDraftSync()
+                    accountViewModel.runIOCatching {
+                        sendDraftSync()
+                    }
                 }
             }
         }
@@ -319,7 +321,7 @@ class NewPublicMessageViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.deleteDraft(version)
+        accountViewModel.account.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {
