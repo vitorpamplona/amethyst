@@ -1015,4 +1015,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
     <string name="dont_translate_from">Nicht übersetzen von</string>
     <string name="dont_translate_from_description">Die hier angezeigten Sprachen werden nicht übersetzt. Wählen Sie eine Sprache, um sie zu entfernen und lassen Sie sie erneut übersetzen.</string>
+    <string name="pause">Pausen</string>
+    <string name="play">Abspielen</string>
 </resources>

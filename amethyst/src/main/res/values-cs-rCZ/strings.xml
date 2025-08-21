@@ -1010,4 +1010,6 @@
     <string name="search_by_hashtag">Vyhledávání hashtag: #%1$s</string>
     <string name="dont_translate_from">Nepřekládat z</string>
     <string name="dont_translate_from_description">Zde zobrazené jazyky nebudou přeloženy. Vyberte jazyk, který chcete odstranit a nechat je znovu přeložit.</string>
+    <string name="pause">Pozastavit</string>
+    <string name="play">Hrát</string>
 </resources>
