@@ -1012,4 +1012,6 @@
     <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
     <string name="dont_translate_from">不要翻译自</string>
     <string name="dont_translate_from_description">此处显示的语言不会被翻译。请选择一种语言来移除它并重新翻译它。</string>
+    <string name="pause">暂停</string>
+    <string name="play">播放</string>
 </resources>
