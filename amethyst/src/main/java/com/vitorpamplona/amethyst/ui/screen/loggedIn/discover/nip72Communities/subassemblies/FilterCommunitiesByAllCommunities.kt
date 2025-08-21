@@ -42,7 +42,7 @@ fun filterCommunitiesAllCommunities(
             filter =
                 Filter(
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
-                    ids = communityList,
+                    tags = mapOf("a" to communityList),
                     limit = 300,
                     since = since,
                 ),

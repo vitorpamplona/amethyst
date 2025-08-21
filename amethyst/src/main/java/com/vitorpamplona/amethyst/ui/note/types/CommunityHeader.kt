@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -87,8 +86,6 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -362,10 +359,10 @@ fun WatchAddressableNoteFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val state by accountViewModel.account.kind3FollowList.flow
+    val state by accountViewModel.account.communityList.flowSet
         .collectAsStateWithLifecycle()
 
-    onFollowChanges(state.communities.contains(note.idHex))
+    onFollowChanges(state.contains(note.idHex))
 }
 
 @Composable
@@ -376,16 +373,9 @@ fun JoinCommunityButton(
 ) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = {
-            scope.launch(Dispatchers.IO) {
-                accountViewModel.follow(note)
-            }
-        },
+        onClick = { accountViewModel.follow(note) },
         shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(R.string.join), color = Color.White)
@@ -402,7 +392,7 @@ fun LeaveCommunityButton(
 
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(note) } },
+        onClick = { accountViewModel.unfollow(note) },
         shape = ButtonBorder,
         colors =
             ButtonDefaults.buttonColors(

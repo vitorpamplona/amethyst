@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
 @Immutable
 class SingleCommunityTopNavPerRelayFilter(
     val community: String,
     val authors: Set<String>?,
-) : IFeedTopNavPerRelayFilter
+) : IFeedTopNavPerRelayFilter {
+    val communityAddress = Address.parse(community)
+}

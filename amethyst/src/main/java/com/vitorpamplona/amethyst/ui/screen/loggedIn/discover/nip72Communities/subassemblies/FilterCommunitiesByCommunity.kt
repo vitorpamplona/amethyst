@@ -25,11 +25,12 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 fun filterClassifiedsByCommunity(
     relay: NormalizedRelayUrl,
-    community: String,
+    community: Address,
     authors: Set<String>?,
     since: Long? = null,
 ): List<RelayBasedFilter> {
@@ -40,9 +41,9 @@ fun filterClassifiedsByCommunity(
             relay = relay,
             filter =
                 Filter(
-                    authors = authors,
+                    authors = listOf(community.pubKeyHex),
                     kinds = listOf(CommunityDefinitionEvent.KIND),
-                    ids = listOf(community),
+                    tags = mapOf("d" to listOf(community.dTag)),
                     limit = 300,
                     since = since,
                 ),
@@ -59,11 +60,13 @@ fun filterCommunitiesByCommunity(
 
     return communitySet.set
         .mapNotNull {
-            filterClassifiedsByCommunity(
-                relay = it.key,
-                community = it.value.community,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
+            it.value.communityAddress?.let { address ->
+                filterClassifiedsByCommunity(
+                    relay = it.key,
+                    community = address,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
         }.flatten()
 }
