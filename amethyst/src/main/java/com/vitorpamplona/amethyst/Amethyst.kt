@@ -102,12 +102,26 @@ class Amethyst : Application() {
             scope = applicationIOScope,
         )
 
+    // manages all relay connections
+    val okHttpClientForRelaysForDms =
+        DualHttpClientManager(
+            userAgent = appAgent,
+            proxyPortProvider = torManager.activePortOrNull,
+            isMobileDataProvider = connManager.isMobileOrNull,
+            keyCache = keyCache,
+            scope = applicationIOScope,
+        )
+
     val torProxySettingsAnchor = ProxySettingsAnchor()
 
     // Connects the NostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
-            okHttpClientForRelays.getHttpClient(torProxySettingsAnchor.useProxy(url))
+            if (torProxySettingsAnchor.isDM(url)) {
+                okHttpClientForRelaysForDms.getHttpClient(torProxySettingsAnchor.useProxy(url))
+            } else {
+                okHttpClientForRelays.getHttpClient(torProxySettingsAnchor.useProxy(url))
+            }
         }
 
     // Caches all events in Memory
