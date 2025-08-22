@@ -51,13 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">你正在使用公钥，公钥是只读的。使用私钥登录以便能够取消关注</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">你正在使用公钥，公钥是只读的。使用私钥登录以便能够隐藏单词或句子</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">你正在使用公钥，公钥是只读的。使用私钥登录以便能够显示单词或句子</string>
-    <string name="login_with_a_private_key_to_be_able_to_change_settings">你正在使用公钥，公钥是只读的。要更改设置请用私钥登录</string>
-    <string name="login_with_a_private_key_to_be_able_to_upload">你正在使用公钥，公钥是只读的。要上传请使用私钥登录</string>
-    <string name="login_with_a_private_key_to_be_able_to_sign_events">你正在使用公钥，公钥是只读的。要报名参加活动请使用私钥登录</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">您正在使用公钥以只读方式登录，需要使用私钥登录才能更改设置。</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">您正在使用公钥以只读方式登录，需要使用私钥登录才能上传。</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">您正在使用公钥以只读方式登录，需要使用私钥登录才能签署事件。</string>
     <string name="unauthorized_exception">未授权的解密</string>
-    <string name="unauthorized_exception_description">签名人没有授权进行此操作所需的解密。在签名人应用中激活 NIP-44 解密并重试</string>
-    <string name="signer_not_found_exception">未找到签名人</string>
-    <string name="signer_not_found_exception_description">签名人应用被卸载了吗？检查是否安装了签名人以及是否签名人有该账户。注销并再次登录，签名人应用已更改。</string>
+    <string name="unauthorized_exception_description">签名器没有授权解密操作，请在签名器中授予 NIP-44 解密权限并重试。</string>
+    <string name="signer_not_found_exception">未找到签名器</string>
+    <string name="signer_not_found_exception_description">签名器被卸载？请检查是否已经安装了签名器以及其中是否存在该账户。变更签名器需要注销后重新登录。</string>
     <string name="zaps">打闪</string>
     <string name="view_count">浏览次数</string>
     <string name="boost">提升</string>
@@ -150,7 +150,7 @@
     <string name="take_a_picture">拍照</string>
     <string name="record_a_message">录制消息</string>
     <string name="record_a_message_title">录制消息</string>
-    <string name="record_a_message_description">单击并按住来录制消息</string>
+    <string name="record_a_message_description">点按以录制消息</string>
     <string name="uploading">上传中…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未设置闪电地址以接收聪</string>
     <string name="reply_here">"🔏在此回复… "</string>
@@ -231,10 +231,10 @@
     <string name="ephemeral_relay_chat">临时聊天</string>
     <string name="relay_chat">中继聊天</string>
     <string name="relay_chat_title">中继聊天</string>
-    <string name="relay_chat_explainer">中继聊天是由主中继控制的聊天群。
-        它们对 Nostr 上的所有人可见，任何人均可加入它们。
-        它们对围绕特定话题的开放社区很好。这些群中的一些是临时存在的
-    因而，聊天消息会随着时间消失</string>
+    <string name="relay_chat_explainer">中继聊天是由聊天所属中继控制的聊天群组。
+        Nostr 上的每个人都可以看到这些群组，任何人都可以加入群组。
+        这非常适合围绕特定主题而建立的开放社区。其中一些群组是临时的，
+    因此聊天信息会随着时间的推移而消失。</string>
     <string name="public_chat">公共聊天</string>
     <string name="public_chat_title">公开聊天元数据</string>
     <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以：
@@ -244,7 +244,7 @@
     <string name="public_chat_relays_explainer">使用 1~3 个中继托管这个群组。
         让 Nostr 客户端知道应该使用这些中继配置来发送和下载消息。</string>
     <string name="paid_relay">付费中继</string>
-    <string name="tor_relay">连接时强制使用 Tor</string>
+    <string name="tor_relay">强制使用 Tor 进行连接</string>
     <string name="posts_received">收到文章</string>
     <string name="remove">移除</string>
     <string name="translations_auto">自动</string>
@@ -289,7 +289,7 @@
     <string name="biometric_error">错误</string>
     <string name="badge_created_by">"由 %1$s 创建"</string>
     <string name="badge_award_image_for">"颁发给 %1$s 的徽章图片"</string>
-    <string name="badge_award_image">\"徽章奖品图片</string>
+    <string name="badge_award_image">\"徽章图片</string>
     <string name="new_badge_award_notif">你收到了新的徽章奖励</string>
     <string name="award_granted_to">徽章奖励授予</string>
     <string name="copied_note_text_to_clipboard">文本已复制到剪贴板</string>
@@ -577,7 +577,7 @@
     <string name="relay_setup">中继器</string>
     <string name="discover_follows">关注包</string>
     <string name="discover_reads">次浏览</string>
-    <string name="discover_content_v2">Feed算法</string>
+    <string name="discover_content_v2">动态源算法</string>
     <string name="discover_marketplace">市场</string>
     <string name="discover_live_v2">直播</string>
     <string name="discover_community_v2">社区</string>
@@ -633,8 +633,8 @@
     <string name="geohash_explainer">将你所在位置的地理位置添加到帖子。公众会知道你在当前位置的5公里之内（3英里）</string>
     <string name="geohash_exclusive">位置限定帖子</string>
     <string name="geohash_exclusive_explainer">只有处于同一地理位置的关注者才能看到贴文。其他追随者无法看到。</string>
-    <string name="hashtag_exclusive">话题标签专属帖子</string>
-    <string name="hashtag_exclusive_explainer">只有话题标签的关注者才会看到它。您的一般关注者不会看到它。</string>
+    <string name="hashtag_exclusive">话题限定贴文</string>
+    <string name="hashtag_exclusive_explainer">只有关注了话题的人才能看到贴文，您的普通关注者也无法看到。</string>
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
@@ -709,7 +709,7 @@
     <string name="wallet_number">钱包 %1$s</string>
     <string name="error_opening_external_signer">打开签名应用时出错</string>
     <string name="error_opening_external_signer_description">找不到签名应用。检查应用是否已被卸载</string>
-    <string name="sign_request_rejected2">签名请求被拒绝了</string>
+    <string name="sign_request_rejected2">签名请求已被拒绝</string>
     <string name="sign_request_rejected">签名请求被拒绝了</string>
     <string name="sign_request_rejected_description">请确保签名应用程序已授权此交易</string>
     <string name="no_wallet_found_with_error">找不到支付闪电发票的钱包（错误：%1$s）。请安装闪电钱包来使用打闪</string>
@@ -838,7 +838,7 @@
     <string name="new_short">新短篇媒体：图像或视频</string>
     <string name="new_community_note">新社区笔记</string>
     <string name="new_product">新产品</string>
-    <string name="new_exclusive_geo_note">新建地理位置专属帖子</string>
+    <string name="new_exclusive_geo_note">新建地理位置限定帖文</string>
     <string name="open_all_reactions_to_this_post">展开对此帖子的所有回应</string>
     <string name="close_all_reactions_to_this_post">收起对此帖子的所有回应</string>
     <string name="reply_description">回复</string>
@@ -903,19 +903,19 @@
     <string name="local_section_explainer">在该设备中运行的中继列表。</string>
     <string name="trusted_relays_title">可信中继</string>
     <string name="trusted_section">可信中继</string>
-    <string name="trusted_section_explainer">你信任的无需 Tor 连接的中继</string>
+    <string name="trusted_section_explainer">无需使用 Tor 进行连接的可信中继</string>
     <string name="proxy_relays_title">代理中继</string>
     <string name="proxy_section">代理中继</string>
-    <string name="proxy_section_explainer">聚合器中继下载 feed 必须使用的应用的流量，类似 filter.nostr.wine。这替代 outbox 模型，让应用只连接到列表中的中继。</string>
+    <string name="proxy_section_explainer">聚合器中继是应用获取资讯源时使用的中继（例如：filter.nostr.wine），设置这个列表将覆盖信箱模型的行为，使得应用只会连接到这个列表中的中继以获取内容。</string>
     <string name="broadcast_relays_title">广播中继</string>
     <string name="broadcast_section">广播中继</string>
-    <string name="broadcast_section_explainer">专门推送便笩到所有其他中继的中继，类似 sendit.nosflare.com。Amethyst 会将这个中继添加到所有你所做的新事件</string>
+    <string name="broadcast_section_explainer">推送你的贴文到其他中继的中继（例如：sendit.nosflare.com），应用会把这个中继作为提示嵌入到你发送的所有事件的 JSON 结构中。</string>
     <string name="indexer_relays_title">索引器中继</string>
     <string name="indexer_section">索引器中继</string>
-    <string name="indexer_section_explainer">专门托管每个人的元数据和中继列表的中继，类似 purplepag.es。Amethyst将使用这些中继来查找不在列表中的用户。</string>
-    <string name="blocked_relays_title">屏蔽的中继</string>
-    <string name="blocked_section">屏蔽的中继</string>
-    <string name="blocked_section_explainer">Amethyst 永远不会连接到这些中继</string>
+    <string name="indexer_section_explainer">专门保存每个人的账户元数据的中继（例如：purplepag.es），应用会使用这些中继来查找不在你列表中的账户元数据。</string>
+    <string name="blocked_relays_title">中继黑名单</string>
+    <string name="blocked_section">中继黑名单</string>
+    <string name="blocked_section_explainer">应用永远不会连接的中继</string>
     <string name="zap_the_devs_title">打闪开发人员！</string>
     <string name="zap_the_devs_description">你的捐赠帮助我们做出不同的贡献。每个聪都很重要！</string>
     <string name="donate_now">立即捐款</string>
@@ -1010,8 +1010,8 @@
     <string name="group_relay_explanation">此聊天所有用户都连接到的中继</string>
     <string name="share_image">分享图片…</string>
     <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
-    <string name="dont_translate_from">不要翻译自</string>
-    <string name="dont_translate_from_description">此处显示的语言不会被翻译。请选择一种语言来移除它并重新翻译它。</string>
+    <string name="dont_translate_from">不要翻译</string>
+    <string name="dont_translate_from_description">此处显示的语言不会被翻译，请选择一种目标语言重新翻译并去除这个提示。</string>
     <string name="pause">暂停</string>
     <string name="play">播放</string>
 </resources>
