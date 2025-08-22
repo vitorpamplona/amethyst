@@ -1012,4 +1012,6 @@
     <string name="search_by_hashtag">Zoek hashtag: #%1$s</string>
     <string name="dont_translate_from">Niet vertalen van</string>
     <string name="dont_translate_from_description">Talen die hier getoond worden worden worden niet vertaald. Selecteer een taal om te verwijderen en het opnieuw te laten vertalen.</string>
+    <string name="pause">Pauze</string>
+    <string name="play">Afspelen</string>
 </resources>
