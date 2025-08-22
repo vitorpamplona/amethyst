@@ -222,7 +222,7 @@ class AccountViewModel(
                         }
                     }
 
-                if (flows != null) {
+                if (!flows.isNullOrEmpty()) {
                     combine(flows) {
                         it.any { it }
                     }

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 
 class OutboxRelayLoader {
@@ -86,8 +87,12 @@ class OutboxRelayLoader {
                     note.flow().metadata.stateFlow
                 }
 
-            return combine(noteMetadataFlows) { outboxRelays ->
-                transformation(authorsPerRelay(outboxRelays, cache))
+            return if (noteMetadataFlows.isEmpty()) {
+                MutableStateFlow(transformation(emptyMap()))
+            } else {
+                combine(noteMetadataFlows) { outboxRelays ->
+                    transformation(authorsPerRelay(outboxRelays, cache))
+                }
             }
         }
     }

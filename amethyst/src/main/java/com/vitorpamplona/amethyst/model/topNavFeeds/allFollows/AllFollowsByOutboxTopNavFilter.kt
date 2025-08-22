@@ -86,6 +86,7 @@ class AllFollowsByOutboxTopNavFilter(
             } else {
                 MutableStateFlow(emptyMap())
             }
+
         val communitiesPerRelay =
             if (communities != null) {
                 CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) { it }
@@ -116,6 +117,7 @@ class AllFollowsByOutboxTopNavFilter(
             } else {
                 emptyMap()
             }
+
         val communitiesPerRelay =
             if (communities != null) {
                 CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) { it }

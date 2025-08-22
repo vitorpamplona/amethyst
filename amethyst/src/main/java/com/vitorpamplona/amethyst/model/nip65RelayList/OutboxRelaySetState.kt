@@ -70,7 +70,12 @@ class OutboxRelaySetState(
         usersToLoad
             .transformLatest { followList ->
                 val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList)
-                val relayListFlows = combineAllFlows(flows)
+                val relayListFlows =
+                    if (flows.isEmpty()) {
+                        MutableStateFlow(emptySet())
+                    } else {
+                        combineAllFlows(flows)
+                    }
                 emitAll(relayListFlows)
             }.onStart {
                 emit(
