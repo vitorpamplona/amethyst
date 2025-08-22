@@ -50,6 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -59,13 +65,13 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun TextSpinner(
-    label: String?,
+    modifier: Modifier = Modifier,
+    label: String? = null,
     placeholder: String,
     options: ImmutableList<TitleExplainer>,
     onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    TextSpinner(
+    BaseTextSpinner(
         placeholder,
         options,
         onSelect,
@@ -90,10 +96,34 @@ fun TextSpinner(
     modifier: Modifier = Modifier,
     mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit,
 ) {
+    BaseTextSpinner(
+        placeholder = placeholder,
+        options = options,
+        onSelect = onSelect,
+        modifier = modifier,
+        mainElement = mainElement,
+    )
+}
+
+@Composable
+private fun BaseTextSpinner(
+    placeholder: String,
+    options: ImmutableList<TitleExplainer>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit,
+) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
     var currentText by remember(placeholder) { mutableStateOf(placeholder) }
+
+    val accessibilityDescription =
+        if (currentText == placeholder) {
+            "Dropdown menu, $placeholder, not selected"
+        } else {
+            "Dropdown menu, $currentText selected"
+        }
 
     Box(
         modifier = modifier,
@@ -105,13 +135,23 @@ fun TextSpinner(
         )
         Box(
             modifier =
-                Modifier.matchParentSize().clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                ) {
-                    optionsShowing = true
-                    focusRequester.requestFocus()
-                },
+                Modifier
+                    .matchParentSize()
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                    ) {
+                        optionsShowing = true
+                        focusRequester.requestFocus()
+                    }.semantics {
+                        role = Role.DropdownList
+                        stateDescription = accessibilityDescription
+                        onClick(label = "Open dropdown menu") {
+                            optionsShowing = true
+                            focusRequester.requestFocus()
+                            return@onClick true
+                        }
+                    },
         )
     }
 
@@ -188,7 +228,15 @@ fun <T> SpinnerSelectionDialog(
                 }
                 itemsIndexed(options) { index, item ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { onSelect(index) }.padding(16.dp, 16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(index) }
+                                .padding(16.dp, 16.dp)
+                                .semantics {
+                                    role = Role.Button
+                                    contentDescription = "Option ${index + 1} of ${options.size}"
+                                },
                     ) {
                         Column { onRenderItem(item) }
                     }
