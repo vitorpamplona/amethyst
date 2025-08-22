@@ -56,13 +56,13 @@ import com.vitorpamplona.amethyst.model.parseFeatureSetType
 import com.vitorpamplona.amethyst.model.parseGalleryType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
+import com.vitorpamplona.amethyst.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.mockSharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer

@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.AroundMeFeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.screen.Name
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
