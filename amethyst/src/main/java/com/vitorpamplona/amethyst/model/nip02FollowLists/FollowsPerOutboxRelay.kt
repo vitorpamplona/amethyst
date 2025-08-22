@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlin.collections.ifEmpty
 
 class FollowsPerOutboxRelay(
     kind3Follows: FollowListState,
@@ -68,7 +70,11 @@ class FollowsPerOutboxRelay(
             mapOfSet {
                 relayListNotes.forEach { noteState ->
                     noteState.note.author?.pubkeyHex?.let { authorHex ->
-                        (noteState.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.forEach { relay ->
+                        val outboxRelayList =
+                            getNIP65RelayList(authorHex)?.writeRelaysNorm()
+                                ?: LocalCache.relayHints.hintsForKey(authorHex).ifEmpty { null }
+                                ?: Constants.eventFinderRelays
+                        outboxRelayList.forEach { relay ->
                             add(relay, authorHex)
                         }
                     }
@@ -85,7 +91,11 @@ class FollowsPerOutboxRelay(
                 emit(
                     mapOfSet {
                         kind3Follows.flow.value.authors.map { authorHex ->
-                            getNIP65RelayList(authorHex)?.writeRelaysNorm()?.forEach { relay ->
+                            val outboxRelayList =
+                                getNIP65RelayList(authorHex)?.writeRelaysNorm()
+                                    ?: LocalCache.relayHints.hintsForKey(authorHex).ifEmpty { null }
+                                    ?: Constants.eventFinderRelays
+                            outboxRelayList.forEach { relay ->
                                 add(relay, authorHex)
                             }
                         }

@@ -50,7 +50,7 @@ fun filterUserMetadataForKey(
                 val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
                 val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
 
-                authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
+                authorHomeRelayEvent?.writeRelaysNorm()
                     ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
                     ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
             }.flatten()

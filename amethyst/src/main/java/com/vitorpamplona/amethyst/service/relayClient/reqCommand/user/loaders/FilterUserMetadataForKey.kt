@@ -52,7 +52,7 @@ fun filterFindUserMetadataForKey(
         mapOfSet {
             authors.forEach { key ->
                 val relays =
-                    key.authorRelayList()?.writeRelaysNorm()?.ifEmpty { null }
+                    key.authorRelayList()?.writeRelaysNorm()
                         ?: LocalCache.relayHints.hintsForKey(key.pubkeyHex).ifEmpty { null }
                         ?: (key.relaysBeingUsed.keys + defaultRelays).toList()
 
