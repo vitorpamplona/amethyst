@@ -351,12 +351,14 @@ class ChatNewMessageViewModel :
         val version = draftTag.current
         innerSendPost(null)
         cancel()
-        accountViewModel.account.deleteDraft(version)
+        accountViewModel.viewModelScope.launch {
+            accountViewModel.account.deleteDraftIgnoreErrors(version)
+        }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
-            account.deleteDraft(draftTag.current)
+            account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             innerSendPost(draftTag.current)
         }
@@ -471,7 +473,7 @@ class ChatNewMessageViewModel :
                 }
 
             if (draftTag != null) {
-                accountViewModel.account.createAndSendDraft(draftTag, template)
+                accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
             } else {
                 accountViewModel.account.sendNip17PrivateMessage(template)
             }
@@ -488,7 +490,7 @@ class ChatNewMessageViewModel :
                 )
 
             if (draftTag != null) {
-                accountViewModel.account.createAndSendDraft(draftTag, template)
+                accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
             } else {
                 accountViewModel.account.sendNip04PrivateMessage(template)
             }

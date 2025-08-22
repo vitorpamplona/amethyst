@@ -276,12 +276,14 @@ open class ChannelNewMessageViewModel :
         cancel()
 
         accountViewModel.account.signAndSendPrivately(template, channelRelays)
-        accountViewModel.account.deleteDraft(version)
+        accountViewModel.viewModelScope.launch {
+            accountViewModel.account.deleteDraftIgnoreErrors(version)
+        }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
-            account.deleteDraft(draftTag.current)
+            account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -290,7 +292,7 @@ open class ChannelNewMessageViewModel :
             }
 
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 

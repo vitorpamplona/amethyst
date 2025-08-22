@@ -321,12 +321,14 @@ class NewPublicMessageViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.account.deleteDraft(version)
+        accountViewModel.viewModelScope.launch {
+            accountViewModel.account.deleteDraftIgnoreErrors(version)
+        }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
-            accountViewModel.account.deleteDraft(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val broadcast = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -335,7 +337,7 @@ class NewPublicMessageViewModel :
             }
 
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag.current, template, broadcast)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
         }
     }
 
