@@ -120,9 +120,9 @@ fun FeedFilterSpinner(
 
     val accessibilityDescription =
         if (selected != null) {
-            "Feed filter, $currentText selected"
+            stringRes(R.string.feed_filter_selected, currentText)
         } else {
-            "Feed filter, $selectAnOption"
+            stringRes(R.string.feed_filter_select_an_option, selectAnOption)
         }
 
     Box(
