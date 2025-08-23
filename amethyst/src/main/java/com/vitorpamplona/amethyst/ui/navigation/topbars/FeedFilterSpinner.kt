@@ -260,12 +260,18 @@ fun RenderOption(
 
                 val noteEvent = noteState.note.event
                 val name =
-                    if (noteEvent is PeopleListEvent) {
-                        noteEvent.nameOrTitle() ?: option.note.dTag()
-                    } else if (noteEvent is FollowListEvent) {
-                        noteEvent.title() ?: option.note.dTag()
-                    } else {
-                        option.note.dTag()
+                    when (noteEvent) {
+                        is PeopleListEvent -> {
+                            noteEvent.nameOrTitle() ?: option.note.dTag()
+                        }
+
+                        is FollowListEvent -> {
+                            noteEvent.title() ?: option.note.dTag()
+                        }
+
+                        else -> {
+                            option.note.dTag()
+                        }
                     }
 
                 Text(text = name, color = MaterialTheme.colorScheme.onSurface)
@@ -278,7 +284,7 @@ fun RenderOption(
             ) {
                 val it by observeNote(option.note, accountViewModel)
 
-                Text(text = "/n/${((it?.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
+                Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

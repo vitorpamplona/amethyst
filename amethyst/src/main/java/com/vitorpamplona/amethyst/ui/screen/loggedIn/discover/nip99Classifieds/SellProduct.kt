@@ -211,7 +211,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                 }
 
             TextSpinner(
-                placeholder = conditionTypes.filter { it.first == postViewModel.condition }.first().second,
+                placeholder = conditionTypes.first { it.first == postViewModel.condition }.second,
                 options = conditionOptions,
                 onSelect = {
                     postViewModel.updateCondition(conditionTypes[it].first)
