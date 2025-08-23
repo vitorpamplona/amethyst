@@ -1012,4 +1012,7 @@
     <string name="dont_translate_from_description">Os idiomas mostrados aqui não serão traduzidos. Selecione um idioma para removê-lo e traduzi-lo novamente.</string>
     <string name="pause">Pausar</string>
     <string name="play">Reproduzir</string>
+    <string name="option_of">Opção %1$s de %2$s</string>
+    <string name="feed_filter_selected">Filtro de feed, %1$s selecionado</string>
+    <string name="feed_filter_select_an_option">Filtro de feed, %1$s</string>
 </resources>
