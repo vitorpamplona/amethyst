@@ -44,6 +44,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -112,6 +117,13 @@ fun FeedFilterSpinner(
     LaunchedEffect(locationPermissionState.status.isGranted) {
         Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
     }
+
+    val accessibilityDescription =
+        if (selected != null) {
+            "Feed filter, $currentText selected"
+        } else {
+            "Feed filter, $selectAnOption"
+        }
 
     Box(
         modifier = modifier,
@@ -195,6 +207,13 @@ fun FeedFilterSpinner(
                         indication = null,
                     ) {
                         optionsShowing = true
+                    }.semantics {
+                        role = Role.DropdownList
+                        stateDescription = accessibilityDescription
+                        onClick(label = "Open feed filter menu") {
+                            optionsShowing = true
+                            return@onClick true
+                        }
                     },
         )
     }
@@ -202,6 +221,7 @@ fun FeedFilterSpinner(
     if (optionsShowing) {
         options.isNotEmpty().also {
             SpinnerSelectionDialog(
+                title = explainer,
                 options = options,
                 onDismiss = { optionsShowing = false },
                 onSelect = {
