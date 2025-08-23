@@ -95,6 +95,14 @@ class RelayUrlNormalizer {
         @OptIn(ExperimentalContracts::class)
         fun fix(url: String): String? {
             if (url.length < 3) return null
+            if (url.length > 100) {
+                // removes multiple urls in the same line
+                val schemeIdx = url.indexOf("://")
+                val nextScheme = url.indexOf("://", schemeIdx + 3)
+                if (nextScheme > 0) {
+                    return null
+                }
+            }
 
             val trimmed =
                 if (url[0].isWhitespace() || url[url.length - 1].isWhitespace()) {
