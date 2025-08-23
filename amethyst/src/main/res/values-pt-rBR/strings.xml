@@ -247,8 +247,8 @@
     <string name="tor_relay">Forçar uso do Tor ao conectar</string>
     <string name="posts_received">postagens recebidas</string>
     <string name="remove">Remover</string>
-    <string name="translations_auto">Automaticamente </string>
-    <string name="translations_translated_from">traduzido de </string>
+    <string name="translations_auto">Autotraduzido </string>
+    <string name="translations_translated_from"> de </string>
     <string name="translations_to">para</string>
     <string name="translations_show_in_lang_first">Mostrar em %1$s primeiro</string>
     <string name="chat_about_topic">Chat público sobre %1$s</string>
