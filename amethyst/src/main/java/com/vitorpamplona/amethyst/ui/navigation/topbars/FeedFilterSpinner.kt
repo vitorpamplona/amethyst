@@ -44,6 +44,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,6 +61,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.AroundMeFeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
@@ -66,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.screen.Name
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -112,6 +117,13 @@ fun FeedFilterSpinner(
     LaunchedEffect(locationPermissionState.status.isGranted) {
         Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
     }
+
+    val accessibilityDescription =
+        if (selected != null) {
+            stringRes(R.string.feed_filter_selected, currentText)
+        } else {
+            stringRes(R.string.feed_filter_select_an_option, selectAnOption)
+        }
 
     Box(
         modifier = modifier,
@@ -195,6 +207,13 @@ fun FeedFilterSpinner(
                         indication = null,
                     ) {
                         optionsShowing = true
+                    }.semantics {
+                        role = Role.DropdownList
+                        stateDescription = accessibilityDescription
+                        onClick(label = "Open feed filter menu") {
+                            optionsShowing = true
+                            return@onClick true
+                        }
                     },
         )
     }
@@ -202,6 +221,7 @@ fun FeedFilterSpinner(
     if (optionsShowing) {
         options.isNotEmpty().also {
             SpinnerSelectionDialog(
+                title = explainer,
                 options = options,
                 onDismiss = { optionsShowing = false },
                 onSelect = {
@@ -260,12 +280,18 @@ fun RenderOption(
 
                 val noteEvent = noteState.note.event
                 val name =
-                    if (noteEvent is PeopleListEvent) {
-                        noteEvent.nameOrTitle() ?: option.note.dTag()
-                    } else if (noteEvent is FollowListEvent) {
-                        noteEvent.title() ?: option.note.dTag()
-                    } else {
-                        option.note.dTag()
+                    when (noteEvent) {
+                        is PeopleListEvent -> {
+                            noteEvent.nameOrTitle() ?: option.note.dTag()
+                        }
+
+                        is FollowListEvent -> {
+                            noteEvent.title() ?: option.note.dTag()
+                        }
+
+                        else -> {
+                            option.note.dTag()
+                        }
                     }
 
                 Text(text = name, color = MaterialTheme.colorScheme.onSurface)
@@ -278,7 +304,7 @@ fun RenderOption(
             ) {
                 val it by observeNote(option.note, accountViewModel)
 
-                Text(text = "/n/${((it?.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
+                Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

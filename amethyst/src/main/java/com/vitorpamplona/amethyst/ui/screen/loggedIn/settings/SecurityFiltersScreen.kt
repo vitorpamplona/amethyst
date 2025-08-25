@@ -68,6 +68,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
+import com.vitorpamplona.amethyst.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -75,8 +77,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel

@@ -54,9 +54,9 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
+import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.checkifItNeedsToRequestNotificationPermission
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes

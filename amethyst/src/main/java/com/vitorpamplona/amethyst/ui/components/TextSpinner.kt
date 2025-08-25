@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -50,22 +50,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun TextSpinner(
-    label: String?,
+    modifier: Modifier = Modifier,
+    label: String? = null,
     placeholder: String,
     options: ImmutableList<TitleExplainer>,
     onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    TextSpinner(
+    BaseTextSpinner(
         placeholder,
         options,
         onSelect,
@@ -90,10 +98,36 @@ fun TextSpinner(
     modifier: Modifier = Modifier,
     mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit,
 ) {
+    BaseTextSpinner(
+        placeholder = placeholder,
+        options = options,
+        onSelect = onSelect,
+        modifier = modifier,
+        mainElement = mainElement,
+    )
+}
+
+@Composable
+private fun BaseTextSpinner(
+    placeholder: String,
+    options: ImmutableList<TitleExplainer>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    mainElement: @Composable (currentOption: String, modifier: Modifier) -> Unit,
+) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     var optionsShowing by remember { mutableStateOf(false) }
     var currentText by remember(placeholder) { mutableStateOf(placeholder) }
+
+    val accessibilityDescription =
+        if (currentText == placeholder) {
+            "Dropdown menu, $placeholder, not selected"
+        } else {
+            "Dropdown menu, $currentText selected"
+        }
+
+    val openDropdownLabel = stringRes(R.string.open_dropdown_menu)
 
     Box(
         modifier = modifier,
@@ -105,13 +139,23 @@ fun TextSpinner(
         )
         Box(
             modifier =
-                Modifier.matchParentSize().clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                ) {
-                    optionsShowing = true
-                    focusRequester.requestFocus()
-                },
+                Modifier
+                    .matchParentSize()
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                    ) {
+                        optionsShowing = true
+                        focusRequester.requestFocus()
+                    }.semantics {
+                        role = Role.DropdownList
+                        stateDescription = accessibilityDescription
+                        onClick(label = openDropdownLabel) {
+                            optionsShowing = true
+                            focusRequester.requestFocus()
+                            return@onClick true
+                        }
+                    },
         )
     }
 
@@ -187,8 +231,17 @@ fun <T> SpinnerSelectionDialog(
                     }
                 }
                 itemsIndexed(options) { index, item ->
+                    val optionsOfLabel = stringRes(R.string.option_of, index + 1, options.size)
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { onSelect(index) }.padding(16.dp, 16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(index) }
+                                .padding(16.dp, 16.dp)
+                                .semantics {
+                                    role = Role.Button
+                                    contentDescription = optionsOfLabel
+                                },
                     ) {
                         Column { onRenderItem(item) }
                     }
