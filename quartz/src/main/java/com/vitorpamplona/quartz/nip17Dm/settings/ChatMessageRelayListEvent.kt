@@ -68,11 +68,8 @@ class ChatMessageRelayListEvent(
             val tags =
                 earlierVersion.tags
                     .filter(RelayTag::notMatch)
-                    .plus(
-                        relays.map {
-                            RelayTag.assemble(it)
-                        },
-                    ).toTypedArray()
+                    .plus(relays.map { RelayTag.assemble(it) })
+                    .toTypedArray()
 
             return signer.sign(createdAt, KIND, tags, earlierVersion.content)
         }

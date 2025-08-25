@@ -33,7 +33,7 @@ class RelayTag {
         fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
-        fun notMatch(tag: Array<String>) = tag.has(0) && tag[0] == TAG_NAME
+        fun notMatch(tag: Array<String>) = !(tag.has(0) && tag[0] == TAG_NAME)
 
         @JvmStatic
         fun parse(tag: Array<String>): NormalizedRelayUrl? {
