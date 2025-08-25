@@ -38,7 +38,7 @@ class AdvertisedRelayInfo(
 
         fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
-        fun notMatch(tag: Array<String>) = !match(tag)
+        fun notMatch(tag: Array<String>) = !(tag.has(0) && tag[0] == TAG_NAME)
 
         @JvmStatic
         fun parse(tag: Array<String>): AdvertisedRelayInfo? {

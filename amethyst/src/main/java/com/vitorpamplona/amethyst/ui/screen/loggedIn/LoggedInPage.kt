@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,11 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -43,6 +47,7 @@ import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -51,7 +56,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.Discove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @Composable
@@ -140,15 +144,31 @@ fun ManageRelayServices(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun NotificationRegistration(accountViewModel: AccountViewModel) {
-    val scope = rememberCoroutineScope()
-    var job = remember<Job?> { null }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val scope = rememberCoroutineScope()
 
-    LifecycleResumeEffect(key1 = accountViewModel) {
-        Log.d("RegisterAccounts", "Registering for push notifications")
-        job?.cancel()
-        job =
+        val notificationPermissionState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+
+        if (notificationPermissionState.status.isGranted) {
+            LifecycleResumeEffect(key1 = accountViewModel, notificationPermissionState.status.isGranted) {
+                Log.d("RegisterAccounts", "Registering for push notifications $notificationPermissionState")
+                scope.launch {
+                    PushNotificationUtils.checkAndInit(
+                        LocalPreferences.allSavedAccounts(),
+                        accountViewModel::okHttpClientForTrustedRelays,
+                    )
+                }
+
+                onPauseOrDispose {}
+            }
+        }
+    } else {
+        // no need for push permissions before 33
+        LifecycleResumeEffect(key1 = accountViewModel) {
+            Log.d("RegisterAccounts", "Registering for push notifications")
             scope.launch {
                 PushNotificationUtils.checkAndInit(
                     LocalPreferences.allSavedAccounts(),
@@ -156,8 +176,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
                 )
             }
 
-        onPauseOrDispose {
-            job.cancel()
+            onPauseOrDispose {}
         }
     }
 }
