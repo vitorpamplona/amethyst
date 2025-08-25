@@ -162,7 +162,7 @@
     <string name="new_requests">Nowe Kontakty</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
-    <string name="conversations">Konwersacje</string>
+    <string name="conversations">Komentarze</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
     <string name="mutual">Twoje</string>
@@ -572,9 +572,9 @@
     <string name="are_you_sure_you_want_to_log_out">Wylogowanie usuwa wszystkie informacje lokalne. Upewnij się, że masz kopię zapasową kluczy prywatnych, aby uniknąć utraty konta. Czy chcesz kontynuować?</string>
     <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
-    <string name="discover_follows">Obserwowani</string>
-    <string name="discover_reads">Wyświetlenia</string>
-    <string name="discover_content_v2">Algorytmy kanału</string>
+    <string name="discover_follows">Godne uwagi</string>
+    <string name="discover_reads">Popularne</string>
+    <string name="discover_content_v2">Wybrane przez algorytm</string>
     <string name="discover_marketplace">Market</string>
     <string name="discover_live_v2">Transmisja na żywo</string>
     <string name="discover_community_v2">Społeczności</string>
@@ -1009,4 +1009,6 @@
     <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
     <string name="dont_translate_from">Nie tłumacz z</string>
     <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>
+    <string name="pause">Pauza</string>
+    <string name="play">Odtwórz</string>
 </resources>
