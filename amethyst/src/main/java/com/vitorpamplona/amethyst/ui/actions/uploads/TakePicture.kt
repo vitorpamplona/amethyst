@@ -136,13 +136,18 @@ fun PictureButton(onClick: () -> Unit) {
     }
 }
 
-fun getPhotoUri(context: Context): Uri {
+private fun getMediaUri(
+    context: Context,
+    directory: String,
+    filePrefix: String,
+    fileExtension: String,
+): Uri {
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    val storageDir: File? = context.getExternalFilesDir(directory)
     return File
         .createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
+            "${filePrefix}_${timeStamp}_",
+            fileExtension,
             storageDir,
         ).let {
             FileProvider.getUriForFile(
@@ -152,3 +157,19 @@ fun getPhotoUri(context: Context): Uri {
             )
         }
 }
+
+fun getPhotoUri(context: Context): Uri =
+    getMediaUri(
+        context,
+        Environment.DIRECTORY_PICTURES,
+        "JPEG",
+        ".jpg",
+    )
+
+fun getVideoUri(context: Context): Uri =
+    getMediaUri(
+        context,
+        Environment.DIRECTORY_MOVIES,
+        "VIDEO",
+        ".mp4",
+    )
