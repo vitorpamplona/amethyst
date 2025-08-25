@@ -167,7 +167,7 @@ class EventNotificationConsumer(
 
                     // this is not verifiable
                     if (LocalCache.justConsume(inner, null, true)) {
-                        event
+                        inner
                     } else {
                         null
                     }
