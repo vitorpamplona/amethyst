@@ -240,6 +240,7 @@ fun NoteCompose(
     WatchNoteEvent(
         baseNote = baseNote,
         accountViewModel = accountViewModel,
+        nav,
         modifier,
     ) {
         CheckHiddenFeedWatchBlockAndReport(
@@ -312,7 +313,7 @@ fun AcceptableNote(
                 }
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         modifier = modifier,
@@ -356,9 +357,9 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         modifier = modifier,

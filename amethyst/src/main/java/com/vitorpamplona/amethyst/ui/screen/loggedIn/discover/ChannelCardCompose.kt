@@ -62,7 +62,7 @@ fun ChannelCardCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
         if (forceEventKind == null || baseNote.event?.kind == forceEventKind) {
             CheckHiddenFeedWatchBlockAndReport(
                 note = baseNote,
@@ -94,7 +94,7 @@ fun NormalChannelCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+    LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
         CheckNewAndRenderChannelCard(
             baseNote,
             routeForLastRead,

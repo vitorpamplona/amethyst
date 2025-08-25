@@ -395,6 +395,7 @@ fun NoteMaster(
     WatchNoteEvent(
         baseNote = baseNote,
         accountViewModel = accountViewModel,
+        nav,
         modifier,
     ) {
         CheckHiddenFeedWatchBlockAndReport(
@@ -405,7 +406,7 @@ fun NoteMaster(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+            LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
                 FullBleedNoteCompose(
                     baseNote,
                     modifier

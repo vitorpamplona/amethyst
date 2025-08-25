@@ -97,7 +97,7 @@ fun ChatroomMessageCompose(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
         WatchBlockAndReport(
             note = baseNote,
             showHiddenWarning = false,

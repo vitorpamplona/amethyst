@@ -82,7 +82,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -142,6 +141,7 @@ val externalLinkForNote = { note: Note ->
 fun LongPressToQuickAction(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
     content: @Composable (() -> Unit) -> Unit,
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
@@ -153,7 +153,7 @@ fun LongPressToQuickAction(
             note = baseNote,
             onDismiss = { popupExpanded.value = false },
             accountViewModel = accountViewModel,
-            nav = EmptyNav,
+            nav = nav,
         )
     }
 }
