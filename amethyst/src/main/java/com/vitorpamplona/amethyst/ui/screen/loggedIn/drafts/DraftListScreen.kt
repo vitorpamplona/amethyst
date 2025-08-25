@@ -38,32 +38,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteContainer
+import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys.DRAFTS
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -74,42 +69,16 @@ fun DraftListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val draftFeedViewModel: DraftEventsFeedViewModel =
-        viewModel(
-            key = "NostrDraftEventsFeedViewModel",
-            factory = DraftEventsFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    RenderDraftListScreen(draftFeedViewModel, accountViewModel, nav)
+    RenderDraftListScreen(accountViewModel.feedStates.drafts, accountViewModel, nav)
 }
 
 @Composable
 private fun RenderDraftListScreen(
-    feedViewModel: DraftEventsFeedViewModel,
+    feedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    LaunchedEffect(feedViewModel) {
-        feedViewModel.invalidateData()
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("DraftList Start")
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("DraftList Stop")
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedState)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -119,15 +88,15 @@ private fun RenderDraftListScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it).fillMaxHeight()) {
-            RefresheableBox(feedViewModel) {
-                SaveableFeedState(feedViewModel.feedState, DRAFTS) { listState ->
-                    RenderFeedState(
-                        viewModel = feedViewModel,
+            RefresheableBox(feedState) {
+                SaveableFeedState(feedState, DRAFTS) { listState ->
+                    RenderFeedContentState(
+                        feedContentState = feedState,
                         accountViewModel = accountViewModel,
                         listState = listState,
                         nav = nav,
                         routeForLastRead = null,
-                        onLoaded = { DraftFeedLoaded(it, listState, null, accountViewModel, nav) },
+                        onLoaded = { DraftFeedLoaded(it, listState, accountViewModel, nav) },
                     )
                 }
             }
@@ -140,7 +109,6 @@ private fun RenderDraftListScreen(
 private fun DraftFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -207,7 +175,7 @@ private fun DraftFeedLoaded(
                     NoteCompose(
                         item,
                         modifier = MaterialTheme.colorScheme.maxWidthWithBackground,
-                        routeForLastRead = routeForLastRead,
+                        routeForLastRead = null,
                         isBoostedNote = false,
                         isHiddenFeed = items.showHidden,
                         quotesLeft = 3,

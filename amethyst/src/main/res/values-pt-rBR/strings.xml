@@ -247,8 +247,8 @@
     <string name="tor_relay">Forçar uso do Tor ao conectar</string>
     <string name="posts_received">postagens recebidas</string>
     <string name="remove">Remover</string>
-    <string name="translations_auto">Automaticamente </string>
-    <string name="translations_translated_from">traduzido de </string>
+    <string name="translations_auto">Autotraduzido </string>
+    <string name="translations_translated_from"> de </string>
     <string name="translations_to">para</string>
     <string name="translations_show_in_lang_first">Mostrar em %1$s primeiro</string>
     <string name="chat_about_topic">Chat público sobre %1$s</string>
@@ -1010,4 +1010,9 @@
     <string name="search_by_hashtag">Pesquisar hashtag: #%1$s</string>
     <string name="dont_translate_from">Não Traduzir de</string>
     <string name="dont_translate_from_description">Os idiomas mostrados aqui não serão traduzidos. Selecione um idioma para removê-lo e traduzi-lo novamente.</string>
+    <string name="pause">Pausar</string>
+    <string name="play">Reproduzir</string>
+    <string name="option_of">Opção %1$s de %2$s</string>
+    <string name="feed_filter_selected">Filtro de feed, %1$s selecionado</string>
+    <string name="feed_filter_select_an_option">Filtro de feed, %1$s</string>
 </resources>

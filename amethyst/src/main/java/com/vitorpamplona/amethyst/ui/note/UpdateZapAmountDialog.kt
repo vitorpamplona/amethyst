@@ -81,12 +81,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
 
 @Composable
 fun UpdateZapAmountDialog(
@@ -536,7 +535,7 @@ fun authenticate(
     fun keyguardPrompt() {
         val intent =
             keyguardManager.createConfirmDeviceCredentialIntent(
-                stringRes(context, R.string.app_name_release),
+                stringRes(context, R.string.app_name),
                 title,
             )
 
@@ -556,7 +555,7 @@ fun authenticate(
     val promptInfo =
         BiometricPrompt.PromptInfo
             .Builder()
-            .setTitle(stringRes(context, R.string.app_name_release))
+            .setTitle(stringRes(context, R.string.app_name))
             .setSubtitle(title)
             .setAllowedAuthenticators(authenticators)
             .build()

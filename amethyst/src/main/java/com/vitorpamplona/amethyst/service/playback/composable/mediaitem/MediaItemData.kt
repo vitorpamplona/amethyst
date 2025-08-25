@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.compose.runtime.Immutable
 import androidx.media3.common.MediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 
 @Immutable
 data class MediaItemData(
@@ -33,6 +34,8 @@ data class MediaItemData(
     val mimeType: String? = null,
     val aspectRatio: Float? = null,
     val proxyPort: Int? = null,
+    val keepPlaying: Boolean = true,
+    val waveformData: WaveformData? = null,
 )
 
 @Immutable

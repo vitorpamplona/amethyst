@@ -48,7 +48,7 @@ fun filterNip04DMs(
         val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
 
         val outbox =
-            authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
+            authorHomeRelayEvent?.writeRelaysNorm()
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
                 ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
 

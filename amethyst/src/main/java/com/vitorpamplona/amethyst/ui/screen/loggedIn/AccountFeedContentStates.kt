@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivitie
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.DiscoverCommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.DiscoverMarketplaceFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
@@ -68,6 +69,8 @@ class AccountFeedContentStates(
 
     val feedListOptions = FollowListState(accountViewModel.account, accountViewModel.viewModelScope)
 
+    val drafts = FeedContentState(DraftEventsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+
     suspend fun init() {
         notificationSummary.initializeSuspend()
         feedListOptions.initializeSuspend()
@@ -97,6 +100,8 @@ class AccountFeedContentStates(
         notificationSummary.invalidateInsertData(newNotes)
 
         feedListOptions.updateFeedWith(newNotes)
+
+        drafts.updateFeedWith(newNotes)
     }
 
     fun destroy() {

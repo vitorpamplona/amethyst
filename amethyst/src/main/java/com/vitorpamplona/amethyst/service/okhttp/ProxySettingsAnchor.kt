@@ -38,5 +38,6 @@ class ProxySettingsAnchor {
             ),
         )
 
+    var isDM: (NormalizedRelayUrl) -> Boolean = { it in flow.value.value.dmRelayList }
     var useProxy: (NormalizedRelayUrl) -> Boolean = { flow.value.value.useTor(it) }
 }

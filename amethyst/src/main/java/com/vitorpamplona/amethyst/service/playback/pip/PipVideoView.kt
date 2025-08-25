@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -42,8 +43,11 @@ import androidx.media3.ui.PlayerView
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.components.getActivity
+import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
 
 @Composable
 fun PipVideo() {
@@ -69,7 +73,7 @@ fun PipVideo() {
     videoData?.let {
         GetMediaItem(it) { mediaItem ->
             GetVideoController(mediaItem, false) { controller ->
-                PipVideo(controller)
+                PipVideo(controller, it.waveformData)
             }
         }
     }
@@ -77,7 +81,10 @@ fun PipVideo() {
 
 @OptIn(UnstableApi::class)
 @Composable
-fun PipVideo(controller: MediaControllerState) {
+fun PipVideo(
+    controller: MediaControllerState,
+    waveformData: WaveformData?,
+) {
     DisposableEffect(controller) {
         BackgroundMedia.switchKeepPlaying(controller)
         onDispose {
@@ -117,5 +124,9 @@ fun PipVideo(controller: MediaControllerState) {
                 }
             },
         )
+
+        Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
+            waveformData?.let { Waveform(it, controller, Modifier) }
+        }
     }
 }

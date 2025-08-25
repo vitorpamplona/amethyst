@@ -142,22 +142,19 @@ fun NewProductScreen(
                 titleRes = R.string.new_product,
                 isActive = postViewModel::canPost,
                 onCancel = {
-                    try {
-                        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                            postViewModel.sendDraftSync()
-                            nav.popBack()
-                            postViewModel.cancel()
-                        }
-                    } catch (e: SignerExceptions.ReadOnlyException) {
-                        // do nothing.
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.runIOCatching {
+                        postViewModel.sendDraftSync()
+                        postViewModel.cancel()
                     }
+                    nav.popBack()
                 },
                 onPost = {
                     try {
                         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
                             postViewModel.sendPostSync()
                             nav.popBack()
-                            postViewModel.cancel()
                         }
                     } catch (e: SignerExceptions.ReadOnlyException) {
                         accountViewModel.toastManager.toast(

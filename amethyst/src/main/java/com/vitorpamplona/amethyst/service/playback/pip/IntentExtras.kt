@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
+import android.R.attr.data
 import android.graphics.Rect
 import android.os.Bundle
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -58,6 +60,8 @@ class IntentExtras {
                 mimeType = intent.getString("mimeType"),
                 aspectRatio = if (ratio > 0) ratio else null,
                 proxyPort = if (port > 0) port else null,
+                keepPlaying = intent.getBoolean("keepPlaying", true),
+                waveformData = intent.getFloatArray("wavefrontData")?.toList()?.let { WaveformData(it) },
             )
         }
 
@@ -74,6 +78,8 @@ class IntentExtras {
                 data.mimeType?.let { putString("mimeType", it) }
                 data.aspectRatio?.let { putFloat("aspectRatio", it) }
                 data.proxyPort?.let { putInt("proxyPort", it) }
+                data.keepPlaying.let { putBoolean("keepPlaying", it) }
+                data.waveformData?.let { putFloatArray("wavefrontData", it.wave.toFloatArray()) }
 
                 bounds?.let { putInt("boundLeft", it.left) }
                 bounds?.let { putInt("boundRight", it.right) }

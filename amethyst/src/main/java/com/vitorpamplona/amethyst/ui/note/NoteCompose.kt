@@ -240,6 +240,7 @@ fun NoteCompose(
     WatchNoteEvent(
         baseNote = baseNote,
         accountViewModel = accountViewModel,
+        nav,
         modifier,
     ) {
         CheckHiddenFeedWatchBlockAndReport(
@@ -312,7 +313,7 @@ fun AcceptableNote(
                 }
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         modifier = modifier,
@@ -356,9 +357,9 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote, accountViewModel)
             else ->
-                LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+                LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
                         modifier = modifier,
@@ -798,7 +799,7 @@ private fun RenderNoteRow(
         is VideoNormalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is VideoShortEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
-        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, accountViewModel, nav)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(

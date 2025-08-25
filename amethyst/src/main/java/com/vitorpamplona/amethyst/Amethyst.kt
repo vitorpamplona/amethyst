@@ -82,8 +82,28 @@ class Amethyst : Application() {
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
 
-    // creates okHttpClients based on the conditions of the connection and tor status
+    // manages all the other connections separately from relays.
     val okHttpClients =
+        DualHttpClientManager(
+            userAgent = appAgent,
+            proxyPortProvider = torManager.activePortOrNull,
+            isMobileDataProvider = connManager.isMobileOrNull,
+            keyCache = keyCache,
+            scope = applicationIOScope,
+        )
+
+    // manages all relay connections
+    val okHttpClientForRelays =
+        DualHttpClientManager(
+            userAgent = appAgent,
+            proxyPortProvider = torManager.activePortOrNull,
+            isMobileDataProvider = connManager.isMobileOrNull,
+            keyCache = keyCache,
+            scope = applicationIOScope,
+        )
+
+    // manages all relay connections
+    val okHttpClientForRelaysForDms =
         DualHttpClientManager(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
@@ -97,7 +117,11 @@ class Amethyst : Application() {
     // Connects the NostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
-            okHttpClients.getHttpClient(torProxySettingsAnchor.useProxy(url))
+            if (torProxySettingsAnchor.isDM(url)) {
+                okHttpClientForRelaysForDms.getHttpClient(torProxySettingsAnchor.useProxy(url))
+            } else {
+                okHttpClientForRelays.getHttpClient(torProxySettingsAnchor.useProxy(url))
+            }
         }
 
     // Caches all events in Memory

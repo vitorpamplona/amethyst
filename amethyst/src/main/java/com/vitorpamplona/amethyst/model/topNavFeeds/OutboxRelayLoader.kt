@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 
 class OutboxRelayLoader {
@@ -49,8 +51,9 @@ class OutboxRelayLoader {
 
                     if (authorHex != null) {
                         val relays =
-                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.ifEmpty { null }
-                                ?: cache.relayHints.hintsForKey(authorHex)
+                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()
+                                ?: cache.relayHints.hintsForKey(authorHex).ifEmpty { null }
+                                ?: Constants.eventFinderRelays
 
                         relays.forEach {
                             add(it, authorHex)
@@ -86,8 +89,12 @@ class OutboxRelayLoader {
                     note.flow().metadata.stateFlow
                 }
 
-            return combine(noteMetadataFlows) { outboxRelays ->
-                transformation(authorsPerRelay(outboxRelays, cache))
+            return if (noteMetadataFlows.isEmpty()) {
+                MutableStateFlow(transformation(emptyMap()))
+            } else {
+                combine(noteMetadataFlows) { outboxRelays ->
+                    transformation(authorsPerRelay(outboxRelays, cache))
+                }
             }
         }
     }

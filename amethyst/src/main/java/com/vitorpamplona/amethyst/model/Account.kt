@@ -214,6 +214,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -1158,11 +1159,25 @@ class Account(
         return event
     }
 
-    suspend fun createAndSendDraft(
+    suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
         broadcast: Set<Event> = emptySet(),
     ) {
+        try {
+            createAndSendDraftInner(draftTag, template, broadcast)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+        }
+    }
+
+    suspend fun createAndSendDraftInner(
+        draftTag: String,
+        template: EventTemplate<out Event>,
+        broadcast: Set<Event> = emptySet(),
+    ) {
+        if (!isWriteable()) return
+
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
         val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
@@ -1180,7 +1195,17 @@ class Account(
         }
     }
 
-    suspend fun deleteDraft(draftTag: String) {
+    suspend fun deleteDraftIgnoreErrors(draftTag: String) {
+        try {
+            deleteDraftInner(draftTag)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+        }
+    }
+
+    suspend fun deleteDraftInner(draftTag: String) {
+        if (!isWriteable()) return
+
         val extraRelays = cache.getAddressableNoteIfExists(DraftWrapEvent.createAddressTag(signer.pubKey, draftTag))?.relays ?: emptyList()
 
         val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
@@ -1307,7 +1332,7 @@ class Account(
             }
 
         if (draftTag != null) {
-            createAndSendDraft(draftTag, template)
+            createAndSendDraftIgnoreErrors(draftTag, template)
         } else {
             val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)
@@ -1352,7 +1377,7 @@ class Account(
         val broadcastNotes = mapEntitiesToNotes(quotes).toSet()
 
         if (draftTag != null) {
-            createAndSendDraft(draftTag, template)
+            createAndSendDraftIgnoreErrors(draftTag, template)
         } else {
             val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)

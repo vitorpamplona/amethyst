@@ -317,12 +317,14 @@ open class CommentPostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.deleteDraft(version)
+        accountViewModel.viewModelScope.launch {
+            accountViewModel.account.deleteDraftIgnoreErrors(version)
+        }
     }
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
-            accountViewModel.account.deleteDraft(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
@@ -331,7 +333,7 @@ open class CommentPostViewModel :
             }
 
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
         }
     }
 

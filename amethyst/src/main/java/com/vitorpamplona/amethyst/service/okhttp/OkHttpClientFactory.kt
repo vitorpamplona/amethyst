@@ -73,13 +73,12 @@ class OkHttpClientFactory(
         userAgent: String,
     ): OkHttpClient {
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
-        val duration = Duration.ofSeconds(seconds.toLong())
         return rootClient
             .newBuilder()
             .proxy(proxy)
-            .readTimeout(duration)
-            .connectTimeout(duration)
-            .writeTimeout(duration)
+            .connectTimeout(Duration.ofSeconds(seconds.toLong()))
+            .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
+            .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)

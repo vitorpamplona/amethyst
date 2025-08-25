@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name_release" translatable="false">Amethyst</string>
+    <string name="app_name" translatable="false">Amethyst</string>
     <string name="app_name_debug" translatable="false">Amy Debug</string>
     <string name="app_name_benchmark" translatable="false">Amy Benchmark</string>
     <string name="point_to_the_qr_code">Point to the QR Code</string>
@@ -1230,4 +1230,10 @@
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
+    <string name="pause">Pause</string>
+    <string name="play">Play</string>
+    <string name="open_dropdown_menu">Open dropdown menu</string>
+    <string name="option_of">Option %1$s of %2$s</string>
+    <string name="feed_filter_selected">Feed filter, %1$s selected</string>
+    <string name="feed_filter_select_an_option">Feed filter, %1$s</string>
 </resources>

@@ -175,10 +175,9 @@ fun NewGroupDMScreen(
                     // function when the postViewModel is released
                     accountViewModel.runIOCatching {
                         postViewModel.sendDraftSync()
-                        delay(100)
-                        nav.popBack()
                         postViewModel.cancel()
                     }
+                    nav.popBack()
                 },
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
@@ -188,7 +187,6 @@ fun NewGroupDMScreen(
                         postViewModel.room?.let {
                             nav.nav(routeToMessage(it, null, null, null, accountViewModel))
                         }
-                        postViewModel.cancel()
                     }
                     nav.popBack()
                 },

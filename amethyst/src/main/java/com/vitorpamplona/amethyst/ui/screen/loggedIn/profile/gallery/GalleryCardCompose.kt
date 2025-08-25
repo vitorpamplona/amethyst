@@ -47,7 +47,7 @@ fun GalleryCardCompose(
     nav: INav,
     ratio: Float = 1.0f,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, shortPreview = true) {
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav, shortPreview = true) {
         CheckHiddenFeedWatchBlockAndReport(
             note = baseNote,
             modifier = modifier,

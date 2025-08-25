@@ -132,7 +132,7 @@ fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel,
 ) {
-    val isFollowingTag by observeUserIsFollowingGeohash(accountViewModel.userProfile(), tag, accountViewModel)
+    val isFollowingTag by observeUserIsFollowingGeohash(tag, accountViewModel)
 
     if (isFollowingTag) {
         UnfollowButton {

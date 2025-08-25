@@ -104,19 +104,21 @@ open class NewProductViewModel :
     IZapRaiser {
     val draftTag = DraftTagState()
 
+    var accountViewModel: AccountViewModel? = null
+    var account: Account? = null
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    sendDraftSync()
+                    accountViewModel?.runIOCatching {
+                        sendDraftSync()
+                    }
                 }
             }
         }
     }
-
-    var accountViewModel: AccountViewModel? = null
-    var account: Account? = null
 
     var productImages by mutableStateOf<List<ProductImageMeta>>(emptyList())
     val iMetaDescription = IMetaAttachments()
@@ -288,26 +290,26 @@ open class NewProductViewModel :
     }
 
     suspend fun sendPostSync() {
+        val accountViewModel = accountViewModel ?: return
         val template = createTemplate() ?: return
 
-        accountViewModel?.account?.signAndSendPrivatelyOrBroadcast(
-            template,
-            relayList = { relayList },
-        )
-
-        accountViewModel?.deleteDraft(draftTag.current)
-
+        val version = draftTag.current
         cancel()
+
+        accountViewModel.account.signAndSendPrivatelyOrBroadcast(template, relayList = { relayList })
+        accountViewModel.viewModelScope.launch {
+            accountViewModel.account.deleteDraftIgnoreErrors(version)
+        }
     }
 
     suspend fun sendDraftSync() {
         val accountViewModel = accountViewModel ?: return
 
         if (message.text.isBlank()) {
-            accountViewModel.account.deleteDraft(draftTag.current)
+            accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
         } else {
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag.current, template)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 

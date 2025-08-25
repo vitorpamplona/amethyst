@@ -395,6 +395,7 @@ fun NoteMaster(
     WatchNoteEvent(
         baseNote = baseNote,
         accountViewModel = accountViewModel,
+        nav,
         modifier,
     ) {
         CheckHiddenFeedWatchBlockAndReport(
@@ -405,7 +406,7 @@ fun NoteMaster(
             accountViewModel = accountViewModel,
             nav = nav,
         ) { canPreview ->
-            LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
+            LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
                 FullBleedNoteCompose(
                     baseNote,
                     modifier
@@ -552,7 +553,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is PictureEvent) {
                     PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
                 } else if (noteEvent is BaseVoiceEvent) {
-                    VoiceHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
+                    VoiceHeader(noteEvent, baseNote, accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
                     FileHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {

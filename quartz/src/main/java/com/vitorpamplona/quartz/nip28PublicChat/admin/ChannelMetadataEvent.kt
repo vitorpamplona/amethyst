@@ -66,7 +66,7 @@ class ChannelMetadataEvent(
 
         val newInfo =
             try {
-                if (isEncrypted()) {
+                if (content.isEmpty() || !content.startsWith("{") || isEncrypted()) {
                     ChannelDataNorm()
                 } else {
                     ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()

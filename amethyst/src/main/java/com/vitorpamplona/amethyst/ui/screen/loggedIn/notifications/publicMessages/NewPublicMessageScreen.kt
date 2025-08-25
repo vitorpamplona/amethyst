@@ -138,10 +138,9 @@ fun NewPublicMessageScreen(
                     // function when the postViewModel is released
                     accountViewModel.runIOCatching {
                         postViewModel.sendDraftSync()
-                        delay(100)
-                        nav.popBack()
                         postViewModel.cancel()
                     }
+                    nav.popBack()
                 },
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
@@ -149,9 +148,7 @@ fun NewPublicMessageScreen(
                     accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
                         nav.popBack()
-                        postViewModel.cancel()
                     }
-                    nav.popBack()
                 },
             )
         },

@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -36,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun WatchNoteEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
     shortPreview: Boolean = false,
     onNoteEventFound: @Composable () -> Unit,
@@ -47,6 +50,7 @@ fun WatchNoteEvent(
             LongPressToQuickAction(
                 baseNote = baseNote,
                 accountViewModel = accountViewModel,
+                nav = nav,
             ) { showPopup ->
                 BlankNote(
                     remember {

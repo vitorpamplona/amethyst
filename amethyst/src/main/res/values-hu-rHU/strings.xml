@@ -1012,4 +1012,6 @@
     <string name="search_by_hashtag">Hashtag keresése: #%1$s</string>
     <string name="dont_translate_from">Innentől NE fordítsa le</string>
     <string name="dont_translate_from_description">Az itt látható nyelvek nem lesznek lefordítva. Az eltávolításához és az újbóli fordításhoz válasszon ki egy nyelvet.</string>
+    <string name="pause">Szüneteltetés</string>
+    <string name="play">Lejátszás</string>
 </resources>

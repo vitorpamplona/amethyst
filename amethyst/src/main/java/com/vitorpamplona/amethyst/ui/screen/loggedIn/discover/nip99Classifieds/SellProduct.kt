@@ -50,9 +50,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -211,7 +211,7 @@ fun SellProduct(postViewModel: NewProductViewModel) {
                 }
 
             TextSpinner(
-                placeholder = conditionTypes.filter { it.first == postViewModel.condition }.first().second,
+                placeholder = conditionTypes.first { it.first == postViewModel.condition }.second,
                 options = conditionOptions,
                 onSelect = {
                     postViewModel.updateCondition(conditionTypes[it].first)

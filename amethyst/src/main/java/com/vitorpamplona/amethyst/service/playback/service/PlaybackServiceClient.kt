@@ -60,6 +60,7 @@ object PlaybackServiceClient {
         mediaControllerState: MediaControllerState,
         videoUri: String,
         proxyPort: Int? = 0,
+        keepPlaying: Boolean = true,
         context: Context,
         onReady: (MediaControllerState) -> Unit,
     ) {
@@ -73,6 +74,7 @@ object PlaybackServiceClient {
                     // link the id with the client's id to make sure it can return the
                     // same session on background media.
                     putString("id", mediaControllerState.id)
+                    putBoolean("keepPlaying", keepPlaying)
                     proxyPort?.let {
                         putInt("proxyPort", it)
                     }

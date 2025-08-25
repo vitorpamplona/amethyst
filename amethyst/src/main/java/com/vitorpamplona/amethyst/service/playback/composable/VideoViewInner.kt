@@ -55,14 +55,16 @@ fun VideoViewInner(
     val muted = remember(videoUri) { DEFAULT_MUTED_SETTING.value }
 
     GetMediaItem(
-        videoUri,
-        title,
-        artworkUri,
-        authorName,
-        nostrUriCallback,
-        mimeType,
-        aspectRatio,
+        videoUri = videoUri,
+        title = title,
+        artworkUri = artworkUri,
+        authorName = authorName,
+        callbackUri = nostrUriCallback,
+        mimeType = mimeType,
+        aspectRatio = aspectRatio,
         proxyPort = accountViewModel.proxyPortFor(videoUri),
+        keepPlaying = true,
+        waveformData = waveform,
     ) { mediaItem ->
         GetVideoController(
             mediaItem = mediaItem,
@@ -76,7 +78,6 @@ fun VideoViewInner(
                     thumbData = thumb,
                     showControls = showControls,
                     contentScale = contentScale,
-                    waveform = waveform,
                     borderModifier = borderModifier,
                     videoModifier = videoModifier,
                     onControllerVisibilityChanged = onControllerVisibilityChanged,

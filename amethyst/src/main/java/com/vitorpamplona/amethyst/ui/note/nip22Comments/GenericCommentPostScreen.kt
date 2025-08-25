@@ -45,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -86,7 +85,6 @@ import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -144,16 +142,16 @@ fun GenericCommentPostScreen(
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.runIOCatching {
                         postViewModel.sendDraftSync()
-                        nav.popBack()
                         postViewModel.cancel()
                     }
+                    nav.popBack()
                 },
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
                         nav.popBack()
                     }

@@ -98,7 +98,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -174,7 +173,6 @@ private fun NewPostScreenInner(
                     // function when the postViewModel is released
                     accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
-                        delay(100)
                         nav.popBack()
                     }
                 },
@@ -183,9 +181,9 @@ private fun NewPostScreenInner(
                     // function when the postViewModel is released
                     accountViewModel.runIOCatching {
                         postViewModel.sendDraftSync()
-                        nav.popBack()
                         postViewModel.cancel()
                     }
+                    nav.popBack()
                 },
             )
         },

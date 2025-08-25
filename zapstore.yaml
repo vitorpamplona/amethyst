@@ -6,16 +6,12 @@ amethyst:
     builder: npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0
     repository: https://github.com/vitorpamplona/amethyst
     artifacts:
-      - amethyst-fdroid-arm64-v8a-v%v.apk
-      - amethyst-fdroid-armeabi-v7a-v%v.apk
-      - amethyst-fdroid-universal-v%v.apk
-      - amethyst-fdroid-x86-v%v.apk
-      - amethyst-fdroid-x86_64-v%v.apk
       - amethyst-googleplay-arm64-v8a-v%v.apk
       - amethyst-googleplay-armeabi-v7a-v%v.apk
       - amethyst-googleplay-universal-v%v.apk
       - amethyst-googleplay-x86-v%v.apk
       - amethyst-googleplay-x86_64-v%v.apk
+
 
 
 

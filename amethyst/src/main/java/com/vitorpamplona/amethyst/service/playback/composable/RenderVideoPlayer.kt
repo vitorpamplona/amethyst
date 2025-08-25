@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.composable
 
 import android.content.Context
 import android.view.View
+import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -49,7 +50,6 @@ fun RenderVideoPlayer(
     thumbData: VideoThumb?,
     showControls: Boolean = true,
     contentScale: ContentScale,
-    waveform: WaveformData? = null,
     borderModifier: Modifier,
     videoModifier: Modifier,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
@@ -64,6 +64,13 @@ fun RenderVideoPlayer(
             factory = { context: Context ->
                 PlayerView(context).apply {
                     player = controllerState.controller
+                    // if we alrady know the size of the frame, this forces the player to stay in the size
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                        )
+
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
@@ -101,7 +108,7 @@ fun RenderVideoPlayer(
             },
         )
 
-        waveform?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
+        mediaItem.src.waveformData?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
 
         if (showControls) {
             RenderControlButtons(

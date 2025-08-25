@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 
 val mediaItemCache = MediaItemCache()
 
@@ -37,6 +38,8 @@ fun GetMediaItem(
     mimeType: String? = null,
     aspectRatio: Float? = null,
     proxyPort: Int? = null,
+    keepPlaying: Boolean = false,
+    waveformData: WaveformData? = null,
     inner: @Composable (LoadedMediaItem) -> Unit,
 ) {
     val data =
@@ -50,6 +53,8 @@ fun GetMediaItem(
                 mimeType = mimeType,
                 aspectRatio = aspectRatio,
                 proxyPort = proxyPort,
+                keepPlaying = keepPlaying,
+                waveformData = waveformData,
             )
         }
 
