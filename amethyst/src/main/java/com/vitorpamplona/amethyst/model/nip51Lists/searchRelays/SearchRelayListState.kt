@@ -57,15 +57,27 @@ class SearchRelayListState(
 
     fun getSearchRelayList(): SearchRelayListEvent? = getSearchRelayListNote().event as? SearchRelayListEvent
 
-    suspend fun normalizeSearchRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
-        val event = note.event as? SearchRelayListEvent ?: settings.backupSearchRelayList
-        return event?.let { decryptionCache.relays(it) } ?: DefaultSearchRelayList
-    }
+    fun searchListEvent(note: Note) = note.event as? SearchRelayListEvent ?: settings.backupSearchRelayList
+
+    suspend fun normalizeSearchRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) }?.ifEmpty { null } ?: DefaultSearchRelayList
+
+    suspend fun normalizeSearchRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
     val flow =
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackup(it.note) }
             .onStart { emit(normalizeSearchRelayListWithBackup(getSearchRelayListNote())) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Companion.Eagerly,
+                emptySet(),
+            )
+
+    val flowNoDefaults =
+        getSearchRelayListFlow()
+            .map { normalizeSearchRelayListWithBackupNoDefaults(it.note) }
+            .onStart { emit(normalizeSearchRelayListWithBackupNoDefaults(getSearchRelayListNote())) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

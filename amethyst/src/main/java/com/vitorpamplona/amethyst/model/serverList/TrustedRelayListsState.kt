@@ -52,11 +52,11 @@ class TrustedRelayListsState(
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
             listOf(
-                nip65RelayList.allFlow,
+                nip65RelayList.allFlowNoDefaults,
                 privateOutboxRelayList.flow,
                 localRelayList.flow,
                 dmRelayList.flow,
-                searchRelayListState.flow,
+                searchRelayListState.flowNoDefaults,
                 trustedRelayList.flow,
                 broadcastRelayList.flow,
             ),
