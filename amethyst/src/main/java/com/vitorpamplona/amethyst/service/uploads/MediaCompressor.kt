@@ -84,14 +84,14 @@ class MediaCompressor {
         val videoQuality =
             when (mediaQuality) {
                 CompressorQuality.VERY_LOW -> VideoQuality.VERY_LOW
-                CompressorQuality.LOW -> VideoQuality.LOW
+                CompressorQuality.LOW -> VideoQuality.VERY_LOW
                 CompressorQuality.MEDIUM -> VideoQuality.MEDIUM
                 CompressorQuality.HIGH -> VideoQuality.HIGH
                 CompressorQuality.VERY_HIGH -> VideoQuality.VERY_HIGH
                 else -> VideoQuality.MEDIUM
             }
 
-        Log.d("MediaCompressor", "Using video compression $mediaQuality")
+        Log.d("MediaCompressor", "Using video compression $videoQuality")
 
         val result =
             withTimeoutOrNull(30000) {
