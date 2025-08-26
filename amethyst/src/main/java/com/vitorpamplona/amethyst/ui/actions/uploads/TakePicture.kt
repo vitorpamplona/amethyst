@@ -26,12 +26,23 @@ import android.net.Uri
 import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,9 +50,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -59,19 +72,111 @@ import java.util.Locale
 
 @Composable
 fun TakePictureButton(onPictureTaken: (ImmutableList<SelectedMedia>) -> Unit) {
-    var showCamera by remember { mutableStateOf(false) }
-    if (showCamera) {
-        TakePicture(
-            onPictureTaken = { uri ->
-                showCamera = false
-                if (uri.isNotEmpty()) {
-                    onPictureTaken(uri)
-                }
+    var showSelection by remember { mutableStateOf(false) }
+
+    if (showSelection) {
+        CameraSelectionDialog(
+            onDismiss = { showSelection = false },
+            onMediaTaken = { media ->
+                showSelection = false
+                onPictureTaken(media)
             },
         )
     }
 
-    PictureButton { showCamera = true }
+    PictureButton { showSelection = true }
+}
+
+@Composable
+fun CameraSelectionDialog(
+    onDismiss: () -> Unit,
+    onMediaTaken: (ImmutableList<SelectedMedia>) -> Unit,
+) {
+    var showPicture by remember { mutableStateOf(false) }
+    var showVideo by remember { mutableStateOf(false) }
+
+    if (showPicture) {
+        TakePicture(
+            onPictureTaken = { media ->
+                showPicture = false
+                onDismiss()
+                onMediaTaken(media)
+            },
+        )
+    }
+
+    if (showVideo) {
+        TakeVideo(
+            onVideoTaken = { media ->
+                showVideo = false
+                onDismiss()
+                onMediaTaken(media)
+            },
+        )
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.select_media_type),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Button(
+                        onClick = { showPicture = true },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = null,
+                            )
+                            Text(
+                                text = stringRes(R.string.photo),
+                                maxLines = 1,
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = { showVideo = true },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Videocam,
+                                contentDescription = null,
+                            )
+                            Text(
+                                text = stringRes(R.string.video),
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)

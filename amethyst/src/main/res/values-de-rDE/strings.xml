@@ -150,6 +150,9 @@ erie gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
     <string name="upload_image">Bild hochladen</string>
     <string name="take_a_picture">Ein Foto aufnehmen</string>
+    <string name="select_media_type">Medientyp auswählen</string>
+    <string name="photo">Foto</string>
+    <string name="video">Video</string>
     <string name="record_a_message">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_title">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>

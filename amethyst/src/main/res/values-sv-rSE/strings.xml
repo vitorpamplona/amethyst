@@ -148,6 +148,9 @@
     <string name="failed_to_save_the_video">Det gick inte att spara videon</string>
     <string name="upload_image">Ladda upp bilden</string>
     <string name="take_a_picture">Ta en bild</string>
+    <string name="select_media_type">Välj Mediatyp</string>
+    <string name="photo">Foto</string>
+    <string name="video">Video</string>
     <string name="record_a_message">Spela in ett meddelande</string>
     <string name="record_a_message_title">Spela in ett meddelande</string>
     <string name="record_a_message_description">Tryck och håll in för att spela in ett meddelande</string>

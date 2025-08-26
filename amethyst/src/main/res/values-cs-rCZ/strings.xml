@@ -148,6 +148,9 @@
     <string name="failed_to_save_the_video">Nepodařilo se uložit video</string>
     <string name="upload_image">Nahrát obrázek</string>
     <string name="take_a_picture">Pořiďte fotografii</string>
+    <string name="select_media_type">Vybrat typ média</string>
+    <string name="photo">Foto</string>
+    <string name="video">Video</string>
     <string name="record_a_message">Nahrajte zprávu</string>
     <string name="record_a_message_title">Nahrajte zprávu</string>
     <string name="record_a_message_description">Stiskněte a podržte pro nahrání zprávy</string>
