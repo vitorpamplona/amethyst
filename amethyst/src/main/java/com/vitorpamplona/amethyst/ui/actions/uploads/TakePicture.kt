@@ -136,6 +136,48 @@ fun PictureButton(onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun TakeVideo(onVideoTaken: (ImmutableList<SelectedMedia>) -> Unit) {
+    val context = LocalContext.current
+    var videoUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CaptureVideo(),
+        ) { success ->
+            if (success) {
+                videoUri?.let {
+                    onVideoTaken(persistentListOf(SelectedMedia(it, "video/mp4")))
+                }
+            } else {
+                onVideoTaken(persistentListOf())
+            }
+            videoUri = null
+        }
+
+    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    val audioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+
+    LaunchedEffect(cameraPermissionState.status.isGranted, audioPermissionState.status.isGranted) {
+        when {
+            cameraPermissionState.status.isGranted && audioPermissionState.status.isGranted -> {
+                scope.launch(Dispatchers.IO) {
+                    videoUri = getVideoUri(context)
+                    videoUri?.let { launcher.launch(it) }
+                }
+            }
+            !cameraPermissionState.status.isGranted -> {
+                cameraPermissionState.launchPermissionRequest()
+            }
+            !audioPermissionState.status.isGranted -> {
+                audioPermissionState.launchPermissionRequest()
+            }
+        }
+    }
+}
+
 private fun getMediaUri(
     context: Context,
     directory: String,
