@@ -1193,6 +1193,7 @@ class AccountViewModel(
                 }
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     newNotesPreProcessor.runDeleted(newNotes)
+                    feedStates.deleteNotes(newNotes)
                 }
             }
         }
