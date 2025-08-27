@@ -1014,4 +1014,8 @@
     <string name="dont_translate_from_description">此处显示的语言不会被翻译，请选择一种目标语言重新翻译并去除这个提示。</string>
     <string name="pause">暂停</string>
     <string name="play">播放</string>
+    <string name="open_dropdown_menu">打开下拉菜单</string>
+    <string name="option_of">第 %1$s 个选项，共 %2$s 个</string>
+    <string name="feed_filter_selected">源过滤器，选中了 %1$s</string>
+    <string name="feed_filter_select_an_option">源过滤器，%1$s</string>
 </resources>
