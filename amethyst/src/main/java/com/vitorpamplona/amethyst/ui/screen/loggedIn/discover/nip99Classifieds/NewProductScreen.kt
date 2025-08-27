@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -135,6 +136,14 @@ fun NewProductScreen(
     nav: INav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    BackHandler {
+        accountViewModel.runIOCatching {
+            postViewModel.sendDraftSync()
+            postViewModel.cancel()
+        }
+        nav.popBack()
+    }
 
     Scaffold(
         topBar = {

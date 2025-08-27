@@ -20,16 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import android.R.attr.onClick
+import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,14 +48,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -52,8 +67,11 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -62,9 +80,10 @@ import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
-import com.vitorpamplona.amethyst.ui.note.elements.NormalTimeAgo
+import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -74,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -81,12 +101,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
-import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import java.util.Locale
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderCommunity(
@@ -111,6 +131,16 @@ fun RenderCommunity(
 }
 
 @Composable
+fun Title(title: String) {
+    Text(
+        text = title,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.W600,
+        textAlign = TextAlign.Start,
+    )
+}
+
+@Composable
 fun LongCommunityHeader(
     baseNote: AddressableNote,
     lineModifier: Modifier = Modifier.padding(horizontal = Size10dp, vertical = Size5dp),
@@ -118,142 +148,169 @@ fun LongCommunityHeader(
     nav: INav,
 ) {
     val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
+    val callbackUri = baseNote.toNostrUri()
 
-    Row(
-        lineModifier,
-    ) {
-        val rulesLabel = stringRes(id = R.string.rules)
-        val summary =
-            remember(noteEvent) {
-                val subject = noteEvent?.subject()?.ifEmpty { null }
-                val body = noteEvent?.description()?.ifBlank { null }
-                val rules = noteEvent?.rules()?.ifBlank { null }
+    val defaultBackground = MaterialTheme.colorScheme.background
+    val background = remember { mutableStateOf(defaultBackground) }
 
-                if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
-                    if (rules == null) {
-                        "### $subject\n$body"
-                    } else {
-                        "### $subject\n$body\n\n### $rulesLabel\n\n$rules"
-                    }
-                } else {
-                    if (rules == null) {
-                        body
-                    } else {
-                        "$body\n\n$rulesLabel\n$rules"
-                    }
+    val description = noteEvent?.description()?.ifBlank { null }
+    val guidelines = noteEvent?.rules()?.ifBlank { null }
+    val image = noteEvent?.image()?.imageUrl
+    val tagList = noteEvent?.tags?.toImmutableListOfLists() ?: EmptyTagList
+
+    Column(Modifier.verticalScroll(rememberScrollState())) {
+        Box(contentAlignment = Alignment.TopEnd) {
+            image?.let {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription =
+                        stringRes(
+                            R.string.preview_card_image_for,
+                            it,
+                        ),
+                    contentScale = ContentScale.FillWidth,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = Modifier.fillMaxWidth(),
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                )
+            } ?: run {
+                DefaultImageHeader(baseNote, accountViewModel)
+            }
+            Box(
+                modifier = Modifier.padding(5.dp),
+            ) {
+                LongCommunityActionOptions(baseNote, accountViewModel, nav)
+            }
+        }
+
+        Column(lineModifier) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = noteEvent?.name() ?: baseNote.dTag(),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W600,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Title(title = stringRes(R.string.about_us))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(Modifier.padding(16.dp, 0.dp, 16.dp, 0.dp)) {
+                TranslatableRichTextViewer(
+                    content = description ?: stringRes(id = R.string.community_no_descriptor),
+                    id = baseNote.idHex + "description",
+                    accountViewModel = accountViewModel,
+                ) {
+                    RichTextViewer(
+                        it,
+                        modifier = Modifier.fillMaxWidth(),
+                        canPreview = false,
+                        quotesLeft = 1,
+                        tags = tagList,
+                        backgroundColor = background,
+                        callbackUri = callbackUri,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
                 }
             }
 
-        Column(
-            Modifier.weight(1f),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val defaultBackground = MaterialTheme.colorScheme.background
-                val background = remember { mutableStateOf(defaultBackground) }
+            guidelines?.let {
+                Spacer(modifier = Modifier.height(24.dp))
+                Title(title = stringRes(R.string.guidelines))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                TranslatableRichTextViewer(
-                    content = summary ?: stringRes(id = R.string.community_no_descriptor),
-                    canPreview = false,
-                    quotesLeft = 1,
-                    tags = EmptyTagList,
-                    backgroundColor = background,
-                    id = baseNote.idHex,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                Column(Modifier.padding(16.dp, 0.dp, 16.dp, 0.dp)) {
+                    TranslatableRichTextViewer(
+                        content = guidelines,
+                        id = baseNote.idHex + "guidelines",
+                        accountViewModel = accountViewModel,
+                    ) {
+                        RichTextViewer(
+                            it,
+                            modifier = Modifier.fillMaxWidth(),
+                            canPreview = false,
+                            quotesLeft = 1,
+                            tags = tagList,
+                            backgroundColor = background,
+                            callbackUri = callbackUri,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
             }
 
             noteEvent?.let {
                 if (it.hasHashtags()) {
                     DisplayUncitedHashtags(
                         event = it,
-                        content = summary ?: "",
+                        content = description ?: "",
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
                 }
             }
-        }
 
-        Column {
-            Row {
+            Spacer(modifier = Modifier.height(24.dp))
+            Title(title = stringRes(R.string.owner))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
                 Spacer(DoubleHorzSpacer)
-                LongCommunityActionOptions(baseNote, accountViewModel, nav)
+                NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
-        }
-    }
 
-    Row(
-        lineModifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringRes(id = R.string.owner),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(75.dp),
-        )
-        Spacer(DoubleHorzSpacer)
-        NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
-        Spacer(DoubleHorzSpacer)
-        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
-    }
+            var participantUsers by
+                remember(baseNote) {
+                    mutableStateOf<ImmutableList<Pair<ModeratorTag, User>>>(
+                        persistentListOf(),
+                    )
+                }
 
-    var participantUsers by
-        remember(baseNote) {
-            mutableStateOf<ImmutableList<Pair<ModeratorTag, User>>>(
-                persistentListOf(),
-            )
-        }
+            LaunchedEffect(key1 = noteEvent) {
+                val participants = noteEvent?.moderators()
 
-    LaunchedEffect(key1 = noteEvent) {
-        val participants = noteEvent?.moderators()
-
-        if (participants != null) {
-            accountViewModel.loadParticipants(participants) { newParticipantUsers ->
-                if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
-                    participantUsers = newParticipantUsers
+                if (participants != null) {
+                    accountViewModel.loadParticipants(participants) { newParticipantUsers ->
+                        val noOwner = newParticipantUsers.filter { it.second != baseNote.author }.toImmutableList()
+                        if (!equalImmutableLists(noOwner, participantUsers)) {
+                            participantUsers = noOwner
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    participantUsers.forEach {
-        Row(
-            lineModifier.clickable { nav.nav(routeFor(it.second)) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            it.first.role?.let { it1 ->
-                Text(
-                    text =
-                        it1.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-                        },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.width(75.dp),
-                )
+            if (participantUsers.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Title(title = stringRes(R.string.moderators))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                participantUsers.forEach {
+                    Column(Modifier.padding(vertical = 5.dp).clickable { nav.nav(routeFor(it.second)) }) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            ClickableUserPicture(it.second, Size25dp, accountViewModel)
+                            Spacer(DoubleHorzSpacer)
+                            UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
+                        }
+                    }
+                }
             }
-            Spacer(DoubleHorzSpacer)
-            ClickableUserPicture(it.second, Size25dp, accountViewModel)
-            Spacer(DoubleHorzSpacer)
-            UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
-        }
-    }
 
-    Row(
-        lineModifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringRes(id = R.string.created_at),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(75.dp),
-        )
-        Spacer(DoubleHorzSpacer)
-        NormalTimeAgo(baseNote = baseNote, Modifier.weight(1f))
-        MoreOptionsButton(baseNote, null, accountViewModel, nav)
+            Spacer(modifier = Modifier.height(15.dp))
+        }
     }
 }
 
@@ -308,7 +365,47 @@ fun ShortCommunityHeader(
 }
 
 @Composable
-private fun ShortCommunityActionOptions(
+fun ShortCommunityHeaderNoActions(
+    baseNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        noteEvent?.image()?.let {
+            RobohashFallbackAsyncImage(
+                robot = baseNote.idHex,
+                model = it.imageUrl,
+                contentDescription = stringRes(R.string.profile_image),
+                contentScale = ContentScale.Crop,
+                modifier = HeaderPictureModifier,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+            )
+        }
+
+        Column(
+            modifier =
+                Modifier
+                    .padding(start = 10.dp)
+                    .height(Size35dp)
+                    .weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = noteEvent?.name() ?: baseNote.dTag(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ShortCommunityActionOptions(
     note: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -346,9 +443,12 @@ private fun LongCommunityActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
-        if (isFollowing) {
-            LeaveCommunityButton(accountViewModel, note, nav)
+    Row {
+        ShareCommunityButton(accountViewModel, note, nav)
+        WatchAddressableNoteFollows(note, accountViewModel) { isFollowing ->
+            if (isFollowing) {
+                LeaveCommunityButton(accountViewModel, note, nav)
+            }
         }
     }
 }
@@ -388,18 +488,48 @@ fun LeaveCommunityButton(
     note: AddressableNote,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
-
-    Button(
+    FilledTonalButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = { accountViewModel.unfollow(note) },
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.leave), color = Color.White)
+        Text(text = stringRes(R.string.leave))
+    }
+}
+
+@Composable
+fun ShareCommunityButton(
+    accountViewModel: AccountViewModel,
+    note: AddressableNote,
+    nav: INav,
+) {
+    val actContext = LocalContext.current
+
+    FilledTonalIconButton(
+        onClick = {
+            val sendIntent =
+                Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        externalLinkForNote(note),
+                    )
+                    putExtra(
+                        Intent.EXTRA_TITLE,
+                        stringRes(actContext, R.string.quick_action_share_browser_link),
+                    )
+                }
+
+            val shareIntent =
+                Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+            ContextCompat.startActivity(actContext, shareIntent, null)
+        },
+    ) {
+        Icon(
+            imageVector = Icons.Default.Share,
+            modifier = Size18Modifier,
+            contentDescription = stringRes(R.string.quick_action_share),
+        )
     }
 }

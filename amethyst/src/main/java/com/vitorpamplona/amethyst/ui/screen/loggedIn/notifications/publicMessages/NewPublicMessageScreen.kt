@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
@@ -127,6 +128,14 @@ fun NewPublicMessageScreen(
     }
 
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    BackHandler {
+        accountViewModel.runIOCatching {
+            postViewModel.sendDraftSync()
+            postViewModel.cancel()
+        }
+        nav.popBack()
+    }
 
     Scaffold(
         topBar = {

@@ -297,7 +297,7 @@ open class NewProductViewModel :
         cancel()
 
         accountViewModel.account.signAndSendPrivatelyOrBroadcast(template, relayList = { relayList })
-        accountViewModel.viewModelScope.launch {
+        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }

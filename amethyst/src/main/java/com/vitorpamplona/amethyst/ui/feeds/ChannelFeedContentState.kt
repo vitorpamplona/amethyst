@@ -105,6 +105,8 @@ class ChannelFeedContentState(
         }
     }
 
+    fun deleteFromFeed(deletedNotes: Set<Note>) {}
+
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
         if (oldNotesState is ChannelFeedState.Loaded) {

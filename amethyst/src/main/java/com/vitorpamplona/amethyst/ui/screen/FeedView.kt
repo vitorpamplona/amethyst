@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
+import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -102,8 +103,7 @@ fun RenderFeedState(
     nav: INav,
     routeForLastRead: String?,
     onLoaded: @Composable (FeedState.Loaded) -> Unit = {
-        com.vitorpamplona.amethyst.ui.feeds
-            .FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav)
+        FeedLoaded(it, listState, routeForLastRead, accountViewModel, nav)
     },
     onEmpty: @Composable () -> Unit = { FeedEmpty { viewModel.invalidateData() } },
     onError: @Composable (String) -> Unit = { FeedError(it) { viewModel.invalidateData() } },

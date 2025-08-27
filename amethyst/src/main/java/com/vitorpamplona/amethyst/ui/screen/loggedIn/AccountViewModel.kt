@@ -774,6 +774,11 @@ class AccountViewModel(
         }
     }
 
+    fun approveCommunityPost(
+        post: Note,
+        community: AddressableNote,
+    ) = runIOCatching { account.approveCommunityPost(post, community) }
+
     fun follow(community: AddressableNote) = runIOCatching { account.follow(community) }
 
     fun follow(channel: PublicChatChannel) = runIOCatching { account.follow(channel) }
@@ -1188,6 +1193,7 @@ class AccountViewModel(
                 }
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     newNotesPreProcessor.runDeleted(newNotes)
+                    feedStates.deleteNotes(newNotes)
                 }
             }
         }

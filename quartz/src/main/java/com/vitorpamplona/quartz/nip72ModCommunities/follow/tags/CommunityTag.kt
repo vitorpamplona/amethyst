@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
@@ -47,7 +48,7 @@ class CommunityTag(
         const val TAG_NAME = "a"
 
         @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)
 
         @JvmStatic
         fun isTagged(
@@ -62,38 +63,33 @@ class CommunityTag(
         ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == address.toTag()
 
         @JvmStatic
-        fun isIn(
-            tag: Array<String>,
-            addressIds: Set<String>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
-
-        @JvmStatic
         fun isTaggedWithKind(
             tag: Array<String>,
             kind: String,
         ) = tag.has(1) && tag[0] == TAG_NAME && Address.isOfKind(tag[1], kind)
 
         @JvmStatic
-        fun parse(
-            aTagId: String,
-            relay: String?,
-        ) = Address.parse(aTagId)?.let {
-            CommunityTag(it, relay?.let { RelayUrlNormalizer.normalizeOrNull(it) })
-        }
+        fun isIn(
+            tag: Array<String>,
+            addressIds: Set<String>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
 
         @JvmStatic
         fun parse(tag: Array<String>): CommunityTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return parse(tag[1], tag.getOrNull(2))
+            ensure(Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+
+            val address = Address.parse(tag[1]) ?: return null
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return CommunityTag(address, relayHint)
         }
 
         @JvmStatic
         fun parseValidAddress(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
             return Address.parse(tag[1])?.toValue()
         }
 
@@ -102,14 +98,16 @@ class CommunityTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return Address.parse(tag[1])
+            val address = Address.parse(tag[1]) ?: return null
+            ensure(address.kind == CommunityDefinitionEvent.KIND) { return null }
+            return address
         }
 
         @JvmStatic
         fun parseAddressId(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
             return tag[1]
         }
 
@@ -117,8 +115,7 @@ class CommunityTag(
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            ensure(tag[1].contains(':')) { return null }
+            ensure(Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])

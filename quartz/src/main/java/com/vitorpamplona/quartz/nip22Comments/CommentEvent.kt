@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -55,10 +57,12 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
+import kotlin.collections.mapNotNull
 
 @Immutable
 class CommentEvent(
@@ -126,6 +130,28 @@ class CommentEvent(
         return aHints + qHints + nip19Hints
     }
 
+    fun rootEventIds() = tags.mapNotNull(RootEventTag::parseKey)
+
+    fun replyEventIds() = tags.mapNotNull(ReplyEventTag::parseKey)
+
+    fun rootAddressIds() = tags.mapNotNull(RootAddressTag::parseAddressId)
+
+    fun hasRootAddress(addressId: String) = tags.any(RootAddressTag::isTagged, addressId)
+
+    fun hasReplyAddress(addressId: String) = tags.any(ReplyAddressTag::isTagged, addressId)
+
+    fun replyAddressIds() = tags.mapNotNull(ReplyAddressTag::parseAddressId)
+
+    fun replyAddress() = tags.mapNotNull(ReplyAddressTag::parseAddress)
+
+    fun rootScopes() = tags.filter { RootIdentifierTag.match(it) || RootAddressTag.match(it) || RootEventTag.match(it) }
+
+    fun rootKinds() = tags.filter(RootKindTag::match)
+
+    fun directReplies() = tags.filter { ReplyIdentifierTag.match(it) || ReplyAddressTag.match(it) || ReplyEventTag.match(it) }
+
+    fun directKinds() = tags.filter(ReplyKindTag::match)
+
     fun rootAuthor() = tags.firstNotNullOfOrNull(RootAuthorTag::parse)
 
     fun replyAuthor() = tags.firstNotNullOfOrNull(ReplyAuthorTag::parse)
@@ -142,14 +168,6 @@ class CommentEvent(
 
     fun replyAuthorHints() = tags.mapNotNull(ReplyAuthorTag::parseAsHint)
 
-    fun rootScopes() = tags.filter { RootIdentifierTag.match(it) || RootAddressTag.match(it) || RootEventTag.match(it) }
-
-    fun rootKinds() = tags.filter(RootKindTag::match)
-
-    fun directReplies() = tags.filter { ReplyIdentifierTag.match(it) || ReplyAddressTag.match(it) || ReplyEventTag.match(it) }
-
-    fun directKinds() = tags.filter(ReplyKindTag::match)
-
     /** root and reply scope search */
     fun isTaggedScope(scopeId: String) = tags.any { RootIdentifierTag.isTagged(it, scopeId) || ReplyIdentifierTag.isTagged(it, scopeId) }
 
@@ -164,9 +182,9 @@ class CommentEvent(
 
     fun isScoped(scopeTest: (String) -> Boolean) = tags.any { RootIdentifierTag.isTagged(it, scopeTest) || ReplyIdentifierTag.isTagged(it, scopeTest) }
 
-    fun hasRootScopeKind(kind: String) = tags.any { RootKindTag.isKind(it, kind) }
+    fun hasRootScopeKind(kind: String) = tags.any(RootKindTag::isKind, kind)
 
-    fun hasReplyScopeKind(kind: String) = tags.any { ReplyKindTag.isKind(it, kind) }
+    fun hasReplyScopeKind(kind: String) = tags.any(ReplyKindTag::isKind, kind)
 
     fun hasScopeKind(kind: String) = tags.any { RootKindTag.isKind(it, kind) || ReplyKindTag.isKind(it, kind) }
 
@@ -184,11 +202,30 @@ class CommentEvent(
         tags.lastNotNullOfOrNull(ReplyEventTag::parseKey)
             ?: tags.lastNotNullOfOrNull(RootEventTag::parseKey)
 
+    fun rootAddress() = tags.mapNotNull(RootAddressTag::parseAddress)
+
+    fun rootAddressId() = tags.mapNotNull(RootAddressTag::parseAddressId)
+
     fun replyingToAddressId(): String? =
-        tags.lastNotNullOfOrNull(RootAddressTag::parseAddressId)
-            ?: tags.lastNotNullOfOrNull(ReplyAddressTag::parseAddressId)
+        tags.lastNotNullOfOrNull(ReplyAddressTag::parseAddressId)
+            ?: tags.lastNotNullOfOrNull(RootAddressTag::parseAddressId)
 
     override fun replyingToAddressOrEvent(): HexKey? = replyingToAddressId() ?: replyingTo()
+
+    override fun tagsWithoutCitations(): List<String> {
+        val rootAddress = rootAddressIds()
+        val replyAddress = replyAddressIds()
+
+        if (
+            rootAddress.any { Address.isOfKind(it, CommunityDefinitionEvent.KIND_STR) } &&
+            replyAddress.any { Address.isOfKind(it, CommunityDefinitionEvent.KIND_STR) }
+        ) {
+            // this is the root of the community post
+            return emptyList()
+        }
+
+        return rootAddress + replyAddress + rootEventIds() + replyEventIds()
+    }
 
     companion object {
         const val KIND = 1111

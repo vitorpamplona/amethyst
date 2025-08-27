@@ -49,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -96,7 +98,9 @@ import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.RenderApproveButton
 import com.vitorpamplona.amethyst.ui.note.RenderDraft
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
@@ -168,6 +172,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -189,7 +194,6 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
@@ -227,7 +231,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
+import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -435,6 +440,7 @@ private fun FullBleedNoteCompose(
 ) {
     val noteEvent = baseNote.event ?: return
 
+    val isDraft = baseNote.isDraft()
     val backgroundColor =
         calculateBackgroundColor(
             baseNote.createdAt(),
@@ -467,15 +473,28 @@ private fun FullBleedNoteCompose(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
 
-                    val isCommunityPost =
-                        remember(baseNote) {
-                            baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.KIND) == true
+                    if (isDraft) {
+                        ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
+                            val isCommunityPost by remember(draftNote) {
+                                derivedStateOf { draftNote.event?.isACommunityPost() == true }
+                            }
+
+                            if (isCommunityPost) {
+                                DisplayFollowingCommunityInPost(draftNote, accountViewModel, nav)
+                            } else {
+                                DisplayFollowingHashtagsInPost(draftNote, accountViewModel, nav)
+                            }
+                        }
+                    } else {
+                        val isCommunityPost by remember(baseNote) {
+                            derivedStateOf { baseNote.event?.isACommunityPost() == true }
                         }
 
-                    if (isCommunityPost) {
-                        DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
-                    } else {
-                        DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+                        if (isCommunityPost) {
+                            DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
+                        } else {
+                            DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+                        }
                     }
 
                     CheckAndDisplayEditStatus(editState)
@@ -508,7 +527,7 @@ private fun FullBleedNoteCompose(
                         DisplayPoW(pow)
                     }
 
-                    if (baseNote.isDraft()) {
+                    if (isDraft) {
                         DisplayDraft()
                     }
 
@@ -527,9 +546,7 @@ private fun FullBleedNoteCompose(
         }
 
         Row(
-            modifier =
-                modifier
-                    .padding(horizontal = 12.dp),
+            modifier = PaddingHorizontal12Modifier,
         ) {
             Column {
                 if (noteEvent is ChannelCreateEvent) {
@@ -753,14 +770,40 @@ private fun FullBleedNoteCompose(
         val zapSplits = remember(noteEvent) { noteEvent.hasZapSplitSetup() }
         if (zapSplits) {
             Spacer(modifier = DoubleVertSpacer)
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp),
-            ) {
+            Row(PaddingHorizontal12Modifier) {
                 DisplayZapSplits(noteEvent, false, accountViewModel, nav)
             }
         }
 
+        RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
+
         ReactionsRow(baseNote, showReactionDetail = true, addPadding = true, editState = editState, accountViewModel = accountViewModel, nav = nav)
+    }
+}
+
+@Composable
+private fun RenderApprovalIfNeeded(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (baseNote.isNewThread()) {
+        val communityAddress =
+            remember(baseNote) {
+                baseNote.event?.communityAddress()
+            }
+        communityAddress?.let {
+            LoadAddressableNote(it, accountViewModel) { community ->
+                if (community != null) {
+                    val showApproveButton by observeCommunityApprovalNeedStatus(baseNote, community, accountViewModel)
+                    if (showApproveButton == true) {
+                        Row(PaddingHorizontal12Modifier) {
+                            RenderApproveButton(baseNote, community, accountViewModel)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

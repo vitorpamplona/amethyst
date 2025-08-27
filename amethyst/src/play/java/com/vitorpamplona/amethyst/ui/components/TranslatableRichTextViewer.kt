@@ -81,50 +81,13 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var translatedTextState by translateAndWatchLanguageChanges(content, id, accountViewModel)
-
-    CrossfadeIfEnabled(targetState = translatedTextState, accountViewModel = accountViewModel) {
-        RenderText(
-            translatedTextState = it,
-            content = content,
-            canPreview = canPreview,
-            quotesLeft = quotesLeft,
-            modifier = modifier,
-            tags = tags,
-            backgroundColor = backgroundColor,
-            id = id,
-            callbackUri = callbackUri,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
-}
-
-@Composable
-private fun RenderText(
-    translatedTextState: TranslationConfig,
-    content: String,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    modifier: Modifier,
-    tags: ImmutableListOfLists<String>,
-    backgroundColor: MutableState<Color>,
-    id: String,
-    callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    var showOriginal by
-        remember(translatedTextState) { mutableStateOf(translatedTextState.showOriginal) }
-
-    val toBeViewed by
-        remember(translatedTextState) {
-            derivedStateOf { if (showOriginal) content else translatedTextState.result ?: content }
-        }
-
-    Column {
+    TranslatableRichTextViewer(
+        content = content,
+        id = id,
+        accountViewModel = accountViewModel,
+    ) {
         ExpandableRichTextViewer(
-            toBeViewed,
+            it,
             canPreview,
             quotesLeft,
             modifier,
@@ -135,6 +98,45 @@ private fun RenderText(
             accountViewModel,
             nav,
         )
+    }
+}
+
+@Composable
+fun TranslatableRichTextViewer(
+    content: String,
+    id: String,
+    accountViewModel: AccountViewModel,
+    displayText: @Composable (String) -> Unit,
+) {
+    var translatedTextState by translateAndWatchLanguageChanges(content, id, accountViewModel)
+
+    CrossfadeIfEnabled(targetState = translatedTextState, accountViewModel = accountViewModel) {
+        RenderTextWithTranslateOptions(
+            translatedTextState = it,
+            content = content,
+            accountViewModel = accountViewModel,
+            displayText = displayText,
+        )
+    }
+}
+
+@Composable
+private fun RenderTextWithTranslateOptions(
+    translatedTextState: TranslationConfig,
+    content: String,
+    accountViewModel: AccountViewModel,
+    displayText: @Composable (String) -> Unit,
+) {
+    var showOriginal by
+        remember(translatedTextState) { mutableStateOf(translatedTextState.showOriginal) }
+
+    val toBeViewed by
+        remember(translatedTextState) {
+            derivedStateOf { if (showOriginal) content else translatedTextState.result ?: content }
+        }
+
+    Column {
+        displayText(toBeViewed)
 
         if (
             translatedTextState.sourceLang != null &&
@@ -325,7 +327,7 @@ fun translateAndWatchLanguageChanges(
     id: String,
     accountViewModel: AccountViewModel,
 ): MutableState<TranslationConfig> {
-    var translatedTextState = remember(id) { mutableStateOf(TranslationsCache.get(content)) }
+    val translatedTextState = remember(id) { mutableStateOf(TranslationsCache.get(content)) }
 
     TranslateAndWatchLanguageChanges(
         content,

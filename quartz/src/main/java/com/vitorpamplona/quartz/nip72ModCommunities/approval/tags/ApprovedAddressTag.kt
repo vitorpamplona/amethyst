@@ -18,31 +18,37 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip22Comments.tags
+package com.vitorpamplona.quartz.nip72ModCommunities.approval.tags
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
-@Immutable
-class RootAddressTag(
-    val addressId: String,
-    val relay: NormalizedRelayUrl? = null,
+class ApprovedAddressTag(
+    val address: Address,
+    val relayHint: NormalizedRelayUrl? = null,
 ) {
-    fun toTagArray() = assemble(addressId, relay)
+    fun countMemory(): Long = 2 * pointerSizeInBytes + address.countMemory() + (relayHint?.url?.bytesUsedInMemory() ?: 0)
+
+    fun toTag() = Address.assemble(address.kind, address.pubKeyHex, address.dTag)
+
+    fun toTagArray() = assemble(address, relayHint)
+
+    fun toTagIdOnly() = assemble(address, null)
 
     companion object {
-        const val TAG_NAME = "A"
+        const val TAG_NAME = "a"
 
         @JvmStatic
-        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && !Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)
 
         @JvmStatic
         fun isTagged(
@@ -51,20 +57,34 @@ class RootAddressTag(
         ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == addressId
 
         @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            address: ApprovedAddressTag,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == address.toTag()
+
+        @JvmStatic
         fun isIn(
             tag: Array<String>,
             addressIds: Set<String>,
         ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
 
         @JvmStatic
-        fun parse(tag: Array<String>): RootAddressTag? {
+        fun parse(tag: Array<String>): ApprovedAddressTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
 
+            val address = Address.parse(tag[1]) ?: return null
             val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return ApprovedAddressTag(address, relayHint)
+        }
 
-            return RootAddressTag(tag[1], relayHint)
+        @JvmStatic
+        fun parseValidAddress(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            return Address.parse(tag[1])?.toValue()
         }
 
         @JvmStatic
@@ -72,23 +92,16 @@ class RootAddressTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-
-            return Address.parse(tag[1])
-        }
-
-        @JvmStatic
-        fun parseValidAddress(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return Address.parse(tag[1])?.toValue()
+            val address = Address.parse(tag[1]) ?: return null
+            ensure(address.kind != CommunityDefinitionEvent.KIND) { return null }
+            return address
         }
 
         @JvmStatic
         fun parseAddressId(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
             return tag[1]
         }
 
@@ -96,7 +109,8 @@ class RootAddressTag(
         fun parseAsHint(tag: Array<String>): AddressHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].length == 64) { return null }
+            ensure(!Address.isOfKind(tag[1], CommunityDefinitionEvent.KIND_STR)) { return null }
+            ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
@@ -107,9 +121,15 @@ class RootAddressTag(
 
         @JvmStatic
         fun assemble(
-            addressId: HexKey,
+            aTagId: HexKey,
             relay: NormalizedRelayUrl?,
-        ) = arrayOfNotNull(TAG_NAME, addressId, relay?.url)
+        ) = arrayOfNotNull(TAG_NAME, aTagId, relay?.url)
+
+        @JvmStatic
+        fun assemble(
+            address: Address,
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay?.url)
 
         @JvmStatic
         fun assemble(
