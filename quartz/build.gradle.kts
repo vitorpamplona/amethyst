@@ -22,10 +22,15 @@ kotlin {
         }.configure {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
-    }
 
-    compilerOptions {
-        freeCompilerArgs.add("-Xstring-concat=inline")
+        optimization {
+            consumerKeepRules.publish = true
+            consumerKeepRules.files.add(File(project.projectDir, "proguard-rules.pro"))
+        }
+
+        compilerOptions {
+            freeCompilerArgs.add("-Xstring-concat=inline")
+        }
     }
 
     // For iOS targets, this is also where you should
@@ -153,5 +158,4 @@ kotlin {
             }
         }
     }
-
 }
