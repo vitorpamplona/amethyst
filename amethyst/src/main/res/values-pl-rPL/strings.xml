@@ -101,7 +101,7 @@
     <string name="error_parsing_preview_for">"Błąd analizowania podglądu dla %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Podgląd obrazu karty dla %1$s"</string>
     <string name="new_channel">Nowy kanał</string>
-    <string name="channel_name">Nazwa Grupy</string>
+    <string name="channel_name">Nazwa</string>
     <string name="my_awesome_group">Nazwa Grupy</string>
     <string name="picture_url">Adres Url obrazka</string>
     <string name="description">Opis</string>
@@ -159,10 +159,11 @@
     <string name="edits_the_channel_metadata">Edytuje metadane kanału</string>
     <string name="join">Dołącz</string>
     <string name="known">Znajomi</string>
-    <string name="new_requests">Nowe Kontakty</string>
+    <string name="new_requests">Nowe</string>
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
     <string name="conversations">Komentarze</string>
+    <string name="mod_queue">Moderacja</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
     <string name="mutual">Twoje</string>
@@ -263,9 +264,9 @@
     <string name="report_hateful_speech">Zgłoś mowę nienawiści</string>
     <string name="report_nudity_porn">Zgłoś Nagość / Pornografię</string>
     <string name="others">inne</string>
-    <string name="mark_all_known_as_read">Oznacz wszystkie popularne jako przeczytane</string>
-    <string name="mark_all_new_as_read">Oznacz wszystkie nowe jako przeczytane</string>
-    <string name="mark_all_as_read">Oznacz wszystkie jako przeczytane</string>
+    <string name="mark_all_known_as_read">Zaznacz wszystkie popularne jako przeczytane</string>
+    <string name="mark_all_new_as_read">Zaznacz wszystkie nowe jako przeczytane</string>
+    <string name="mark_all_as_read">Zaznacz wszystkie jako przeczytane</string>
     <string name="backup_keys">Klucze kopii zapasowej</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Porady dotyczące kopii zapasowej i bezpieczeństwa
         \n\nTwoje konto jest zabezpieczone tajnym kluczem. Kluczem jest długa sekwencja znaków, zaczynająca się od **nsec1**. Każdy, kto ma dostęp do tego tajnego klucza może publikować i zmieniać Twoją tożsamość.
@@ -456,7 +457,7 @@
     <string name="tor_use_onion_address_explainer">Użyj Tor dla dowolnego adresu .onion</string>
     <string name="tor_use_dm_relays">Transmitery DM</string>
     <string name="tor_use_dm_relays_explainer">Zmuś Tor do wysyłania i odbierania DM</string>
-    <string name="tor_use_new_relays">Niepewne Transmitery</string>
+    <string name="tor_use_new_relays">Niewiarygodne Transmitery</string>
     <string name="tor_use_new_relays_explainer">Wymuś Tor na transmiterach skrzynki odbiorczej/nadawczej</string>
     <string name="tor_use_trusted_relays">Zaufane Transmitery</string>
     <string name="tor_use_trusted_relays_explainer">Wymuś Tor na wszystkich transmiterach na listach</string>
@@ -471,10 +472,10 @@
     <string name="tor_use_money_operations">Operacje finansowe</string>
     <string name="tor_use_money_operations_explainer">Wymuś Tor przy zapsach, transferach lightning and cashu</string>
     <string name="tor_use_nip05_verification">Weryfikacja adresu Nostr</string>
-    <string name="tor_use_nip05_verification_explainer">Wymuś Tor przy weryfikacji adresów NIP-05</string>
+    <string name="tor_use_nip05_verification_explainer">Wymuś Tor podczas weryfikacji adresów NIP-05</string>
     <string name="tor_use_nip96_uploads">Wgrywanie mediów</string>
     <string name="tor_use_nip96_uploads_explainer">Wymuś Tor podczas wgrywania zawartości</string>
-    <string name="tor_internal">Wewnętrzny</string>
+    <string name="tor_internal">Wewnętrznie</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Wył.</string>
     <string name="tor_when_needed">Podstawowe</string>
@@ -484,7 +485,7 @@
     <string name="tor_custom">Niestandardowy</string>
     <string name="tor_when_needed_explainer">Użyj Tor, gdy jest wymagany przez serwer</string>
     <string name="tor_default_explainer">Ukryj swój adres IP przed przypadkowymi transmiterami</string>
-    <string name="tor_small_payloads_explainer">Ukryj swój adres IP od wszystkiego oprócz zdjęć i filmów</string>
+    <string name="tor_small_payloads_explainer">Ukryj swój adres IP wszędzie oprócz zdjęć i filmów</string>
     <string name="tor_full_privacy_explainer">Ukryj swój adres IP przy wszystkich połączeniach</string>
     <string name="tor_custom_explainer">Stwórz swój własny</string>
     <string name="invalid_port_number">Nieprawidłowy numer portu</string>
@@ -520,7 +521,7 @@
     <string name="warn_when_posts_have_reports_from_your_follows_title">Ostrzeżenie o zgłoszeniach</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Wyświetla komunikat ostrzegawczy, gdy posty zostały zgłoszone przez 5 lub więcej obserwowanych osób</string>
     <string name="show_sensitive_content_title">Pokaż wrażliwe treści</string>
-    <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor wpisu oznaczył go jako wrażliwy</string>
+    <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor oznaczył wpis jako wrażliwy</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
@@ -645,7 +646,7 @@
     <string name="messages_new_message_to">Do</string>
     <string name="messages_new_message_subject">Temat</string>
     <string name="messages_new_message_subject_caption">Temat dyskusji</string>
-    <string name="messages_new_message_to_caption">"\@Użytkownik1, @Użytkownik2, @Użytkownik3"</string>
+    <string name="messages_new_message_to_caption">"\@Użytkownik1, @Użytkownik2"</string>
     <string name="messages_cant_upload_title">Nie można wysłać</string>
     <string name="messages_cant_upload_explainer">Najpierw podaj adresata wiadomości</string>
     <string name="messages_group_descriptor">Członkowie tej grupy</string>
@@ -669,6 +670,9 @@
     <string name="media_added_to_profile_gallery">Pliki dodane do Twojej galerii profilu</string>
     <string name="created_at">Utworzono</string>
     <string name="rules">Zasady</string>
+    <string name="community_description">O nas</string>
+    <string name="guidelines">Wskazówki</string>
+    <string name="moderators">Moderatorzy</string>
     <string name="login_with_external_signer">Zaloguj się za pomocą Amber</string>
     <string name="status_update">Zaktualizuj swój status</string>
     <string name="lightning_wallets_not_found">Błąd podczas analizowania komunikatu o błędzie</string>
@@ -903,7 +907,7 @@
     <string name="trusted_section_explainer">Transmitery, którym ufasz, nie potrzebujesz połączenia Tor</string>
     <string name="proxy_relays_title">Transmitery Proxy</string>
     <string name="proxy_section">Transmitery Proxy</string>
-    <string name="proxy_section_explainer">Transmitery agregatora, z których aplikacja musi pobierać kanały, takie jak filter.nostr.wine. To zastępuje model skrzynki nadawczej i sprawia, że aplikacja łączy się tylko z transmiterami z listy.</string>
+    <string name="proxy_section_explainer">Transmitery agregatora, z których aplikacja musi pobierać kanały, takie jak filter.nostr.wine. To zastępuje model skrzynki nadawczej i sprawia, że aplikacja łączy się tylko z transmiterami z Twojej listy.</string>
     <string name="broadcast_relays_title">Transmitery Nadawcze</string>
     <string name="broadcast_section">Transmitery Nadawania</string>
     <string name="broadcast_section_explainer">Transmitery, które specjalizują się w przesyłaniu wpisów do wszystkich innych transmiterów, takich jak sendit.nosflare.com. Amethyst doda ten transmiter do wszystkich nowych wydarzeń utworzonych przez użytkownika</string>
@@ -1011,4 +1015,6 @@
     <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>
     <string name="pause">Pauza</string>
     <string name="play">Odtwórz</string>
+    <string name="open_dropdown_menu">Otwórz rozwijane menu</string>
+    <string name="option_of">Opcja %1$s dla %2$s</string>
 </resources>
