@@ -323,7 +323,7 @@ open class CommentPostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.viewModelScope.launch {
+        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }

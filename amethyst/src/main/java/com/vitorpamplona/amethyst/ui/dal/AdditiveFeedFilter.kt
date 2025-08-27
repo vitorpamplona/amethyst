@@ -40,11 +40,6 @@ abstract class AdditiveFeedFilter<T> :
                 oldList
             }
         }
-
-    fun removeNotes(
-        oldList: List<T>,
-        deletedNotes: Set<T>,
-    ): List<T> = oldList - deletedNotes
 }
 
 interface IAdditiveFeedFilter<T> : IFeedFilter<T> {

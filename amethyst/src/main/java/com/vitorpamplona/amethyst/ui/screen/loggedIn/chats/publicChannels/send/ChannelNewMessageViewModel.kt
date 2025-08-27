@@ -276,7 +276,7 @@ open class ChannelNewMessageViewModel :
         cancel()
 
         accountViewModel.account.signAndSendPrivately(template, channelRelays)
-        accountViewModel.viewModelScope.launch {
+        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
