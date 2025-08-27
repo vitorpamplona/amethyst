@@ -163,6 +163,8 @@
     <string name="blocked_users">已隐藏用户</string>
     <string name="new_threads">新动态</string>
     <string name="conversations">会话</string>
+    <string name="feed">源</string>
+    <string name="mod_queue">Mod 队列</string>
     <string name="notes">动态</string>
     <string name="replies">回复</string>
     <string name="mutual">你的</string>
@@ -672,6 +674,9 @@
     <string name="media_added_to_profile_gallery">媒体已添加到个人资料相册中</string>
     <string name="created_at">创建于</string>
     <string name="rules">规则</string>
+    <string name="community_description">关于我们</string>
+    <string name="guidelines">指南</string>
+    <string name="moderators">审核者</string>
     <string name="login_with_external_signer">使用 Amber 登录</string>
     <string name="status_update">更新你的状态</string>
     <string name="lightning_wallets_not_found">错误解析错误消息</string>
