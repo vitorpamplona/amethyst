@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.diffplugSpotless)
     alias(libs.plugins.googleServices) apply false
     alias(libs.plugins.jetbrainsComposeCompiler) apply false
+    alias(libs.plugins.kotlinMultiplatform) apply false
+    alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
 }
 
 allprojects {
@@ -39,9 +41,18 @@ allprojects {
 
 subprojects {
     afterEvaluate {
-        tasks.named("preBuild") {
-            dependsOn("spotlessApply")
+        try {
+            tasks.named("preBuild") {
+                dependsOn("spotlessApply")
+            }
+        } catch (UnknownTaskException ignored) {
+            tasks.matching {
+                it.name.startsWith("pre") && it.name.endsWith("Build")
+            }.configureEach {
+                dependsOn("spotlessApply")
+            }
         }
+
     }
 }
 

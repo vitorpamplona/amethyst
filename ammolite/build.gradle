@@ -54,9 +54,9 @@ dependencies {
     implementation libs.androidx.core.ktx
 
     // Compose's @Immutable and @Stable classes
-    implementation libs.androidx.runtime.runtime
-
+    implementation libs.androidx.compose.runtime
     implementation project(path: ':quartz')
+
 
     testImplementation libs.junit
 
