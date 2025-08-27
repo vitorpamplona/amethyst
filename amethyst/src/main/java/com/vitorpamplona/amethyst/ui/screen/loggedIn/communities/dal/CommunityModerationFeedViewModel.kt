@@ -18,30 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.addressables
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 
-fun <R> Event.mapTaggedAddress(map: (address: String) -> R) = tags.mapTaggedAddress(map)
-
-fun Event.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = tags.firstIsTaggedAddressableNote(addressableNotes)
-
-fun Event.isTaggedAddressableNote(addressId: String) = tags.isTaggedAddressableNote(addressId)
-
-fun Event.isTaggedAddressableNotes(addressIds: Set<String>) = tags.isTaggedAddressableNotes(addressIds)
-
-fun Event.isTaggedAddressableKind(kind: Int) = tags.isTaggedAddressableKind(kind)
-
-fun Event.isTaggedAddressableKind(kindStr: String) = tags.isTaggedAddressableKind(kindStr)
-
-fun Event.getTagOfAddressableKind(kind: Int) = tags.getTagOfAddressableKind(kind)
-
-fun Event.getTagOfAddressableKind(kindStr: String) = tags.getTagOfAddressableKind(kindStr)
-
-fun Event.taggedATags() = tags.taggedATags()
-
-fun Event.firstTaggedATag() = tags.firstTaggedATag()
-
-fun Event.taggedAddresses() = tags.taggedAddresses()
-
-fun Event.firstTaggedAddress() = tags.firstTaggedAddress()
+class CommunityModerationFeedViewModel(
+    val note: AddressableNote,
+    val account: Account,
+) : FeedViewModel(CommunityModerationFeedFilter(note, account)) {
+    class Factory(
+        val note: AddressableNote,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = CommunityModerationFeedViewModel(note, account) as T
+    }
+}

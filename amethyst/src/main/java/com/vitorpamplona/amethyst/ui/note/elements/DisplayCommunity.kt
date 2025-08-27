@@ -34,9 +34,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.getTagOfAddressableKind
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 
 @Composable
 fun DisplayFollowingCommunityInPost(
@@ -55,11 +54,15 @@ private fun DisplayCommunity(
     nav: INav,
 ) {
     val communityTag =
-        remember(note) { note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.KIND) } ?: return
+        remember(note) { note.event?.communityAddress() } ?: return
 
     val displayTag =
         remember(note) {
-            buildLinkString(getCommunityShortName(communityTag)) { nav.nav(Route.Community(communityTag.kind, communityTag.pubKeyHex, communityTag.dTag)) }
+            buildLinkString(
+                getCommunityShortName(communityTag),
+            ) {
+                nav.nav(Route.Community(communityTag.kind, communityTag.pubKeyHex, communityTag.dTag))
+            }
         }
 
     Text(
@@ -75,12 +78,12 @@ private fun DisplayCommunity(
     )
 }
 
-private fun getCommunityShortName(communityTag: ATag): String {
+fun getCommunityShortName(communityAddress: Address): String {
     val name =
-        if (communityTag.dTag.length > 10) {
-            communityTag.dTag.take(10) + "..."
+        if (communityAddress.dTag.length > 10) {
+            communityAddress.dTag.take(10) + "..."
         } else {
-            communityTag.dTag.take(10)
+            communityAddress.dTag.take(10)
         }
 
     return "/n/$name"

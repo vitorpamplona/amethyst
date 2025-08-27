@@ -18,28 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip22Comments.tags
+package com.vitorpamplona.quartz.nip72ModCommunities.approval.tags
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
-class RootAddressTag(
-    val addressId: String,
-    val relay: NormalizedRelayUrl? = null,
+class ApprovedEventTag(
+    val ref: EventReference,
 ) {
-    fun toTagArray() = assemble(addressId, relay)
+    constructor(eventId: String, relayHint: NormalizedRelayUrl?, pubkey: String?) : this(EventReference(eventId, pubkey, relayHint))
+
+    fun toTagArray() = assemble(ref)
 
     companion object {
-        const val TAG_NAME = "A"
+        const val TAG_NAME = "e"
 
         @JvmStatic
         fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
@@ -47,53 +49,42 @@ class RootAddressTag(
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
-            addressId: String,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == addressId
+            eventId: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == eventId
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
-            addressIds: Set<String>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
+            eventIds: Set<String>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in eventIds
 
         @JvmStatic
-        fun parse(tag: Array<String>): RootAddressTag? {
+        fun parse(tag: Array<String>): ApprovedEventTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-
-            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-
-            return RootAddressTag(tag[1], relayHint)
+            ensure(tag[1].length == 64) { return null }
+            return ApprovedEventTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }, tag.getOrNull(3))
         }
 
         @JvmStatic
-        fun parseAddress(tag: Array<String>): Address? {
+        fun parseId(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-
-            return Address.parse(tag[1])
-        }
-
-        @JvmStatic
-        fun parseValidAddress(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return Address.parse(tag[1])?.toValue()
-        }
-
-        @JvmStatic
-        fun parseAddressId(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 
         @JvmStatic
-        fun parseAsHint(tag: Array<String>): AddressHint? {
+        fun parseValidId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(Hex.isHex(tag[1])) { return null }
+            return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): EventIdHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
@@ -102,21 +93,17 @@ class RootAddressTag(
             val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
             ensure(relayHint != null) { return null }
 
-            return AddressHint(tag[1], relayHint)
+            return EventIdHint(tag[1], relayHint)
         }
 
         @JvmStatic
         fun assemble(
-            addressId: HexKey,
+            eventId: HexKey,
             relay: NormalizedRelayUrl?,
-        ) = arrayOfNotNull(TAG_NAME, addressId, relay?.url)
+            pubkey: String?,
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay?.url, pubkey)
 
         @JvmStatic
-        fun assemble(
-            kind: Int,
-            pubKey: String,
-            dTag: String,
-            relay: NormalizedRelayUrl?,
-        ) = assemble(Address.assemble(kind, pubKey, dTag), relay)
+        fun assemble(ref: EventReference) = assemble(ref.eventId, ref.relayHint, ref.author)
     }
 }

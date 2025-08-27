@@ -45,6 +45,12 @@ class ReplyAddressTag(
         fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            addressId: String,
+        ) = tag.has(1) && tag[0] == RootAddressTag.Companion.TAG_NAME && tag[1] == addressId
+
+        @JvmStatic
         fun parse(tag: Array<String>): ReplyAddressTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
@@ -53,6 +59,15 @@ class ReplyAddressTag(
             val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
 
             return ReplyAddressTag(tag[1], relayHint)
+        }
+
+        @JvmStatic
+        fun parseAddress(tag: Array<String>): Address? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+
+            return Address.parse(tag[1])
         }
 
         @JvmStatic

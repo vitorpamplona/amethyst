@@ -80,7 +80,7 @@ class CommunityDefinitionEvent(
 
     fun moderators() = tags.mapNotNull(ModeratorTag::parse)
 
-    fun moderatorKeys() = tags.mapNotNull(ModeratorTag::parseKey)
+    fun moderatorKeys() = tags.mapNotNull(ModeratorTag::parseKey).plus(pubKey)
 
     fun relays() = tags.mapNotNull(RelayTag::parse)
 
@@ -88,6 +88,7 @@ class CommunityDefinitionEvent(
 
     companion object {
         const val KIND = 34550
+        const val KIND_STR = "34550"
         const val ALT_DESCRIPTION = "Community definition"
 
         fun build(

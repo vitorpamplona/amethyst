@@ -33,8 +33,10 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -50,6 +52,8 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
@@ -157,7 +161,26 @@ class NotificationFeedFilter(
         }
 
         if (event is BaseThreadedEvent) {
-            if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) return true
+            if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) {
+                return true
+            }
+
+            if ((event is TextNoteEvent || event is CommentEvent)) {
+                val community =
+                    event
+                        .communityAddress()
+                        ?.let {
+                            LocalCache.getAddressableNoteIfExists(it)
+                        }?.event as? CommunityDefinitionEvent
+                if (community != null) {
+                    val moderators = community.moderatorKeys().toSet()
+                    val isModerator = moderators.contains(authorHex)
+
+                    if (isModerator && event.pubKey !in moderators) {
+                        return true
+                    }
+                }
+            }
 
             val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
             val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)

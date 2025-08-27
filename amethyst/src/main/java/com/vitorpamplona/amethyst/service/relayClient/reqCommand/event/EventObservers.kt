@@ -29,6 +29,11 @@ import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -355,4 +360,50 @@ fun observeNoteEdits(
         .edits
         .stateFlow
         .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeCommunityApprovalNeedStatus(
+    note: Note,
+    community: Note,
+    accountViewModel: AccountViewModel,
+): State<Boolean?> {
+    // Subscribe in the relay for changes in this note.
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(note, community) {
+            combine(
+                community.flow().metadata.stateFlow,
+                note.flow().boosts.stateFlow,
+            ) { communityMetadata, boosts ->
+                (communityMetadata.note.event as? CommunityDefinitionEvent)?.let { communityDefEvent ->
+                    val moderators = communityDefEvent.moderatorKeys().toSet()
+
+                    if (note.author?.pubkeyHex in moderators) {
+                        false
+                    } else {
+                        val isModerator = accountViewModel.account.userProfile().pubkeyHex in moderators
+
+                        if (isModerator) {
+                            val wasAlreadyApproved =
+                                note.boosts.any {
+                                    val approvalEvent = it.event
+                                    (approvalEvent is CommunityPostApprovalEvent || approvalEvent is RepostEvent || approvalEvent is GenericRepostEvent) &&
+                                        approvalEvent.pubKey in moderators &&
+                                        approvalEvent.isForCommunity(community.idHex)
+                                }
+                            !wasAlreadyApproved
+                        } else {
+                            false
+                        }
+                    }
+                }
+            }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return flow.collectAsStateWithLifecycle(false)
 }

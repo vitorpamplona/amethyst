@@ -35,7 +35,11 @@ fun TagArray.isTaggedAddressableNotes(addressIds: Set<String>) = this.any(ATag::
 
 fun TagArray.isTaggedAddressableKind(kind: Int) = this.any(ATag::isTaggedWithKind, kind.toString())
 
+fun TagArray.isTaggedAddressableKind(kindStr: String) = this.any(ATag::isTaggedWithKind, kindStr)
+
 fun TagArray.getTagOfAddressableKind(kind: Int) = this.fastFirstNotNullOfOrNull(ATag::parseIfOfKind, kind.toString())
+
+fun TagArray.getTagOfAddressableKind(kindStr: String) = this.fastFirstNotNullOfOrNull(ATag::parseIfOfKind, kindStr.toString())
 
 fun TagArray.taggedATags() = this.mapNotNull(ATag::parse)
 

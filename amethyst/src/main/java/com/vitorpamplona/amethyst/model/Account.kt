@@ -186,6 +186,8 @@ import com.vitorpamplona.quartz.nip68Picture.pictureIMeta
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -862,6 +864,24 @@ class Account(
     suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 
     suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
+
+    suspend fun approveCommunityPost(
+        post: Note,
+        community: AddressableNote,
+    ) {
+        val commEvent = community.event as? CommunityDefinitionEvent ?: return
+        val postHint = post.toEventHint<Event>() ?: return
+        val communityHint = community.toEventHint<CommunityDefinitionEvent>() ?: return
+
+        val template = CommunityPostApprovalEvent.build(postHint, communityHint)
+
+        val signedEvent = signer.sign(template)
+
+        val relays = outboxRelays.flow.value + commEvent.relayUrls() + community.relays + (post.author?.inboxRelays() ?: emptyList())
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, relays)
+    }
 
     fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
 

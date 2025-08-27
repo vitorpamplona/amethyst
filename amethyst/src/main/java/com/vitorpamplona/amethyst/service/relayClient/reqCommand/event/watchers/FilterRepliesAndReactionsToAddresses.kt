@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -45,6 +46,7 @@ val RepliesAndReactionsToAddressesKinds1 =
         ReportEvent.KIND,
         LnZapEvent.KIND,
         PollNoteEvent.KIND,
+        CommentEvent.KIND,
     )
 
 val PostsAndChatMessagesToAddresses =

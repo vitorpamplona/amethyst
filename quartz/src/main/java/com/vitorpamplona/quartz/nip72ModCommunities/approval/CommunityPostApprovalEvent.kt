@@ -25,22 +25,29 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.isTagged
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag.Companion.parseAddress
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag.Companion.parseAddressId
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag.Companion.parse
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag.Companion.parseId
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.mapNotNull
 
 @Immutable
 class CommunityPostApprovalEvent(
@@ -54,13 +61,17 @@ class CommunityPostApprovalEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
-    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+    override fun eventHints() = tags.mapNotNull(ApprovedEventTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId)
+    override fun linkedEventIds() = tags.mapNotNull(ApprovedEventTag::parseId)
 
-    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+    override fun addressHints() =
+        tags.mapNotNull(ApprovedAddressTag::parseAsHint) +
+            tags.mapNotNull(CommunityTag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(QTag::parseAddressId)
+    override fun linkedAddressIds() =
+        tags.mapNotNull(ApprovedAddressTag::parseAddressId) +
+            tags.mapNotNull(CommunityTag::parseAddressId)
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
@@ -77,15 +88,17 @@ class CommunityPostApprovalEvent(
             null
         }
 
-    fun communities() = taggedATags().filter { it.kind == CommunityDefinitionEvent.KIND }
+    fun isForCommunity(communityAddressId: String): Boolean = tags.any(CommunityTag::isTagged, communityAddressId)
 
-    fun communityAddresses() = taggedAddresses().filter { it.kind == CommunityDefinitionEvent.KIND }
+    fun isForCommunity(community: Address): Boolean = isForCommunity(community.toValue())
 
-    fun approvedEvents() = taggedEvents()
+    fun communities(): List<CommunityTag> = tags.mapNotNull(CommunityTag::parse)
 
-    fun approvedATags() = taggedATags().filter { it.kind != CommunityDefinitionEvent.KIND }
+    fun communityAddresses(): List<Address> = tags.mapNotNull(CommunityTag::parseAddress)
 
-    fun approvedAddresses() = taggedAddresses().filter { it.kind != CommunityDefinitionEvent.KIND }
+    fun approvedEvents(): List<HexKey> = tags.mapNotNull(ApprovedEventTag::parseId)
+
+    fun approvedAddresses(): List<Address> = tags.mapNotNull(ApprovedAddressTag::parseAddress)
 
     companion object {
         const val KIND = 4550

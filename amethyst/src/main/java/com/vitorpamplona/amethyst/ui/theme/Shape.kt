@@ -356,3 +356,5 @@ val BadgePictureModifier = Modifier.size(35.dp).clip(shape = CutCornerShape(20))
 val MaxWidthPaddingTop5dp = Modifier.fillMaxWidth().padding(top = 5.dp)
 
 val VoiceHeightModifier = Modifier.fillMaxWidth().height(100.dp)
+
+val PaddingHorizontal12Modifier = Modifier.padding(horizontal = 12.dp)

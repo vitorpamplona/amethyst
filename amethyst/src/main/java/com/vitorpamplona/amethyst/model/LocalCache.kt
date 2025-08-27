@@ -1453,6 +1453,8 @@ object LocalCache : ILocalCache {
             // Counts the replies
             repliesTo.forEach { it.addBoost(note) }
 
+            eventsApproved.forEach { it.addBoost(note) }
+
             event.containedPost()?.let {
                 checkDeletionAndConsume(it, relay, false)
             }
