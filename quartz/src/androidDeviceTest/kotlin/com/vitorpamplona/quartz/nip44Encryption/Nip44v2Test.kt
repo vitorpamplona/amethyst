@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -41,7 +40,7 @@ class Nip44v2Test {
     private val vectors: VectorFile =
         jacksonObjectMapper()
             .readValue(
-                getInstrumentation().context.assets.open("nip44.vectors.json"),
+                javaClass.classLoader?.getResourceAsStream("nip44.vectors.json"),
                 VectorFile::class.java,
             )
 

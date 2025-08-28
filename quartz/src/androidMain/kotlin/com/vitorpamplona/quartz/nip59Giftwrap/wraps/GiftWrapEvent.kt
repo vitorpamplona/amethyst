@@ -80,14 +80,13 @@ class GiftWrapEvent(
         return gift
     }
 
-    suspend fun unwrapOrNull(signer: NostrSigner): Event? {
+    suspend fun unwrapOrNull(signer: NostrSigner): Event? =
         try {
-            return unwrapThrowing(signer)
+            unwrapThrowing(signer)
         } catch (_: Exception) {
             Log.w("GiftWrapEvent", "Couldn't Decrypt the content " + this.toNostrUri())
-            return null
+            null
         }
-    }
 
     private suspend fun plainContent(signer: NostrSigner): String {
         if (content.isEmpty()) return ""

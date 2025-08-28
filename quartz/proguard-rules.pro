@@ -59,3 +59,4 @@
 
 # JSON parsing
 -keep class com.vitorpamplona.quartz.** { *; }
+

@@ -237,7 +237,7 @@ class GiftWrapEventTest {
                 fail("Should not be able to decrypt msg for the receiver decrypted by the sender")
             }
 
-            giftWrapToReceiver.unwrapOrNull(receiver)?.let { _ ->
+            giftWrapToSender.unwrapOrNull(receiver)?.let { _ ->
                 fail("Should not be able to decrypt msg for the sender decrypted by the receiver")
             }
 

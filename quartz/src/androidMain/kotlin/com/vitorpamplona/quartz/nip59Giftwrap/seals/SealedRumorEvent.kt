@@ -78,14 +78,13 @@ class SealedRumorEvent(
         return event
     }
 
-    suspend fun unsealOrNull(signer: NostrSigner): Event? {
-        return try {
-            return unsealThrowing(signer)
+    suspend fun unsealOrNull(signer: NostrSigner): Event? =
+        try {
+            unsealThrowing(signer)
         } catch (e: Exception) {
             Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
             null
         }
-    }
 
     private suspend fun plainContent(signer: NostrSigner): String {
         if (content.isEmpty()) return ""

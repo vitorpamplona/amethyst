@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip17Dm
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
 import junit.framework.TestCase.assertEquals
@@ -46,9 +45,9 @@ class AESGCMTest {
     @Test
     fun imageTest() {
         val image =
-            getInstrumentation().context.assets.open("ovxxk2vz.jpg").use {
+            javaClass.classLoader?.getResourceAsStream("ovxxk2vz.jpg")?.use {
                 it.readAllBytes()
-            }
+            }!!
 
         val decrypted = cipher.decrypt(image)
 
@@ -64,9 +63,9 @@ class AESGCMTest {
             )
 
         val encrypted =
-            getInstrumentation().context.assets.open("trouble_video").use {
+            javaClass.classLoader?.getResourceAsStream("trouble_video")?.use {
                 it.readAllBytes()
-            }
+            }!!
 
         val decrypted = myCipher.decrypt(encrypted)
 

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.vitorpamplona.amethyst.commons.preview.MetaTagsParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -35,9 +34,8 @@ import java.nio.charset.Charset
 @RunWith(AndroidJUnit4::class)
 class MetaTagsParserBenchmark {
     private val html =
-        getInstrumentation()
-            .context.assets
-            .open("github_amethyst.html")
+        javaClass.classLoader!!
+            .getResourceAsStream("github_amethyst.html")
             .readBytes()
             .toString(Charset.forName("utf-8"))
 
