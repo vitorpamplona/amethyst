@@ -341,7 +341,14 @@ fun UpdateZapAmountContent(
 
             IconButton(
                 onClick = {
-                    clipboardManager.getText()?.let { postViewModel.copyFromClipboard(it.text) }
+                    val uri = clipboardManager.getText()?.text
+                    try {
+                        uri?.let {
+                            postViewModel.copyFromClipboard(it)
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        accountViewModel.toastManager.toast(R.string.invalid_nip47_uri_title, R.string.invalid_nip47_uri_description)
+                    }
                 },
             ) {
                 Icon(
