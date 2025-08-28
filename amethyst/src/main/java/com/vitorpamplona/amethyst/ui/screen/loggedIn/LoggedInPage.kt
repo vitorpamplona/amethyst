@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -166,6 +165,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
             }
         }
     } else {
+        val scope = rememberCoroutineScope()
         // no need for push permissions before 33
         LifecycleResumeEffect(key1 = accountViewModel) {
             Log.d("RegisterAccounts", "Registering for push notifications")

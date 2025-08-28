@@ -25,10 +25,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.LargeCache
+import kotlinx.coroutines.CoroutineScope
 import java.io.File
 
 class AccountSecretsEncryptedStores(
     val rootFilesDir: () -> File,
+    val scope: CoroutineScope,
 ) {
     companion object Companion {
         val encryption = KeyStoreEncryption()
@@ -47,6 +49,7 @@ class AccountSecretsEncryptedStores(
                     produceFile = { file(npub) },
                 ),
                 encryption,
+                scope = scope,
             )
         }
 
