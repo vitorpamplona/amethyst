@@ -27,7 +27,7 @@ class TorSettingsFlow(
     val externalSocksPort: MutableStateFlow<Int> = MutableStateFlow(9050),
     val onionRelaysViaTor: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val dmRelaysViaTor: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val newRelaysViaTor: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val newRelaysViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val trustedRelaysViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val urlPreviewsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val profilePicsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
