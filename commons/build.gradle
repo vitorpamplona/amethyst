@@ -51,7 +51,6 @@ composeCompiler {
 
 dependencies {
     implementation project(path: ':quartz')
-
     // Import @Immutable and @Stable
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.ui
