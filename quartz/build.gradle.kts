@@ -4,7 +4,11 @@ plugins {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+        }
+    }
 
     // Target declarations - add or remove as needed below. These define
     // which platforms this KMP module supports.
@@ -35,6 +39,7 @@ kotlin {
         }
 
         compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
             freeCompilerArgs.add("-Xstring-concat=inline")
         }
     }
