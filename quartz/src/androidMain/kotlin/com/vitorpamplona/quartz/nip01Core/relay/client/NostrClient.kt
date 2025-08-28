@@ -103,7 +103,7 @@ class NostrClient(
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 activeRequests.relays.value + activeCounts.relays.value + eventOutbox.relays.value,
             )
 
