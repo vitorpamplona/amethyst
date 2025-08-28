@@ -6,7 +6,7 @@ plugins {
 kotlin {
     jvm {
         compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
         }
     }
 
@@ -39,7 +39,7 @@ kotlin {
         }
 
         compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
             freeCompilerArgs.add("-Xstring-concat=inline")
         }
     }
