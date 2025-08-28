@@ -117,10 +117,11 @@ class Amethyst : Application() {
     // Connects the NostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
+            val useTor = torProxySettingsAnchor.useProxy(url)
             if (torProxySettingsAnchor.isDM(url)) {
-                okHttpClientForRelaysForDms.getHttpClient(torProxySettingsAnchor.useProxy(url))
+                okHttpClientForRelaysForDms.getHttpClient(useTor)
             } else {
-                okHttpClientForRelays.getHttpClient(torProxySettingsAnchor.useProxy(url))
+                okHttpClientForRelays.getHttpClient(useTor)
             }
         }
 

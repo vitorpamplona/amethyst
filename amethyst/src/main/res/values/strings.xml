@@ -787,6 +787,10 @@
 
     <string name="paste_from_clipboard">Paste from clipboard</string>
 
+    <string name="invalid_nip47_uri_title">Invalid NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">The URI %1$s is not a valid NIP-47 login URI.</string>
+
+
     <string name="language_description">For the App\'s Interface</string>
     <string name="theme_description">Dark, Light or System theme</string>
     <string name="automatically_load_images_gifs_description">Automatically load images and GIFs</string>

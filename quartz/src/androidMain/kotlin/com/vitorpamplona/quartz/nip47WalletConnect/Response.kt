@@ -37,9 +37,9 @@ class PayInvoiceSuccessResponse(
     val result: PayInvoiceResultParams? = null,
 ) : Response("pay_invoice") {
     class PayInvoiceResultParams(
-        val preimage: String,
+        val preimage: String? = null,
     ) {
-        fun countMemory(): Long = pointerSizeInBytes + preimage.bytesUsedInMemory()
+        fun countMemory(): Long = pointerSizeInBytes + (preimage?.bytesUsedInMemory() ?: 0)
     }
 
     override fun countMemory(): Long = pointerSizeInBytes + (result?.countMemory() ?: 0)
@@ -49,8 +49,8 @@ class PayInvoiceErrorResponse(
     val error: PayInvoiceErrorParams? = null,
 ) : Response("pay_invoice") {
     class PayInvoiceErrorParams(
-        val code: ErrorType?,
-        val message: String?,
+        val code: ErrorType? = null,
+        val message: String? = null,
     ) {
         fun countMemory(): Long = pointerSizeInBytes + pointerSizeInBytes + (message?.bytesUsedInMemory() ?: 0)
     }
