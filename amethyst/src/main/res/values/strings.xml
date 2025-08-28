@@ -1245,4 +1245,8 @@
     <string name="option_of">Option %1$s of %2$s</string>
     <string name="feed_filter_selected">Feed filter, %1$s selected</string>
     <string name="feed_filter_select_an_option">Feed filter, %1$s</string>
+
+    <string name="crashreport_found">Crash Report found</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
+    <string name="crashreport_found_send">Send it</string>
 </resources>
