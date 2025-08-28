@@ -18,32 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal
 
-import com.vitorpamplona.amethyst.logTime
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 
-abstract class AdditiveFeedFilter<T> :
-    FeedFilter<T>(),
-    IAdditiveFeedFilter<T> {
-    open fun updateListWith(
-        oldList: List<T>,
-        newItems: Set<T>,
-    ): List<T> =
-        logTime(
-            debugMessage = { "${this.javaClass.simpleName} AdditiveFeedFilter updating ${newItems.size} new items to ${it.size} items" },
-        ) {
-            val newItemsToBeAdded = applyFilter(newItems)
-            if (newItemsToBeAdded.isNotEmpty()) {
-                val newList = oldList.toSet() + newItemsToBeAdded
-                sort(newList).take(limit())
-            } else {
-                oldList
-            }
-        }
-}
-
-interface IAdditiveFeedFilter<T> : IFeedFilter<T> {
-    fun applyFilter(newItems: Set<T>): Set<T>
-
-    fun sort(items: Set<T>): List<T>
+class CommunityModerationFeedViewModel(
+    val note: AddressableNote,
+    val account: Account,
+) : FeedViewModel(CommunityModerationFeedFilter(note, account)) {
+    class Factory(
+        val note: AddressableNote,
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = CommunityModerationFeedViewModel(note, account) as T
+    }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -163,6 +164,14 @@ private fun NewPostScreenInner(
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    BackHandler {
+        accountViewModel.runIOCatching {
+            postViewModel.sendDraftSync()
+            postViewModel.cancel()
+        }
+        nav.popBack()
+    }
 
     Scaffold(
         topBar = {

@@ -340,6 +340,9 @@ class CardFeedContentState(
         }
     }
 
+    fun deleteFromFeed(deletedNotes: Set<Note>) {
+    }
+
     private fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
 

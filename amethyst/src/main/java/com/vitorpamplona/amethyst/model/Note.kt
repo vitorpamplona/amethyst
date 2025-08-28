@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -64,6 +65,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
@@ -201,6 +203,16 @@ open class Note(
     }
 
     fun relayHintUrl(): NormalizedRelayUrl? {
+        val noteEvent = event
+        val communityPostRelays =
+            when (noteEvent) {
+                is CommunityDefinitionEvent -> noteEvent.relayUrls().ifEmpty { null }?.toSet()
+                is IsInPublicChatChannel -> LocalCache.getAnyChannel(this)?.relays()
+                else -> null
+            }
+
+        if (!communityPostRelays.isNullOrEmpty()) return communityPostRelays.firstOrNull()
+
         val currentOutbox = author?.outboxRelays()?.toSet()
 
         return if (relays.isNotEmpty()) {

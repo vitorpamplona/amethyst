@@ -72,16 +72,18 @@ open class BaseThreadedEvent(
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
-    fun tagsWithoutCitations(): List<String> {
+    open fun tagsWithoutCitations(): List<String> {
         val certainRepliesTo = markedReplyTos()
         val uncertainRepliesTo = unmarkedReplyTos()
 
         val tagAddresses =
             taggedATags()
-                .filter {
-                    it.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
+                .filter { aTag ->
+                    aTag.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || aTag.kind != WikiNoteEvent.KIND)
                     // removes forks from itself.
-                }.map { it.toTag() }
+                }.map {
+                    it.toTag()
+                }
 
         if (certainRepliesTo.isEmpty() && uncertainRepliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 

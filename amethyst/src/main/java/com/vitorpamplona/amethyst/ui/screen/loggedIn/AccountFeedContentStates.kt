@@ -104,6 +104,34 @@ class AccountFeedContentStates(
         drafts.updateFeedWith(newNotes)
     }
 
+    fun deleteNotes(newNotes: Set<Note>) {
+        checkNotInMainThread()
+
+        homeLive.deleteFromFeed(newNotes)
+        homeNewThreads.deleteFromFeed(newNotes)
+        homeReplies.deleteFromFeed(newNotes)
+
+        dmKnown.updateFeedWith(newNotes)
+        dmNew.updateFeedWith(newNotes)
+
+        videoFeed.deleteFromFeed(newNotes)
+
+        discoverMarketplace.deleteFromFeed(newNotes)
+        discoverFollowSets.deleteFromFeed(newNotes)
+        discoverReads.deleteFromFeed(newNotes)
+        discoverDVMs.deleteFromFeed(newNotes)
+        discoverLive.deleteFromFeed(newNotes)
+        discoverCommunities.deleteFromFeed(newNotes)
+        discoverPublicChats.deleteFromFeed(newNotes)
+
+        notifications.deleteFromFeed(newNotes)
+        notificationSummary.invalidateInsertData(newNotes)
+
+        feedListOptions.deleteFromFeed(newNotes)
+
+        drafts.deleteFromFeed(newNotes)
+    }
+
     fun destroy() {
         notifications.destroy()
         notificationSummary.destroy()

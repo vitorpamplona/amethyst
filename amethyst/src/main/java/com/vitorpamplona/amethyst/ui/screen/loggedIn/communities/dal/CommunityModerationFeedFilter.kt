@@ -27,16 +27,19 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
-import kotlin.collections.toSet
 
-class CommunityFeedFilter(
+class CommunityModerationFeedFilter(
     val communityDefNote: AddressableNote,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
+    val approvedFilter = CommunityFeedFilter(communityDefNote, account)
+
     val communityDefEvent = communityDefNote.event as? CommunityDefinitionEvent
     val moderators = communityDefEvent?.moderatorKeys()?.toSet() ?: emptySet()
 
@@ -53,6 +56,28 @@ class CommunityFeedFilter(
         return sort(result)
     }
 
+    override fun updateListWith(
+        oldList: List<Note>,
+        newItems: Set<Note>,
+    ): List<Note> {
+        val approved = approvedFilter.applyFilter(newItems)
+
+        val newOldList =
+            if (approved.isNotEmpty()) {
+                oldList - approved
+            } else {
+                oldList
+            }
+
+        val newItemsToBeAdded = applyFilter(newItems)
+        return if (newItemsToBeAdded.isNotEmpty()) {
+            val newList = newOldList.toSet() + newItemsToBeAdded
+            sort(newList).take(limit())
+        } else {
+            newOldList
+        }
+    }
+
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
@@ -65,21 +90,28 @@ class CommunityFeedFilter(
             .toSet()
     }
 
+    private fun wasApprovedByCommunity(note: Note): Boolean =
+        note.boosts.any {
+            val approvalEvent = it.event
+            (approvalEvent is CommunityPostApprovalEvent || approvalEvent is RepostEvent || approvalEvent is GenericRepostEvent) &&
+                approvalEvent.pubKey in moderators &&
+                approvalEvent.isForCommunity(this.communityDefNote.idHex)
+        }
+
     private fun filterMap(note: Note): List<Note>? {
         val noteEvent = note.event ?: return null
 
         return if (
-            // Only Approvals
             (noteEvent is TextNoteEvent || noteEvent is CommentEvent || noteEvent is CommunityPostApprovalEvent) &&
-            noteEvent.pubKey in moderators &&
-            noteEvent.isForCommunity(this.communityDefNote.idHex)
+            noteEvent.isForCommunity(this.communityDefNote.idHex) &&
+            noteEvent.pubKey !in moderators
         ) {
             if (noteEvent is CommunityPostApprovalEvent) {
                 note.replyTo?.filter {
-                    it.isNewThread()
+                    it.isNewThread() && !wasApprovedByCommunity(it)
                 }
             } else {
-                if (note.isNewThread()) {
+                if (note.isNewThread() && !wasApprovedByCommunity(note)) {
                     listOf(note)
                 } else {
                     null

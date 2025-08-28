@@ -64,9 +64,10 @@ fun DisappearingScaffold(
     bottomBar: (@Composable () -> Unit)? = null,
     floatingButton: (@Composable () -> Unit)? = null,
     accountViewModel: AccountViewModel,
+    isActive: () -> Boolean = { true },
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
-    val shouldShow = remember { mutableStateOf(true) }
+    val shouldShow = remember { mutableStateOf(isActive()) }
 
     val modifier =
         if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
@@ -80,6 +81,13 @@ fun DisappearingScaffold(
                             available: Offset,
                             source: NestedScrollSource,
                         ): Offset {
+                            if (!isActive()) {
+                                if (!shouldShow.value) {
+                                    shouldShow.value = true
+                                }
+                                return Offset.Zero
+                            }
+
                             val newOffset = bottomBarOffsetHeightPx.floatValue + available.y
 
                             if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {

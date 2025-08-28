@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
@@ -51,7 +52,7 @@ val RepliesAndReactionsKinds =
         PollNoteEvent.KIND,
         OtsEvent.KIND,
         TextNoteModificationEvent.KIND,
-        GitReplyEvent.KIND,
+        CommentEvent.KIND,
     )
 
 val RepliesAndReactionsKinds2 =
@@ -60,6 +61,7 @@ val RepliesAndReactionsKinds2 =
         NIP90ContentDiscoveryResponseEvent.KIND,
         NIP90StatusEvent.KIND,
         TorrentCommentEvent.KIND,
+        GitReplyEvent.KIND,
     )
 
 fun filterRepliesAndReactionsToNotes(
@@ -108,7 +110,7 @@ fun filterRepliesAndReactionsToNotes(
                     relay = relay,
                     filter =
                         Filter(
-                            kinds = listOf(TextNoteEvent.KIND),
+                            kinds = listOf(TextNoteEvent.KIND, CommentEvent.KIND),
                             tags = mapOf("q" to sortedList),
                             since = since,
                             limit = 1000,

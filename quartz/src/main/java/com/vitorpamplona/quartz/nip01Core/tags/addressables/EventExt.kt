@@ -32,7 +32,11 @@ fun Event.isTaggedAddressableNotes(addressIds: Set<String>) = tags.isTaggedAddre
 
 fun Event.isTaggedAddressableKind(kind: Int) = tags.isTaggedAddressableKind(kind)
 
+fun Event.isTaggedAddressableKind(kindStr: String) = tags.isTaggedAddressableKind(kindStr)
+
 fun Event.getTagOfAddressableKind(kind: Int) = tags.getTagOfAddressableKind(kind)
+
+fun Event.getTagOfAddressableKind(kindStr: String) = tags.getTagOfAddressableKind(kindStr)
 
 fun Event.taggedATags() = tags.taggedATags()
 

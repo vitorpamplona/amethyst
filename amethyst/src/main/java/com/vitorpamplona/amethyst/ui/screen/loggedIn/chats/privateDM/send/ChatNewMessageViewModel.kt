@@ -351,7 +351,7 @@ class ChatNewMessageViewModel :
         val version = draftTag.current
         innerSendPost(null)
         cancel()
-        accountViewModel.viewModelScope.launch {
+        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }

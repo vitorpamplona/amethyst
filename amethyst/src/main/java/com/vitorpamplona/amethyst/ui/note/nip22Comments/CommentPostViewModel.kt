@@ -86,6 +86,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
@@ -252,8 +253,7 @@ open class CommentPostViewModel :
     }
 
     private fun loadFromDraft(draftEvent: CommentEvent) {
-        val scope = draftEvent.scope() ?: return
-        this.externalIdentity = scope
+        this.externalIdentity = draftEvent.scope()
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
@@ -278,8 +278,14 @@ open class CommentPostViewModel :
             zapRaiserAmount.value = zapraiser
         }
 
-        draftEvent.replyingTo()?.let {
-            replyingTo = LocalCache.getOrCreateNote(it)
+        val replyAddress = draftEvent.replyAddress()
+
+        if (replyAddress.isNotEmpty()) {
+            replyingTo = LocalCache.getOrCreateAddressableNote(replyAddress.first())
+        } else {
+            draftEvent.replyingTo()?.let {
+                replyingTo = LocalCache.getOrCreateNote(it)
+            }
         }
 
         wantsToAddGeoHash = draftEvent.hasGeohashes()
@@ -317,7 +323,7 @@ open class CommentPostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.viewModelScope.launch {
+        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -356,6 +362,7 @@ open class CommentPostViewModel :
         val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
 
         val replyingTo = replyingTo
+        val replyingToEvent = replyingTo?.event
 
         val template =
             if (replyingTo != null) {
@@ -365,7 +372,22 @@ open class CommentPostViewModel :
                     msg = tagger.message,
                     replyingTo = eventHint,
                 ) {
-                    tagger.pTags?.let { pTagList -> notify(pTagList.map { it.toPTag() }) }
+                    val notifyPTags = tagger.pTags?.let { pTagList -> pTagList.map { it.toPTag() } } ?: emptyList()
+
+                    val extraNotificationAuthors =
+                        if (replyingToEvent is CommunityDefinitionEvent) {
+                            replyingToEvent.moderatorKeys().mapNotNull {
+                                if (it != replyingToEvent.pubKey) {
+                                    accountViewModel.checkGetOrCreateUser(it)?.toPTag()
+                                } else {
+                                    null
+                                }
+                            }
+                        } else {
+                            emptyList()
+                        }
+
+                    notify((notifyPTags + extraNotificationAuthors).distinctBy { it.pubKey })
 
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))

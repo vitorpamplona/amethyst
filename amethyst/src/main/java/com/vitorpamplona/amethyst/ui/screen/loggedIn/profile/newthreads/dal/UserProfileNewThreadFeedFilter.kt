@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -70,6 +71,7 @@ class UserProfileNewThreadFeedFilter(
         it.author == user &&
             (
                 it.event is TextNoteEvent ||
+                    it.event is CommentEvent ||
                     it.event is ClassifiedsEvent ||
                     it.event is RepostEvent ||
                     it.event is GenericRepostEvent ||

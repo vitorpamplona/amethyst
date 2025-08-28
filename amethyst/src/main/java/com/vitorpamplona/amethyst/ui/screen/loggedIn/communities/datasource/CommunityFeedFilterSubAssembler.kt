@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 class CommunityFeedFilterSubAssembler(
     client: NostrClient,
@@ -40,14 +41,34 @@ class CommunityFeedFilterSubAssembler(
         return keys.flatMap {
             val commEvent = it.community.event
             if (commEvent is CommunityDefinitionEvent) {
-                val relays =
-                    commEvent.relayUrls().ifEmpty { null }
-                        ?: LocalCache.relayHints.hintsForAddress(commEvent.addressTag()).ifEmpty { null }
-                        ?: it.community.relayUrls()
+                val communityRelays =
+                    (
+                        commEvent.relayUrls().ifEmpty {
+                            LocalCache.relayHints.hintsForAddress(commEvent.addressTag())
+                        } + it.community.relayUrls()
+                    ).toSet()
 
-                relays.toSet().map {
-                    filterCommunityPosts(it, commEvent, since?.get(it)?.time)
-                }
+                val moderatorsOutbox =
+                    mapOfSet {
+                        commEvent.moderatorKeys().forEach { modKey ->
+                            // hits the relay of each moderator for approvals
+                            LocalCache.checkGetOrCreateUser(modKey)?.outboxRelays()?.forEach { relay ->
+                                add(relay, modKey)
+                            }
+
+                            // static relay hints from this community
+                            communityRelays.forEach { relay ->
+                                add(relay, modKey)
+                            }
+                        }
+                    }
+
+                moderatorsOutbox.map { (relay, authors) ->
+                    filterCommunityPostsFromModerators(relay, authors, commEvent, since?.get(relay)?.time)
+                } +
+                    communityRelays.map { relay ->
+                        filterCommunityPostsFromEverybody(relay, commEvent, since?.get(relay)?.time)
+                    }
             } else {
                 emptyList()
             }
