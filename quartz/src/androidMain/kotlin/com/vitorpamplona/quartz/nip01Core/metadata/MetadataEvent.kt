@@ -117,7 +117,7 @@ class MetadataEvent(
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it.trim()) }
 
             return eventTemplate(KIND, currentMetadata.toString(), createdAt) {
-                alt("User profile for ${currentMetadata.get("name").asText() ?: "Anonymous"}")
+                alt("User profile for ${currentMetadata.get("name")?.asText() ?: "Anonymous"}")
 
                 // For https://github.com/nostr-protocol/nips/pull/1770
                 currentMetadata.get(NameTag.TAG_NAME)?.asText()?.let { name(it) }
@@ -132,7 +132,7 @@ class MetadataEvent(
                 currentMetadata.get(Lud06Tag.TAG_NAME)?.asText()?.let { lud06(it) }
 
                 twitter?.let { twitterClaim(it) }
-                    ?: mastodon?.let { mastodonClaim(it) }
+                mastodon?.let { mastodonClaim(it) }
                 github?.let { githubClaim(it) }
 
                 initializer()
