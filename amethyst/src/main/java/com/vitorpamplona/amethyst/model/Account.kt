@@ -128,9 +128,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -1785,83 +1782,6 @@ class Account(
                         if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
                             hiddenUsers.hideUser(spammer.pubkeyHex)
                         }
-                    }
-                }
-            }
-        }
-
-        scope.launch(Dispatchers.Default) {
-            Log.d("DB UPGRADE", "Migrating List")
-            delay(1000 * 60 * 1)
-            // waits 5 minutes before migrating the list.
-            val contactList = userProfile().latestContactList
-            val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { cache.getPublicChatChannelIfExists(it) }
-
-            if (oldChannels != null && oldChannels.isNotEmpty()) {
-                Log.d("DB UPGRADE", "Migrating List with ${oldChannels.size} old channels ")
-                val existingChannels = publicChatList.flowSet.value
-
-                val needsToUpgrade = oldChannels.filter { it.idHex !in existingChannels }
-
-                Log.d("DB UPGRADE", "Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
-
-                if (needsToUpgrade.isNotEmpty()) {
-                    Log.d("DB UPGRADE", "Migrating List")
-                    runCatching {
-                        sendMyPublicAndPrivateOutbox(publicChatList.follow(oldChannels))
-                    }
-                }
-            }
-
-            val oldCommunities = contactList?.taggedAddresses()?.toSet()?.map { cache.getOrCreateAddressableNote(it) }
-
-            if (oldCommunities != null && oldCommunities.isNotEmpty()) {
-                Log.d("DB UPGRADE", "Migrating List with ${oldCommunities.size} old communities ")
-                val existingCommunities = communityList.flowSet.value
-
-                val needsToUpgrade = oldCommunities.filter { it.idHex !in existingCommunities }
-
-                Log.d("DB UPGRADE", "Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
-
-                if (needsToUpgrade.isNotEmpty()) {
-                    Log.d("DB UPGRADE", "Migrating List")
-                    runCatching {
-                        sendMyPublicAndPrivateOutbox(communityList.follow(oldCommunities))
-                    }
-                }
-            }
-
-            val oldHashtags = contactList?.hashtags()?.toSet()
-
-            if (oldHashtags != null && oldHashtags.isNotEmpty()) {
-                Log.d("DB UPGRADE", "Migrating List with ${oldHashtags.size} old hashtags ")
-                val existingHashtags = hashtagList.flow.value
-
-                val needsToUpgrade = oldHashtags.filter { it !in existingHashtags }
-
-                Log.d("DB UPGRADE", "Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
-
-                if (needsToUpgrade.isNotEmpty()) {
-                    Log.d("DB UPGRADE", "Migrating List")
-                    runCatching {
-                        sendMyPublicAndPrivateOutbox(hashtagList.follow(oldHashtags.toList()))
-                    }
-                }
-            }
-
-            val oldGeohashes = contactList?.geohashes()?.toSet()
-            if (oldGeohashes != null && oldGeohashes.isNotEmpty()) {
-                Log.d("DB UPGRADE", "Migrating List with ${oldGeohashes.size} old geohashes ")
-                val existingGeohashes = geohashList.flow.value
-
-                val needsToUpgrade = oldGeohashes.filter { it !in existingGeohashes }
-
-                Log.d("DB UPGRADE", "Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
-
-                if (needsToUpgrade.isNotEmpty()) {
-                    Log.d("DB UPGRADE", "Migrating List")
-                    runCatching {
-                        sendMyPublicAndPrivateOutbox(geohashList.follow(oldGeohashes.toList()))
                     }
                 }
             }
