@@ -64,6 +64,15 @@ fun DisplayErrorMessages(
                     toastManager.clearToasts()
                 }
 
+            is ActionableStringToastMsg ->
+                InformationDialog(
+                    obj.title,
+                    obj.msg,
+                ) {
+                    obj.action()
+                    toastManager.clearToasts()
+                }
+
             is ThrowableToastMsg ->
                 InformationDialog(
                     stringRes(obj.titleResId),

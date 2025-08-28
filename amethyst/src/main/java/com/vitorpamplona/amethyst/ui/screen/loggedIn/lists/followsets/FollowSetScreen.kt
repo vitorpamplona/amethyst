@@ -43,12 +43,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -58,85 +63,144 @@ import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowSetScreen(
-    onClose: () -> Unit,
+    // TODO: Investigate passing follow set properties rather than follow set object.
+    selectedSetIdentifier: String,
     accountViewModel: AccountViewModel,
     navigator: INav,
-    // TODO: Investigate passing follow set properties rather than follow set object.
-    selectedSet: FollowSet,
-    onProfileRemove: (String) -> Unit,
-    onListSave: () -> Unit,
-    onListBroadcast: () -> Unit,
-    onListDelete: () -> Unit,
 ) {
-    BackHandler { onClose() }
-
-    // TODO: Investigate moving the mapping function to a VM.(related to above TODO).
-    val users = selectedSet.profileList.mapToUsers(accountViewModel).filterNotNull()
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = selectedSet.title,
-                        )
-                        Icon(
-                            painter =
-                                painterResource(
-                                    when (selectedSet.listVisibility) {
-                                        ListVisibility.Public -> R.drawable.ic_public
-                                        ListVisibility.Private -> R.drawable.lock
-                                        ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                                    },
-                                ),
-                            contentDescription = null,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    BackButton(
-                        onPress = onClose,
-                    )
-                },
-                actions = {
-                    ListActionsMenuButton(
-                        onSaveList = onListSave,
-                        onBroadcastList = onListBroadcast,
-                        onDeleteList = onListDelete,
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-            )
-        },
-    ) { padding ->
-        FollowSetListView(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = 10.dp,
-                        end = 10.dp,
-                        top = padding.calculateTopPadding(),
-                        bottom = padding.calculateBottomPadding(),
-                    ).consumeWindowInsets(padding)
-                    .imePadding(),
-            followSetList = users,
-            onDeleteUser = { onProfileRemove(it) },
-            accountViewModel = accountViewModel,
-            nav = navigator,
+    val followSetViewModel: NostrUserListFeedViewModel =
+        viewModel(
+            key = "NostrUserListFeedViewModel",
+            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
         )
+
+    val followSetState by followSetViewModel.feedContent.collectAsState()
+    val uiScope = rememberCoroutineScope()
+
+    val selectedSet by remember(followSetState) {
+        derivedStateOf {
+            uiScope.launch {
+                delay(500L)
+            }
+            val note =
+                followSetViewModel.getFollowSetNote(
+                    selectedSetIdentifier,
+                    accountViewModel.account,
+                )
+
+            if (note != null) {
+                val event = note.event as PeopleListEvent
+                println("Found list, with title: ${event.nameOrTitle()}")
+                val selectedFollowSet =
+                    FollowSet.mapEventToSet(
+                        event,
+                        accountViewModel.account.signer,
+                    )
+                return@derivedStateOf selectedFollowSet
+            } else {
+                null
+            }
+        }
+    }
+
+    BackHandler { navigator.popBack() }
+
+    when {
+        selectedSet != null -> {
+            // TODO: Investigate moving the mapping function to a VM.(related to above TODO).
+            val users = selectedSet!!.profileList.mapToUsers(accountViewModel).filterNotNull()
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = selectedSet!!.title,
+                                )
+                                Icon(
+                                    painter =
+                                        painterResource(
+                                            when (selectedSet!!.listVisibility) {
+                                                ListVisibility.Public -> R.drawable.ic_public
+                                                ListVisibility.Private -> R.drawable.lock
+                                                ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
+                                            },
+                                        ),
+                                    contentDescription = null,
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            BackButton(
+                                onPress = { navigator.popBack() },
+                            )
+                        },
+                        actions = {
+                            // TODO: Fix onSaveList and onBroadcastList
+                            ListActionsMenuButton(
+                                onSaveList = {},
+                                onBroadcastList = {},
+                                onDeleteList = {
+                                    followSetViewModel.deleteFollowSet(
+                                        selectedSet!!,
+                                        accountViewModel.account,
+                                    )
+                                },
+                            )
+                        },
+                        colors =
+                            TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                    )
+                },
+            ) { padding ->
+                FollowSetListView(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(
+                                start = 10.dp,
+                                end = 10.dp,
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding(),
+                            ).consumeWindowInsets(padding)
+                            .imePadding(),
+                    followSetList = users,
+                    onDeleteUser = {
+                        followSetViewModel.removeUserFromSet(
+                            it,
+                            selectedSet!!,
+                            accountViewModel.account,
+                        )
+                    },
+                    accountViewModel = accountViewModel,
+                    nav = navigator,
+                )
+            }
+        }
+
+        selectedSet == null -> {
+            accountViewModel.toastManager.toast(
+                "Follow Set Error",
+                "Could not find requested follow set",
+            ) {
+                navigator.popBack()
+            }
+        }
     }
 }
 

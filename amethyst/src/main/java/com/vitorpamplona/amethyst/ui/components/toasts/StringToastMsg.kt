@@ -27,3 +27,9 @@ class StringToastMsg(
     val title: String,
     val msg: String,
 ) : ToastMsg()
+
+class ActionableStringToastMsg(
+    val title: String,
+    val msg: String,
+    val action: () -> Unit,
+) : ToastMsg()
