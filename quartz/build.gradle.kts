@@ -28,6 +28,12 @@ kotlin {
             consumerKeepRules.files.add(File(project.projectDir, "proguard-rules.pro"))
         }
 
+        packaging {
+            resources {
+                excludes.add("**/libscrypt.dylib")
+            }
+        }
+
         compilerOptions {
             freeCompilerArgs.add("-Xstring-concat=inline")
         }
