@@ -1485,7 +1485,7 @@ class AccountViewModel(
         dvmPublicKey: User,
         onReady: (event: Note) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        runIOCatching {
             account.requestDVMContentDiscovery(dvmPublicKey) {
                 onReady(LocalCache.getOrCreateNote(it.id))
             }
