@@ -26,21 +26,28 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
+import kotlin.collections.toSet
 
 class CommunityFeedFilter(
-    val note: AddressableNote,
+    val communityDefNote: AddressableNote,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + note.idHex
+    val communityDefEvent = communityDefNote.event as? CommunityDefinitionEvent
+    val moderators = communityDefEvent?.moderatorKeys()?.toSet() ?: emptySet()
+
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + communityDefNote.idHex
 
     override fun feed(): List<Note> {
-        val myPubKey = account.userProfile().pubkeyHex
+        if (communityDefEvent == null) return emptyList()
+
         val result =
             LocalCache.notes.mapFlattenIntoSet { _, it ->
-                filterMap(it, myPubKey)
+                filterMap(it)
             }
 
         return sort(result)
@@ -49,35 +56,39 @@ class CommunityFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val myPubKey = account.userProfile().pubkeyHex
+        if (communityDefEvent == null) return emptySet()
 
         return collection
             .mapNotNull {
-                filterMap(it, myPubKey)
+                filterMap(it)
             }.flatten()
             .toSet()
     }
 
-    private fun filterMap(
-        note: Note,
-        myPubKey: HexKey,
-    ): List<Note>? =
-        if (
+    private fun filterMap(note: Note): List<Note>? {
+        val noteEvent = note.event ?: return null
+
+        return if (
             // Only Approvals
-            note.event is CommunityPostApprovalEvent &&
-            // Of the given community
-            note.event?.isTaggedAddressableNote(this.note.idHex) == true
+            (noteEvent is TextNoteEvent || noteEvent is CommentEvent || noteEvent is CommunityPostApprovalEvent) &&
+            noteEvent.pubKey in moderators &&
+            noteEvent.isForCommunity(this.communityDefNote.idHex)
         ) {
-            // if it is my post, bring on
-            if (note.author?.pubkeyHex == myPubKey && note.isNewThread()) {
-                listOf(note)
+            if (noteEvent is CommunityPostApprovalEvent) {
+                note.replyTo?.filter {
+                    it.isNewThread()
+                }
             } else {
-                // brings the actual posts, not the approvals
-                note.replyTo?.filter { it.isNewThread() }
+                if (note.isNewThread()) {
+                    listOf(note)
+                } else {
+                    null
+                }
             }
         } else {
             null
         }
+    }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

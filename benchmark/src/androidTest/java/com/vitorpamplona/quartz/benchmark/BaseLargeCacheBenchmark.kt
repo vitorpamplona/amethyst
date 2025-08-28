@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.benchmark
 
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -34,7 +33,7 @@ open class BaseLargeCacheBenchmark {
     companion object {
         fun getEventDB(): List<Event> {
             // This file includes duplicates
-            val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_startup_data.json")
+            val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json")
 
             return JsonMapper.mapper.readValue<ArrayList<Event>>(
                 GZIPInputStream(fullDBInputStream),

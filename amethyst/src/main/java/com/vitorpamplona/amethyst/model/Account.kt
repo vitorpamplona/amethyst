@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.ots.OkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
@@ -137,6 +136,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -187,6 +187,8 @@ import com.vitorpamplona.quartz.nip68Picture.pictureIMeta
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -323,7 +325,9 @@ class Account(
 
     val otsResolverBuilder: OkHttpOtsResolverBuilder =
         OkHttpOtsResolverBuilder(
-            Amethyst.instance.okHttpClients,
+            {
+                Amethyst.instance.okHttpClients.getHttpClient(privacyState.shouldUseTorForMoneyOperations(it))
+            },
             privacyState::shouldUseTorForMoneyOperations,
             Amethyst.instance.otsBlockHeightCache,
         )
@@ -878,6 +882,24 @@ class Account(
     suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 
     suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
+
+    suspend fun approveCommunityPost(
+        post: Note,
+        community: AddressableNote,
+    ) {
+        val commEvent = community.event as? CommunityDefinitionEvent ?: return
+        val postHint = post.toEventHint<Event>() ?: return
+        val communityHint = community.toEventHint<CommunityDefinitionEvent>() ?: return
+
+        val template = CommunityPostApprovalEvent.build(postHint, communityHint)
+
+        val signedEvent = signer.sign(template)
+
+        val relays = outboxRelays.flow.value + commEvent.relayUrls() + community.relays + (post.author?.inboxRelays() ?: emptyList())
+
+        cache.justConsumeMyOwnEvent(signedEvent)
+        client.send(signedEvent, relays)
+    }
 
     fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
 

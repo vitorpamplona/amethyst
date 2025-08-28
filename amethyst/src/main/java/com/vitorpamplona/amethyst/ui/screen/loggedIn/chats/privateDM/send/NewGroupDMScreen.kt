@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -164,6 +165,14 @@ fun NewGroupDMScreen(
     }
 
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    BackHandler {
+        accountViewModel.runIOCatching {
+            postViewModel.sendDraftSync()
+            postViewModel.cancel()
+        }
+        nav.popBack()
+    }
 
     Scaffold(
         topBar = {

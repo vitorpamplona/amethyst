@@ -20,4 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keep class com.vitorpamplona.amethyst.commons.** { *; }
+-keep class com.vitorpamplona.quartz.** { *; }
+-keep class com.vitorpamplona.amethyst.** { *; }
+-keep class com.vitorpamplona.ammolite.** { *; }

@@ -28,9 +28,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +58,7 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -139,7 +142,9 @@ import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -164,7 +169,6 @@ import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -212,7 +216,9 @@ import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
@@ -552,6 +558,8 @@ fun InnerNoteWithReactions(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+
+            RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
         }
     }
 
@@ -574,6 +582,47 @@ fun InnerNoteWithReactions(
         if (baseNote.event is DraftWrapEvent) {
             Spacer(modifier = DoubleVertSpacer)
         }
+    }
+}
+
+@Composable
+private fun RenderApprovalIfNeeded(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (baseNote.isNewThread()) {
+        val communityAddress =
+            remember(baseNote) {
+                baseNote.event?.communityAddress()
+            }
+        communityAddress?.let {
+            LoadAddressableNote(it, accountViewModel) { community ->
+                if (community != null) {
+                    val showApproveButton by observeCommunityApprovalNeedStatus(baseNote, community, accountViewModel)
+                    if (showApproveButton == true) {
+                        RenderApproveButton(baseNote, community, accountViewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderApproveButton(
+    post: Note,
+    community: AddressableNote,
+    accountViewModel: AccountViewModel,
+) {
+    OutlinedButton(
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minWidth = Size10dp, minHeight = Size30dp),
+        contentPadding = PaddingValues(0.dp),
+        onClick = {
+            accountViewModel.approveCommunityPost(post, community)
+        },
+    ) {
+        Text("Approve")
     }
 }
 
@@ -1090,14 +1139,7 @@ fun FirstUserInfoRow(
 ) {
     Row(verticalAlignment = CenterVertically, modifier = UserNameRowHeight) {
         val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
-
-        val isCommunityPost by
-            remember(baseNote) {
-                derivedStateOf {
-                    baseNote.event?.isTaggedAddressableKind(CommunityDefinitionEvent.KIND) == true
-                }
-            }
-
+        val isDraft = baseNote.isDraft()
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 
         if (showAuthorPicture) {
@@ -1108,10 +1150,28 @@ fun FirstUserInfoRow(
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
-        if (isCommunityPost) {
-            DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
+        if (isDraft) {
+            ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
+                val isCommunityPost by remember(draftNote) {
+                    derivedStateOf { draftNote.event?.isACommunityPost() == true }
+                }
+
+                if (isCommunityPost) {
+                    DisplayFollowingCommunityInPost(draftNote, accountViewModel, nav)
+                } else {
+                    DisplayFollowingHashtagsInPost(draftNote, accountViewModel, nav)
+                }
+            }
         } else {
-            DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+            val isCommunityPost by remember(baseNote) {
+                derivedStateOf { baseNote.event?.isACommunityPost() == true }
+            }
+
+            if (isCommunityPost) {
+                DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
+            } else {
+                DisplayFollowingHashtagsInPost(baseNote, accountViewModel, nav)
+            }
         }
 
         if (isRepost) {
@@ -1120,7 +1180,7 @@ fun FirstUserInfoRow(
 
         CheckAndDisplayEditStatus(editState)
 
-        if (baseNote.isDraft()) {
+        if (isDraft) {
             DisplayDraft()
         }
 
@@ -1192,7 +1252,7 @@ fun observeEdits(
 }
 
 @Composable
-private fun BadgeBox(
+fun BadgeBox(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1207,7 +1267,7 @@ private fun BadgeBox(
 }
 
 @Composable
-private fun RenderAuthorImages(
+fun RenderAuthorImages(
     baseNote: Note,
     nav: INav,
     accountViewModel: AccountViewModel,

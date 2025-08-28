@@ -175,6 +175,8 @@
     <string name="blocked_users">Blocked Users</string>
     <string name="new_threads">New Threads</string>
     <string name="conversations">Conversations</string>
+    <string name="feed">Feed</string>
+    <string name="mod_queue">Mod Queue</string>
     <string name="notes">Notes</string>
     <string name="replies">Replies</string>
     <string name="mutual">Yours</string>
@@ -805,6 +807,10 @@
 
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>
+
+    <string name="community_description">About Us</string>
+    <string name="guidelines">Guidelines</string>
+    <string name="moderators">Moderators</string>
 
     <string name="login_with_external_signer">Login with Amber</string>
 

@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.service.ots.OkHttpBitcoinExplorer
-import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
-import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpBitcoinExplorer
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpCalendarBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OtsBlockHeightCache
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient

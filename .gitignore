@@ -15,6 +15,7 @@
 /.idea/other.xml
 /.idea/runConfigurations.xml
 /.idea/ChatHistory_schema_v2.xml
+/.idea/artifacts/*
 .DS_Store
 /build
 /captures

@@ -1,4 +1,4 @@
-<div align="center">
+ <div align="center">
 
 <a href="https://amethyst.social">
     <img src="./docs/design/3rd%20Logo%20-%20Zitron/amethyst.svg" alt="Amethyst Logo" title="Amethyst logo" width="80"/>

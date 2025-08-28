@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
@@ -47,9 +46,8 @@ class HintIndexerBenchmark {
             }
 
         val relays =
-            getInstrumentation()
-                .context.assets
-                .open("relayDB.txt")
+            javaClass.classLoader
+                ?.getResourceAsStream("relayDB.txt")!!
                 .readBytes()
                 .toString(Charset.forName("utf-8"))
                 .split("\n")

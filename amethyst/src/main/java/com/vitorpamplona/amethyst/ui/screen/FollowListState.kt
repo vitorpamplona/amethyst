@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -123,36 +124,40 @@ class FollowListState(
 
     val livePeopleListsFlow = MutableStateFlow(emptyList<FeedDefinition>())
 
+    fun hasItemInNoteList(notes: Set<Note>): Boolean =
+        notes.any { it ->
+            val noteEvent = it.event
+
+            noteEvent?.pubKey == account.userProfile().pubkeyHex &&
+                (
+                    (
+                        noteEvent is PeopleListEvent ||
+                            noteEvent is FollowListEvent ||
+                            noteEvent is MuteListEvent ||
+                            noteEvent is ContactListEvent
+                    ) ||
+                        (
+                            noteEvent is DeletionEvent &&
+                                (
+                                    noteEvent.deleteEventIds().any { LocalCache.getNoteIfExists(it)?.event is PeopleListEvent } ||
+                                        noteEvent.deleteAddresses().any { it.kind == PeopleListEvent.KIND }
+                                )
+                        )
+                )
+        }
+
+    fun deleteFromFeed(deletedNotes: Set<Note>) {
+        checkNotInMainThread()
+
+        if (hasItemInNoteList(deletedNotes)) {
+            livePeopleListsFlow.tryEmit(getPeopleLists())
+        }
+    }
+
     fun updateFeedWith(newNotes: Set<Note>) {
         checkNotInMainThread()
 
-        val hasNewList =
-            newNotes.any { it ->
-                val noteEvent = it.event
-
-                noteEvent?.pubKey == account.userProfile().pubkeyHex &&
-                    (
-                        (
-                            noteEvent is PeopleListEvent ||
-                                noteEvent is FollowListEvent ||
-                                noteEvent is MuteListEvent ||
-                                noteEvent is ContactListEvent
-                        ) ||
-                            (
-                                noteEvent is DeletionEvent &&
-                                    (
-                                        noteEvent.deleteEventIds().any {
-                                            LocalCache.getNoteIfExists(it)?.event is PeopleListEvent
-                                        } ||
-                                            noteEvent.deleteAddresses().any {
-                                                it.kind == PeopleListEvent.KIND
-                                            }
-                                    )
-                            )
-                    )
-            }
-
-        if (hasNewList) {
+        if (hasItemInNoteList(newNotes)) {
             livePeopleListsFlow.tryEmit(getPeopleLists())
         }
     }
@@ -163,7 +168,7 @@ class FollowListState(
             checkNotInMainThread()
 
             val communities =
-                communityList.mapNotNull {
+                communityList.map {
                     LocalCache.getOrCreateAddressableNote(it.address).let { communityNote ->
                         TagFeedDefinition(
                             "Community/${communityNote.idHex}",
@@ -377,6 +382,7 @@ val DEFAULT_FEED_KINDS =
 val DEFAULT_COMMUNITY_FEEDS =
     listOf(
         TextNoteEvent.KIND,
+        CommentEvent.KIND,
         LongTextNoteEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,

@@ -36,12 +36,14 @@ class ThreadAssembler {
     ): Note? {
         if (note.replyTo == null || note.replyTo?.isEmpty() == true) return note
 
-        if (note.event is RepostEvent || note.event is GenericRepostEvent) return note
+        val noteEvent = note.event
+
+        if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) return note
 
         testedNotes.add(note)
 
         val markedAsRoot =
-            note.event
+            noteEvent
                 ?.tags
                 ?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }
                 ?.getOrNull(1)
@@ -52,7 +54,10 @@ class ThreadAssembler {
             }
         }
 
-        val hasNoReplyTo = note.replyTo?.reversed()?.firstOrNull { it.replyTo?.isEmpty() == true }
+        val hasNoReplyTo =
+            note.replyTo?.lastOrNull {
+                it.replyTo?.isEmpty() == true
+            }
         if (hasNoReplyTo != null) return hasNoReplyTo
 
         // recursive

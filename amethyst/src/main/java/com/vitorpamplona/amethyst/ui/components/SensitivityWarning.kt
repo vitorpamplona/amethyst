@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 
@@ -113,7 +114,7 @@ fun SensitivityWarning(
 @Composable
 fun ContentWarningNote(onDismiss: () -> Unit) {
     Column {
-        Row(modifier = Modifier.padding(horizontal = 12.dp)) {
+        Row(modifier = PaddingHorizontal12Modifier) {
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     Box(

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -60,6 +61,14 @@ fun EditFieldRow(
     onSendNewMessage: suspend () -> Unit,
     nav: INav,
 ) {
+    BackHandler {
+        accountViewModel.runIOCatching {
+            channelScreenModel.sendDraftSync()
+            channelScreenModel.cancel()
+        }
+        nav.popBack()
+    }
+
     channelScreenModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) {
             channelScreenModel.clearReply()

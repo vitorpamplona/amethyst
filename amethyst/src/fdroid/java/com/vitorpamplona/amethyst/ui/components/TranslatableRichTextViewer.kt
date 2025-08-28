@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -52,3 +54,11 @@ fun TranslatableRichTextViewer(
     accountViewModel,
     nav,
 )
+
+@Composable
+fun TranslatableRichTextViewer(
+    content: String,
+    id: String,
+    accountViewModel: AccountViewModel,
+    displayText: @Composable (String) -> Unit,
+) = displayText(content)

@@ -34,7 +34,6 @@ object Constants {
     val elites = RelayUrlNormalizer.normalize("wss://nostrelites.org")
 
     val bitcoiner = RelayUrlNormalizer.normalize("wss://nostr.bitcoiner.social")
-    val bg = RelayUrlNormalizer.normalize("wss://relay.nostr.bg")
     val oxtr = RelayUrlNormalizer.normalize("wss://nostr.oxtr.dev")
     val fmtwiz = RelayUrlNormalizer.normalize("wss://nostr.fmt.wiz.biz")
 
@@ -47,7 +46,7 @@ object Constants {
     val coracle = RelayUrlNormalizer.normalize("wss://indexer.coracle.social")
     val userkinds = RelayUrlNormalizer.normalize("wss://user.kindpag.es")
 
-    val eventFinderRelays = setOf(band, wine, damus, primal, mom, nos, bitcoiner, oxtr, fmtwiz, bg)
+    val eventFinderRelays = setOf(band, wine, damus, primal, mom, nos, bitcoiner, oxtr, fmtwiz)
 
     val defaultSearchRelaySet = setOf(band, wine, where)
 }
