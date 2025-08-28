@@ -63,12 +63,14 @@ class NostrUserListFeedViewModel(
         }
     }
 
-    suspend fun getFollowSetNote(
+    fun getFollowSetNote(
         noteIdentifier: String,
         account: Account,
     ): AddressableNote? {
-        checkNotInMainThread()
-        val potentialNote = account.getFollowSetNotes().find { it.dTag() == noteIdentifier }
+//        checkNotInMainThread()
+        val potentialNote =
+            runBlocking(Dispatchers.IO) { account.getFollowSetNotes() }
+                .find { it.dTag() == noteIdentifier }
         return potentialNote
     }
 
@@ -76,7 +78,6 @@ class NostrUserListFeedViewModel(
         setName: String,
         account: Account,
     ): Boolean {
-        checkNotInMainThread()
         val potentialNote =
             runBlocking(viewModelScope.coroutineContext) { account.getFollowSetNotes() }
                 .find { (it.event as PeopleListEvent).nameOrTitle() == setName }
@@ -116,10 +117,10 @@ class NostrUserListFeedViewModel(
     fun addFollowSet(
         setName: String,
         setDescription: String?,
-        setType: ListVisibility,
+        isListPrivate: Boolean,
         account: Account,
     ) {
-        if (account.settings.isWriteable()) {
+        if (!account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
         } else {
             viewModelScope.launch(Dispatchers.IO) {
@@ -127,7 +128,7 @@ class NostrUserListFeedViewModel(
                     dTag = UUID.randomUUID().toString(),
                     title = setName,
                     description = setDescription,
-                    isPrivate = setType == ListVisibility.Private,
+                    isPrivate = isListPrivate,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)
