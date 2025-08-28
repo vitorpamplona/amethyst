@@ -12,12 +12,7 @@
           "package_name": "com.vitorpamplona.amethyst"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyB7ZxgdpgrN6R223HCFdfv4ulP8Egp7trE"
@@ -25,12 +20,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     },
@@ -41,12 +31,7 @@
           "package_name": "com.vitorpamplona.amethyst.benchmark"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyB7ZxgdpgrN6R223HCFdfv4ulP8Egp7trE"
@@ -54,12 +39,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     },
@@ -70,12 +50,7 @@
           "package_name": "com.vitorpamplona.amethyst.debug"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyB7ZxgdpgrN6R223HCFdfv4ulP8Egp7trE"
@@ -83,12 +58,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
