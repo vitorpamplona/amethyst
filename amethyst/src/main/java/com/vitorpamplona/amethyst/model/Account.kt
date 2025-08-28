@@ -853,8 +853,6 @@ class Account(
                 signer,
             )
 
-//    fun followSetNotesFlow() = MutableStateFlow(userProfile().followSets)
-
     suspend fun updateAttestations() = sendAutomatic(otsState.updateAttestations())
 
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))

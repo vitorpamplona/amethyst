@@ -60,15 +60,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -100,41 +98,22 @@ fun ListsScreen(
 
     val followSetsFlow by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
 
-    // TODO: Replace this with nav-based solution.
-    val isFollowSetSelected = remember { mutableStateOf(false) }
-    val selectedFollowList = remember { mutableStateOf<FollowSet?>(null) }
-
     CustomListsScreen(
         followSetsFlow,
         refresh = {
             followSetsViewModel.invalidateData()
         },
         addItem = { title: String, description: String?, listType: ListVisibility ->
+            val isSetPrivate = listType == ListVisibility.Private
             followSetsViewModel.addFollowSet(
                 setName = title,
                 setDescription = description,
-                setType = listType,
+                isListPrivate = isSetPrivate,
                 account = accountViewModel.account,
             )
         },
         openItem = {
-            // TODO: Same as the next TODO below, as they are related.
-            currentCoroutineScope.launch(Dispatchers.IO) {
-                val note = followSetsViewModel.getFollowSetNote(it, accountViewModel.account)
-                if (note != null) {
-                    val event = note.event as PeopleListEvent
-                    println("Found list, with title: ${event.nameOrTitle()}")
-                    val selectedFollowSet =
-                        FollowSet.mapEventToSet(
-                            event,
-                            accountViewModel.account.signer,
-                        )
-                    selectedFollowList.value = selectedFollowSet
-                    isFollowSetSelected.value = true
-                } else {
-                    println("No corresponding note found for this list.")
-                }
-            }
+            nav.nav(Route.FollowSetRoute(it))
         },
         renameItem = { followSet, newValue ->
             followSetsViewModel.renameFollowSet(
@@ -152,40 +131,6 @@ fun ListsScreen(
         accountViewModel,
         nav,
     )
-
-    // TODO: Replace this with nav-based solution.
-    if (isFollowSetSelected.value && selectedFollowList.value != null) {
-        val leFollowSet = selectedFollowList.value
-        FollowSetScreen(
-            onClose = {
-                isFollowSetSelected.value = false
-                selectedFollowList.value = null
-            },
-            accountViewModel = accountViewModel,
-            navigator = nav,
-            selectedSet = leFollowSet!!,
-            onProfileRemove = {
-                followSetsViewModel.removeUserFromSet(
-                    it,
-                    leFollowSet,
-                    accountViewModel.account,
-                )
-            },
-            onListSave = {
-                accountViewModel.toastManager.toast("List Changes", "Changes already saved.")
-            },
-            onListBroadcast = {
-                accountViewModel.toastManager.toast("List Status", "List has been broadcast.")
-            },
-            onListDelete = {
-                isFollowSetSelected.value = false
-                followSetsViewModel.deleteFollowSet(
-                    leFollowSet,
-                    accountViewModel.account,
-                )
-            },
-        )
-    }
 }
 
 @Composable
