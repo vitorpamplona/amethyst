@@ -66,7 +66,7 @@ fun ObserveRelayListForSearchAndDisplayIfNotFound(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val searchRelayList by accountViewModel.account.searchRelayList.flow
+    val searchRelayList by accountViewModel.account.searchRelayList.flowNoDefaults
         .collectAsStateWithLifecycle()
 
     if (searchRelayList.isEmpty()) {
