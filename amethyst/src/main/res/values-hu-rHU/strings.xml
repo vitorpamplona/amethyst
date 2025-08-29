@@ -6,8 +6,8 @@
     <string name="your_profile_image">Az Ön profilképe</string>
     <string name="scan_qr">QR-kód beolvasása</string>
     <string name="show_anyway">Megjelenítés mindenképp</string>
-    <string name="post_was_hidden">Ez a hozzászólás el lett rejtve, mert az Ön rejtett felhasználóit vagy szavait említi</string>
-    <string name="post_was_flagged_as_inappropriate_by">A hozzászólás el lett némítva vagy be lett jelentve általa:</string>
+    <string name="post_was_hidden">Ez a bejegyzés el lett rejtve, mert az Ön rejtett felhasználóit vagy szavait említi</string>
+    <string name="post_was_flagged_as_inappropriate_by">A bejegyzés el lett némítva vagy be lett jelentve általa:</string>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>
@@ -32,7 +32,7 @@
     <string name="timestamp_pending">Időbélyeg: függőben lévő megerősítések</string>
     <string name="timestamp_pending_short">OTS: függőben</string>
     <string name="request_deletion">Törlés kérése</string>
-    <string name="block_report">Letiltás / Bejelentés</string>
+    <string name="block_report">Tiltás / jelentés</string>
     <string name="block_hide_user"><![CDATA[Letiltás és a felhasználó elrejtése]]></string>
     <string name="report_spam_scam">Kéretlen tartalom vagy csalás bejelentése</string>
     <string name="report_impersonation">Profilutánzás bejelentése</string>
@@ -114,16 +114,16 @@
     <string name="create">Létrehozás</string>
     <string name="cancel">Mégse</string>
     <string name="failed_to_upload_the_image">Nem sikerült feltölteni a képet</string>
-    <string name="relay_address">Az átjátszó címe</string>
+    <string name="relay_address">Atjátszó címe</string>
     <string name="posts">Bejegyzések</string>
     <string name="bytes">Bájt</string>
     <string name="errors">Hibák</string>
     <string name="errors_description">Ebben a munkamenetben lévő kapcsolati hibák száma</string>
     <string name="home_feed">Fő hírfolyam</string>
-    <string name="private_message_feed">Privát üzenet-hírfolyam</string>
-    <string name="public_chat_feed">Nyilvános üzenet-hírfolyam</string>
+    <string name="private_message_feed">Privát üzenethírfolyam</string>
+    <string name="public_chat_feed">Nyilvános csevegési hírfolyam</string>
     <string name="global_feed">Globális hírfolyam</string>
-    <string name="search_feed">Keresési hírfolyam</string>
+    <string name="search_feed">Hírfolyam keresése</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
     <string name="profile_name">Név</string>
     <string name="display_name">Megjelenítendő név</string>
@@ -143,7 +143,7 @@
     <string name="image_saved_to_the_gallery">Kép elmentve a képgalériába</string>
     <string name="video_download_has_started_toast">A videó letöltése megkezdődött…</string>
     <string name="media_download_has_started_toast">A média letöltése megkezdődött…</string>
-    <string name="failed_to_save_the_image">Nem sikerült elmenteni a képet</string>
+    <string name="failed_to_save_the_image">Nem sikerült menteni a képet</string>
     <string name="video_saved_to_the_gallery">Videó elmentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült elmenteni a videót</string>
     <string name="upload_image">Kép feltöltése</string>
@@ -163,9 +163,11 @@
     <string name="blocked_users">Letiltott felhasználók</string>
     <string name="new_threads">Új bejegyzések</string>
     <string name="conversations">Beszélgetések</string>
+    <string name="feed">Hírfolyam</string>
+    <string name="mod_queue">Mod várólista</string>
     <string name="notes">Bejegyzések</string>
     <string name="replies">Válaszok</string>
-    <string name="mutual">Az Öné</string>
+    <string name="mutual">Saját</string>
     <string name="gallery">Galéria</string>
     <string name="follows">"Követett"</string>
     <string name="reports">"Bejelentés"</string>
@@ -210,7 +212,7 @@
     <string name="already_have_an_account">Már van Nostr-fiókja?</string>
     <string name="create_a_new_account">Új fiók létrehozása</string>
     <string name="generate_a_new_key">Új kulcs előállítása</string>
-    <string name="loading_feed">Hírfolyam betöltése…</string>
+    <string name="loading_feed">Hírforrás betöltése…</string>
     <string name="loading_account">Fiók betöltése…</string>
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbálja újra</string>
@@ -587,7 +589,7 @@
     <string name="community_no_descriptor">Ennek a csoportnak nincs leírása vagy szabályai. Kérje meg a tulajdonosát, hogy adjon hozzá egyet</string>
     <string name="add_sensitive_content_label">Érzékeny tartalom</string>
     <string name="add_sensitive_content_description">Érzékeny tartalom-figyelmeztetés hozzáadása a tartalom megjelenítése előtt</string>
-    <string name="preferences">Alkalmazás-beállítások</string>
+    <string name="preferences">Alkalmazásbeállítások</string>
     <string name="user_preferences">Felhasználói beállítások</string>
     <string name="settings">Beállítások</string>
     <string name="connectivity_type_always">Mindig</string>
@@ -602,7 +604,7 @@
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
-    <string name="application_preferences">Alkalmazás-beállítások</string>
+    <string name="application_preferences">Alkalmazásbeállítások</string>
     <string name="wallet_connect">Kapcsolódás pénztárcához</string>
     <string name="language">Nyelv</string>
     <string name="theme">Téma</string>
@@ -655,6 +657,8 @@
     <string name="messages_new_subject_message">Kifejtés a csoport tagjai számára</string>
     <string name="messages_new_subject_message_placeholder">Név megváltoztatása az új célok érdekében.</string>
     <string name="paste_from_clipboard">Beszúrás vágólapról</string>
+    <string name="invalid_nip47_uri_title">Érvénytelen NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">A(z) %1$s URI nem egy érvényes NIP-47 bejelentkezési URI.</string>
     <string name="language_description">Az alkalmazás felületéhez</string>
     <string name="theme_description">Sötét, világos vagy a rendszer által használt téma</string>
     <string name="automatically_load_images_gifs_description">Képek és GIF-ek automatikus betöltése</string>
@@ -672,6 +676,9 @@
     <string name="media_added_to_profile_gallery">Média hozzáadva az Ön profil-galériájába</string>
     <string name="created_at">Létrehozva ekkor:</string>
     <string name="rules">Szabályok</string>
+    <string name="community_description">Névjegy</string>
+    <string name="guidelines">Útmutatók</string>
+    <string name="moderators">Moderátorok</string>
     <string name="login_with_external_signer">Bejelentkezés Amberrel</string>
     <string name="status_update">Állapot frissítése</string>
     <string name="lightning_wallets_not_found">Hiba a hibaüzenet elemzésekor</string>
@@ -849,7 +856,7 @@
     <string name="profile_image_of_user">%1$s profilképe</string>
     <string name="relay_info">%1$s átjátszó</string>
     <string name="expand_relay_list">Átjátszólista kibontása</string>
-    <string name="note_options">Bejegyzés-beállítások</string>
+    <string name="note_options">Bejegyzésbeállítások</string>
     <string name="relay_list_selector">Átjátszólista-választó</string>
     <string name="poll">Szavazás</string>
     <string name="disable_poll">Szavazás kikapcsolása</string>
@@ -882,7 +889,7 @@
     <string name="search_relays_not_found_editing">Adjon hozzá 1–3 átjátszót a tartalom kereséshez vagy a felhasználók címkézéséhez. Győződjön meg arról, hogy a kiválasztott átjátszók alkalmazzák a NIP-50-et</string>
     <string name="search_relays_not_found_examples">Jó választási lehetőségek:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
     <string name="dm_upload">Feltöltés közvetlen üzenetbe</string>
-    <string name="relay_settings">Átjátszó-beállítások</string>
+    <string name="relay_settings">Átjátszók beállításai</string>
     <string name="public_home_section">Nyilvános kimenő és saját átjátszók</string>
     <string name="public_home_section_explainer">Ez az átjátszótípus tárolja az összes tartalmat. Az Amethyst ide küldi az Ön bejegyzéseit, és mások ezeket az átjátszókat fogják használni, hogy megtalálják az Ön tartalmát. Adjon hozzá 1–3 átjátszót. Ezek lehetnek személyes-, fizetett- vagy nyilvános átjátszók.</string>
     <string name="public_notif_section">Nyilvános bejövő átjátszók</string>
@@ -1014,4 +1021,11 @@
     <string name="dont_translate_from_description">Az itt látható nyelvek nem lesznek lefordítva. Az eltávolításához és az újbóli fordításhoz válasszon ki egy nyelvet.</string>
     <string name="pause">Szüneteltetés</string>
     <string name="play">Lejátszás</string>
+    <string name="open_dropdown_menu">Legördülő menü megnyitása</string>
+    <string name="option_of">%2$s/%1$s beállítás</string>
+    <string name="feed_filter_selected">%1$s hírfolyamszűrő kiválasztva</string>
+    <string name="feed_filter_select_an_option">%1$s hírforfolyamszűrő</string>
+    <string name="crashreport_found">Összeomlási jelentés megtalálva</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Szeretné elküldeni a legutóbbi összeomlási jelentést az Amethystnek egy közvetlen üzenetben? A személyes adatait nem osztja meg</string>
+    <string name="crashreport_found_send">Küldés</string>
 </resources>
