@@ -137,22 +137,13 @@ fun PictureButton(onClick: () -> Unit) {
     }
 }
 
-fun getPhotoUri(context: Context): Uri {
-    val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    return File
-        .createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir,
-        ).let {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.provider",
-                it,
-            )
-        }
-}
+fun getPhotoUri(context: Context): Uri =
+    getMediaUri(
+        context = context,
+        filePrefix = "JPEG",
+        fileExtension = ".jpg",
+        storageDir = Environment.DIRECTORY_PICTURES,
+    )
 
 @Composable
 fun TakeVideoButton(onVideoTaken: (ImmutableList<SelectedMedia>) -> Unit) {
@@ -233,14 +224,27 @@ fun VideoButton(onClick: () -> Unit) {
     }
 }
 
-fun getVideoUri(context: Context): Uri {
+fun getVideoUri(context: Context): Uri =
+    getMediaUri(
+        context = context,
+        filePrefix = "MP4",
+        fileExtension = ".mp4",
+        storageDir = Environment.DIRECTORY_MOVIES,
+    )
+
+private fun getMediaUri(
+    context: Context,
+    filePrefix: String,
+    fileExtension: String,
+    storageDir: String,
+): Uri {
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
+    val storageDirectory: File? = context.getExternalFilesDir(storageDir)
     return File
         .createTempFile(
-            "MP4_${timeStamp}_",
-            ".mp4",
-            storageDir,
+            "${filePrefix}_${timeStamp}_",
+            fileExtension,
+            storageDirectory,
         ).let {
             FileProvider.getUriForFile(
                 context,
