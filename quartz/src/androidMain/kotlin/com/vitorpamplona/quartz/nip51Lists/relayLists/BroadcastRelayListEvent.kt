@@ -77,7 +77,7 @@ class BroadcastRelayListEvent(
             val newRelayList = relays.map { RelayTag.assemble(it) }
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             val publicTags = earlierVersion.tags.remove(RelayTag::match)
-            val newPrivateTags = privateTags.remove(RelayTag::notMatch).plus(newRelayList)
+            val newPrivateTags = privateTags.remove(RelayTag::match).plus(newRelayList)
 
             return signer.signNip51List(createdAt, KIND, publicTags, newPrivateTags)
         }
