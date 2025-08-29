@@ -43,7 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -62,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.MessageFieldRow
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.SendDirectMessageTo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
@@ -318,6 +317,12 @@ private fun BottomRowActions(
 
         TakePictureButton(
             onPictureTaken = {
+                postViewModel.selectImage(it)
+            },
+        )
+
+        TakeVideoButton(
+            onVideoTaken = {
                 postViewModel.selectImage(it)
             },
         )
