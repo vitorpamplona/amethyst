@@ -160,6 +160,7 @@
     <string name="failed_to_save_the_video">Failed to save the video</string>
     <string name="upload_image">Upload Image</string>
     <string name="take_a_picture">Take a picture</string>
+    <string name="record_a_video">Record a video</string>
     <string name="record_a_message">Record a message</string>
     <string name="record_a_message_title">Record a message</string>
     <string name="record_a_message_description">Click and hold to record a message</string>
