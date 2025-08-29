@@ -26,6 +26,9 @@ import com.vitorpamplona.amethyst.BuildConfig
 class ReportAssembler {
     fun buildReport(e: Throwable): String =
         buildString {
+            append(e.javaClass.simpleName)
+            appendLine()
+
             // Device and Product Information
             append("Amethyst Version: ")
             appendLine(BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
