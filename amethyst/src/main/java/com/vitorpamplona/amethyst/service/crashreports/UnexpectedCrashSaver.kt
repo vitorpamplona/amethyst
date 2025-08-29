@@ -33,8 +33,11 @@ class UnexpectedCrashSaver(
         t: Thread,
         e: Throwable,
     ) {
-        scope.launch {
-            cache.writeReport(ReportAssembler().buildReport(e))
+        if (e !is OutOfMemoryError) {
+            // OOM reports are junk
+            scope.launch {
+                cache.writeReport(ReportAssembler().buildReport(e))
+            }
         }
         defaultUEH!!.uncaughtException(t, e)
     }
