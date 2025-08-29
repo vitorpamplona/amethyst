@@ -29,9 +29,11 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
+import java.time.temporal.TemporalAdjusters.next
 
 class NIP17Factory {
     data class Result(
@@ -43,8 +45,17 @@ class NIP17Factory {
         event: Event,
         to: Set<HexKey>,
         signer: NostrSigner,
-    ): List<GiftWrapEvent> =
-        mapNotNullAsync(
+    ): List<GiftWrapEvent> {
+        val innerExpDelta =
+            event.expiration()?.let {
+                if (it > event.createdAt) {
+                    it - event.createdAt
+                } else {
+                    null
+                }
+            }
+
+        return mapNotNullAsync(
             to.toList(),
         ) { next ->
             GiftWrapEvent.create(
@@ -52,11 +63,14 @@ class NIP17Factory {
                     SealedRumorEvent.create(
                         event = event,
                         encryptTo = next,
+                        expirationDelta = innerExpDelta,
                         signer = signer,
                     ),
                 recipientPubKey = next,
+                expirationDelta = innerExpDelta,
             )
         }
+    }
 
     suspend fun createMessageNIP17(
         template: EventTemplate<ChatMessageEvent>,

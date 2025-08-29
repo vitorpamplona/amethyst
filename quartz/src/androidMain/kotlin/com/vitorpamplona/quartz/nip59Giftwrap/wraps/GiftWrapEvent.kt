@@ -28,7 +28,9 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -103,13 +105,27 @@ class GiftWrapEvent(
         suspend fun create(
             event: Event,
             recipientPubKey: HexKey,
+            expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
         ): GiftWrapEvent {
             val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
+
+            val tags =
+                expirationDelta?.let {
+                    // minimum expiration is two days in the future due to the random created at
+                    // this will make sure the even arrives and is not deleted because of the 2 days.
+                    arrayOf(
+                        PTag.assemble(recipientPubKey, null),
+                        ExpirationTag.assemble(createdAt + it + TimeUtils.twoDays()),
+                    )
+                } ?: arrayOf(
+                    PTag.assemble(recipientPubKey, null),
+                )
+
             return signer.sign(
                 createdAt = createdAt,
                 kind = KIND,
-                tags = arrayOf(arrayOf("p", recipientPubKey)),
+                tags = tags,
                 content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
             )
         }

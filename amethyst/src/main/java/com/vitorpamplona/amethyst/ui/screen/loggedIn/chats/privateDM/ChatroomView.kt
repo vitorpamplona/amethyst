@@ -52,6 +52,7 @@ fun ChatroomView(
     draftMessage: String?,
     replyToNote: HexKey? = null,
     editFromDraft: HexKey? = null,
+    expiresDays: Int? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -79,12 +80,17 @@ fun ChatroomView(
         }
     }
     if (editFromDraft != null) {
-        LaunchedEffect(replyToNote, newPostModel, accountViewModel) {
+        LaunchedEffect(editFromDraft, newPostModel, accountViewModel) {
             accountViewModel.checkGetOrCreateNote(editFromDraft) {
                 if (it != null) {
                     newPostModel.editFromDraft(it)
                 }
             }
+        }
+    }
+    if (expiresDays != null) {
+        LaunchedEffect(expiresDays, newPostModel, accountViewModel) {
+            newPostModel.loadExpiration(expiresDays)
         }
     }
 

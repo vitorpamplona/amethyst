@@ -194,7 +194,7 @@ fun NewGroupDMScreen(
                     accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
                         postViewModel.room?.let {
-                            nav.nav(routeToMessage(it, null, null, null, accountViewModel))
+                            nav.nav(routeToMessage(it, null, null, null, null, accountViewModel))
                         }
                     }
                     nav.popBack()

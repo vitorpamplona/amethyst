@@ -80,6 +80,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
@@ -88,6 +89,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -167,6 +169,8 @@ class ChatNewMessageViewModel :
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
+
+    var expirationDays by mutableStateOf<Int?>(null)
 
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
@@ -267,6 +271,10 @@ class ChatNewMessageViewModel :
         }
     }
 
+    fun loadExpiration(expirationDays: Int) {
+        this.expirationDays = expirationDays
+    }
+
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
 
@@ -340,6 +348,8 @@ class ChatNewMessageViewModel :
                 TextFieldValue(draftEvent.content)
             }
         urlPreviews.update(message)
+
+        expirationDays = draftEvent.expiration()?.let { (it / 86_400).toInt() }
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
@@ -438,6 +448,8 @@ class ChatNewMessageViewModel :
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
+        val expiration = expirationDays?.let { TimeUtils.now() + it.toLong() * 86_400 }
+
         if (nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
             val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
 
@@ -452,6 +464,7 @@ class ChatNewMessageViewModel :
                         localZapRaiserAmount?.let { zapraiser(it) }
                         zapReceiver?.let { zapSplits(it) }
                         contentWarningReason?.let { contentWarning(it) }
+                        expiration?.let { expiration(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -466,6 +479,7 @@ class ChatNewMessageViewModel :
                         localZapRaiserAmount?.let { zapraiser(it) }
                         zapReceiver?.let { zapSplits(it) }
                         contentWarningReason?.let { contentWarning(it) }
+                        expiration?.let { expiration(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -487,7 +501,9 @@ class ChatNewMessageViewModel :
                     imetas = usedAttachments,
                     replyingTo = replyTo.value?.toEId(),
                     signer = accountViewModel.account.signer,
-                )
+                ) {
+                    expiration?.let { expiration(it) }
+                }
 
             if (draftTag != null) {
                 accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag, template)
@@ -518,6 +534,7 @@ class ChatNewMessageViewModel :
         subject = TextFieldValue("")
 
         replyTo.value = null
+        expirationDays = null
 
         wantsInvoice = false
         wantsZapraiser = false

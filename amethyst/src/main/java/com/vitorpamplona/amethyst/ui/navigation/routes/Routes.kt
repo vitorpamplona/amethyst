@@ -126,12 +126,14 @@ sealed class Route {
         val message: String? = null,
         val replyId: HexKey? = null,
         val draftId: HexKey? = null,
+        val expiresDays: Int? = null,
     ) : Route() {
-        constructor(key: ChatroomKey, message: String? = null, replyId: HexKey? = null, draftId: HexKey? = null) : this(
+        constructor(key: ChatroomKey, message: String? = null, replyId: HexKey? = null, draftId: HexKey? = null, expiresDays: Int? = null) : this(
             id = key.users.joinToString(","),
             message = message,
             replyId = replyId,
             draftId = draftId,
+            expiresDays = expiresDays,
         )
 
         fun toKey(): ChatroomKey = ChatroomKey(id.split(",").toSet())

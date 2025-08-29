@@ -41,6 +41,7 @@ fun ChatroomScreen(
     draftMessage: String? = null,
     replyToNote: HexKey? = null,
     editFromDraft: HexKey? = null,
+    expiresDays: Int? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -57,6 +58,7 @@ fun ChatroomScreen(
                 draftMessage = draftMessage,
                 replyToNote = replyToNote,
                 editFromDraft = editFromDraft,
+                expiresDays = expiresDays,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
