@@ -57,6 +57,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AROUND_ME
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.OnlineChecker.isOnline
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -81,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -345,8 +348,11 @@ fun DisplayLiveBubbles(
     val feed by liveFeed.feed.collectAsStateWithLifecycle()
 
     LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
-        itemsIndexed(feed.list, key = { _, item -> item.roomId.toKey() }) { _, item ->
-            RenderEphemeralBubble(item, accountViewModel, nav)
+        itemsIndexed(feed.list, key = { _, item -> item.hashCode() }) { _, item ->
+            when (item) {
+                is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
+                is LiveActivitiesChannel -> RenderLiveActivityBubble(item, accountViewModel, nav)
+            }
         }
     }
 }

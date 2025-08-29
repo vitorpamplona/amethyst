@@ -18,40 +18,51 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelNoteAuthors
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header.LiveActivityTopBar
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 
 @Composable
-fun LiveActivityChannelScreen(
-    channelId: Address?,
-    draft: Note? = null,
+fun RenderLiveActivityBubble(
+    channel: LiveActivitiesChannel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (channelId == null) return
-
-    DisappearingScaffold(
-        isInvertedLayout = true,
-        topBar = {
-            LoadLiveActivityChannel(channelId, accountViewModel) {
-                LiveActivityTopBar(it, accountViewModel, nav)
-            }
+    FilledTonalButton(
+        contentPadding = PaddingValues(start = 8.dp, end = 10.dp, bottom = 0.dp, top = 0.dp),
+        onClick = {
+            nav.nav { routeFor(channel) }
         },
-        accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it)) {
-            LiveActivityChannelView(channelId, draft, accountViewModel, nav)
-        }
+        RenderUsers(channel, accountViewModel, nav)
+        Spacer(StdHorzSpacer)
+        Text(
+            channel.toBestDisplayName(),
+        )
     }
+}
+
+@Composable
+fun RenderUsers(
+    channel: LiveActivitiesChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authors by observeChannelNoteAuthors(channel, accountViewModel)
+
+    Gallery(authors, Modifier, accountViewModel, nav, 3)
 }

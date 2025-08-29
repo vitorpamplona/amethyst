@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChanne
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ShowVideoStreaming
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
@@ -70,7 +71,11 @@ fun LiveActivitiesChannelHeader(
             )
 
             if (expanded.value) {
-                LongLiveActivityChannelHeader(baseChannel, accountViewModel = accountViewModel, nav = nav)
+                LongLiveActivityChannelHeader(
+                    baseChannel,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
     }

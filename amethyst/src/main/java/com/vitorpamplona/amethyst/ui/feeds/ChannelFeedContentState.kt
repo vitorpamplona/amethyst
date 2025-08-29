@@ -24,8 +24,8 @@ import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
 
 @Stable
 class ChannelFeedContentState(
-    val localFilter: AdditiveComplexFeedFilter<EphemeralChatChannel, Note>,
+    val localFilter: AdditiveComplexFeedFilter<Channel, Note>,
     val viewModelScope: CoroutineScope,
 ) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<ChannelFeedState>(ChannelFeedState.Loading)
@@ -92,15 +92,15 @@ class ChannelFeedContentState(
         }
     }
 
-    private fun updateFeed(notes: ImmutableList<EphemeralChatChannel>) {
+    private fun updateFeed(notes: ImmutableList<Channel>) {
         val currentState = _feedContent.value
         if (notes.isEmpty()) {
             _feedContent.tryEmit(ChannelFeedState.Empty)
         } else if (currentState is ChannelFeedState.Loaded) {
-            currentState.feed.tryEmit(LoadedFeedState<EphemeralChatChannel>(notes, localFilter.showHiddenKey()))
+            currentState.feed.tryEmit(LoadedFeedState<Channel>(notes, localFilter.showHiddenKey()))
         } else {
             _feedContent.tryEmit(
-                ChannelFeedState.Loaded(MutableStateFlow(LoadedFeedState<EphemeralChatChannel>(notes, localFilter.showHiddenKey()))),
+                ChannelFeedState.Loaded(MutableStateFlow(LoadedFeedState<Channel>(notes, localFilter.showHiddenKey()))),
             )
         }
     }

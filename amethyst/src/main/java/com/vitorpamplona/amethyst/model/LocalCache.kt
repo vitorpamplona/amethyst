@@ -1588,7 +1588,7 @@ object LocalCache : ILocalCache {
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
                 if (wasVerified || justVerify(event)) {
-                    oldChannel.updateChannelInfo(author, event)
+                    oldChannel.updateChannelInfo(author, event, note)
                     true
                 } else {
                     false

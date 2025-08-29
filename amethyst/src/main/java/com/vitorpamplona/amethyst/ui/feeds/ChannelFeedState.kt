@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
@@ -29,7 +29,7 @@ sealed class ChannelFeedState {
     object Loading : ChannelFeedState()
 
     class Loaded(
-        val feed: MutableStateFlow<LoadedFeedState<EphemeralChatChannel>>,
+        val feed: MutableStateFlow<LoadedFeedState<Channel>>,
     ) : ChannelFeedState()
 
     object Empty : ChannelFeedState()

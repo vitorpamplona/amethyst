@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
@@ -35,11 +37,13 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class HomeLiveFilter(
     val account: Account,
-) : AdditiveComplexFeedFilter<EphemeralChatChannel, Note>() {
+) : AdditiveComplexFeedFilter<Channel, Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
     override fun showHiddenKey(): Boolean = false
@@ -52,14 +56,17 @@ class HomeLiveFilter(
 
     fun limitTime() = TimeUtils.fifteenMinutesAgo()
 
-    override fun feed(): List<EphemeralChatChannel> {
+    override fun feed(): List<Channel> {
         val filterParams = buildFilterParams(account)
-        val fiveMinsAgo = limitTime()
+        val fifteenMinsAgo = limitTime()
 
         val list =
             LocalCache.ephemeralChannels.filter { id, channel ->
-                shouldIncludeChannel(channel, filterParams, fiveMinsAgo)
-            }
+                shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
+            } +
+                LocalCache.liveChatChannels.filter { id, channel ->
+                    shouldIncludeChannel(channel, filterParams, fifteenMinsAgo)
+                }
 
         return sort(list.toSet())
     }
@@ -71,18 +78,42 @@ class HomeLiveFilter(
     ): Boolean =
         channel.notes
             .filter { key, value ->
-                acceptableEvent(value, filterParams, timeLimit)
+                acceptableChatEvent(value, filterParams, timeLimit)
             }.isNotEmpty()
 
+    fun shouldIncludeChannel(
+        channel: LiveActivitiesChannel,
+        filterParams: FilterByListParams,
+        timeLimit: Long,
+    ): Boolean {
+        val liveChannel =
+            channel.info?.let {
+                it.createdAt > timeLimit &&
+                    it.status() == StatusTag.STATUS.LIVE &&
+                    filterParams.match(it, channel.relays().toList())
+            }
+
+        if (liveChannel == true) {
+            return true
+        }
+
+        return channel.notes
+            .filter { key, value ->
+                acceptableChatEvent(value, filterParams, timeLimit)
+            }.isNotEmpty()
+    }
+
     override fun updateListWith(
-        oldList: List<EphemeralChatChannel>,
+        oldList: List<Channel>,
         newItems: Set<Note>,
-    ): List<EphemeralChatChannel> {
-        val fiveMinsAgo = limitTime()
+    ): List<Channel> {
+        val fifteenMinsAgo = limitTime()
 
         val revisedOldList =
             oldList.filter { channel ->
-                (channel.lastNote?.createdAt() ?: 0) > fiveMinsAgo
+                val channelTime = (channel as? LiveActivitiesChannel)?.info?.createdAt
+                (channelTime == null || channelTime > fifteenMinsAgo) ||
+                    (channel.lastNote?.createdAt() ?: 0) > fifteenMinsAgo
             }
 
         val newItemsToBeAdded = applyFilter(newItems)
@@ -94,7 +125,12 @@ class HomeLiveFilter(
                         if (room != null) {
                             LocalCache.getEphemeralChatChannelIfExists(room)
                         } else {
-                            null
+                            val liveStream = (it.event as? LiveActivitiesChatMessageEvent)?.activityAddress()
+                            if (liveStream != null) {
+                                LocalCache.getLiveActivityChannelIfExists(liveStream)
+                            } else {
+                                null
+                            }
                         }
                     }
 
@@ -109,23 +145,23 @@ class HomeLiveFilter(
         val filterParams = buildFilterParams(account)
 
         return collection.filterTo(HashSet()) {
-            acceptableEvent(it, filterParams, limitTime())
+            acceptableChatEvent(it, filterParams, limitTime())
         }
     }
 
-    private fun acceptableEvent(
+    private fun acceptableChatEvent(
         note: Note,
         filterParams: FilterByListParams,
         timeLimit: Long,
     ): Boolean {
         val createdAt = note.createdAt() ?: return false
         val noteEvent = note.event
-        return (noteEvent is EphemeralChatEvent) &&
+        return (noteEvent is EphemeralChatEvent || noteEvent is LiveActivitiesChatMessageEvent) &&
             createdAt > timeLimit &&
             filterParams.match(noteEvent, note.relays)
     }
 
-    fun sort(collection: Set<EphemeralChatChannel>): List<EphemeralChatChannel> {
+    fun sort(collection: Set<Channel>): List<Channel> {
         val topFilter = account.liveHomeFollowLists.value
         val topFilterAuthors =
             when (topFilter) {
@@ -145,15 +181,14 @@ class HomeLiveFilter(
             collection.associateWith { followsThatParticipateOn(it, followingKeySet) }
 
         return collection.sortedWith(
-            compareByDescending<EphemeralChatChannel> { followCounts[it] }
-                .thenByDescending<EphemeralChatChannel> { it.lastNote?.createdAt() ?: 0 }
-                .thenBy { it.roomId.id }
-                .thenBy { it.roomId.relayUrl },
+            compareByDescending<Channel> { followCounts[it] }
+                .thenByDescending<Channel> { it.lastNote?.createdAt() ?: 0 }
+                .thenBy { it.hashCode() },
         )
     }
 
     fun followsThatParticipateOn(
-        channel: EphemeralChatChannel,
+        channel: Channel,
         followingSet: Set<HexKey>?,
     ): Int {
         var count = 0
