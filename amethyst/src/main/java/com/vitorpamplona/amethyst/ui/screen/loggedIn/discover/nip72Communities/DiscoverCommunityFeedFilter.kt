@@ -112,15 +112,23 @@ open class DiscoverCommunityFeedFilter(
     ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag, comingFrom)
 
     override fun sort(items: Set<Note>): List<Note> {
-        val lastNote =
+        val lastNotesCreatedAt =
             items.associateWith { note ->
-                note.boosts.maxOfOrNull { it.createdAt() ?: 0 } ?: 0
+                val boosts = note.boosts
+                var max = 0L
+                for (boost in boosts) {
+                    val createdAt = boost.createdAt()
+                    if (createdAt != null && createdAt > max) {
+                        max = createdAt
+                    }
+                }
+                max
             }
 
         return items
             .sortedWith(
                 compareBy(
-                    { lastNote[it] },
+                    { lastNotesCreatedAt[it] },
                     { it.createdAt() },
                     { it.idHex },
                 ),
