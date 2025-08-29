@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -366,6 +367,12 @@ private fun BottomRowActions(postViewModel: NewProductViewModel) {
 
         TakePictureButton(
             onPictureTaken = {
+                postViewModel.selectImage(it)
+            },
+        )
+
+        TakeVideoButton(
+            onVideoTaken = {
                 postViewModel.selectImage(it)
             },
         )
