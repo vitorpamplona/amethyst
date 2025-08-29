@@ -27,65 +27,67 @@ class ReportAssembler {
     fun buildReport(e: Throwable): String =
         buildString {
             append(e.javaClass.simpleName)
-            appendLine()
-
-            // Device and Product Information
-            append("Amethyst Version: ")
+            append(": ")
             appendLine(BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
             appendLine()
 
             // Device and Product Information
-            append("Manufacturer: ")
-            appendLine(Build.MANUFACTURER)
-            append("Model: ")
-            appendLine(Build.MODEL)
-            append("Product: ")
-            appendLine(Build.PRODUCT)
-            appendLine()
+            appendLine("| Prop | Value |")
+            appendLine("|------|-------|")
+            append("| Manuf |")
+            append(Build.MANUFACTURER)
+            appendLine(" |")
+            append("| Model |")
+            append(Build.MODEL)
+            appendLine(" |")
+            append("| Prod |")
+            append(Build.PRODUCT)
+            appendLine(" |")
 
             // OS Information
-            append("Android Version: ")
-            appendLine(Build.VERSION.RELEASE)
-            append("SDK Int: ")
-            appendLine(Build.VERSION.SDK_INT.toString())
-            append("Build ID: ")
-            appendLine(Build.ID)
-            appendLine()
+            append("| Android |")
+            append(Build.VERSION.RELEASE)
+            appendLine(" |")
+            append("| SDK Int |")
+            append(Build.VERSION.SDK_INT.toString())
+            appendLine(" |")
 
             // Hardware Information
-            append("Brand: ")
-            appendLine(Build.BRAND)
-            append("Hardware: ")
-            appendLine(Build.HARDWARE)
-            appendLine()
+            append("| Brand |")
+            append(Build.BRAND)
+            appendLine(" |")
+            append("| Hardware |")
+            append(Build.HARDWARE)
+            appendLine(" |")
 
             // Other Useful Information
-            append("Device: ")
-            appendLine(Build.DEVICE)
-            append("Host: ")
-            appendLine(Build.HOST)
-            append("User: ")
-            appendLine(Build.USER)
+            append("| Device | ")
+            append(Build.DEVICE)
+            appendLine(" |")
+            append("| Host | ")
+            append(Build.HOST)
+            appendLine(" |")
+            append("| User | ")
+            append(Build.USER)
+            appendLine(" |")
             appendLine()
 
-            append(e.toString())
-            append("\n")
+            appendLine("```")
+            appendLine(e.toString())
             e.stackTrace.forEach {
                 append("    ")
-                append(it.toString())
-                append("\n")
+                appendLine(it.toString())
             }
             val cause = e.cause
             if (cause != null) {
-                append("\n\nCause:\n")
+                appendLine("\n\nCause:")
                 append("    ")
-                append(cause.toString())
-                append("\n")
+                appendLine(cause.toString())
                 cause.stackTrace.forEach {
                     append("        ")
-                    append(it.toString())
-                    append("\n")
+                    appendLine(it.toString())
                 }
             }
+            appendLine("```")
         }
 }
