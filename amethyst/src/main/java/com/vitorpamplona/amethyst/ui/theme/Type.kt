@@ -52,6 +52,7 @@ val Typography =
      */
     )
 
+val Font10SP = 10.sp
 val Font12SP = 12.sp
 val Font14SP = 14.sp
 val Font17SP = 17.sp

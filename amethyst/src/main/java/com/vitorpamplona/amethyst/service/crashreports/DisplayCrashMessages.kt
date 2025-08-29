@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.crashreports
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
@@ -40,11 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -79,44 +72,35 @@ fun DisplayCrashMessages(
                     Text(stringResource(R.string.would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared))
                 }
             },
+            dismissButton = {
+                TextButton(onClick = { stackTrace.value = null }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
             confirmButton = {
-                Row(
-                    modifier =
-                        Modifier
-                            .padding(all = 8.dp)
-                            .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    val clipboardManager = LocalClipboardManager.current
-                    TextButton(onClick = {
-                        clipboardManager.setText(AnnotatedString(stack))
-                    }) {
-                        Text(stringRes(R.string.copy_stack_to_clipboard))
-                    }
-
-                    Button(
-                        onClick = {
-                            nav.nav {
-                                routeToMessage(
-                                    user = LocalCache.getOrCreateUser("aa9047325603dacd4f8142093567973566de3b1e20a89557b728c3be4c6a844b"),
-                                    draftMessage = stack,
-                                    accountViewModel = accountViewModel,
-                                )
-                            }
-                            stackTrace.value = null
-                        },
-                        contentPadding = PaddingValues(horizontal = Size16dp),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Done,
-                                contentDescription = stringRes(R.string.crashreport_found_send),
+                Button(
+                    onClick = {
+                        nav.nav {
+                            routeToMessage(
+                                user = LocalCache.getOrCreateUser("aa9047325603dacd4f8142093567973566de3b1e20a89557b728c3be4c6a844b"),
+                                draftMessage = stack,
+                                accountViewModel = accountViewModel,
+                                expiresDays = 30,
                             )
-                            Spacer(StdHorzSpacer)
-                            Text(stringRes(R.string.crashreport_found_send))
                         }
+                        stackTrace.value = null
+                    },
+                    contentPadding = PaddingValues(horizontal = Size16dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Done,
+                            contentDescription = stringRes(R.string.crashreport_found_send),
+                        )
+                        Spacer(StdHorzSpacer)
+                        Text(stringRes(R.string.crashreport_found_send))
                     }
                 }
             },
