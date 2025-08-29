@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -78,6 +80,8 @@ fun NewImageButton(
 
     var wantsToPostFromCamera by remember { mutableStateOf(false) }
 
+    var wantsToPostFromVideo by remember { mutableStateOf(false) }
+
     var pickedURIs by remember { mutableStateOf<ImmutableList<SelectedMedia>>(persistentListOf()) }
 
     val scope = rememberCoroutineScope()
@@ -93,6 +97,13 @@ fun NewImageButton(
     if (wantsToPostFromCamera) {
         TakePicture { uri ->
             wantsToPostFromCamera = false
+            pickedURIs = uri
+        }
+    }
+
+    if (wantsToPostFromVideo) {
+        TakeVideo { uri ->
+            wantsToPostFromVideo = false
             pickedURIs = uri
         }
     }
@@ -134,7 +145,26 @@ fun NewImageButton(
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = stringRes(id = R.string.upload_image),
+                        contentDescription = stringRes(id = R.string.take_a_picture),
+                        modifier = Modifier.size(26.dp),
+                        tint = Color.White,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                FloatingActionButton(
+                    onClick = {
+                        wantsToPostFromVideo = true
+                        isOpen = false
+                    },
+                    modifier = Size55Modifier,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = stringRes(id = R.string.record_a_video),
                         modifier = Modifier.size(26.dp),
                         tint = Color.White,
                     )
