@@ -51,13 +51,14 @@ class CommunityListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val communityListNote = cache.getOrCreateAddressableNote(getCommunityListAddress())
+
     fun getCommunityListAddress() = CommunityListEvent.createAddress(signer.pubKey)
 
-    fun getCommunityListNote(): AddressableNote = cache.getOrCreateAddressableNote(getCommunityListAddress())
+    fun getCommunityListFlow(): StateFlow<NoteState> = communityListNote.flow().metadata.stateFlow
 
-    fun getCommunityListFlow(): StateFlow<NoteState> = getCommunityListNote().flow().metadata.stateFlow
-
-    fun getCommunityList(): CommunityListEvent? = getCommunityListNote().event as? CommunityListEvent
+    fun getCommunityList(): CommunityListEvent? = communityListNote.event as? CommunityListEvent
 
     suspend fun communityListWithBackup(note: Note): Set<CommunityTag> {
         val event = note.event as? CommunityListEvent ?: settings.backupCommunityList
@@ -70,7 +71,7 @@ class CommunityListState(
             .transformLatest { noteState ->
                 emit(communityListWithBackup(noteState.note))
             }.onStart {
-                emit(communityListWithBackup(getCommunityListNote()))
+                emit(communityListWithBackup(communityListNote))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

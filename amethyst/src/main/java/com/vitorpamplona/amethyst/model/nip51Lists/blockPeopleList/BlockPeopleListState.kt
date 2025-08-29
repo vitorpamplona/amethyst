@@ -43,13 +43,14 @@ class BlockPeopleListState(
     val decryptionCache: PeopleListDecryptionCache,
     val scope: CoroutineScope,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val blockListNote = cache.getOrCreateAddressableNote(getBlockListAddress())
+
     fun getBlockListAddress() = PeopleListEvent.createBlockAddress(signer.pubKey)
 
-    fun getBlockListNote() = LocalCache.getOrCreateAddressableNote(getBlockListAddress())
+    fun getBlockListFlow(): StateFlow<NoteState> = blockListNote.flow().metadata.stateFlow
 
-    fun getBlockListFlow(): StateFlow<NoteState> = getBlockListNote().flow().metadata.stateFlow
-
-    fun getBlockList(): PeopleListEvent? = getBlockListNote().event as? PeopleListEvent
+    fun getBlockList(): PeopleListEvent? = blockListNote.event as? PeopleListEvent
 
     suspend fun blockListWithBackup(note: Note): List<MuteTag> {
         val event = note.event as? PeopleListEvent
@@ -59,7 +60,7 @@ class BlockPeopleListState(
     val flow =
         getBlockListFlow()
             .map { blockListWithBackup(it.note) }
-            .onStart { emit(blockListWithBackup(getBlockListNote())) }
+            .onStart { emit(blockListWithBackup(blockListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

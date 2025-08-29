@@ -399,18 +399,6 @@ class Account(
 
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
-    /*
-    val mergedTopFeedAuthorLists =
-        MergedTopFeedAuthorListsState(
-            liveHomeFollowListsPerRelay,
-            liveStoriesFollowListsPerRelay,
-            liveDiscoveryFollowListsPerRelay,
-            liveNotificationFollowListsPerRelay,
-            scope,
-        ).flow
-
-     */
-
     fun isWriteable(): Boolean = settings.isWriteable()
 
     suspend fun updateWarnReports(warnReports: Boolean): Boolean {

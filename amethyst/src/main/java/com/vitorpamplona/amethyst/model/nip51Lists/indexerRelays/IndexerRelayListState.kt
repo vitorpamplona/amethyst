@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays
 
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -45,13 +44,14 @@ class IndexerRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val indexerListNote = cache.getOrCreateAddressableNote(getIndexerRelayListAddress())
+
     fun getIndexerRelayListAddress() = IndexerRelayListEvent.createAddress(signer.pubKey)
 
-    fun getIndexerRelayListNote(): AddressableNote = cache.getOrCreateAddressableNote(getIndexerRelayListAddress())
+    fun getIndexerRelayListFlow(): StateFlow<NoteState> = indexerListNote.flow().metadata.stateFlow
 
-    fun getIndexerRelayListFlow(): StateFlow<NoteState> = getIndexerRelayListNote().flow().metadata.stateFlow
-
-    fun getIndexerRelayList(): IndexerRelayListEvent? = getIndexerRelayListNote().event as? IndexerRelayListEvent
+    fun getIndexerRelayList(): IndexerRelayListEvent? = indexerListNote.event as? IndexerRelayListEvent
 
     suspend fun normalizeIndexerRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? IndexerRelayListEvent
@@ -61,7 +61,7 @@ class IndexerRelayListState(
     val flow =
         getIndexerRelayListFlow()
             .map { normalizeIndexerRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeIndexerRelayListWithBackup(getIndexerRelayListNote())) }
+            .onStart { emit(normalizeIndexerRelayListWithBackup(indexerListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

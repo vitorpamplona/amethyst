@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays
 
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -44,13 +43,14 @@ class BroadcastRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val broadcastListNote = cache.getOrCreateAddressableNote(getBroadcastRelayListAddress())
+
     fun getBroadcastRelayListAddress() = BroadcastRelayListEvent.createAddress(signer.pubKey)
 
-    fun getBroadcastRelayListNote(): AddressableNote = cache.getOrCreateAddressableNote(getBroadcastRelayListAddress())
+    fun getBroadcastRelayListFlow(): StateFlow<NoteState> = broadcastListNote.flow().metadata.stateFlow
 
-    fun getBroadcastRelayListFlow(): StateFlow<NoteState> = getBroadcastRelayListNote().flow().metadata.stateFlow
-
-    fun getBroadcastRelayList(): BroadcastRelayListEvent? = getBroadcastRelayListNote().event as? BroadcastRelayListEvent
+    fun getBroadcastRelayList(): BroadcastRelayListEvent? = broadcastListNote.event as? BroadcastRelayListEvent
 
     suspend fun normalizeBroadcastRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? BroadcastRelayListEvent
@@ -60,7 +60,7 @@ class BroadcastRelayListState(
     val flow =
         getBroadcastRelayListFlow()
             .map { normalizeBroadcastRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeBroadcastRelayListWithBackup(getBroadcastRelayListNote())) }
+            .onStart { emit(normalizeBroadcastRelayListWithBackup(broadcastListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

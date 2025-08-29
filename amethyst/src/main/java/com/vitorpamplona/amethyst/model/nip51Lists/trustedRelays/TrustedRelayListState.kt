@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -48,13 +47,14 @@ class TrustedRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
-    fun getTrustedRelayListAddress() = TrustedRelayListEvent.Companion.createAddress(signer.pubKey)
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val trustedListNote = cache.getOrCreateAddressableNote(getTrustedRelayListAddress())
 
-    fun getTrustedRelayListNote(): AddressableNote = cache.getOrCreateAddressableNote(getTrustedRelayListAddress())
+    fun getTrustedRelayListAddress() = TrustedRelayListEvent.createAddress(signer.pubKey)
 
-    fun getTrustedRelayListFlow(): StateFlow<NoteState> = getTrustedRelayListNote().flow().metadata.stateFlow
+    fun getTrustedRelayListFlow(): StateFlow<NoteState> = trustedListNote.flow().metadata.stateFlow
 
-    fun getTrustedRelayList(): TrustedRelayListEvent? = getTrustedRelayListNote().event as? TrustedRelayListEvent
+    fun getTrustedRelayList(): TrustedRelayListEvent? = trustedListNote.event as? TrustedRelayListEvent
 
     suspend fun normalizeTrustedRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? TrustedRelayListEvent ?: settings.backupTrustedRelayList
@@ -64,7 +64,7 @@ class TrustedRelayListState(
     val flow =
         getTrustedRelayListFlow()
             .map { normalizeTrustedRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeTrustedRelayListWithBackup(getTrustedRelayListNote())) }
+            .onStart { emit(normalizeTrustedRelayListWithBackup(trustedListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

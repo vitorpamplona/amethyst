@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -49,13 +48,14 @@ class BlockedRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val blockedListNote = cache.getOrCreateAddressableNote(getBlockedRelayListAddress())
+
     fun getBlockedRelayListAddress() = BlockedRelayListEvent.createAddress(signer.pubKey)
 
-    fun getBlockedRelayListNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getBlockedRelayListAddress())
+    fun getBlockedRelayListFlow(): StateFlow<NoteState> = blockedListNote.flow().metadata.stateFlow
 
-    fun getBlockedRelayListFlow(): StateFlow<NoteState> = getBlockedRelayListNote().flow().metadata.stateFlow
-
-    fun getBlockedRelayList(): BlockedRelayListEvent? = getBlockedRelayListNote().event as? BlockedRelayListEvent
+    fun getBlockedRelayList(): BlockedRelayListEvent? = blockedListNote.event as? BlockedRelayListEvent
 
     suspend fun normalizeBlockedRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? BlockedRelayListEvent ?: settings.backupBlockedRelayList
@@ -66,7 +66,7 @@ class BlockedRelayListState(
         getBlockedRelayListFlow()
             .map {
                 normalizeBlockedRelayListWithBackup(it.note)
-            }.onStart { emit(normalizeBlockedRelayListWithBackup(getBlockedRelayListNote())) }
+            }.onStart { emit(normalizeBlockedRelayListWithBackup(blockedListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

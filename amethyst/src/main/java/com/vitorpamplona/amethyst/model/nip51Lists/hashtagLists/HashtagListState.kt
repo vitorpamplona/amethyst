@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -48,13 +47,14 @@ class HashtagListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val hashtagListNote = cache.getOrCreateAddressableNote(getHashtagListAddress())
+
     fun getHashtagListAddress() = HashtagListEvent.createAddress(signer.pubKey)
 
-    fun getHashtagListNote(): AddressableNote = cache.getOrCreateAddressableNote(getHashtagListAddress())
+    fun getHashtagListFlow(): StateFlow<NoteState> = hashtagListNote.flow().metadata.stateFlow
 
-    fun getHashtagListFlow(): StateFlow<NoteState> = getHashtagListNote().flow().metadata.stateFlow
-
-    fun getHashtagList(): HashtagListEvent? = getHashtagListNote().event as? HashtagListEvent
+    fun getHashtagList(): HashtagListEvent? = hashtagListNote.event as? HashtagListEvent
 
     suspend fun hashtagListWithBackup(note: Note): Set<String> {
         val event = note.event as? HashtagListEvent ?: settings.backupHashtagList
@@ -67,7 +67,7 @@ class HashtagListState(
             .transformLatest { noteState ->
                 emit(hashtagListWithBackup(noteState.note))
             }.onStart {
-                emit(hashtagListWithBackup(getHashtagListNote()))
+                emit(hashtagListWithBackup(hashtagListNote))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

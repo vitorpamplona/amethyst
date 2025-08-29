@@ -51,13 +51,12 @@ class FollowListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
-    // fun getEphemeralChatListAddress() = cache.getOrCreateUser(signer.pubKey)
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val user = cache.getOrCreateUser(signer.pubKey)
 
-    fun getFollowListUser(): User = cache.getOrCreateUser(signer.pubKey)
+    fun getFollowListFlow(): StateFlow<UserState> = user.flow().follows.stateFlow
 
-    fun getFollowListFlow(): StateFlow<UserState> = getFollowListUser().flow().follows.stateFlow
-
-    fun getFollowListEvent(): ContactListEvent? = getFollowListUser().latestContactList
+    fun getFollowListEvent(): ContactListEvent? = user.latestContactList
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val innerFlow: Flow<Kind3Follows> =
