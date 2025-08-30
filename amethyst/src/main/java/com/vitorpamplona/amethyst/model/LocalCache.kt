@@ -309,7 +309,9 @@ object LocalCache : ILocalCache {
         require(isValidHex(key = key)) { "$key is not a valid hex" }
 
         return users.getOrCreate(key) {
-            User(it)
+            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(key))
+            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(key))
+            User(it, nip65RelayListNote, dmRelayListNote)
         }
     }
 

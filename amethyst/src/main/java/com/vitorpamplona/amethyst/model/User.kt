@@ -50,6 +50,8 @@ import java.math.BigDecimal
 @Stable
 class User(
     val pubkeyHex: String,
+    val nip65RelayListNote: Note,
+    val dmRelayListNote: Note,
 ) {
     var info: UserMetadata? = null
 
@@ -72,9 +74,9 @@ class User(
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay()
 
-    fun dmInboxRelayList() = (LocalCache.getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(pubkeyHex))?.event as? ChatMessageRelayListEvent)
+    fun dmInboxRelayList() = dmRelayListNote.event as? ChatMessageRelayListEvent
 
-    fun authorRelayList() = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)
+    fun authorRelayList() = nip65RelayListNote.event as? AdvertisedRelayListEvent
 
     fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
 
@@ -139,8 +141,6 @@ class User(
                 ?.followers
                 ?.invalidateData()
         }
-
-        flowSet?.relays?.invalidateData()
     }
 
     fun addReport(note: Note) {
@@ -227,7 +227,7 @@ class User(
             here.counter++
         }
 
-        flowSet?.relayInfo?.invalidateData()
+        flowSet?.usedRelays?.invalidateData()
     }
 
     fun updateUserInfo(
@@ -339,20 +339,18 @@ class UserFlowSet(
     // Observers line up here.
     val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
-    val relays = UserBundledRefresherFlow(u)
     val followers = UserBundledRefresherFlow(u)
     val reports = UserBundledRefresherFlow(u)
-    val relayInfo = UserBundledRefresherFlow(u)
+    val usedRelays = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
         metadata.hasObservers() ||
-            relays.hasObservers() ||
             follows.hasObservers() ||
             followers.hasObservers() ||
             reports.hasObservers() ||
-            relayInfo.hasObservers() ||
+            usedRelays.hasObservers() ||
             zaps.hasObservers() ||
             statuses.hasObservers()
 }

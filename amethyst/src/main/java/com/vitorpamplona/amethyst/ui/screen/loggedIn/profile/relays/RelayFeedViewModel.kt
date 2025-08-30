@@ -29,18 +29,24 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import kotlin.collections.map
 
 @Stable
 class RelayFeedViewModel :
@@ -51,11 +57,90 @@ class RelayFeedViewModel :
             .thenByDescending { it.counter }
             .thenBy { it.url.url }
 
-    private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
-    val feedContent = _feedContent.asStateFlow()
+    var currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
 
-    var currentUser: User? = null
-    var currentJob: Job? = null
+    fun convert(
+        relays: Set<NormalizedRelayUrl>?,
+        user: User?,
+    ): List<RelayInfo> {
+        if (relays == null || user == null) return emptyList()
+        return relays
+            .map { relay ->
+                user.relaysBeingUsed[relay] ?: RelayInfo(relay, 0, 0)
+            }.sortedWith(order)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val nip65OutboxFlow =
+        currentUser
+            .transformLatest { user ->
+                if (user != null) {
+                    emitAll(
+                        combine(
+                            user.nip65RelayListNote
+                                .flow()
+                                .metadata.stateFlow,
+                            user.flow().usedRelays.stateFlow,
+                        ) { nip65, userState ->
+                            val relays = (nip65.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet() ?: emptySet()
+                            convert(relays, userState.user)
+                        },
+                    )
+                } else {
+                    emit(emptyList<RelayInfo>())
+                }
+            }.onStart {
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet(), currentUser.value))
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val nip65InboxFlow =
+        currentUser
+            .transformLatest { user ->
+                if (user != null) {
+                    emitAll(
+                        combine(
+                            user.nip65RelayListNote
+                                .flow()
+                                .metadata.stateFlow,
+                            user.flow().usedRelays.stateFlow,
+                        ) { nip65, userState ->
+                            val relays = (nip65.note.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet() ?: emptySet()
+                            convert(relays, userState.user)
+                        },
+                    )
+                } else {
+                    emit(emptyList<RelayInfo>())
+                }
+            }.onStart {
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet(), currentUser.value))
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val dmInboxFlow =
+        currentUser
+            .transformLatest { user ->
+                if (user != null) {
+                    emitAll(
+                        combine(
+                            user.dmRelayListNote
+                                .flow()
+                                .metadata.stateFlow,
+                            user.flow().usedRelays.stateFlow,
+                        ) { nip65, userState ->
+                            val relays = (nip65.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
+                            convert(relays, userState.user)
+                        },
+                    )
+                } else {
+                    emit(emptyList<RelayInfo>())
+                }
+            }.onStart {
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? ChatMessageRelayListEvent)?.relays()?.toSet(), currentUser.value))
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
@@ -65,80 +150,36 @@ class RelayFeedViewModel :
         }
     }
 
-    fun refreshSuspended() {
+    suspend fun refreshSuspended() {
         try {
             isRefreshing.value = true
 
-            currentUser?.let {
-                val newList = mergeRelays(it.relaysBeingUsed, it.latestContactList?.relays())
-                _feedContent.update { newList }
-            }
+            delay(1000)
         } finally {
             isRefreshing.value = false
         }
     }
 
-    fun mergeRelays(
-        relaysBeingUsed: Map<NormalizedRelayUrl, RelayInfo>,
-        relays: Map<NormalizedRelayUrl, ReadWrite>?,
-    ): List<RelayInfo> {
-        val userRelaysBeingUsed = relaysBeingUsed.map { it.value }
-
-        val currentUserRelays =
-            relays?.mapNotNull {
-                val url = it.key
-                if (url !in relaysBeingUsed) {
-                    RelayInfo(url, 0, 0)
-                } else {
-                    null
-                }
-            } ?: emptyList()
-
-        return (userRelaysBeingUsed + currentUserRelays).sortedWith(order)
-    }
-
     @OptIn(FlowPreview::class)
     fun subscribeTo(user: User) {
         if (currentUser != user) {
-            currentUser = user
-
-            currentJob?.cancel()
-            currentJob =
-                viewModelScope.launch {
-                    combine(currentUser!!.flow().relays.stateFlow, currentUser!!.flow().relayInfo.stateFlow) { relays, relayInfo ->
-                        mergeRelays(relays.user.relaysBeingUsed, relayInfo.user.latestContactList?.relays())
-                    }.debounce(1000)
-                        .collect { newList ->
-                            _feedContent.update { newList }
-                        }
-                }
-
-            invalidateData()
+            currentUser.tryEmit(user)
         }
     }
 
     fun unsubscribeTo(user: User) {
         if (currentUser == user) {
-            currentUser = null
-            currentJob?.cancel()
+            currentUser.tryEmit(null)
             invalidateData()
         }
     }
 
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
-
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-        }
+        currentUser.tryEmit(currentUser.value)
     }
 
     override fun onCleared() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        bundler.cancel()
-        currentJob?.cancel()
         super.onCleared()
     }
 }

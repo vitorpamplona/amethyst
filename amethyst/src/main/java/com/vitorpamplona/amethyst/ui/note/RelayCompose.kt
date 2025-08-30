@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -67,7 +68,7 @@ fun RelayCompose(
     ) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(

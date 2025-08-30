@@ -388,7 +388,7 @@ private fun RelayOptionsAction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isCurrentlyOnTheUsersList by observeUserRelayIntoList(accountViewModel.userProfile(), relay, accountViewModel)
+    val isCurrentlyOnTheUsersList by observeUserRelayIntoList(relay, accountViewModel)
     val clipboardManager = LocalClipboardManager.current
 
     if (isCurrentlyOnTheUsersList) {

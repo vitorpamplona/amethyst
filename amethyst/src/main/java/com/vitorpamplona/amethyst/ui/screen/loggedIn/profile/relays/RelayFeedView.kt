@@ -20,23 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun RelayFeedView(
@@ -45,16 +51,45 @@ fun RelayFeedView(
     nav: INav,
     enablePullRefresh: Boolean = true,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val outboxListState by viewModel.nip65OutboxFlow.collectAsStateWithLifecycle()
+    val inboxListState by viewModel.nip65InboxFlow.collectAsStateWithLifecycle()
+    val dmListState by viewModel.dmInboxFlow.collectAsStateWithLifecycle()
 
     RefresheableBox(viewModel, enablePullRefresh) {
         val listState = rememberLazyListState()
 
         LazyColumn(
-            contentPadding = FeedPadding,
+            contentPadding = PaddingValues(top = 10.dp, bottom = 20.dp),
             state = listState,
         ) {
-            itemsIndexed(feedState, key = { _, item -> item.url.url }) { _, item ->
+            item {
+                SettingsCategory(
+                    stringRes(R.string.public_home_section),
+                    stringRes(R.string.public_home_section_explainer_profile),
+                    Modifier.padding(top = 10.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
+                )
+            }
+            itemsIndexed(outboxListState, key = { _, item -> "outbox" + item.url.url }) { _, item ->
+                RenderRelayRow(item, accountViewModel, nav)
+            }
+            item {
+                SettingsCategory(
+                    stringRes(R.string.public_notif_section),
+                    stringRes(R.string.public_notif_section_explainer_profile),
+                    Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
+                )
+            }
+            itemsIndexed(inboxListState, key = { _, item -> "inbox" + item.url.url }) { _, item ->
+                RenderRelayRow(item, accountViewModel, nav)
+            }
+            item {
+                SettingsCategory(
+                    stringRes(R.string.private_inbox_section),
+                    stringRes(R.string.private_inbox_section_explainer_profile),
+                    Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
+                )
+            }
+            itemsIndexed(dmListState, key = { _, item -> "dminbox" + item.url.url }) { _, item ->
                 RenderRelayRow(item, accountViewModel, nav)
             }
         }
