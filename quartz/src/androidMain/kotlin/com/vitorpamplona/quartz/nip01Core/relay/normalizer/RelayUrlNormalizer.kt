@@ -27,7 +27,7 @@ import org.czeal.rfc3986.URIReference
 import kotlin.contracts.ExperimentalContracts
 
 sealed interface NormalizationResult {
-    class Sucess(
+    class Success(
         val url: NormalizedRelayUrl,
     ) : NormalizationResult
 
@@ -157,28 +157,16 @@ class RelayUrlNormalizer {
         }
 
         fun normalize(url: String): NormalizedRelayUrl {
-            normalizedUrls[url]?.let {
-                return when (it) {
-                    is NormalizationResult.Sucess -> it.url
-                    else -> throw IllegalArgumentException("Invalid Url: $url")
-                }
-            }
-
-            return try {
-                val fixed = fix(url) ?: return NormalizedRelayUrl(url)
-                val normalized = norm(fixed)
-                normalizedUrls.put(url, NormalizationResult.Sucess(normalized))
-                normalized
-            } catch (e: Exception) {
-                NormalizedRelayUrl(url)
-            }
+            val result = normalizeOrNull(url)
+            return result ?: throw IllegalArgumentException("Invalid Relay Url: $url")
         }
 
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
             if (url.isEmpty()) return null
+            // happy path when the url has been fixed already
             normalizedUrls[url]?.let {
                 return when (it) {
-                    is NormalizationResult.Sucess -> it.url
+                    is NormalizationResult.Success -> it.url
                     else -> null
                 }
             }
@@ -187,8 +175,8 @@ class RelayUrlNormalizer {
                 val fixed = fix(url)
                 if (fixed != null) {
                     val normalized = norm(fixed)
-                    normalizedUrls.put(url, NormalizationResult.Sucess(normalized))
-                    return normalized
+                    normalizedUrls.put(url, NormalizationResult.Success(normalized))
+                    normalized
                 } else {
                     Log.w("NormalizedRelayUrl", "Rejected Error $url")
                     normalizedUrls.put(url, NormalizationResult.Error)
