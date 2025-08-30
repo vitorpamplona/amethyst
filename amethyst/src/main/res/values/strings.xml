@@ -268,8 +268,8 @@
     <string name="posts_received">posts received</string>
     <string name="remove">Remove</string>
     <string name="sats" translatable="false">sats</string>
-    <string name="translations_auto">Auto</string>
-    <string name="translations_translated_from">translated from</string>
+    <string name="translations_auto">Auto-translated</string>
+    <string name="translations_translated_from">from</string>
     <string name="translations_to">to</string>
     <string name="translations_show_in_lang_first">Show in %1$s first</string>
     <string name="chat_about_topic">Public chat about %1$s</string>
