@@ -59,6 +59,13 @@ class AdvertisedRelayInfo(
         }
 
         @JvmStatic
+        fun parseNorm(tag: Array<String>): NormalizedRelayUrl? {
+            ensure(match(tag)) { return null }
+            val normalizedUrl = RelayUrlNormalizer.normalizeOrNull(tag[1])
+            return normalizedUrl
+        }
+
+        @JvmStatic
         fun parseRead(tag: Array<String>): String? {
             ensure(match(tag)) { return null }
             ensure(AdvertisedRelayType.isRead(tag.getOrNull(2))) { return null }
