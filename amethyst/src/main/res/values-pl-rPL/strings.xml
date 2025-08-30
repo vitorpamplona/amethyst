@@ -76,8 +76,8 @@
     <string name="profile_banner">Baner profilu</string>
     <string name="payment_successful">Płatność zakończona pomyślnie</string>
     <string name="error_parsing_error_message">Błąd podczas analizowania komunikatu o błędzie</string>
-    <string name="following">" Obserwowani"</string>
-    <string name="followers">" Obserwujący"</string>
+    <string name="following">" Obserwowane"</string>
+    <string name="followers">" Obserwujące"</string>
     <string name="number_following">"%1$s Obserwowanych"</string>
     <string name="number_followers">"%1$s Obserwujących"</string>
     <string name="profile">Twój Profil</string>
@@ -630,9 +630,9 @@
     <string name="geohash_title">Wyświetl lokalizację jako </string>
     <string name="geohash_explainer">Dodaje Geohash twojej lokalizacji do wpisu. Użytkownicy będą wiedzieli, że jesteś mniej niż 5 km od bieżącej lokalizacji</string>
     <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
-    <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji zobaczą to. Twoi ogólni obserwatorzy tego nie zobaczą.</string>
+    <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji to zobaczą. Twoi ogólni obserwatorzy nie zobaczą tego.</string>
     <string name="hashtag_exclusive">Wpis hashtagowy</string>
-    <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag zobaczą go. Twoi ogólni obserwujący go nie zobaczą.</string>
+    <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag to zobaczą. Twoi ogólni obserwujący nie zobaczą tego.</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
@@ -653,6 +653,8 @@
     <string name="messages_new_subject_message">Wyjaśnienie dla członków</string>
     <string name="messages_new_subject_message_placeholder">Zmiana nazwy dla nowych celów.</string>
     <string name="paste_from_clipboard">Wklej ze schowka</string>
+    <string name="invalid_nip47_uri_title">Nieprawidłowy NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">URI %1$s nie jest prawidłowym URI logowania NIP-47.</string>
     <string name="language_description">Dla interfejsu aplikacji</string>
     <string name="theme_description">Motyw ciemny, jasny lub automatyczny</string>
     <string name="automatically_load_images_gifs_description">Automatycznie załaduj obrazki i Gify</string>
@@ -1017,4 +1019,8 @@
     <string name="play">Odtwórz</string>
     <string name="open_dropdown_menu">Otwórz rozwijane menu</string>
     <string name="option_of">Opcja %1$s dla %2$s</string>
+    <string name="crashreport_found">Znaleziono raport o błędzie</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Czy chcesz wysłać ostatni raport o awarii do Amethyst w DM? Żadne dane osobowe nie będą udostępnione</string>
+    <string name="crashreport_found_send">Prześlij</string>
+    <string name="this_message_will_disappear_in_days">Ta wiadomość zniknie za %1$d dni</string>
 </resources>

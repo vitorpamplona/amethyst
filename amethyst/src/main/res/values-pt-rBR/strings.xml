@@ -148,7 +148,6 @@
     <string name="failed_to_save_the_video">Falha ao salvar o vídeo</string>
     <string name="upload_image">Enviar Imagem</string>
     <string name="take_a_picture">Tirar uma foto</string>
-    <string name="record_a_video">Gravar um vídeo</string>
     <string name="record_a_message">Gravar uma mensagem</string>
     <string name="record_a_message_title">Gravar uma mensagem</string>
     <string name="record_a_message_description">Clique e segure para gravar uma mensagem</string>
