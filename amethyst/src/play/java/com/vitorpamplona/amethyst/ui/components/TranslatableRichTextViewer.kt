@@ -173,7 +173,7 @@ private fun TranslationMessage(
             text =
                 buildAnnotatedString {
                     appendLink(stringRes(R.string.translations_auto), textColor) { langSettingsPopupExpanded = !langSettingsPopupExpanded }
-                    append("-${stringRes(R.string.translations_translated_from)} ")
+                    append(" ${stringRes(R.string.translations_translated_from)} ")
                     appendLink(Locale(source).displayName, textColor) { onChangeWhatToShow(true) }
                     append(" ${stringRes(R.string.translations_to)} ")
                     appendLink(Locale(target).displayName, textColor) { onChangeWhatToShow(false) }
