@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
@@ -72,6 +73,23 @@ class FollowListState(
                 SharingStarted.Eagerly,
                 // this has priority.
                 buildKind3Follows(getFollowListEvent() ?: settings.backupContactList),
+            )
+
+    // Creates a long-term reference for all follows of a user
+    val userList =
+        flow
+            .map {
+                it.authors.map {
+                    cache.checkGetOrCreateUser(it)
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                // this has priority.
+                flow.value.authors.map {
+                    cache.checkGetOrCreateUser(it)
+                },
             )
 
     /**
