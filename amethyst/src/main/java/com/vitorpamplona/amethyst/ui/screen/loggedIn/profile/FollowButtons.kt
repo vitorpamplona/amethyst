@@ -29,8 +29,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
 
 @Composable
 fun FollowButton(
@@ -40,7 +40,7 @@ fun FollowButton(
     FilledTonalButton(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = LeftHalfCircleButtonBorder,
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(text), textAlign = TextAlign.Center)
@@ -52,7 +52,7 @@ fun UnfollowButton(onClick: () -> Unit) {
     FilledTonalButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = LeftHalfCircleButtonBorder,
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(R.string.unfollow))
