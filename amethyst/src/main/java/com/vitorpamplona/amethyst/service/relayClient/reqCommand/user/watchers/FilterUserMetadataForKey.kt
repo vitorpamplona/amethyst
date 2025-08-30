@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
+import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -35,7 +35,7 @@ val UserMetadataForKeyKinds =
     listOf(
         MetadataEvent.KIND,
         StatusEvent.KIND,
-        RelationshipStatusEvent.KIND,
+        ContactCardEvent.KIND,
         AdvertisedRelayListEvent.KIND,
         ChatMessageRelayListEvent.KIND,
     )

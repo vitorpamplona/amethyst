@@ -50,7 +50,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
-import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
+import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -1085,7 +1085,7 @@ object LocalCache : ILocalCache {
     }
 
     fun consume(
-        event: RelationshipStatusEvent,
+        event: ContactCardEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2812,7 +2812,7 @@ object LocalCache : ILocalCache {
                 is PeopleListEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
-                is RelationshipStatusEvent -> consume(event, relay, wasVerified)
+                is ContactCardEvent -> consume(event, relay, wasVerified)
                 is RelaySetEvent -> consume(event, relay, wasVerified)
                 is ReportEvent -> consume(event, relay, wasVerified)
                 is RepostEvent -> consume(event, relay, wasVerified)
