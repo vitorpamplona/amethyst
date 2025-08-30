@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst
 
+import com.vitorpamplona.amethyst.model.LocalCache.getOrCreateAddressableNoteInternal
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -38,7 +41,12 @@ import org.junit.Test
 class NewMessageTaggerKeyParseTest {
     val dao: Dao =
         object : Dao {
-            override suspend fun getOrCreateUser(hex: String): User = User(hex)
+            override suspend fun getOrCreateUser(hex: String): User =
+                User(
+                    hex,
+                    getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(hex)),
+                    getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(hex)),
+                )
 
             override suspend fun getOrCreateNote(hex: String) =
                 com.vitorpamplona.amethyst.model
