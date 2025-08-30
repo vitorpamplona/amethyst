@@ -51,7 +51,6 @@ import okhttp3.OkHttpClient
 import org.junit.Assert
 import org.junit.Ignore
 import org.junit.Test
-import org.junit.runner.Request.method
 import org.junit.runner.RunWith
 import java.io.ByteArrayOutputStream
 import kotlin.random.Random

@@ -45,7 +45,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
-import kotlin.collections.ifEmpty
 
 class FollowsPerOutboxRelay(
     kind3Follows: FollowListState,

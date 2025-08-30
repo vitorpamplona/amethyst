@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
-import android.R.attr.data
 import android.graphics.Rect
 import android.os.Bundle
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData

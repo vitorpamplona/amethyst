@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast
 
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import java.util.stream.Collectors.toList
 
 class BroadcastRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun getRelayList(): List<NormalizedRelayUrl>? =
