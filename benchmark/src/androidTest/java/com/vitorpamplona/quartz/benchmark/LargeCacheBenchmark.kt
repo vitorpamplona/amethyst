@@ -27,7 +27,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Arrays
-import kotlin.collections.distinctBy
 
 @RunWith(AndroidJUnit4::class)
 class LargeCacheBenchmark : BaseLargeCacheBenchmark() {

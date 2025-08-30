@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.utils.startsWith
 import com.vitorpamplona.quartz.utils.startsWithAny
-import kotlin.collections.ArrayList
 
 inline fun TagArray.filterToArray(predicate: (Array<String>) -> Boolean): TagArray = filterTo(ArrayList(), predicate).toTypedArray()
 

@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
-import java.time.temporal.TemporalAdjusters.next
 
 class NIP17Factory {
     data class Result(

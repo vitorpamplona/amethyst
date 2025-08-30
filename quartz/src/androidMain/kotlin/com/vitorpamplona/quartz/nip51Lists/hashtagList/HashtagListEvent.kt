@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.map
 
 @Immutable
 class HashtagListEvent(

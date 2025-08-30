@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip62RequestToVanish.tags
 
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.relay
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import kotlin.collections.map
 
 fun TagArrayBuilder<RequestToVanishEvent>.vanishFromEverywhere() = add(RelayTag.assembleEverywhere())
 

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.benchmark
 import android.content.Context
 import android.database.sqlite.SQLiteException
 import android.util.Log
-import android.util.Log.e
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.core.app.ApplicationProvider
@@ -35,7 +34,6 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.collections.flatten
 
 @RunWith(AndroidJUnit4::class)
 class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
