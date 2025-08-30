@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
-import kotlin.collections.map
 
 class MergedFollowListsState(
     val kind3List: FollowListState,

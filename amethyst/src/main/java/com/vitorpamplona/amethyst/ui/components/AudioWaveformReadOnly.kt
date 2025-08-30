@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.R.attr.maxHeight
-import android.R.attr.minHeight
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -50,7 +48,6 @@ import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import com.linc.audiowaveform.model.AmplitudeType
 import com.linc.audiowaveform.model.WaveformAlignment
-import com.vitorpamplona.amethyst.ui.components.toDrawableAmplitudes
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 

@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isForCommunity
-import kotlin.collections.toSet
 
 class CommunityFeedFilter(
     val communityDefNote: AddressableNote,

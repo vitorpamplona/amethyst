@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.ifEmpty
 
 class UserProfileMetadataFilterSubAssembler(
     client: NostrClient,

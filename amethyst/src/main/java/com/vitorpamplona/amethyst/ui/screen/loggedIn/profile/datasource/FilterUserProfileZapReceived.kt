@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import kotlin.collections.ifEmpty
 
 val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND)
 
