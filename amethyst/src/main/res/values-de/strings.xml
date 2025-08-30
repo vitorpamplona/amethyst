@@ -947,6 +947,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="signer_not_found_exception_description">Wurde die Signierer-App deinstalliert? Überprüfe, ob sie installiert ist und dieses Konto enthält. Melde dich ab und wieder an, falls sich die App geändert hat.</string>
     <string name="no_description">Keine Beschreibung gefunden</string>
     <string name="take_a_picture">Ein Foto aufnehmen</string>
+    <string name="record_a_video">Video aufnehmen</string>
     <string name="record_a_message">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_title">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>

@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -316,6 +317,12 @@ private fun BottomRowActions(
 
         TakePictureButton(
             onPictureTaken = {
+                postViewModel.selectImage(it)
+            },
+        )
+
+        TakeVideoButton(
+            onVideoTaken = {
                 postViewModel.selectImage(it)
             },
         )
