@@ -62,7 +62,6 @@ import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
-import kotlin.collections.mapNotNull
 
 @Immutable
 class CommentEvent(

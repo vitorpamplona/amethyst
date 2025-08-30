@@ -24,7 +24,6 @@ import android.util.Log
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
 import org.czeal.rfc3986.URIReference
-import java.lang.IllegalArgumentException
 import kotlin.contracts.ExperimentalContracts
 
 sealed interface NormalizationResult {

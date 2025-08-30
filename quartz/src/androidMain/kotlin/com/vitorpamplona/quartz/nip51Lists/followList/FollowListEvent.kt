@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.UUID
-import kotlin.collections.plus
 
 @Immutable
 class FollowListEvent(

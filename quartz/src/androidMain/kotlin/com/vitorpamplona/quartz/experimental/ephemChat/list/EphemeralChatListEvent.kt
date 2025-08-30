@@ -22,9 +22,7 @@ package com.vitorpamplona.quartz.experimental.ephemChat.list
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
-import com.vitorpamplona.quartz.experimental.ephemChat.list.rooms
 import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
-import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag.Companion.parse
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -39,7 +37,6 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.removeParsing
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.lang.reflect.Modifier.isPrivate
 
 @Immutable
 class EphemeralChatListEvent(

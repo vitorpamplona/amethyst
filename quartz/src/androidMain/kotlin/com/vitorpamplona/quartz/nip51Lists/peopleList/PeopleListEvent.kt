@@ -43,8 +43,6 @@ import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.UUID
-import kotlin.collections.map
-import kotlin.collections.plus
 
 @Immutable
 class PeopleListEvent(

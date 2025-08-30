@@ -40,7 +40,6 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.proxyRelays
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.plus
 
 @Immutable
 class ProxyRelayListEvent(

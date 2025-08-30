@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.tryAndWait
-import kotlin.collections.forEach
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 

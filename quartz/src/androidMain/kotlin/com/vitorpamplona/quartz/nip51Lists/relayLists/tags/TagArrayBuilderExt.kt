@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
-import kotlin.collections.map
 
 fun <T : PrivateTagArrayEvent> TagArrayBuilder<T>.name(name: String) = addUnique(NameTag.assemble(name))
 

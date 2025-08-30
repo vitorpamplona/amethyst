@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
-import kotlin.collections.joinToString
 
 class WaveformTag(
     val wave: List<Float>,

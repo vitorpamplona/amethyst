@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip10Notes.tags
 
-import android.R.attr.tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
