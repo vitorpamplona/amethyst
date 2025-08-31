@@ -2203,9 +2203,17 @@ object LocalCache : ILocalCache {
     }
 
     fun cleanMemory() {
+        Log.d("LargeCache", "Notes cleanup started. Current size: ${notes.size()}")
         notes.cleanUp()
+        Log.d("LargeCache", "Notes cleanup completed. Remaining size: ${notes.size()}")
+
+        Log.d("LargeCache", "Addressables cleanup started. Current size: ${addressables.size()}")
         addressables.cleanUp()
+        Log.d("LargeCache", "Addressables cleanup completed. Remaining size: ${addressables.size()}")
+
+        Log.d("LargeCache", "Users cleanup started. Current size: ${users.size()}")
         users.cleanUp()
+        Log.d("LargeCache", "Users cleanup completed. Remaining size: ${users.size()}")
     }
 
     fun cleanObservers() {
