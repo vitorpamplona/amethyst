@@ -65,7 +65,7 @@ fun LazyListScope.renderTrustedItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Trusted" + item.relay }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Trusted" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },

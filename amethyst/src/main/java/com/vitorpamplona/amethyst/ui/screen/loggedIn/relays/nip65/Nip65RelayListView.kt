@@ -67,7 +67,7 @@ fun LazyListScope.renderNip65HomeItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.relay }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Nip65Home" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteHomeRelay(item) },
@@ -88,7 +88,7 @@ fun LazyListScope.renderNip65NotifItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.relay }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Nip65Notif" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteNotifRelay(item) },
