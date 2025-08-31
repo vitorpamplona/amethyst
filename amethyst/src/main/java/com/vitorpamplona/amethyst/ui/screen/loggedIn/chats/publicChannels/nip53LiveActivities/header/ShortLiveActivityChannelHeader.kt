@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.OfflineFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -130,9 +132,16 @@ fun LiveChannelActionOptions(
     nav: INav,
 ) {
     val isLive by remember(activity) { derivedStateOf { activity.isLive() } }
+    val url = activity.streaming()
 
-    if (showFlag && isLive) {
-        LiveFlag()
+    if (showFlag && isLive && url != null) {
+        CheckIfVideoIsOnline(url, accountViewModel) { isOnline ->
+            if (isOnline) {
+                LiveFlag()
+            } else {
+                OfflineFlag()
+            }
+        }
         Spacer(modifier = StdHorzSpacer)
     }
 

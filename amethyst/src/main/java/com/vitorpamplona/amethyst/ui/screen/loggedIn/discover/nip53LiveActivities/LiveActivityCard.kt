@@ -156,7 +156,7 @@ fun RenderLiveActivityThumb(
                         StatusTag.STATUS.LIVE -> {
                             val url = card.media
                             if (url.isNullOrBlank()) {
-                                LiveFlag()
+                                EndedFlag()
                             } else {
                                 CheckIfVideoIsOnline(url, accountViewModel) { isOnline ->
                                     if (isOnline) {

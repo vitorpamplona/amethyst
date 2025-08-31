@@ -164,7 +164,11 @@ fun RenderLiveActivityEventInner(
         CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
                 StatusTag.STATUS.LIVE -> {
-                    media?.let { CrossfadeCheckIfVideoIsOnline(it, accountViewModel) { LiveFlag() } }
+                    media?.let {
+                        CrossfadeCheckIfVideoIsOnline(it, accountViewModel) {
+                            LiveFlag()
+                        }
+                    }
                 }
 
                 StatusTag.STATUS.PLANNED -> {
