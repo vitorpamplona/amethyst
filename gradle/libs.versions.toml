@@ -17,7 +17,7 @@ composeBom = "2025.08.01"
 coreKtx = "1.17.0"
 datastore = "1.1.7"
 espressoCore = "3.7.0"
-firebaseBom = "34.1.0"
+firebaseBom = "34.2.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.3"
 jacksonModuleKotlin = "2.19.2"
@@ -156,6 +156,5 @@ jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "k
 jetbrainsKotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 jetbrainsComposeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref = 'kotlinxSerializationPlugin' }
-parcelize = { id = "kotlin-parcelize" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
