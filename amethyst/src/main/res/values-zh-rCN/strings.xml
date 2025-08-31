@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">保存视频失败</string>
     <string name="upload_image">上传图片</string>
     <string name="take_a_picture">拍照</string>
+    <string name="record_a_video">录制视频</string>
     <string name="record_a_message">录制消息</string>
     <string name="record_a_message_title">录制消息</string>
     <string name="record_a_message_description">点按以录制消息</string>
@@ -891,10 +892,13 @@
     <string name="dm_upload">DM 上传</string>
     <string name="relay_settings">中继设置</string>
     <string name="public_home_section">公共时间线中继</string>
+    <string name="public_home_section_explainer_profile">用户正在将其内容发布到这些中继</string>
     <string name="public_home_section_explainer">这类中继会保存您的所有内容。Amethyst 会将您的事件发送到这些中继，其他人则通过这些中继查找您的内容。可以设置 1 ~ 3 个中继。它们可以是个人专用中继、付费中继或者公共中继。</string>
     <string name="public_notif_section">公共收件箱中继</string>
+    <string name="public_notif_section_explainer_profile">用户正在接收这些中继的通知</string>
     <string name="public_notif_section_explainer">这类中继用于接收其他人对您内容的回复、评论、点赞和打闪。可设置 1 ~ 3 个中继，需要确保它们能够接受来自任何人的事件（公共写入）。</string>
     <string name="private_inbox_section">私信收件箱中继</string>
+    <string name="private_inbox_section_explainer_profile">用户接收到这些中继的私信</string>
     <string name="private_inbox_section_explainer">设置 1 ~ 3 个中继作为您的私人收件箱。其他人将使用这些中继向您发送私信。需要确保这些收件箱中继能够接受来自任何人的任何私信消息，但只允许您读取这些消息。示例：\n - inbox.nostr.wine（付费）\n - you.nostr1.com（个人专用中继 - 付费）</string>
     <string name="private_outbox_section">私人中继</string>
     <string name="private_outbox_section_explainer">设置 1 ~ 3 个中继用于保存其他人无法看到的事件，例如您的草稿和软件设置。理想情况下，这些应该是本地中继，或者是在获取用户内容时需要经过身份验证的中继。</string>
