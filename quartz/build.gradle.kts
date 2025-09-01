@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-//    id("maven-publish")
 }
 
 android {
@@ -35,9 +34,10 @@ android {
             excludes.add("**/libscrypt.dylib")
         }
     }
-    publishing {
-        this.multipleVariants { singleVariant("release") }
-    }
+//    publishing {
+//        singleVariant("release")
+//        this.multipleVariants { singleVariant("release") }
+//    }
 }
 
 kotlin {
