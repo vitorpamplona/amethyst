@@ -49,7 +49,7 @@ kotlin {
     // which platforms this KMP module supports.
     // See: https://kotlinlang.org/docs/multiplatform-discover-project.html#targets
     androidTarget {
-//        publishLibraryVariants("release")
+        publishLibraryVariants("release")
     }
 
     // For iOS targets, this is also where you should
