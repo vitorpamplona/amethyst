@@ -110,7 +110,7 @@ fun RenderClassifieds(
             ) {
                 title?.let {
                     Text(
-                        text = "test'",
+                        text = it,
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
