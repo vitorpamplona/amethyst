@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip28PublicChats
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -51,13 +50,14 @@ class PublicChatListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val publicChatListNote = cache.getOrCreateAddressableNote(getChannelListAddress())
+
     fun getChannelListAddress() = ChannelListEvent.createAddress(signer.pubKey)
 
-    fun getChannelListNote(): AddressableNote = cache.getOrCreateAddressableNote(getChannelListAddress())
+    fun getChannelListFlow(): StateFlow<NoteState> = publicChatListNote.flow().metadata.stateFlow
 
-    fun getChannelListFlow(): StateFlow<NoteState> = getChannelListNote().flow().metadata.stateFlow
-
-    fun getChannelList(): ChannelListEvent? = getChannelListNote().event as? ChannelListEvent
+    fun getChannelList(): ChannelListEvent? = publicChatListNote.event as? ChannelListEvent
 
     suspend fun publicChatListWithBackup(note: Note): Set<ChannelTag> {
         val event = note.event as? ChannelListEvent ?: settings.backupChannelList
@@ -70,7 +70,7 @@ class PublicChatListState(
             .transformLatest { noteState ->
                 emit(publicChatListWithBackup(noteState.note))
             }.onStart {
-                emit(publicChatListWithBackup(getChannelListNote()))
+                emit(publicChatListWithBackup(publicChatListNote))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

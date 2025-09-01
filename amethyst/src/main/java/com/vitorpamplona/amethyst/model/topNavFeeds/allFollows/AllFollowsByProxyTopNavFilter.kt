@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.collections.associateWith
 
 /**
  * This is a big OR filter on all fields.

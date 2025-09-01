@@ -41,6 +41,8 @@ class AdvertisedRelayListEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun relays() = tags.mapNotNull(AdvertisedRelayInfo::parse)
 
+    fun relaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseNorm)
+
     fun readRelays() = tags.mapNotNull(AdvertisedRelayInfo::parseRead).ifEmpty { null }
 
     fun readRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseReadNorm).ifEmpty { null }

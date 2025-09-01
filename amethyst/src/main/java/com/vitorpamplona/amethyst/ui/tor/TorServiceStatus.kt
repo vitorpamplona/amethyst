@@ -25,8 +25,9 @@ import net.freehaven.tor.control.TorControlConnection
 sealed class TorServiceStatus {
     data class Active(
         val port: Int,
-        val torControlConnection: TorControlConnection,
-    ) : TorServiceStatus()
+    ) : TorServiceStatus() {
+        lateinit var torControlConnection: TorControlConnection
+    }
 
     object Off : TorServiceStatus()
 

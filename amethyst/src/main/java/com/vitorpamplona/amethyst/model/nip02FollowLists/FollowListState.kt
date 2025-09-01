@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
@@ -51,13 +52,12 @@ class FollowListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
-    // fun getEphemeralChatListAddress() = cache.getOrCreateUser(signer.pubKey)
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val user = cache.getOrCreateUser(signer.pubKey)
 
-    fun getFollowListUser(): User = cache.getOrCreateUser(signer.pubKey)
+    fun getFollowListFlow(): StateFlow<UserState> = user.flow().follows.stateFlow
 
-    fun getFollowListFlow(): StateFlow<UserState> = getFollowListUser().flow().follows.stateFlow
-
-    fun getFollowListEvent(): ContactListEvent? = getFollowListUser().latestContactList
+    fun getFollowListEvent(): ContactListEvent? = user.latestContactList
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val innerFlow: Flow<Kind3Follows> =
@@ -73,6 +73,23 @@ class FollowListState(
                 SharingStarted.Eagerly,
                 // this has priority.
                 buildKind3Follows(getFollowListEvent() ?: settings.backupContactList),
+            )
+
+    // Creates a long-term reference for all follows of a user
+    val userList =
+        flow
+            .map {
+                it.authors.map {
+                    cache.checkGetOrCreateUser(it)
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                // this has priority.
+                flow.value.authors.map {
+                    cache.checkGetOrCreateUser(it)
+                },
             )
 
     /**

@@ -117,9 +117,7 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
         }
         keysToRemove.forEach { key, value ->
             cache.remove(key, value)
-            println("Cleaned up entry for key: $key (object was garbage collected)")
         }
-        println("Cache cleanup completed. Remaining size: ${cache.size}")
     }
 
     override fun forEach(consumer: BiConsumer<K, V>) {

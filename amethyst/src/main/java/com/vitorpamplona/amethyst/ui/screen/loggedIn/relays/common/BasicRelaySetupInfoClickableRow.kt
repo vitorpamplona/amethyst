@@ -37,8 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.LocalCache.users
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture

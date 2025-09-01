@@ -28,6 +28,8 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
+import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
@@ -163,6 +165,8 @@ class Amethyst : Application() {
     // image cache in memory for coil
     val memoryCache: MemoryCache by lazy { ImageCacheFactory.newMemory(this) }
 
+    val crashReportCache: CrashReportCache by lazy { CrashReportCache(this) }
+
     // Application-wide ots verification cache
     val otsVerifCache by lazy { VerificationStateCache() }
 
@@ -172,6 +176,8 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.d("AmethystApp", "onCreate $this")
+
+        Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
 
         instance = this
 

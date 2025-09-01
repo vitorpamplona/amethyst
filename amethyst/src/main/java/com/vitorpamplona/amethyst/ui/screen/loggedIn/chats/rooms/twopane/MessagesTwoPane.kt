@@ -110,6 +110,7 @@ fun MessagesTwoPane(
                                 draftMessage = it.message,
                                 replyToNote = it.replyId,
                                 editFromDraft = it.draftId,
+                                expiresDays = it.expiresDays,
                                 nav = nav,
                             )
                         }

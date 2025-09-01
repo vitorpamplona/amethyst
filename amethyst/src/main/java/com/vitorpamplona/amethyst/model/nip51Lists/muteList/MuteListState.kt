@@ -49,13 +49,14 @@ class MuteListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val muteListNote = cache.getOrCreateAddressableNote(getMuteListAddress())
+
     fun getMuteListAddress() = MuteListEvent.createAddress(signer.pubKey)
 
-    fun getMuteListNote() = cache.getOrCreateAddressableNote(getMuteListAddress())
+    fun getMuteListFlow(): StateFlow<NoteState> = muteListNote.flow().metadata.stateFlow
 
-    fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
-
-    fun getMuteList(): MuteListEvent? = getMuteListNote().event as? MuteListEvent
+    fun getMuteList(): MuteListEvent? = muteListNote.event as? MuteListEvent
 
     suspend fun muteListWithBackup(note: Note): List<MuteTag> {
         val event = note.event as? MuteListEvent ?: settings.backupMuteList
@@ -65,7 +66,7 @@ class MuteListState(
     val flow =
         getMuteListFlow()
             .map { muteListWithBackup(it.note) }
-            .onStart { emit(muteListWithBackup(getMuteListNote())) }
+            .onStart { emit(muteListWithBackup(muteListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

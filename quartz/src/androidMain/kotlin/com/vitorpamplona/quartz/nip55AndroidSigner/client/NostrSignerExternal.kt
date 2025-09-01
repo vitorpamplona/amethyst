@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.BackgroundReq
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.ForegroundRequestHandler
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import java.lang.Exception
 
 class NostrSignerExternal(
     pubKey: HexKey,

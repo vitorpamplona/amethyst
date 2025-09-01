@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nipB7Blossom
 
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -44,13 +43,14 @@ class BlossomServerListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val blossomListNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
+
     fun getBlossomServersAddress() = BlossomServersEvent.createAddress(signer.pubKey)
 
-    fun getBlossomServersNote(): AddressableNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
+    fun getBlossomServersListFlow(): StateFlow<NoteState> = blossomListNote.flow().metadata.stateFlow
 
-    fun getBlossomServersListFlow(): StateFlow<NoteState> = getBlossomServersNote().flow().metadata.stateFlow
-
-    fun getBlossomServersList(): BlossomServersEvent? = getBlossomServersNote().event as? BlossomServersEvent
+    fun getBlossomServersList(): BlossomServersEvent? = blossomListNote.event as? BlossomServersEvent
 
     fun normalizeServers(note: Note): List<String> {
         val event = note.event as? BlossomServersEvent
@@ -60,7 +60,7 @@ class BlossomServerListState(
     val flow =
         getBlossomServersListFlow()
             .map { normalizeServers(it.note) }
-            .onStart { emit(normalizeServers(getBlossomServersNote())) }
+            .onStart { emit(normalizeServers(blossomListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

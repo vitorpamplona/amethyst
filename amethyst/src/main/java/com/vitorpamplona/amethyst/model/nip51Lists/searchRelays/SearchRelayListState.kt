@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip51Lists.searchRelays
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -49,13 +48,14 @@ class SearchRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val searchListNote = cache.getOrCreateAddressableNote(getSearchRelayListAddress())
+
     fun getSearchRelayListAddress() = SearchRelayListEvent.Companion.createAddress(signer.pubKey)
 
-    fun getSearchRelayListNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getSearchRelayListAddress())
+    fun getSearchRelayListFlow(): StateFlow<NoteState> = searchListNote.flow().metadata.stateFlow
 
-    fun getSearchRelayListFlow(): StateFlow<NoteState> = getSearchRelayListNote().flow().metadata.stateFlow
-
-    fun getSearchRelayList(): SearchRelayListEvent? = getSearchRelayListNote().event as? SearchRelayListEvent
+    fun getSearchRelayList(): SearchRelayListEvent? = searchListNote.event as? SearchRelayListEvent
 
     fun searchListEvent(note: Note) = note.event as? SearchRelayListEvent ?: settings.backupSearchRelayList
 
@@ -66,7 +66,7 @@ class SearchRelayListState(
     val flow =
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeSearchRelayListWithBackup(getSearchRelayListNote())) }
+            .onStart { emit(normalizeSearchRelayListWithBackup(searchListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -77,7 +77,7 @@ class SearchRelayListState(
     val flowNoDefaults =
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackupNoDefaults(it.note) }
-            .onStart { emit(normalizeSearchRelayListWithBackupNoDefaults(getSearchRelayListNote())) }
+            .onStart { emit(normalizeSearchRelayListWithBackupNoDefaults(searchListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

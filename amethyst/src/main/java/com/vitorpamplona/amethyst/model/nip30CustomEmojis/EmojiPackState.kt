@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nip30CustomEmojis
 
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -52,13 +51,14 @@ class EmojiPackState(
         val link: MediaUrlImage,
     )
 
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val emojiPackListNote = cache.getOrCreateAddressableNote(getEmojiPackSelectionAddress())
+
     fun getEmojiPackSelectionAddress() = EmojiPackSelectionEvent.createAddress(signer.pubKey)
 
-    fun getEmojiPackSelection(): EmojiPackSelectionEvent? = getEmojiPackSelectionNote().event as? EmojiPackSelectionEvent
+    fun getEmojiPackSelection(): EmojiPackSelectionEvent? = emojiPackListNote.event as? EmojiPackSelectionEvent
 
-    fun getEmojiPackSelectionFlow(): StateFlow<NoteState> = getEmojiPackSelectionNote().flow().metadata.stateFlow
-
-    fun getEmojiPackSelectionNote(): AddressableNote = cache.getOrCreateAddressableNote(getEmojiPackSelectionAddress())
+    fun getEmojiPackSelectionFlow(): StateFlow<NoteState> = emojiPackListNote.flow().metadata.stateFlow
 
     fun convertEmojiSelectionPack(selection: EmojiPackSelectionEvent?): List<StateFlow<NoteState>>? =
         selection?.taggedAddresses()?.map {

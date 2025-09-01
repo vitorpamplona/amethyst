@@ -160,6 +160,7 @@
     <string name="failed_to_save_the_video">Failed to save the video</string>
     <string name="upload_image">Upload Image</string>
     <string name="take_a_picture">Take a picture</string>
+    <string name="record_a_video">Record a video</string>
     <string name="record_a_message">Record a message</string>
     <string name="record_a_message_title">Record a message</string>
     <string name="record_a_message_description">Click and hold to record a message</string>
@@ -267,8 +268,8 @@
     <string name="posts_received">posts received</string>
     <string name="remove">Remove</string>
     <string name="sats" translatable="false">sats</string>
-    <string name="translations_auto">Auto</string>
-    <string name="translations_translated_from">translated from</string>
+    <string name="translations_auto">Auto-translated</string>
+    <string name="translations_translated_from">from</string>
     <string name="translations_to">to</string>
     <string name="translations_show_in_lang_first">Show in %1$s first</string>
     <string name="chat_about_topic">Public chat about %1$s</string>
@@ -1083,10 +1084,13 @@
     <string name="dm_upload">DM Upload</string>
     <string name="relay_settings">Relay Settings</string>
     <string name="public_home_section">Public Outbox/Home Relays</string>
+    <string name="public_home_section_explainer_profile">User is posting his content to these relays</string>
     <string name="public_home_section_explainer">This relay type stores all your content. Amethyst will send your posts here and others will use these relays to find your content. Insert between 1–3 relays. They can be personal relays, paid relays or public relays.</string>
     <string name="public_notif_section">Public Inbox Relays</string>
+    <string name="public_notif_section_explainer_profile">User is receiving notifications on these relays</string>
     <string name="public_notif_section_explainer">This relay type receives all replies, comments, likes and zaps to your posts. They can be paid or free relays. Limits set by the relay operator can limit the notifications you receive for the good and for the bad. For example, if you are being attacked by comment spam, paid relays can filter the spam out. Insert between 1–3 relays.</string>
     <string name="private_inbox_section">DM Inbox Relays</string>
+    <string name="private_inbox_section_explainer_profile">User receives DMs on these relays</string>
     <string name="private_inbox_section_explainer">Insert between 1–3 relays to serve as your private inbox. Others will use these relays to send DMs to you. DM Inbox relays should accept any message from anyone, but only allow you to download them. Good options are:\n - inbox.nostr.wine (paid)\n - auth.nostr1.com (free)\n - you.nostr1.com (personal relays - paid)</string>
     <string name="private_outbox_section">Private Home Relays</string>
     <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
@@ -1246,4 +1250,9 @@
     <string name="option_of">Option %1$s of %2$s</string>
     <string name="feed_filter_selected">Feed filter, %1$s selected</string>
     <string name="feed_filter_select_an_option">Feed filter, %1$s</string>
+
+    <string name="crashreport_found">Crash Report found</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
+    <string name="crashreport_found_send">Send it</string>
+    <string name="this_message_will_disappear_in_days">This message will disappear in %1$d days</string>
 </resources>

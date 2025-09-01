@@ -62,7 +62,10 @@ class TorService(
                                 delay(100)
                             }
 
-                            trySend(TorServiceStatus.Active(torService.socksPort, torService.torControlConnection))
+                            val active = TorServiceStatus.Active(torService.socksPort)
+                            active.torControlConnection = torService.torControlConnection
+
+                            trySend(active)
                             Log.d("TorService", "Tor Service Connected ${torService.socksPort}")
                         }
                     }

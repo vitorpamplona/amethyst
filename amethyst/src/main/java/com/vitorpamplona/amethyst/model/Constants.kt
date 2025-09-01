@@ -46,6 +46,7 @@ object Constants {
     val coracle = RelayUrlNormalizer.normalize("wss://indexer.coracle.social")
     val userkinds = RelayUrlNormalizer.normalize("wss://user.kindpag.es")
 
+    val bootstrapInbox = setOf(band, damus, primal, mom, nos, bitcoiner, oxtr, fmtwiz)
     val eventFinderRelays = setOf(band, wine, damus, primal, mom, nos, bitcoiner, oxtr, fmtwiz)
 
     val defaultSearchRelaySet = setOf(band, wine, where)

@@ -29,8 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlin.collections.associateWith
-import kotlin.collections.isNotEmpty
 
 @Immutable
 class GlobalTopNavFilter(

@@ -47,11 +47,12 @@ class AppSpecificState(
         const val APP_SPECIFIC_DATA_D_TAG = "AmethystSettings"
     }
 
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val amethystSettingsNote = cache.getOrCreateAddressableNote(getAppSpecificDataAddress())
+
     fun getAppSpecificDataAddress() = AppSpecificDataEvent.createAddress(signer.pubKey, APP_SPECIFIC_DATA_D_TAG)
 
-    fun getAppSpecificDataNote() = cache.getOrCreateAddressableNote(getAppSpecificDataAddress())
-
-    fun getAppSpecificDataFlow(): StateFlow<NoteState> = getAppSpecificDataNote().flow().metadata.stateFlow
+    fun getAppSpecificDataFlow(): StateFlow<NoteState> = amethystSettingsNote.flow().metadata.stateFlow
 
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
         val toInternal = settings.syncedSettings.toInternal()

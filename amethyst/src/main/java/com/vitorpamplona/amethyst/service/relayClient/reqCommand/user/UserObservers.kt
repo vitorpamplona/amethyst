@@ -43,7 +43,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
@@ -634,61 +633,18 @@ fun observeUserStatuses(
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserRelayIntoList(
-    user: User,
     relayUrl: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(user) {
-            user
-                .flow()
-                .relayInfo
-                .stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.latestContactList
-                        ?.relays()
-                        ?.none { it.key == relayUrl } == true
+        remember(accountViewModel) {
+            accountViewModel.account.trustedRelays.flow
+                .mapLatest { relays ->
+                    relayUrl in relays
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
     return flow.collectAsStateWithLifecycle(false)
-}
-
-data class RelayUsage(
-    val relays: List<NormalizedRelayUrl> = emptyList(),
-    val userRelayList: List<NormalizedRelayUrl> = emptyList(),
-)
-
-@OptIn(FlowPreview::class)
-@Composable
-fun observeUserRelaysUsing(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<RelayUsage> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            combine(user.flow().relays.stateFlow, user.flow().relayInfo.stateFlow) { relays, relayInfo ->
-                val userRelaysBeingUsed = relays.user.relaysBeingUsed.map { it.key }
-                val currentUserRelays =
-                    relayInfo.user.latestContactList
-                        ?.relays()
-                        ?.map { it.key } ?: emptyList()
-
-                RelayUsage(userRelaysBeingUsed, currentUserRelays)
-            }.sample(1000)
-                .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
-        }
-
-    return flow.collectAsStateWithLifecycle(RelayUsage())
 }

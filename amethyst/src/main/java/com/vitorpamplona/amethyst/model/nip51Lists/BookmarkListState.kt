@@ -51,13 +51,14 @@ class BookmarkListState(
         val private: List<Note> = emptyList(),
     )
 
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val bookmarkList = cache.getOrCreateAddressableNote(getBookmarkListAddress())
+
     fun getBookmarkListAddress() = BookmarkListEvent.createBookmarkAddress(signer.pubKey)
 
-    fun getBookmarkListNote() = cache.getOrCreateAddressableNote(getBookmarkListAddress())
+    fun getBookmarkListFlow(): StateFlow<NoteState> = bookmarkList.flow().metadata.stateFlow
 
-    fun getBookmarkListFlow(): StateFlow<NoteState> = getBookmarkListNote().flow().metadata.stateFlow
-
-    fun getBookmarkList(): BookmarkListEvent? = getBookmarkListNote().event as? BookmarkListEvent
+    fun getBookmarkList(): BookmarkListEvent? = bookmarkList.event as? BookmarkListEvent
 
     suspend fun publicBookmarks(note: Note): List<BookmarkIdTag> {
         val noteEvent = note.event as? BookmarkListEvent
@@ -75,7 +76,7 @@ class BookmarkListState(
             .map { noteState ->
                 publicBookmarks(noteState.note)
             }.onStart {
-                emit(publicBookmarks(getBookmarkListNote()))
+                emit(publicBookmarks(bookmarkList))
             }.debounce(100)
             .flowOn(Dispatchers.Default)
             .stateIn(
@@ -90,7 +91,7 @@ class BookmarkListState(
             .map { noteState ->
                 privateBookmarks(noteState.note)
             }.onStart {
-                emit(privateBookmarks(getBookmarkListNote()))
+                emit(privateBookmarks(bookmarkList))
             }.debounce(100)
             .flowOn(Dispatchers.Default)
             .stateIn(

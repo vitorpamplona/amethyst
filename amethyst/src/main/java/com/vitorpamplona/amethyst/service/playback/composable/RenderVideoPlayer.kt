@@ -67,8 +67,8 @@ fun RenderVideoPlayer(
                     // if we alrady know the size of the frame, this forces the player to stay in the size
                     layoutParams =
                         FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
                         )
 
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip51Lists.geohashLists
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -48,13 +47,14 @@ class GeohashListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val geohashListNote = cache.getOrCreateAddressableNote(getGeohashListAddress())
+
     fun getGeohashListAddress() = GeohashListEvent.createAddress(signer.pubKey)
 
-    fun getGeohashListNote(): AddressableNote = cache.getOrCreateAddressableNote(getGeohashListAddress())
+    fun getGeohashListFlow(): StateFlow<NoteState> = geohashListNote.flow().metadata.stateFlow
 
-    fun getGeohashListFlow(): StateFlow<NoteState> = getGeohashListNote().flow().metadata.stateFlow
-
-    fun getGeohashList(): GeohashListEvent? = getGeohashListNote().event as? GeohashListEvent
+    fun getGeohashList(): GeohashListEvent? = geohashListNote.event as? GeohashListEvent
 
     suspend fun geohashListWithBackup(note: Note): Set<String> {
         val event = note.event as? GeohashListEvent ?: settings.backupGeohashList
@@ -67,7 +67,7 @@ class GeohashListState(
             .transformLatest { noteState ->
                 emit(geohashListWithBackup(noteState.note))
             }.onStart {
-                emit(geohashListWithBackup(getGeohashListNote()))
+                emit(geohashListWithBackup(geohashListNote))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

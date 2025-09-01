@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip17Dms
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -47,13 +46,14 @@ class DmRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val dmListNote = cache.getOrCreateAddressableNote(getDMRelayListAddress())
+
     fun getDMRelayListAddress() = ChatMessageRelayListEvent.createAddress(signer.pubKey)
 
-    fun getDMRelayListNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getDMRelayListAddress())
+    fun getDMRelayListFlow(): StateFlow<NoteState> = dmListNote.flow().metadata.stateFlow
 
-    fun getDMRelayListFlow(): StateFlow<NoteState> = getDMRelayListNote().flow().metadata.stateFlow
-
-    fun getDMRelayList(): ChatMessageRelayListEvent? = getDMRelayListNote().event as? ChatMessageRelayListEvent
+    fun getDMRelayList(): ChatMessageRelayListEvent? = dmListNote.event as? ChatMessageRelayListEvent
 
     fun normalizeDMRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? ChatMessageRelayListEvent ?: settings.backupDMRelayList
@@ -63,7 +63,7 @@ class DmRelayListState(
     val flow =
         getDMRelayListFlow()
             .map { normalizeDMRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeDMRelayListWithBackup(getDMRelayListNote())) }
+            .onStart { emit(normalizeDMRelayListWithBackup(dmListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

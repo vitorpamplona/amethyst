@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nip96FileStorage
 
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -42,13 +41,14 @@ class FileStorageServerListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val fileStorageListNote = cache.getOrCreateAddressableNote(getFileServersAddress())
+
     fun getFileServersAddress() = FileServersEvent.createAddress(signer.pubKey)
 
-    fun getFileServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getFileServersAddress())
+    fun getFileServersListFlow(): StateFlow<NoteState> = fileStorageListNote.flow().metadata.stateFlow
 
-    fun getFileServersListFlow(): StateFlow<NoteState> = getFileServersNote().flow().metadata.stateFlow
-
-    fun getFileServersList(): FileServersEvent? = getFileServersNote().event as? FileServersEvent
+    fun getFileServersList(): FileServersEvent? = fileStorageListNote.event as? FileServersEvent
 
     fun normalizeServers(note: Note): List<String> {
         val event = note.event as? FileServersEvent
@@ -58,7 +58,7 @@ class FileStorageServerListState(
     val flow =
         getFileServersListFlow()
             .map { normalizeServers(it.note) }
-            .onStart { emit(normalizeServers(getFileServersNote())) }
+            .onStart { emit(normalizeServers(fileStorageListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

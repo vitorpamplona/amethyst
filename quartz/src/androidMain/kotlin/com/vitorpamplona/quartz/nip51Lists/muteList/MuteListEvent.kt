@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.plus
 
 @Immutable
 class MuteListEvent(

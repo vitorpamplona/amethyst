@@ -8,7 +8,11 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="nostrsigner" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
+
 
     <!-- Doesn't require a camera -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />

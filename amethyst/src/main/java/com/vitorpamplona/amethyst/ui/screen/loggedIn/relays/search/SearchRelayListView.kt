@@ -65,7 +65,7 @@ fun LazyListScope.renderSearchItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Search" + item.relay }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Search" + item.relay.url }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },

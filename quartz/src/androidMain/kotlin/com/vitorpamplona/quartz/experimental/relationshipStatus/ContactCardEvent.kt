@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
-class RelationshipStatusEvent(
+class ContactCardEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -49,9 +49,9 @@ class RelationshipStatusEvent(
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    companion object {
+    companion object Companion {
         const val KIND = 30382
-        const val ALT = "Relationship Status"
+        const val ALT = "Contact Card"
 
         suspend fun create(
             targetUser: HexKey,
@@ -59,9 +59,9 @@ class RelationshipStatusEvent(
             summary: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            publicInitializer: TagArrayBuilder<RelationshipStatusEvent>.() -> Unit = {},
-            privateInitializer: TagArrayBuilder<RelationshipStatusEvent>.() -> Unit = {},
-        ): RelationshipStatusEvent {
+            publicInitializer: TagArrayBuilder<ContactCardEvent>.() -> Unit = {},
+            privateInitializer: TagArrayBuilder<ContactCardEvent>.() -> Unit = {},
+        ): ContactCardEvent {
             val publicTags =
                 tagArray {
                     alt(ALT)

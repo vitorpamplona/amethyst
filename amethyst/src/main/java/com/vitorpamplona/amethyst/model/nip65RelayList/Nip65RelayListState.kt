@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip65RelayList
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -49,19 +48,20 @@ class Nip65RelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val nip65ListNote = cache.getOrCreateAddressableNote(getNIP65RelayListAddress())
+
     fun getNIP65RelayListAddress() = AdvertisedRelayListEvent.createAddress(signer.pubKey)
 
-    fun getNIP65RelayListNote(): AddressableNote = cache.getOrCreateAddressableNote(getNIP65RelayListAddress())
+    fun getNIP65RelayListFlow(): StateFlow<NoteState> = nip65ListNote.flow().metadata.stateFlow
 
-    fun getNIP65RelayListFlow(): StateFlow<NoteState> = getNIP65RelayListNote().flow().metadata.stateFlow
-
-    fun getNIP65RelayList(): AdvertisedRelayListEvent? = getNIP65RelayListNote().event as? AdvertisedRelayListEvent
+    fun getNIP65RelayList(): AdvertisedRelayListEvent? = nip65ListNote.event as? AdvertisedRelayListEvent
 
     fun nip65Event(note: Note) = note.event as? AdvertisedRelayListEvent ?: settings.backupNIP65RelayList
 
     fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: Constants.eventFinderRelays
 
-    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: Constants.eventFinderRelays
+    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: Constants.bootstrapInbox
 
     fun normalizeNIP65AllRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: Constants.eventFinderRelays
 
@@ -70,7 +70,7 @@ class Nip65RelayListState(
     val outboxFlow =
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeNIP65ReadRelayListWithBackup(getNIP65RelayListNote())) }
+            .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -81,18 +81,7 @@ class Nip65RelayListState(
     val inboxFlow =
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeNIP65ReadRelayListWithBackup(getNIP65RelayListNote())) }
-            .flowOn(Dispatchers.Default)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptySet(),
-            )
-
-    val allFlow =
-        getNIP65RelayListFlow()
-            .map { normalizeNIP65AllRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeNIP65AllRelayListWithBackup(getNIP65RelayListNote())) }
+            .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -103,7 +92,7 @@ class Nip65RelayListState(
     val allFlowNoDefaults =
         getNIP65RelayListFlow()
             .map { normalizeNIP65AllRelayListWithBackupNoDefaults(it.note) }
-            .onStart { emit(normalizeNIP65AllRelayListWithBackupNoDefaults(getNIP65RelayListNote())) }
+            .onStart { emit(normalizeNIP65AllRelayListWithBackupNoDefaults(nip65ListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

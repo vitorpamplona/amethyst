@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.edits
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -48,13 +47,14 @@ class PrivateStorageRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val privateOutboxListNote = cache.getOrCreateAddressableNote(getPrivateOutboxRelayListAddress())
+
     fun getPrivateOutboxRelayListAddress() = PrivateOutboxRelayListEvent.createAddress(signer.pubKey)
 
-    fun getPrivateOutboxRelayListNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getPrivateOutboxRelayListAddress())
+    fun getPrivateOutboxRelayListFlow(): StateFlow<NoteState> = privateOutboxListNote.flow().metadata.stateFlow
 
-    fun getPrivateOutboxRelayListFlow(): StateFlow<NoteState> = getPrivateOutboxRelayListNote().flow().metadata.stateFlow
-
-    fun getPrivateOutboxRelayList(): PrivateOutboxRelayListEvent? = getPrivateOutboxRelayListNote().event as? PrivateOutboxRelayListEvent
+    fun getPrivateOutboxRelayList(): PrivateOutboxRelayListEvent? = privateOutboxListNote.event as? PrivateOutboxRelayListEvent
 
     suspend fun normalizePrivateOutboxRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? PrivateOutboxRelayListEvent ?: settings.backupPrivateHomeRelayList
@@ -65,7 +65,7 @@ class PrivateStorageRelayListState(
         getPrivateOutboxRelayListFlow()
             .map { normalizePrivateOutboxRelayListWithBackup(it.note) }
             .onStart {
-                emit(normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()))
+                emit(normalizePrivateOutboxRelayListWithBackup(privateOutboxListNote))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

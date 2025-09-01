@@ -40,7 +40,10 @@ class PublicChatChannel(
 ) : Channel() {
     var creator: User? = null
     var event: ChannelCreateEvent? = null
-    var eventNote: Note? = null
+
+    // Important to keep this long-term reference because LocalCache uses WeakReferences.
+    var creationEventNote: Note? = null
+    var updateEventNote: Note? = null
 
     var info = ChannelDataNorm(null, null, null, null)
     var infoTags = EmptyTagList
@@ -71,7 +74,7 @@ class PublicChatChannel(
 
         this.infoTags = event.tags.toImmutableListOfLists()
         this.updatedMetadataAt = event.createdAt
-        this.eventNote = eventNote
+        this.creationEventNote = eventNote
 
         updateChannelInfo()
     }
@@ -79,12 +82,14 @@ class PublicChatChannel(
     fun updateChannelInfo(
         creator: User,
         event: ChannelMetadataEvent,
+        eventNote: Note? = null,
     ) {
         this.creator = creator
         this.info = event.channelInfo()
 
         this.infoTags = event.tags.toImmutableListOfLists()
         this.updatedMetadataAt = event.createdAt
+        this.updateEventNote = eventNote
 
         super.updateChannelInfo()
     }

@@ -24,7 +24,6 @@ import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.caches.DecryptCache
-import kotlin.collections.plus
 
 class PrivateTagArrayEventCache<T : PrivateTagArrayEvent>(
     signer: NostrSigner,

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays
 
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -44,13 +43,14 @@ class ProxyRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val proxyListNote = cache.getOrCreateAddressableNote(getProxyRelayListAddress())
+
     fun getProxyRelayListAddress() = ProxyRelayListEvent.createAddress(signer.pubKey)
 
-    fun getProxyRelayListNote(): AddressableNote = cache.getOrCreateAddressableNote(getProxyRelayListAddress())
+    fun getProxyRelayListFlow(): StateFlow<NoteState> = proxyListNote.flow().metadata.stateFlow
 
-    fun getProxyRelayListFlow(): StateFlow<NoteState> = getProxyRelayListNote().flow().metadata.stateFlow
-
-    fun getProxyRelayList(): ProxyRelayListEvent? = getProxyRelayListNote().event as? ProxyRelayListEvent
+    fun getProxyRelayList(): ProxyRelayListEvent? = proxyListNote.event as? ProxyRelayListEvent
 
     suspend fun normalizeProxyRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? ProxyRelayListEvent
@@ -60,7 +60,7 @@ class ProxyRelayListState(
     val flow =
         getProxyRelayListFlow()
             .map { normalizeProxyRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeProxyRelayListWithBackup(getProxyRelayListNote())) }
+            .onStart { emit(normalizeProxyRelayListWithBackup(proxyListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

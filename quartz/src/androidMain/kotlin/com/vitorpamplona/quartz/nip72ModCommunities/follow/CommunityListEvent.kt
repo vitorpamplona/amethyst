@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.plus
 
 @Immutable
 class CommunityListEvent(

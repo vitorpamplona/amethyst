@@ -40,8 +40,6 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.searchRelays
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.plus
-import kotlin.collections.toTypedArray
 
 @Immutable
 class SearchRelayListEvent(
@@ -79,7 +77,7 @@ class SearchRelayListEvent(
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
 
             val publicTags = earlierVersion.tags.remove(RelayTag::match)
-            val newPrivateTags = privateTags.remove(RelayTag::notMatch).plus(newRelayList)
+            val newPrivateTags = privateTags.remove(RelayTag::match).plus(newRelayList)
 
             return signer.signNip51List(createdAt, KIND, publicTags, newPrivateTags)
         }

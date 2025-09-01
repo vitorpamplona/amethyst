@@ -138,6 +138,7 @@ fun routeToMessage(
     draftMessage: String?,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
+    expiresDays: Int? = null,
     accountViewModel: AccountViewModel,
 ): Route =
     routeToMessage(
@@ -145,6 +146,7 @@ fun routeToMessage(
         draftMessage,
         replyId,
         draftId,
+        expiresDays,
         accountViewModel,
     )
 
@@ -153,12 +155,14 @@ fun routeToMessage(
     draftMessage: String?,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
+    expiresDays: Int? = null,
     accountViewModel: AccountViewModel,
 ) = routeToMessage(
     ChatroomKey(users),
     draftMessage,
     replyId,
     draftId,
+    expiresDays,
     accountViewModel,
 )
 
@@ -167,19 +171,21 @@ fun routeToMessage(
     draftMessage: String?,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
+    expiresDays: Int? = null,
     accountViewModel: AccountViewModel,
-): Route = routeToMessage(room, draftMessage, replyId, draftId, accountViewModel.account)
+): Route = routeToMessage(room, draftMessage, replyId, draftId, expiresDays, accountViewModel.account)
 
 fun routeToMessage(
     room: ChatroomKey,
     draftMessage: String? = null,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
+    expiresDays: Int? = null,
     account: Account,
 ): Route {
     account.chatroomList.getOrCreatePrivateChatroom(room)
 
-    return Route.Room(room, draftMessage, replyId, draftId)
+    return Route.Room(room, draftMessage, replyId, draftId, expiresDays)
 }
 
 fun routeToMessage(
@@ -187,8 +193,9 @@ fun routeToMessage(
     draftMessage: String?,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
+    expiresDays: Int? = null,
     accountViewModel: AccountViewModel,
-): Route = routeToMessage(user.pubkeyHex, draftMessage, replyId, draftId, accountViewModel)
+): Route = routeToMessage(user.pubkeyHex, draftMessage, replyId, draftId, expiresDays, accountViewModel)
 
 fun routeFor(note: EphemeralChatChannel): Route = Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl.url)
 

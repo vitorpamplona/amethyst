@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.emphChat
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -49,13 +48,14 @@ class EphemeralChatListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val ephemeralChatListNote = cache.getOrCreateAddressableNote(getEphemeralChatListAddress())
+
     fun getEphemeralChatListAddress() = EphemeralChatListEvent.createAddress(signer.pubKey)
 
-    fun getEphemeralChatListNote(): AddressableNote = cache.getOrCreateAddressableNote(getEphemeralChatListAddress())
+    fun getEphemeralChatListFlow(): StateFlow<NoteState> = ephemeralChatListNote.flow().metadata.stateFlow
 
-    fun getEphemeralChatListFlow(): StateFlow<NoteState> = getEphemeralChatListNote().flow().metadata.stateFlow
-
-    fun getEphemeralChatList(): EphemeralChatListEvent? = getEphemeralChatListNote().event as? EphemeralChatListEvent
+    fun getEphemeralChatList(): EphemeralChatListEvent? = ephemeralChatListNote.event as? EphemeralChatListEvent
 
     suspend fun ephemeralChatListWithBackup(note: Note): Set<RoomId> {
         val event = note.event as? EphemeralChatListEvent ?: settings.backupEphemeralChatList
@@ -68,7 +68,7 @@ class EphemeralChatListState(
             .transformLatest { noteState ->
                 emit(ephemeralChatListWithBackup(noteState.note))
             }.onStart {
-                emit(ephemeralChatListWithBackup(getEphemeralChatListNote()))
+                emit(ephemeralChatListWithBackup(ephemeralChatListNote))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

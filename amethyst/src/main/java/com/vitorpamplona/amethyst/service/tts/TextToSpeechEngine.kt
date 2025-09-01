@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.tts
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
@@ -42,8 +44,8 @@ fun getErrorText(errorCode: Int): String =
 class TextToSpeechEngine private constructor() {
     private var tts: TextToSpeech? = null
 
-    private var defaultPitch = 0.8f
-    private var defaultSpeed = 0.8f
+    private var defaultPitch = DEF_SPEECH_AND_PITCH
+    private var defaultSpeed = DEF_SPEECH_AND_PITCH
     private var defLanguage = Locale.getDefault()
     private var onStartListener: (() -> Unit)? = null
     private var onDoneListener: (() -> Unit)? = null
@@ -67,13 +69,27 @@ class TextToSpeechEngine private constructor() {
         message: String,
     ) {
         tts =
-            TextToSpeech(context) {
-                if (it == TextToSpeech.SUCCESS) {
-                    tts?.let {
-                        it.language = defLanguage
-                        it.setPitch(defaultPitch)
-                        it.setSpeechRate(defaultSpeed)
-                        it.setListener(
+            TextToSpeech(context) { result ->
+                if (result == TextToSpeech.SUCCESS) {
+                    tts?.let { engine ->
+                        val result = engine.setLanguage(defLanguage)
+                        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            engine.language = Locale.US
+                        }
+                        engine.setPitch(defaultPitch)
+                        engine.setSpeechRate(defaultSpeed)
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            val audioAttributes =
+                                AudioAttributes
+                                    .Builder()
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                                    .build()
+                            engine.setAudioAttributes(audioAttributes)
+                        }
+
+                        engine.setListener(
                             onStart = { onStartListener?.invoke() },
                             onError = { e -> e?.let { error -> onErrorListener?.invoke(error) } },
                             onRange = { start, end ->
@@ -86,7 +102,7 @@ class TextToSpeechEngine private constructor() {
                         speak(message)
                     }
                 } else {
-                    onErrorListener?.invoke(getErrorText(it))
+                    onErrorListener?.invoke(getErrorText(result))
                 }
             }
     }

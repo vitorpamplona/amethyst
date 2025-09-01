@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCon
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia.isPlaying
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -36,6 +36,8 @@ class LiveActivitiesChannel(
 ) : Channel() {
     var creator: User? = null
     var info: LiveActivitiesEvent? = null
+
+    // Important to keep this long-term reference because LocalCache uses WeakReferences.
     var infoNote: Note? = null
 
     fun address() = address

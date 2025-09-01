@@ -48,7 +48,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,8 +56,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AROUND_ME
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.OnlineChecker
-import com.vitorpamplona.amethyst.service.OnlineChecker.isOnline
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -92,7 +93,6 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
-import kotlin.collections.forEachIndexed
 
 @Composable
 fun HomeScreen(
@@ -345,8 +345,11 @@ fun DisplayLiveBubbles(
     val feed by liveFeed.feed.collectAsStateWithLifecycle()
 
     LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
-        itemsIndexed(feed.list, key = { _, item -> item.roomId.toKey() }) { _, item ->
-            RenderEphemeralBubble(item, accountViewModel, nav)
+        itemsIndexed(feed.list, key = { _, item -> item.hashCode() }) { _, item ->
+            when (item) {
+                is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
+                is LiveActivitiesChannel -> RenderLiveActivityBubble(item, accountViewModel, nav)
+            }
         }
     }
 }

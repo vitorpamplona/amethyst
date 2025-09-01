@@ -29,6 +29,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -136,14 +137,114 @@ fun PictureButton(onClick: () -> Unit) {
     }
 }
 
-fun getPhotoUri(context: Context): Uri {
+fun getPhotoUri(context: Context): Uri =
+    getMediaUri(
+        context = context,
+        filePrefix = "JPEG",
+        fileExtension = ".jpg",
+        storageDir = Environment.DIRECTORY_PICTURES,
+    )
+
+@Composable
+fun TakeVideoButton(onVideoTaken: (ImmutableList<SelectedMedia>) -> Unit) {
+    var showCamera by remember { mutableStateOf(false) }
+    if (showCamera) {
+        TakeVideo(
+            onVideoTaken = { uri ->
+                showCamera = false
+                if (uri.isNotEmpty()) {
+                    onVideoTaken(uri)
+                }
+            },
+        )
+    }
+
+    VideoButton { showCamera = true }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun TakeVideo(onVideoTaken: (ImmutableList<SelectedMedia>) -> Unit) {
+    val context = LocalContext.current
+    var videoUri by remember { mutableStateOf<Uri?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CaptureVideo(),
+        ) { success ->
+            if (success) {
+                videoUri?.let {
+                    onVideoTaken(persistentListOf(SelectedMedia(it, "video/mp4")))
+                }
+            } else {
+                onVideoTaken(persistentListOf())
+            }
+            videoUri = null
+        }
+
+    val cameraPermissionState =
+        rememberPermissionState(
+            Manifest.permission.CAMERA,
+            onPermissionResult = {
+                if (it) {
+                    scope.launch(Dispatchers.IO) {
+                        videoUri = getVideoUri(context)
+                        videoUri?.let { launcher.launch(it) }
+                    }
+                }
+            },
+        )
+
+    if (cameraPermissionState.status.isGranted) {
+        LaunchedEffect(key1 = Unit) {
+            launch(Dispatchers.IO) {
+                videoUri = getVideoUri(context)
+                videoUri?.let { launcher.launch(it) }
+            }
+        }
+    } else {
+        LaunchedEffect(key1 = Unit) {
+            cameraPermissionState.launchPermissionRequest()
+        }
+    }
+}
+
+@Composable
+fun VideoButton(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Videocam,
+            contentDescription = stringRes(id = R.string.record_a_video),
+            modifier = Modifier.height(22.dp),
+            tint = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+fun getVideoUri(context: Context): Uri =
+    getMediaUri(
+        context = context,
+        filePrefix = "MP4",
+        fileExtension = ".mp4",
+        storageDir = Environment.DIRECTORY_MOVIES,
+    )
+
+private fun getMediaUri(
+    context: Context,
+    filePrefix: String,
+    fileExtension: String,
+    storageDir: String,
+): Uri {
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-    val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+    val storageDirectory: File? = context.getExternalFilesDir(storageDir)
     return File
         .createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir,
+            "${filePrefix}_${timeStamp}_",
+            fileExtension,
+            storageDirectory,
         ).let {
             FileProvider.getUriForFile(
                 context,

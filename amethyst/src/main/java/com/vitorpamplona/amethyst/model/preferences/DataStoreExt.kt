@@ -24,8 +24,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
-import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URI.Companion.parser
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
@@ -34,6 +33,7 @@ suspend fun <T> DataStore<Preferences>.getProperty(
     key: Preferences.Key<String>,
     parser: (String) -> T,
     serializer: (T) -> String,
+    scope: CoroutineScope,
 ): UpdatablePropertyFlow<T> =
     UpdatablePropertyFlow<T>(
         flow =

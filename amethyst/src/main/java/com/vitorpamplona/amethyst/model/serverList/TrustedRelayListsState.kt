@@ -65,11 +65,11 @@ class TrustedRelayListsState(
             emit(
                 mergeLists(
                     arrayOf(
-                        nip65RelayList.allFlow.value,
+                        nip65RelayList.allFlowNoDefaults.value,
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
                         dmRelayList.flow.value,
-                        searchRelayListState.flow.value,
+                        searchRelayListState.flowNoDefaults.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
                     ),
@@ -81,11 +81,11 @@ class TrustedRelayListsState(
                 SharingStarted.Eagerly,
                 mergeLists(
                     arrayOf(
-                        nip65RelayList.allFlow.value,
+                        nip65RelayList.allFlowNoDefaults.value,
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
                         dmRelayList.flow.value,
-                        searchRelayListState.flow.value,
+                        searchRelayListState.flowNoDefaults.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
                     ),

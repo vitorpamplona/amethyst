@@ -41,6 +41,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -85,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -194,7 +196,7 @@ fun NewGroupDMScreen(
                     accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
                         postViewModel.room?.let {
-                            nav.nav(routeToMessage(it, null, null, null, accountViewModel))
+                            nav.nav(routeToMessage(it, null, null, null, null, accountViewModel))
                         }
                     }
                     nav.popBack()
@@ -408,7 +410,26 @@ private fun BottomRowActions(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CameraAlt,
-                    contentDescription = stringRes(id = R.string.upload_image),
+                    contentDescription = stringRes(id = R.string.take_a_picture),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+        }
+
+        if (postViewModel.room != null) {
+            TakeVideoButton(
+                onVideoTaken = { postViewModel.pickedMedia(it) },
+            )
+        } else {
+            IconButton(
+                onClick = {
+                    accountViewModel.toastManager.toast(R.string.messages_cant_upload_title, R.string.messages_cant_upload_explainer)
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Videocam,
+                    contentDescription = stringRes(id = R.string.record_a_video),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )

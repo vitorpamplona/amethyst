@@ -24,7 +24,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -34,6 +34,7 @@ import java.util.Base64
 class EncryptedDataStore(
     private val store: DataStore<Preferences>,
     private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
+    private val scope: CoroutineScope,
 ) {
     private fun decode(str: String): ByteArray = Base64.getDecoder().decode(str)
 

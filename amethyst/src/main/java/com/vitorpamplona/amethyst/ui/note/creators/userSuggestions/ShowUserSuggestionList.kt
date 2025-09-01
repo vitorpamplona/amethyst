@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.AnimateOnNewSearch
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

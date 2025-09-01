@@ -25,8 +25,8 @@ import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun TagArrayBuilder<RelationshipStatusEvent>.rank(rank: Int) = add(RankTag.assemble(rank))
+fun TagArrayBuilder<ContactCardEvent>.rank(rank: Int) = add(RankTag.assemble(rank))
 
-fun TagArrayBuilder<RelationshipStatusEvent>.petName(name: String) = add(PetNameTag.assemble(name))
+fun TagArrayBuilder<ContactCardEvent>.petName(name: String) = add(PetNameTag.assemble(name))
 
-fun TagArrayBuilder<RelationshipStatusEvent>.summary(summary: String) = add(SummaryTag.assemble(summary))
+fun TagArrayBuilder<ContactCardEvent>.summary(summary: String) = add(SummaryTag.assemble(summary))

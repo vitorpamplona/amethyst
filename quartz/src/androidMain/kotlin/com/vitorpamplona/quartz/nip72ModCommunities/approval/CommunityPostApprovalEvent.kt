@@ -31,23 +31,15 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.isTagged
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag.Companion.parseAddress
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag.Companion.parseAddressId
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedAddressTag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag.Companion.parse
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag.Companion.parseAsHint
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.tags.ApprovedEventTag.Companion.parseId
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.mapNotNull
 
 @Immutable
 class CommunityPostApprovalEvent(

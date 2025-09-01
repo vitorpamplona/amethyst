@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip62RequestToVanish.tags
 
-import android.R.attr.tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
