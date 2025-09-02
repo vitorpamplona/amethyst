@@ -175,7 +175,11 @@ class Nip11Retriever {
                     val body = response.body.string()
                     try {
                         if (response.isSuccessful) {
-                            onInfo(Nip11RelayInformation.fromJson(body))
+                            if (body.startsWith("{")) {
+                                onInfo(Nip11RelayInformation.fromJson(body))
+                            } else {
+                                onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, body)
+                            }
                         } else {
                             onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
                         }
