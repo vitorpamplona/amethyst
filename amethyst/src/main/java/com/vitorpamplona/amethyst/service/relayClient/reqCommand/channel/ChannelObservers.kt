@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ChannelState
+import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
@@ -69,22 +70,51 @@ fun observeChannelNoteAuthors(
                 .flow()
                 .notes.stateFlow
                 .mapLatest {
-                    it.channel.notes
-                        .mapNotNull { key, value -> value.author }
-                        .toSet()
-                        .toImmutableList()
+                    channelToParticipatingUsers(it.channel, accountViewModel)
                 }.onStart {
                     emit(
-                        baseChannel.notes
-                            .mapNotNull { key, value -> value.author }
-                            .toSet()
-                            .toImmutableList(),
+                        channelToParticipatingUsers(baseChannel, accountViewModel),
                     )
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
     return flow.collectAsStateWithLifecycle(persistentListOf())
+}
+
+private fun channelToParticipatingUsers(
+    channel: Channel,
+    accountViewModel: AccountViewModel,
+): ImmutableList<User> {
+    val users = mutableSetOf<User>()
+
+    channel.participatingAuthors().forEach {
+        users.add(it)
+    }
+
+    if (channel is LiveActivitiesChannel) {
+        val noteAuthor = channel.infoNote?.author
+        if (noteAuthor != null) {
+            users.add(noteAuthor)
+        }
+
+        val pKeys = channel.info?.participantKeys() ?: emptyList()
+
+        pKeys.forEach {
+            val u = accountViewModel.checkGetOrCreateUser(it)
+            if (u != null) {
+                users.add(u)
+            }
+        }
+    }
+
+    return users
+        .sortedWith(
+            compareBy(
+                { !accountViewModel.isFollowing(it) },
+                { it.pubkeyHex },
+            ),
+        ).toImmutableList()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

@@ -89,6 +89,8 @@ class LiveActivitiesEvent(
 
     fun totalParticipants() = tags.firstNotNullOfOrNull(TotalParticipantsTag::parse)
 
+    fun participantKeys(): List<HexKey> = tags.mapNotNull(ParticipantTag::parseKey)
+
     fun participants() = tags.mapNotNull(ParticipantTag::parse)
 
     fun relays() = tags.mapNotNull(RelayListTag::parse)

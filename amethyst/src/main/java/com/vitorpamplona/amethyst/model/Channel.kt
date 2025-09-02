@@ -48,6 +48,8 @@ abstract class Channel : NotesGatherer {
         return new
     }
 
+    open fun participatingAuthors() = notes.mapNotNull { key, value -> value.author }
+
     abstract fun toBestDisplayName(): String
 
     open fun relays(): Set<NormalizedRelayUrl> =
