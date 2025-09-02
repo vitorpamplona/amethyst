@@ -184,6 +184,7 @@ class RelayUrlNormalizer {
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                normalizedUrls.put(url, NormalizationResult.Error)
                 Log.w("NormalizedRelayUrl", "Rejected Error $url")
                 null
             }
