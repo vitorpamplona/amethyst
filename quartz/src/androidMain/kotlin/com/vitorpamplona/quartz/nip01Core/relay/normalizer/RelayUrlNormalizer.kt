@@ -93,8 +93,10 @@ class RelayUrlNormalizer {
 
         @OptIn(ExperimentalContracts::class)
         fun fix(url: String): String? {
-            if (url.length < 3) return null
-            if (url.length > 100) {
+            if (url.length < 4) return null
+            if (url.length > 50) {
+                if (url.indexOf("%00") > -1) return null
+
                 // removes multiple urls in the same line
                 val schemeIdx = url.indexOf("://")
                 val nextScheme = url.indexOf("://", schemeIdx + 3)
@@ -184,6 +186,7 @@ class RelayUrlNormalizer {
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                normalizedUrls.put(url, NormalizationResult.Error)
                 Log.w("NormalizedRelayUrl", "Rejected Error $url")
                 null
             }

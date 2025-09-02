@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Block
@@ -65,7 +64,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -82,6 +80,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -89,6 +88,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
+import com.vitorpamplona.amethyst.ui.theme.QuickActionPopupShadow
+import com.vitorpamplona.amethyst.ui.theme.SmallestBorder
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -232,18 +233,38 @@ private fun RenderMainPopup(
     showReportDialog: MutableState<Boolean>,
     onWantsToEditDraft: () -> Unit,
 ) {
+    Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
+        val backgroundColor =
+            if (MaterialTheme.colorScheme.isLight) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.secondaryButtonBackground
+            }
+
+        Card(
+            modifier = QuickActionPopupShadow,
+            shape = SmallestBorder,
+            colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        ) {
+            CardBody(accountViewModel, note, onDismiss, showBlockAlertDialog, showDeleteAlertDialog, showReportDialog, onWantsToEditDraft)
+        }
+    }
+}
+
+@Composable
+fun CardBody(
+    accountViewModel: AccountViewModel,
+    note: Note,
+    onDismiss: () -> Unit,
+    showBlockAlertDialog: MutableState<Boolean>,
+    showDeleteAlertDialog: MutableState<Boolean>,
+    showReportDialog: MutableState<Boolean>,
+    onWantsToEditDraft: () -> Unit,
+) {
     val context = LocalContext.current
     val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
-    val cardShape = RoundedCornerShape(5.dp)
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
-
-    val backgroundColor =
-        if (MaterialTheme.colorScheme.isLight) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.secondaryButtonBackground
-        }
 
     val showToast = { stringRes: Int ->
         scope.launch {
@@ -259,156 +280,148 @@ private fun RenderMainPopup(
     val isOwnNote = accountViewModel.isLoggedUser(note.author)
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
-    Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
-        Card(
-            modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
-            shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Min)) {
-                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    NoteQuickActionItem(
-                        icon = Icons.Default.ContentCopy,
-                        label = stringRes(R.string.quick_action_copy_text),
-                    ) {
-                        accountViewModel.decrypt(note) {
-                            clipboardManager.setText(AnnotatedString(it))
-                            showToast(R.string.copied_note_text_to_clipboard)
-                        }
+    Column(modifier = Modifier.width(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            NoteQuickActionItem(
+                icon = Icons.Default.ContentCopy,
+                label = stringRes(R.string.quick_action_copy_text),
+            ) {
+                accountViewModel.decrypt(note) {
+                    clipboardManager.setText(AnnotatedString(it))
+                    showToast(R.string.copied_note_text_to_clipboard)
+                }
 
+                onDismiss()
+            }
+            VerticalDivider(color = primaryLight)
+            NoteQuickActionItem(
+                Icons.Default.AlternateEmail,
+                stringRes(R.string.quick_action_copy_user_id),
+            ) {
+                note.author?.let {
+                    scope.launch {
+                        clipboardManager.setText(AnnotatedString(it.toNostrUri()))
+                        showToast(R.string.copied_user_id_to_clipboard)
                         onDismiss()
-                    }
-                    VerticalDivider(color = primaryLight)
-                    NoteQuickActionItem(
-                        Icons.Default.AlternateEmail,
-                        stringRes(R.string.quick_action_copy_user_id),
-                    ) {
-                        note.author?.let {
-                            scope.launch {
-                                clipboardManager.setText(AnnotatedString(it.toNostrUri()))
-                                showToast(R.string.copied_user_id_to_clipboard)
-                                onDismiss()
-                            }
-                        }
-                    }
-                    VerticalDivider(color = primaryLight)
-                    NoteQuickActionItem(
-                        Icons.Default.FormatQuote,
-                        stringRes(R.string.quick_action_copy_note_id),
-                    ) {
-                        scope.launch {
-                            clipboardManager.setText(AnnotatedString(note.toNostrUri()))
-                            showToast(R.string.copied_note_id_to_clipboard)
-                            onDismiss()
-                        }
-                    }
-
-                    if (!isOwnNote) {
-                        VerticalDivider(color = primaryLight)
-
-                        NoteQuickActionItem(
-                            Icons.Default.Block,
-                            stringRes(R.string.quick_action_block),
-                        ) {
-                            if (accountViewModel.account.settings.hideBlockAlertDialog) {
-                                note.author?.let { accountViewModel.hide(it) }
-                                onDismiss()
-                            } else {
-                                showBlockAlertDialog.value = true
-                            }
-                        }
                     }
                 }
-                HorizontalDivider(
-                    color = primaryLight,
-                )
-                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    if (isOwnNote) {
-                        NoteQuickActionItem(
-                            Icons.Default.Delete,
-                            stringRes(R.string.quick_action_delete),
-                        ) {
-                            if (accountViewModel.account.settings.hideDeleteRequestDialog) {
-                                accountViewModel.delete(note)
-                                onDismiss()
-                            } else {
-                                showDeleteAlertDialog.value = true
-                            }
-                        }
-                    } else if (isFollowingUser) {
-                        NoteQuickActionItem(
-                            Icons.Default.PersonRemove,
-                            stringRes(R.string.quick_action_unfollow),
-                        ) {
-                            accountViewModel.unfollow(note.author!!)
-                            onDismiss()
-                        }
-                    } else {
-                        NoteQuickActionItem(
-                            Icons.Default.PersonAdd,
-                            stringRes(R.string.quick_action_follow),
-                        ) {
-                            accountViewModel.follow(note.author!!)
-                            onDismiss()
-                        }
-                    }
+            }
+            VerticalDivider(color = primaryLight)
+            NoteQuickActionItem(
+                Icons.Default.FormatQuote,
+                stringRes(R.string.quick_action_copy_note_id),
+            ) {
+                scope.launch {
+                    clipboardManager.setText(AnnotatedString(note.toNostrUri()))
+                    showToast(R.string.copied_note_id_to_clipboard)
+                    onDismiss()
+                }
+            }
 
-                    VerticalDivider(color = primaryLight)
-                    NoteQuickActionItem(
-                        icon = ImageVector.vectorResource(id = R.drawable.relays),
-                        label = stringRes(R.string.broadcast),
-                    ) {
-                        accountViewModel.broadcast(note)
-                        // showSelectTextDialog = true
+            if (!isOwnNote) {
+                VerticalDivider(color = primaryLight)
+
+                NoteQuickActionItem(
+                    Icons.Default.Block,
+                    stringRes(R.string.quick_action_block),
+                ) {
+                    if (accountViewModel.account.settings.hideBlockAlertDialog) {
+                        note.author?.let { accountViewModel.hide(it) }
                         onDismiss()
-                    }
-                    VerticalDivider(color = primaryLight)
-                    if (isOwnNote && note.isDraft()) {
-                        NoteQuickActionItem(
-                            Icons.Default.Edit,
-                            stringRes(R.string.edit_draft),
-                        ) {
-                            onWantsToEditDraft()
-                        }
                     } else {
-                        NoteQuickActionItem(
-                            icon = Icons.Default.Share,
-                            label = stringRes(R.string.quick_action_share),
-                        ) {
-                            val sendIntent =
-                                Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    type = "text/plain"
-                                    putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        externalLinkForNote(note),
-                                    )
-                                    putExtra(
-                                        Intent.EXTRA_TITLE,
-                                        stringRes(context, R.string.quick_action_share_browser_link),
-                                    )
-                                }
-
-                            val shareIntent =
-                                Intent.createChooser(
-                                    sendIntent,
-                                    stringRes(context, R.string.quick_action_share),
-                                )
-                            context.startActivity(shareIntent)
-                            onDismiss()
-                        }
+                        showBlockAlertDialog.value = true
                     }
-
-                    if (!isOwnNote) {
-                        VerticalDivider(color = primaryLight)
-
-                        NoteQuickActionItem(
-                            Icons.Default.Report,
-                            stringRes(R.string.quick_action_report),
-                        ) {
-                            showReportDialog.value = true
-                        }
+                }
+            }
+        }
+        HorizontalDivider(
+            color = primaryLight,
+        )
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            if (isOwnNote) {
+                NoteQuickActionItem(
+                    Icons.Default.Delete,
+                    stringRes(R.string.quick_action_delete),
+                ) {
+                    if (accountViewModel.account.settings.hideDeleteRequestDialog) {
+                        accountViewModel.delete(note)
+                        onDismiss()
+                    } else {
+                        showDeleteAlertDialog.value = true
                     }
+                }
+            } else if (isFollowingUser) {
+                NoteQuickActionItem(
+                    Icons.Default.PersonRemove,
+                    stringRes(R.string.quick_action_unfollow),
+                ) {
+                    accountViewModel.unfollow(note.author!!)
+                    onDismiss()
+                }
+            } else {
+                NoteQuickActionItem(
+                    Icons.Default.PersonAdd,
+                    stringRes(R.string.quick_action_follow),
+                ) {
+                    accountViewModel.follow(note.author!!)
+                    onDismiss()
+                }
+            }
+
+            VerticalDivider(color = primaryLight)
+            NoteQuickActionItem(
+                icon = ImageVector.vectorResource(id = R.drawable.relays),
+                label = stringRes(R.string.broadcast),
+            ) {
+                accountViewModel.broadcast(note)
+                // showSelectTextDialog = true
+                onDismiss()
+            }
+            VerticalDivider(color = primaryLight)
+            if (isOwnNote && note.isDraft()) {
+                NoteQuickActionItem(
+                    Icons.Default.Edit,
+                    stringRes(R.string.edit_draft),
+                ) {
+                    onWantsToEditDraft()
+                }
+            } else {
+                NoteQuickActionItem(
+                    icon = Icons.Default.Share,
+                    label = stringRes(R.string.quick_action_share),
+                ) {
+                    val sendIntent =
+                        Intent().apply {
+                            action = Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                externalLinkForNote(note),
+                            )
+                            putExtra(
+                                Intent.EXTRA_TITLE,
+                                stringRes(context, R.string.quick_action_share_browser_link),
+                            )
+                        }
+
+                    val shareIntent =
+                        Intent.createChooser(
+                            sendIntent,
+                            stringRes(context, R.string.quick_action_share),
+                        )
+                    context.startActivity(shareIntent)
+                    onDismiss()
+                }
+            }
+
+            if (!isOwnNote) {
+                VerticalDivider(color = primaryLight)
+
+                NoteQuickActionItem(
+                    Icons.Default.Report,
+                    stringRes(R.string.quick_action_report),
+                ) {
+                    showReportDialog.value = true
                 }
             }
         }

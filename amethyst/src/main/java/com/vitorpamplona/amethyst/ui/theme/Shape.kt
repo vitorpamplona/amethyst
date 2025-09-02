@@ -43,6 +43,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.ripple
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -62,6 +63,7 @@ val RippleRadius45dp = 45.dp // Ripple should be +10.dp over the component size
 val BottomTopHeight = Modifier.height(50.dp)
 val TabRowHeight = Modifier
 
+val SmallestBorder = RoundedCornerShape(5.dp)
 val SmallBorder = RoundedCornerShape(7.dp)
 val SmallishBorder = RoundedCornerShape(9.dp)
 val QuoteBorder = RoundedCornerShape(15.dp)
@@ -360,3 +362,5 @@ val MaxWidthPaddingTop5dp = Modifier.fillMaxWidth().padding(top = 5.dp)
 val VoiceHeightModifier = Modifier.fillMaxWidth().height(100.dp)
 
 val PaddingHorizontal12Modifier = Modifier.padding(horizontal = 12.dp)
+
+val QuickActionPopupShadow = Modifier.shadow(elevation = Size6dp, shape = SmallestBorder)

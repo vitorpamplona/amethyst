@@ -163,7 +163,12 @@ kotlin {
             }
         }
 
-        androidUnitTest.configure { dependsOn(jvmTest.get()) }
+        androidUnitTest.configure {
+            dependencies {
+                // Bitcoin secp256k1 bindings
+                implementation(libs.secp256k1.kmp.jni.jvm)
+            }
+        }
 
         androidInstrumentedTest {
             dependencies {
