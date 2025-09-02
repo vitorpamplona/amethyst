@@ -41,6 +41,12 @@ import kotlin.coroutines.cancellation.CancellationException
 object OnlineChecker {
     val checkOnlineCache = LruCache<String, OnlineCheckResult>(100)
 
+    fun isCachedAndOffline(url: String?): Boolean {
+        if (url.isNullOrBlank()) return false
+        val cached = checkOnlineCache.get(url)
+        return cached != null && !cached.online && cached.timeInSecs > TimeUtils.fiveMinutesAgo()
+    }
+
     fun isOnlineCached(url: String?): Boolean {
         if (url.isNullOrBlank()) return false
         val cached = checkOnlineCache.get(url)
