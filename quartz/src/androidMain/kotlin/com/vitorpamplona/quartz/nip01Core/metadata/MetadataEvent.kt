@@ -176,7 +176,7 @@ class MetadataEvent(
 
             val tags =
                 latest.tags.builder {
-                    alt("User profile for ${currentMetadata.get("name").asText() ?: "Anonymous"}")
+                    alt("User profile for ${currentMetadata.get("name")?.asText() ?: "Anonymous"}")
 
                     // For https://github.com/nostr-protocol/nips/pull/1770
                     currentMetadata.get(NameTag.TAG_NAME)?.asText()?.let { name(it) } ?: run { remove(NameTag.TAG_NAME) }
