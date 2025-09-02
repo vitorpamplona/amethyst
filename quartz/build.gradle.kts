@@ -1,47 +1,55 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.androidLibrary)
+}
+
+android {
+    namespace = "com.vitorpamplona.quartz"
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    defaultConfig {
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        targetSdk = libs.versions.android.targetSdk.get().toInt()
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles (getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+    packaging {
+        resources {
+            excludes.add("**/libscrypt.dylib")
+        }
+    }
+    publishing {
+        singleVariant("release")
+    }
 }
 
 kotlin {
-    jvm {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
-        }
+    compilerOptions {
+        freeCompilerArgs.add("-Xstring-concat=inline")
     }
+    jvm()
 
     // Target declarations - add or remove as needed below. These define
     // which platforms this KMP module supports.
     // See: https://kotlinlang.org/docs/multiplatform-discover-project.html#targets
-    androidLibrary {
-        namespace = "com.vitorpamplona.quartz"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
-
-        withHostTestBuilder {
-        }
-
-        withDeviceTestBuilder {
-            sourceSetTreeName = "test"
-        }.configure {
-            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        }
-
-        optimization {
-            consumerKeepRules.publish = true
-            consumerKeepRules.files.add(File(project.projectDir, "proguard-rules.pro"))
-        }
-
-        packaging {
-            resources {
-                excludes.add("**/libscrypt.dylib")
-            }
-        }
-
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
-            freeCompilerArgs.add("-Xstring-concat=inline")
-        }
+    androidTarget {
+        publishLibraryVariants("release")
     }
 
     // For iOS targets, this is also where you should
@@ -89,6 +97,12 @@ kotlin {
             }
         }
 
+        commonTest {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
+        }
+
         jvmMain {
             dependencies {
                 // Bitcoin secp256k1 bindings
@@ -111,11 +125,10 @@ kotlin {
             }
         }
 
-        commonTest {
+        jvmTest {
             dependencies {
-                implementation(libs.kotlin.test)
                 // Bitcoin secp256k1 bindings
-                api(libs.secp256k1.kmp.jni.jvm)
+                implementation(libs.secp256k1.kmp.jni.jvm)
             }
         }
 
@@ -150,7 +163,9 @@ kotlin {
             }
         }
 
-        getByName("androidDeviceTest") {
+        androidUnitTest.configure { dependsOn(jvmTest.get()) }
+
+        androidInstrumentedTest {
             dependencies {
                 implementation(libs.androidx.runner)
                 implementation(libs.androidx.core)
