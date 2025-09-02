@@ -93,8 +93,10 @@ class RelayUrlNormalizer {
 
         @OptIn(ExperimentalContracts::class)
         fun fix(url: String): String? {
-            if (url.length < 3) return null
-            if (url.length > 100) {
+            if (url.length < 4) return null
+            if (url.length > 50) {
+                if (url.indexOf("%00") > -1) return null
+
                 // removes multiple urls in the same line
                 val schemeIdx = url.indexOf("://")
                 val nextScheme = url.indexOf("://", schemeIdx + 3)
