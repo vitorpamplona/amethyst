@@ -21,52 +21,30 @@
 package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
-import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
-import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
 import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
-import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 
 @Immutable
-abstract class VideoEvent(
-    id: HexKey,
-    pubKey: HexKey,
-    createdAt: Long,
-    kind: Int,
-    tags: Array<Array<String>>,
-    content: String,
-    sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
-    PublishedAtProvider,
-    RootScope {
-    @Transient var iMetas: List<VideoMeta>? = null
+interface VideoEvent : IEvent {
+    fun title(): String?
 
-    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+    fun publishedAt(): Long?
 
-    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    fun duration(): Int?
 
-    fun duration() = tags.firstNotNullOfOrNull(DurationTag::parse)
+    fun textTrack(): List<ETag>
 
-    fun textTrack() = tags.mapNotNull(ETag::parse)
+    fun segments(): List<SegmentTag>
 
-    fun segments() = tags.mapNotNull(SegmentTag::parse)
+    fun participants(): List<PTag>
 
-    fun participants() = tags.mapNotNull(PTag::parse)
+    fun hashtags(): List<String>
 
-    fun hashtags() = tags.hashtags()
+    fun mimeType(): String?
 
-    private fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
+    fun hash(): String?
 
-    private fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
-
-    fun imetaTags() = iMetas ?: imetas().map { VideoMeta.parse(it) }.also { iMetas = it }
+    fun imetaTags(): List<VideoMeta>
 }

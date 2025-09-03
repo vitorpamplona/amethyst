@@ -1044,13 +1044,13 @@ object LocalCache : ILocalCache {
         event: VideoNormalEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ) = consumeBaseReplaceable(event, relay, wasVerified)
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     private fun consume(
         event: VideoShortEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ) = consumeBaseReplaceable(event, relay, wasVerified)
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: StatusEvent,

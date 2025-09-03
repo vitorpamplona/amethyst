@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
@@ -43,8 +44,10 @@ fun JustVideoDisplay(
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
 ) {
-    val event = (note.event as? VideoEvent) ?: return
-    val imeta = event.imetaTags().getOrNull(0) ?: return
+    val videoEvent = (note.event as? VideoEvent) ?: return
+    val event = (videoEvent as? Event) ?: return
+
+    val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
 
     val content by
         remember(note) {
