@@ -237,9 +237,6 @@ open class BasicRelayClient(
         text: String,
         onConnected: () -> Unit,
     ) {
-        if (text.contains("2e9244f75b36d47116b8c8bd5c4ea4d29fb1a3d64688d2524156af34c6124dc3")) {
-            Log.d(logTag, "AABBCC Receiving: $text")
-        }
         // Log.d(logTag, "Receiving: $text")
         stats.addBytesReceived(text.bytesUsedInMemory())
 
