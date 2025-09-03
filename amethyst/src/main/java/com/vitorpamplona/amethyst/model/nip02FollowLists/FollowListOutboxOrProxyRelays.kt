@@ -20,18 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,37 +48,16 @@ class FollowListOutboxOrProxyRelays(
     val cache: LocalCache,
     scope: CoroutineScope,
 ) {
-    fun getNIP65RelayListAddress(pubkey: HexKey) = AdvertisedRelayListEvent.createAddress(pubkey)
-
-    fun getNIP65RelayListNote(pubkey: HexKey): AddressableNote = cache.getOrCreateAddressableNote(getNIP65RelayListAddress(pubkey))
-
-    fun getNIP65RelayListFlow(pubkey: HexKey): StateFlow<NoteState> = getNIP65RelayListNote(pubkey).flow().metadata.stateFlow
-
-    fun getNIP65RelayList(pubkey: HexKey): AdvertisedRelayListEvent? = getNIP65RelayListNote(pubkey).event as? AdvertisedRelayListEvent
-
-    fun allRelayListFlows(followList: Set<HexKey>): List<StateFlow<NoteState>> = followList.map { getNIP65RelayListFlow(it) }
-
-    fun combineAllFlows(flows: List<StateFlow<NoteState>>): Flow<Set<NormalizedRelayUrl>> =
-        combine(flows) { relayListNotes: Array<NoteState> ->
-            relayListNotes
-                .mapNotNull {
-                    (it.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()
-                }.flatten()
-                .toSet()
-        }
-
     @OptIn(ExperimentalCoroutinesApi::class)
     val outboxRelayFlow: StateFlow<Set<NormalizedRelayUrl>> =
         kind3Follows.flow
-            .transformLatest {
-                emitAll(combineAllFlows(allRelayListFlows(it.authors)))
+            .transformLatest { follows ->
+                emitAll(
+                    OutboxRelayLoader(true).toAuthorsPerRelayFlow(follows.authors, cache) { it.keys },
+                )
             }.onStart {
                 emit(
-                    kind3Follows.flow.value.authors
-                        .mapNotNull {
-                            getNIP65RelayList(it)?.writeRelaysNorm()
-                        }.flatten()
-                        .toSet(),
+                    OutboxRelayLoader(true).authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it.keys },
                 )
             }.distinctUntilChanged()
             .flowOn(Dispatchers.Default)
