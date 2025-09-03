@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 
 @Composable
 fun BasicRelaySetupInfoDialog(
@@ -35,8 +34,6 @@ fun BasicRelaySetupInfoDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relayInfo by loadRelayInfo(item.relay, accountViewModel)
-
     BasicRelaySetupInfoClickableRow(
         item = item,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
