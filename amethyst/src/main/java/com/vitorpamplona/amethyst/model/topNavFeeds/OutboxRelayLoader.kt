@@ -56,7 +56,13 @@ class OutboxRelayLoader {
                                 ?: Constants.eventFinderRelays
 
                         relays.forEach {
-                            add(it, authorHex)
+                            if (!it.url.startsWith("wss://feeds.nostr.band") &&
+                                !it.url.startsWith("wss://filter.nostr.wine") &&
+                                !it.url.startsWith("wss://nwc.primal.net") &&
+                                !it.url.startsWith("wss://relay.getalby.com")
+                            ) {
+                                add(it, authorHex)
+                            }
                         }
                     }
                 }
