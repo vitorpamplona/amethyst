@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">चलचित्र को सुरक्षित रखने में असफल</string>
     <string name="upload_image">चित्र आरोहण</string>
     <string name="take_a_picture">एक चित्र लें</string>
+    <string name="record_a_video">चलचित्र का अभिलेखन करें</string>
     <string name="record_a_message">ऐक संदेश का अभिलेखन करें</string>
     <string name="record_a_message_title">ऐक संदेश का अभिलेखन करें</string>
     <string name="record_a_message_description">टाँकें तथा दबाए रखें संदेश का अभिलेखन करने के लिए</string>
@@ -163,6 +164,8 @@
     <string name="blocked_users">बाधित उपयोगकर्ता</string>
     <string name="new_threads">नये सूत्र</string>
     <string name="conversations">सम्वाद</string>
+    <string name="feed">सूचनावली</string>
+    <string name="mod_queue">नियमन पंक्ति</string>
     <string name="notes">टीकाएँ</string>
     <string name="replies">प्रतिवचन</string>
     <string name="mutual">आपका</string>
@@ -655,6 +658,8 @@
     <string name="messages_new_subject_message">सदस्यों के लिए व्याख्यान</string>
     <string name="messages_new_subject_message_placeholder">नाम का परिवर्तन नये लक्ष्य के लिए।</string>
     <string name="paste_from_clipboard">टाँकाफलक से चिपकाएँ</string>
+    <string name="invalid_nip47_uri_title">अमान्य निप॰-४७ वैश्विकसाधनपरिचायक</string>
+    <string name="invalid_nip47_uri_description">यह %1$s एक मान्य निप॰-४७ प्रवेशांकन वैश्विकसाधनपरिचायक नहीं है।</string>
     <string name="language_description">क्रमक के प्रयोगमाध्यम के लिए</string>
     <string name="theme_description">अन्धकारमय, प्रकाशवान अथवा यन्त्रव्यवस्थित प्रदर्शनशैली</string>
     <string name="automatically_load_images_gifs_description">स्वचालित रूप से चित्र तथा जिफ॰ का अवरोहण करें</string>
@@ -672,6 +677,9 @@
     <string name="media_added_to_profile_gallery">अभिलेख जोडा गया आपके परिचय चित्रालय में</string>
     <string name="created_at">तब बनाया गया</string>
     <string name="rules">नियमावली</string>
+    <string name="community_description">हमारा परिचय</string>
+    <string name="guidelines">दिशा निर्देश</string>
+    <string name="moderators">नियामक</string>
     <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>
     <string name="status_update">आपकी स्थिति का नवीकरण करें</string>
     <string name="lightning_wallets_not_found">अपक्रम संदेश परखने में अपक्रम</string>
@@ -884,10 +892,13 @@
     <string name="dm_upload">सीधा संदेश आरोहण</string>
     <string name="relay_settings">पुनःप्रसारक स्थापना विकल्प</string>
     <string name="public_home_section">सार्वजनिक मुख्य पुनःप्रसारक</string>
+    <string name="public_home_section_explainer_profile">प्रयोक्ता अपने विषयवस्तुओं को इन पुनःप्रसारकों को भेज रहा है</string>
     <string name="public_home_section_explainer">यह पुनःप्रसारक प्रकार आपके सभी विषयवस्तु रखता है। अमेथिस्ट आपके पत्रों को प्रकाशित करने के लिए यहाँ भेजेगा तथा अन्य लोग आपके विषयवस्तु ढूँढने के लिए इनका प्रयोग करेंगे। १ - ३ पुनःप्रसारकों को जोडें। ये व्यक्तिगत अथवा सशुल्क अथवा सार्वजनिक पुनःप्रसारक हो सकते हैं।</string>
     <string name="public_notif_section">सार्वजनिक आगतपेटिका पुनःप्रसारक</string>
+    <string name="public_notif_section_explainer_profile">प्रयोक्ता इन पुनःप्रसारकों पर सूचनाएँ प्राप्त कर रहा है</string>
     <string name="public_notif_section_explainer">यह पुनःप्रसारक प्रकार आपके प्रकाशित पत्रों को भेजे गये सभी प्रतिवचन, टिप्पणियाँ, इष्टसूचक तथा ज्सापों को प्राप्त करता है। १ - ३ पुनःप्रसारकों को जोडें तथा सुनिश्चित करें कि वे किसी से भी पत्र स्वीकारते हैं।</string>
     <string name="private_inbox_section">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
+    <string name="private_inbox_section_explainer_profile">प्रयोक्ता इन पुनःप्रसारकों पर सीधा सन्देश प्राप्त कर रहा है</string>
     <string name="private_inbox_section_explainer">आपके निजी आगतपेटिका के रूप में १ - ३ पुनःप्रसारकों को जोडें। अन्य लोग इनका उपयोग करेंगे आपको सी॰सं॰ भेजने के लिए। सी॰सं॰ आगतपेटिका पुनःप्रसारकों को किसी से भी सन्देश स्वीकारना चाहिए पर उनका अवरोहण अनुमति केवल आपको देना चाहिए। ये अच्छे विकल्प हैं :\n - inbox.nostr.wine (सशुल्क)\n - auth.nostr1.com (शुल्करहित)\n - you.nostr1.com (व्यक्तिगत पुनःप्रसारक - सशुल्क)</string>
     <string name="private_outbox_section">निजी पुनःप्रसारक</string>
     <string name="private_outbox_section_explainer">१ - ३ पुनःप्रसारकों को जोडें उन घटनाओं को रखने के लिए जो कोई अन्य नहीं देख सकता जैसे कि पाण्डुलिपियाँ अथवा क्रमक के स्थापना विकल्प। आदर्शतः ये पुनःप्रसारक स्थानीय होने चाहिए अथवा प्रत्येक उपयोगकर्ता के विषयवस्तु अवरोहण के पूर्व परिचय प्रमाणीकरण अनिवार्य होना चाहिए।</string>
@@ -1014,4 +1025,12 @@
     <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>
     <string name="pause">विराम</string>
     <string name="play">चलाएँ</string>
+    <string name="open_dropdown_menu">विकल्प सूची खोलें</string>
+    <string name="option_of">%2$s में से %1$s विकल्प</string>
+    <string name="feed_filter_selected">सूचनावली छलनी। %1$s चयनित</string>
+    <string name="feed_filter_select_an_option">सूचनावली छलनी। %1$s</string>
+    <string name="crashreport_found">क्रमदोष सूचनापत्र प्राप्त</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">क्या आप निकटकालिक क्रमदोष सूचनापत्र एक सीधे सन्देश में अमेथिस्ट को भेजना चाहते हैं। कोई व्यक्तिगत जानकारी बाँटी नहीं जाएगी</string>
+    <string name="crashreport_found_send">भेजें</string>
+    <string name="this_message_will_disappear_in_days">यह सन्देश %1$d दिनों में अदृश्य हो जाएगा</string>
 </resources>
