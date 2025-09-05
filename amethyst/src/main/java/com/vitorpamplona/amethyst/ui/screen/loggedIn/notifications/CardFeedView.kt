@@ -42,11 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -58,8 +56,8 @@ import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
-import com.vitorpamplona.amethyst.ui.note.elements.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -192,30 +190,6 @@ private fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
-        }
-    }
-}
-
-@Composable
-private fun ShowDonationCard(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (!accountViewModel.account.hasDonatedInThisVersion()) {
-        val donated by accountViewModel.account.observeDonatedInThisVersion().collectAsStateWithLifecycle()
-        if (!donated) {
-            LoadNote(
-                BuildConfig.RELEASE_NOTES_ID,
-                accountViewModel,
-            ) { loadedNoteId ->
-                if (loadedNoteId != null) {
-                    ZapTheDevsCard(
-                        loadedNoteId,
-                        accountViewModel,
-                        nav,
-                    )
-                }
-            }
         }
     }
 }
