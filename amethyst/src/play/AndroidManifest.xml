@@ -19,6 +19,8 @@
             android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService" tools:node="remove">
         </service>
 
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false"/>
+
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/amethyst" />
 
