@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByPr
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -102,7 +103,7 @@ open class DiscoverLiveFeedFilter(
         return items
             .sortedWith(
                 compareBy(
-                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.status()) },
+                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)) },
                     { participantCounts[it] },
                     { allParticipants[it] },
                     { (it.event as? LiveActivitiesEvent)?.starts() ?: it.createdAt() },
@@ -111,11 +112,21 @@ open class DiscoverLiveFeedFilter(
             ).reversed()
     }
 
-    fun convertStatusToOrder(status: StatusTag.STATUS?): Int =
-        when (status) {
-            StatusTag.STATUS.LIVE -> 2
+    fun convertStatusToOrder(event: LiveActivitiesEvent?): Int {
+        if (event == null) return 0
+        val url = event.streaming()
+        if (url == null) return 0
+        return when (event.status()) {
+            StatusTag.STATUS.LIVE -> {
+                if (OnlineChecker.isCachedAndOffline(url)) {
+                    0
+                } else {
+                    2
+                }
+            }
             StatusTag.STATUS.PLANNED -> 1
             StatusTag.STATUS.ENDED -> 0
             else -> 0
         }
+    }
 }

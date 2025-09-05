@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
@@ -127,7 +128,7 @@ fun UsedBy(
     nav: INav,
 ) {
     if (item.users.isNotEmpty()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = HalfHalfVertPadding, verticalAlignment = Alignment.CenterVertically) {
             item.users.getOrNull(0)?.let {
                 UserPicture(
                     user = it,

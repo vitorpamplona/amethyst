@@ -129,14 +129,13 @@ fun LoadOts(
     val noteStatus by observeNoteOts(note, accountViewModel)
 
     LaunchedEffect(key1 = noteStatus) {
-        accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->
-            earliestDate =
-                if (newOts == null) {
-                    GenericLoadable.Empty()
-                } else {
-                    GenericLoadable.Loaded(newOts)
-                }
-        }
+        val newOts = accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note)
+        earliestDate =
+            if (newOts == null) {
+                GenericLoadable.Empty()
+            } else {
+                GenericLoadable.Loaded(newOts)
+            }
     }
 
     (earliestDate as? GenericLoadable.Loaded)?.let {

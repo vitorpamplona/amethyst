@@ -24,11 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.util.UUID
 
 @Immutable
 class VideoShortEvent(
@@ -38,7 +36,7 @@ class VideoShortEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : VideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : RegularVideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope {
     companion object {
         const val KIND = 22
@@ -47,21 +45,18 @@ class VideoShortEvent(
         fun build(
             video: VideoMeta,
             description: String,
-            dTag: String = UUID.randomUUID().toString(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VideoShortEvent>.() -> Unit = {},
-        ) = build(description, dTag, createdAt) {
+        ) = build(description, createdAt) {
             videoIMeta(video)
             initializer()
         }
 
         fun build(
             description: String,
-            dTag: String = UUID.randomUUID().toString(),
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VideoShortEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, description, createdAt) {
-            dTag(dTag)
             alt(ALT_DESCRIPTION)
             initializer()
         }

@@ -56,6 +56,8 @@ object Nip11CachedRetriever {
         class Empty(
             data: Nip11RelayInformation,
         ) : RetrieveResult(data, TimeUtils.now())
+
+        fun isValid() = time > TimeUtils.oneHourAgo()
     }
 
     private val relayInformationEmptyCache = LruCache<NormalizedRelayUrl, Nip11RelayInformation>(1000)
@@ -79,16 +81,18 @@ object Nip11CachedRetriever {
     fun getFromCache(relay: NormalizedRelayUrl): Nip11RelayInformation {
         val result = relayInformationDocumentCache.get(relay)
 
+        if (result == null) {
+            // resets the clock
+            val empty = getEmpty(relay)
+            relayInformationDocumentCache.put(relay, RetrieveResult.Empty(empty))
+            return empty
+        }
+
         return when (result) {
-            is RetrieveResult.Success -> return result.data
-            is RetrieveResult.Error -> return result.data
-            is RetrieveResult.Empty -> return result.data
-            is RetrieveResult.Loading -> return result.data
-            else -> {
-                val empty = getEmpty(relay)
-                relayInformationDocumentCache.put(relay, RetrieveResult.Empty(empty))
-                empty
-            }
+            is RetrieveResult.Success -> result.data
+            is RetrieveResult.Error -> result.data
+            is RetrieveResult.Empty -> result.data
+            is RetrieveResult.Loading -> result.data
         }
     }
 
@@ -100,23 +104,23 @@ object Nip11CachedRetriever {
     ) {
         val doc = relayInformationDocumentCache.get(relay)
         if (doc != null) {
-            if (doc is RetrieveResult.Success) {
-                onInfo(doc.data)
-            } else if (doc is RetrieveResult.Loading) {
-                if (TimeUtils.now() - doc.time < TimeUtils.ONE_MINUTE) {
-                    // just wait.
-                } else {
-                    retrieve(relay, okHttpClient, onInfo, onError)
+            when (doc) {
+                is RetrieveResult.Success -> onInfo(doc.data)
+                is RetrieveResult.Loading -> {
+                    if (doc.isValid()) {
+                        // just wait.
+                    } else {
+                        retrieve(relay, okHttpClient, onInfo, onError)
+                    }
                 }
-            } else if (doc is RetrieveResult.Error) {
-                if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
-                    onError(relay, doc.error, null)
-                } else {
-                    retrieve(relay, okHttpClient, onInfo, onError)
+                is RetrieveResult.Error -> {
+                    if (doc.isValid()) {
+                        onError(relay, doc.error, null)
+                    } else {
+                        retrieve(relay, okHttpClient, onInfo, onError)
+                    }
                 }
-            } else {
-                // Empty
-                retrieve(relay, okHttpClient, onInfo, onError)
+                is RetrieveResult.Empty -> retrieve(relay, okHttpClient, onInfo, onError)
             }
         } else {
             retrieve(relay, okHttpClient, onInfo, onError)
@@ -135,10 +139,12 @@ object Nip11CachedRetriever {
             okHttpClient = okHttpClient,
             onInfo = {
                 relayInformationDocumentCache.put(relay, RetrieveResult.Success(it))
+                relayInformationEmptyCache.remove(relay)
                 onInfo(it)
             },
             onError = { relay, code, errorMsg ->
                 relayInformationDocumentCache.put(relay, RetrieveResult.Error(getEmpty(relay), code, errorMsg))
+                relayInformationEmptyCache.remove(relay)
                 onError(relay, code, errorMsg)
             },
         )
@@ -175,7 +181,11 @@ class Nip11Retriever {
                     val body = response.body.string()
                     try {
                         if (response.isSuccessful) {
-                            onInfo(Nip11RelayInformation.fromJson(body))
+                            if (body.startsWith("{")) {
+                                onInfo(Nip11RelayInformation.fromJson(body))
+                            } else {
+                                onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, body)
+                            }
                         } else {
                             onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
                         }

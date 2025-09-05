@@ -35,6 +35,7 @@ enum class ROLE(
     val code: String,
 ) {
     HOST("host"),
+    MODERATOR("moderator"),
     SPEAKER("speaker"),
 }
 

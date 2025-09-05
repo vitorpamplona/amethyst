@@ -81,7 +81,7 @@ class AllFollowsByOutboxTopNavFilter(
     override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsTopNavPerRelayFilterSet> {
         val authorsPerRelay =
             if (authors != null) {
-                OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache) { it }
+                OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
             } else {
                 MutableStateFlow(emptyMap())
             }
@@ -112,7 +112,7 @@ class AllFollowsByOutboxTopNavFilter(
     override fun startValue(cache: LocalCache): AllFollowsTopNavPerRelayFilterSet {
         val authorsPerRelay =
             if (authors != null) {
-                OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache) { it }
+                OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
             } else {
                 emptyMap()
             }

@@ -1230,19 +1230,18 @@ fun observeEdits(
 
     LaunchedEffect(key1 = updatedNote) {
         updatedNote?.note?.let {
-            accountViewModel.findModificationEventsForNote(it) { newModifications ->
-                if (newModifications.isEmpty()) {
-                    if (editState.value !is GenericLoadable.Empty) {
-                        editState.value = GenericLoadable.Empty()
-                    }
+            val newModifications = accountViewModel.findModificationEventsForNote(it)
+            if (newModifications.isEmpty()) {
+                if (editState.value !is GenericLoadable.Empty) {
+                    editState.value = GenericLoadable.Empty()
+                }
+            } else {
+                if (editState.value is GenericLoadable.Loaded) {
+                    (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.updateModifications(newModifications)
                 } else {
-                    if (editState.value is GenericLoadable.Loaded) {
-                        (editState.value as? GenericLoadable.Loaded<EditState>)?.loaded?.updateModifications(newModifications)
-                    } else {
-                        val state = EditState()
-                        state.updateModifications(newModifications)
-                        editState.value = GenericLoadable.Loaded(state)
-                    }
+                    val state = EditState()
+                    state.updateModifications(newModifications)
+                    editState.value = GenericLoadable.Loaded(state)
                 }
             }
         }

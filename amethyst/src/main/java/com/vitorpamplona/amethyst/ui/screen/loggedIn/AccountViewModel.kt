@@ -1026,38 +1026,22 @@ class AccountViewModel(
 
     fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
-    suspend fun findStatusesForUser(
-        myUser: User,
-        onResult: (ImmutableList<AddressableNote>) -> Unit,
-    ) {
+    suspend fun findStatusesForUser(myUser: User) =
         withContext(Dispatchers.IO) {
-            onResult(LocalCache.findStatusesForUser(myUser))
+            LocalCache.findStatusesForUser(myUser)
         }
-    }
 
-    suspend fun findOtsEventsForNote(
-        note: Note,
-        onResult: (Long?) -> Unit,
-    ) {
-        onResult(
-            withContext(Dispatchers.Default) {
-                LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
-            },
-        )
-    }
+    suspend fun findOtsEventsForNote(note: Note) =
+        withContext(Dispatchers.Default) {
+            LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
+        }
 
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
-    suspend fun findModificationEventsForNote(
-        note: Note,
-        onResult: (List<Note>) -> Unit,
-    ) {
-        onResult(
-            withContext(Dispatchers.Default) {
-                LocalCache.findLatestModificationForNote(note)
-            },
-        )
-    }
+    suspend fun findModificationEventsForNote(note: Note): List<Note> =
+        withContext(Dispatchers.Default) {
+            LocalCache.findLatestModificationForNote(note)
+        }
 
     fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel? = LocalCache.getOrCreatePublicChatChannel(key)
 
