@@ -1015,4 +1015,19 @@
     <string name="option_of">Alternativ %1$s av %2$s</string>
     <string name="feed_filter_selected">Flödesfilter, %1$s valt</string>
     <string name="feed_filter_select_an_option">Flödesfilter, %1$s</string>
+    <string name="feed">Flöde</string>
+    <string name="mod_queue">Moderationskö</string>
+    <string name="invalid_nip47_uri_title">Ogiltig NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">URI %1$s är inte en giltig NIP-47 inloggnings-URI.</string>
+    <string name="public_home_section_explainer_profile">Användaren publicerar sitt innehåll på dessa reläer</string>
+    <string name="public_notif_section_explainer_profile">Användaren tar emot aviseringar på dessa reläer</string>
+    <string name="private_inbox_section_explainer_profile">Användaren tar emot DM:s på dessa reläer</string>
+    <string name="this_message_will_disappear_in_days">Detta meddelande försvinner om %1$d dagar</string>
+    <string name="crashreport_found">Kraschrapport hittad</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Vill du skicka den senaste kraschrapporten till Amethyst i ett DM? Ingen personlig information kommer att delas</string>
+    <string name="crashreport_found_send">Skicka</string>
+    <string name="community_description">Om oss</string>
+    <string name="guidelines">Riktlinjer</string>
+    <string name="moderators">Moderatorer</string>
+    <string name="open_dropdown_menu">Öppna rullgardinsmeny</string>
 </resources>
