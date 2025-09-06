@@ -41,7 +41,7 @@ class CrashReportCache(
             null
         }
 
-    suspend fun writeReport(report: String) {
+    fun writeReport(report: String) {
         val trace = outputStream()
         trace.write(report.toByteArray())
         trace.close()

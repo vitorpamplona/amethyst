@@ -62,7 +62,7 @@ abstract class OpCrypto internal constructor() : OpUnary() {
         val digest = MessageDigest.getInstance(this.hashLibName())
         var chunk = ctx.read(1048576)
 
-        while (chunk != null && chunk.size > 0) {
+        while (chunk.isNotEmpty()) {
             digest.update(chunk)
             chunk = ctx.read(1048576)
         }
