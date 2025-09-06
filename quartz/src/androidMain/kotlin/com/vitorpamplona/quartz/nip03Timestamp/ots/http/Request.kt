@@ -67,10 +67,10 @@ class Request(
                     "Content-Length",
                     "" + this.data!!.size.toString(),
                 )
-                val wr = DataOutputStream(httpURLConnection.getOutputStream())
-                wr.write(this.data, 0, this.data!!.size)
-                wr.flush()
-                wr.close()
+                DataOutputStream(httpURLConnection.getOutputStream()).use { wr ->
+                    wr.write(this.data, 0, this.data!!.size)
+                    wr.flush()
+                }
             } else {
                 httpURLConnection.setRequestMethod("GET")
             }

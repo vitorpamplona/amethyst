@@ -1842,15 +1842,15 @@ object LocalCache : ILocalCache {
             note.addRelay(relay)
         }
 
-        var isVerified =
+        val isVerified =
             try {
                 val cachePath = Amethyst.instance.nip95cache
                 cachePath.mkdirs()
                 val file = File(cachePath, event.id)
                 if (!file.exists() && (wasVerified || justVerify(event))) {
-                    val stream = FileOutputStream(file)
-                    stream.write(event.decode())
-                    stream.close()
+                    FileOutputStream(file).use { stream ->
+                        stream.write(event.decode())
+                    }
                     Log.i(
                         "FileStorageEvent",
                         "NIP95 File received from $relay and saved to disk as $file",
@@ -2134,7 +2134,7 @@ object LocalCache : ILocalCache {
         }
     }
 
-    suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
+    fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
         checkNotInMainThread()
 
         return addressables
@@ -2151,7 +2151,7 @@ object LocalCache : ILocalCache {
             .toImmutableList()
     }
 
-    suspend fun findEarliestOtsForNote(
+    fun findEarliestOtsForNote(
         note: Note,
         resolverBuilder: OtsResolverBuilder,
     ): Long? {
@@ -2178,7 +2178,7 @@ object LocalCache : ILocalCache {
 
     fun cachedModificationEventsForNote(note: Note): List<Note>? = modificationCache[note.idHex]
 
-    suspend fun findLatestModificationForNote(note: Note): List<Note> {
+    fun findLatestModificationForNote(note: Note): List<Note> {
         checkNotInMainThread()
 
         val noteAuthor = note.author ?: return emptyList()
@@ -2340,9 +2340,9 @@ object LocalCache : ILocalCache {
         val children =
             if (noteEvent is WrappedEvent) {
                 noteEvent.host?.id?.let {
-                    getNoteIfExists(it)?.let {
-                        removeFromCache(it)
-                        it.removeAllChildNotes()
+                    getNoteIfExists(it)?.let { it2 ->
+                        removeFromCache(it2)
+                        it2.removeAllChildNotes()
                     }
                 }
             } else {
