@@ -47,7 +47,7 @@ kotlin {
     }
     jvm {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
+            jvmTarget.set(JvmTarget.JVM_1_8)
         }
     }
 
@@ -57,7 +57,7 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
+            jvmTarget.set(JvmTarget.JVM_1_8)
         }
     }
 
@@ -152,8 +152,8 @@ kotlin {
                 api(libs.secp256k1.kmp.jni.android)
 
                 // LibSodium for ChaCha encryption (NIP-44)
-                implementation ("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation ("net.java.dev.jna:jna:5.17.0@aar")
+                implementation (libs.lazysodium.android)
+                implementation (libs.jna)
 
                 // Performant Parser of JSONs into Events
                 api(libs.jackson.module.kotlin)
