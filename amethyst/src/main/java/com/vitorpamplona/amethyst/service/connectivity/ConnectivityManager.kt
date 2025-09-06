@@ -53,4 +53,14 @@ class ConnectivityManager(
                 SharingStarted.WhileSubscribed(2000),
                 (status.value as? ConnectivityStatus.Active)?.isMobile,
             )
+
+    val isMobileOrFalse: StateFlow<Boolean> =
+        status
+            .map {
+                (status.value as? ConnectivityStatus.Active)?.isMobile ?: false
+            }.stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(2000),
+                (status.value as? ConnectivityStatus.Active)?.isMobile ?: false,
+            )
 }
