@@ -531,7 +531,9 @@ fun ListContent(
 
 @Composable
 private fun RelayStatus(accountViewModel: AccountViewModel) {
-    val connectedRelaysText by accountViewModel.relayStatusFlow().collectAsStateWithLifecycle()
+    val connectedRelaysText by accountViewModel.account.client
+        .relayStatusFlow()
+        .collectAsStateWithLifecycle()
 
     RenderRelayStatus(connectedRelaysText)
 }

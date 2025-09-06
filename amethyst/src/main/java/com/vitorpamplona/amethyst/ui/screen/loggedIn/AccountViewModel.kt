@@ -1600,8 +1600,6 @@ class AccountViewModel(
 
     fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
 
-    fun relayStatusFlow() = app.client.relayStatusFlow()
-
     fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> =
         loggedInAccounts
             ?.mapNotNull {
