@@ -176,10 +176,9 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.d("AmethystApp", "onCreate $this")
+        instance = this
 
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
-
-        instance = this
 
         if (isDebug) {
             Logging.setup()
