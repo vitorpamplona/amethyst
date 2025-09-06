@@ -42,7 +42,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoggedInPage(
-    accountSettings: AccountSettings,
+    account: Account,
     route: Route?,
     accountStateViewModel: AccountStateViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
@@ -69,9 +69,9 @@ fun LoggedInPage(
             key = "AccountViewModel",
             factory =
                 AccountViewModel.Factory(
-                    accountSettings,
-                    sharedPreferencesViewModel.sharedPrefs,
-                    Amethyst.instance,
+                    account = account,
+                    settings = sharedPreferencesViewModel.sharedPrefs,
+                    app = Amethyst.instance,
                 ),
         )
 

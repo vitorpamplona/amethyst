@@ -33,6 +33,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
@@ -1725,9 +1726,9 @@ fun mockAccountViewModel(): AccountViewModel {
         )
 
     return AccountViewModel(
-        sharedPreferencesViewModel.sharedPrefs,
-        Amethyst(),
         account = account,
+        settings = sharedPreferencesViewModel.sharedPrefs,
+        app = Amethyst(),
     ).also {
         mockedCache = it
     }
@@ -1765,9 +1766,9 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         )
 
     return AccountViewModel(
-        sharedPreferencesViewModel.sharedPrefs,
-        Amethyst(),
         account = account,
+        settings = sharedPreferencesViewModel.sharedPrefs,
+        app = Amethyst(),
     ).also {
         vitorCache = it
     }

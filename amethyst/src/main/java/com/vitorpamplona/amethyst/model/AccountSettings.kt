@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.content.ContentResolver
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -29,10 +28,8 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -49,7 +46,6 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
-import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -153,21 +149,6 @@ class AccountSettings(
     }
 
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
-
-    fun createSigner(contentResolver: ContentResolver) =
-        if (keyPair.privKey != null) {
-            NostrSignerInternal(keyPair)
-        } else {
-            when (val packageName = externalSignerPackageName) {
-                null -> NostrSignerInternal(keyPair)
-                else ->
-                    NostrSignerExternal(
-                        pubKey = keyPair.pubKey.toHexKey(),
-                        packageName = packageName,
-                        contentResolver = contentResolver,
-                    )
-            }
-        }
 
     // ---
     // Zaps and Reactions

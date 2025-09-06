@@ -184,7 +184,9 @@ class AccountStateViewModel : ViewModel() {
         accountSettings: AccountSettings,
         route: Route? = null,
     ) = withContext(Dispatchers.Main) {
-        _accountContent.update { AccountState.LoggedIn(accountSettings, route) }
+        _accountContent.update {
+            AccountState.LoggedIn(Amethyst.instance.loadAccount(accountSettings), route)
+        }
 
         collectorJob?.cancel()
         collectorJob =
@@ -376,7 +378,8 @@ class AccountStateViewModel : ViewModel() {
     fun currentAccountNPub() =
         when (val state = _accountContent.value) {
             is AccountState.LoggedIn ->
-                state.accountSettings.keyPair.pubKey
+                state.account.signer.pubKey
+                    .hexToByteArray()
                     .toNpub()
             else -> null
         }
@@ -387,10 +390,12 @@ class AccountStateViewModel : ViewModel() {
                 // log off and relogin with the 0 account
                 prepareLogoutOrSwitch()
                 LocalPreferences.deleteAccount(accountInfo)
+                Amethyst.instance.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
                 LocalPreferences.deleteAccount(accountInfo)
+                Amethyst.instance.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
             }
         }
     }

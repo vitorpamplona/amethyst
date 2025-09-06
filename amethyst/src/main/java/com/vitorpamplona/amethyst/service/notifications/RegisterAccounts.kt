@@ -59,8 +59,8 @@ class RegisterAccounts(
         }
 
         return mapNotNullAsync(remainingTos) { info ->
-            val signer = info.accountSettings.createSigner(Amethyst.instance.contentResolver)
-            RelayAuthEvent.create(info.relays, notificationToken, signer)
+            val account = Amethyst.instance.loadAccount(info.accountSettings)
+            RelayAuthEvent.create(info.relays, notificationToken, account.signer)
         }
     }
 

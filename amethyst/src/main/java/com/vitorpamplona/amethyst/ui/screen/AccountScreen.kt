@@ -95,7 +95,7 @@ fun LoggedInSetup(
 ) {
     SetAccountCentricViewModelStore(state) {
         LoggedInPage(
-            state.accountSettings,
+            state.account,
             state.route,
             accountStateViewModel,
             sharedPreferencesViewModel,

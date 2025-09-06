@@ -26,7 +26,10 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
@@ -49,10 +52,15 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OtsBlockHeightCache
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -153,6 +161,15 @@ class Amethyst : Application() {
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, applicationIOScope)
 
+    val accountsCache =
+        AccountCacheState(
+            geolocationFlow = locationManager.geohashStateFlow,
+            nwcFilterAssembler = sources.nwc,
+            cache = cache,
+            client = client,
+            scope = applicationIOScope,
+        )
+
     // saves the .content of NIP-95 blobs in disk to save memory
     val nip95cache: File by lazy { Nip95CacheFactory.new(this) }
 
@@ -223,6 +240,31 @@ class Amethyst : Application() {
         applicationIOScope.launch(Dispatchers.Default) {
             trimmingService.run(null, LocalPreferences.allSavedAccounts())
         }
+    }
+
+    fun loadAccount(accountSettings: AccountSettings): Account {
+        val keyPair = accountSettings.keyPair
+        return accountsCache.loadAccount(
+            signer =
+                if (keyPair.privKey != null) {
+                    NostrSignerInternal(keyPair)
+                } else {
+                    when (val packageName = accountSettings.externalSignerPackageName) {
+                        null -> NostrSignerInternal(keyPair)
+                        else ->
+                            NostrSignerExternal(
+                                pubKey = keyPair.pubKey.toHexKey(),
+                                packageName = packageName,
+                                contentResolver = contentResolver,
+                            )
+                    }
+                },
+            accountSettings = accountSettings,
+        )
+    }
+
+    fun removeAccount(pubkey: HexKey) {
+        accountsCache.removeAccount(pubkey)
     }
 
     companion object {

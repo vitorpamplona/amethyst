@@ -24,6 +24,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -81,12 +82,11 @@ class EventNotificationConsumer(
 
     private suspend fun consumeIfMatchesAccount(
         pushWrappedEvent: GiftWrapEvent,
-        account: AccountSettings,
+        accountSettings: AccountSettings,
     ) {
-        val signer = account.createSigner(applicationContext.contentResolver)
-
-        val notificationEvent = pushWrappedEvent.unwrapThrowing(signer)
-        consumeNotificationEvent(notificationEvent, signer, account)
+        val account = Amethyst.instance.loadAccount(accountSettings)
+        val notificationEvent = pushWrappedEvent.unwrapThrowing(account.signer)
+        consumeNotificationEvent(notificationEvent, account.signer, accountSettings)
     }
 
     suspend fun consumeNotificationEvent(
@@ -124,11 +124,11 @@ class EventNotificationConsumer(
         var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
-                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { accountSettings ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
-                        val signer = acc.createSigner(applicationContext.contentResolver)
-                        consumeNotificationEvent(event, signer, acc)
+                        val account = Amethyst.instance.loadAccount(accountSettings)
+                        consumeNotificationEvent(event, account.signer, accountSettings)
                         matchAccount = true
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
