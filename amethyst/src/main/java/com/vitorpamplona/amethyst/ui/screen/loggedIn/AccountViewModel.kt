@@ -28,11 +28,11 @@ import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
@@ -95,7 +97,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
@@ -158,21 +162,11 @@ import java.util.Locale
 
 @Stable
 class AccountViewModel(
-    accountSettings: AccountSettings,
+    val account: Account,
     val settings: SharedSettingsState,
     val app: Amethyst,
 ) : ViewModel(),
     Dao {
-    val account =
-        Account(
-            settings = accountSettings,
-            signer = accountSettings.createSigner(app.contentResolver),
-            geolocationFlow = app.locationManager.geohashStateFlow,
-            cache = LocalCache,
-            client = app.client,
-            scope = viewModelScope,
-        )
-
     val newNotesPreProcessor = EventProcessor(account, LocalCache)
 
     var firstRoute: Route? = null
@@ -1137,12 +1131,12 @@ class AccountViewModel(
     fun setTorSettings(newTorSettings: TorSettings) = runIOCatching { account.settings.setTorSettings(newTorSettings) }
 
     class Factory(
-        val accountSettings: AccountSettings,
+        val account: Account,
         val settings: SharedSettingsState,
         val app: Amethyst,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings, app) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(account, settings, app) as T
     }
 
     init {
@@ -1706,19 +1700,34 @@ fun mockAccountViewModel(): AccountViewModel {
 
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
     sharedPreferencesViewModel.init()
+    val keyPair =
+        KeyPair(
+            privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
+            pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
+            forceReplacePubkey = false,
+        )
+
+    val scope = rememberCoroutineScope()
+
+    val client = EmptyNostrClient
+
+    val nwcFilters = NWCPaymentFilterAssembler(client)
+
+    val account =
+        Account(
+            settings = AccountSettings(keyPair),
+            signer = NostrSignerInternal(keyPair),
+            geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
+            nwcFilterAssembler = nwcFilters,
+            cache = LocalCache,
+            client = client,
+            scope = scope,
+        )
 
     return AccountViewModel(
-        AccountSettings(
-            // blank keys
-            keyPair =
-                KeyPair(
-                    privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
-                    pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-                    forceReplacePubkey = false,
-                ),
-        ),
         sharedPreferencesViewModel.sharedPrefs,
         Amethyst(),
+        account = account,
     ).also {
         mockedCache = it
     }
@@ -1733,17 +1742,32 @@ fun mockVitorAccountViewModel(): AccountViewModel {
 
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
     sharedPreferencesViewModel.init()
+    val keyPair =
+        KeyPair(
+            pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+        )
+
+    val client = EmptyNostrClient
+
+    val nwcFilters = NWCPaymentFilterAssembler(client)
+
+    val scope = rememberCoroutineScope()
+
+    val account =
+        Account(
+            settings = AccountSettings(keyPair),
+            signer = NostrSignerInternal(keyPair),
+            geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
+            nwcFilterAssembler = nwcFilters,
+            cache = LocalCache,
+            client = EmptyNostrClient,
+            scope = scope,
+        )
 
     return AccountViewModel(
-        AccountSettings(
-            // blank keys
-            keyPair =
-                KeyPair(
-                    pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                ),
-        ),
         sharedPreferencesViewModel.sharedPrefs,
         Amethyst(),
+        account = account,
     ).also {
         vitorCache = it
     }
