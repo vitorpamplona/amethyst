@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
             StringResSetup()
 
             val sharedPreferencesViewModel = prepareSharedViewModel()
-            AmethystTheme(sharedPreferencesViewModel) {
+            AmethystTheme(sharedPreferencesViewModel.sharedPrefs.theme) {
                 val accountStateViewModel: AccountStateViewModel = viewModel()
 
                 LaunchedEffect(key1 = Unit) {
