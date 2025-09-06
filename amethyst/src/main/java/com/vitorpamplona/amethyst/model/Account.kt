@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -218,7 +219,8 @@ import kotlin.coroutines.cancellation.CancellationException
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     val signer: NostrSigner,
-    geolocationFlow: StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: StateFlow<LocationState.LocationResult>,
+    val nwcFilterAssembler: NWCPaymentFilterAssembler,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
@@ -229,7 +231,7 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    val nip47SignerState = NwcSignerState(signer, cache, scope, settings)
+    val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
