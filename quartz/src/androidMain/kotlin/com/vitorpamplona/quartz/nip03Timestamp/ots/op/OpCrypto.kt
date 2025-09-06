@@ -73,7 +73,7 @@ abstract class OpCrypto internal constructor() : OpUnary() {
     }
 
     @Throws(IOException::class, NoSuchAlgorithmException::class)
-    fun hashFd(file: File?): ByteArray = hashFd(FileInputStream(file))
+    fun hashFd(file: File?): ByteArray = FileInputStream(file).use { inputStream -> hashFd(inputStream) }
 
     @Throws(IOException::class, NoSuchAlgorithmException::class)
     fun hashFd(bytes: ByteArray): ByteArray {
