@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -32,7 +32,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-fun NostrClient.downloadFirstEvent(
+fun INostrClient.downloadFirstEvent(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     onResponse: (Event) -> Unit,

@@ -121,7 +121,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -220,7 +220,7 @@ class Account(
     val signer: NostrSigner,
     geolocationFlow: StateFlow<LocationState.LocationResult>,
     val cache: LocalCache,
-    val client: NostrClient,
+    val client: INostrClient,
     val scope: CoroutineScope,
 ) {
     private var userProfileCache: User? = null

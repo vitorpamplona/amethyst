@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 
@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
  * filters
  */
 abstract class SingleSubNoEoseCacheEoseManager<T>(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
