@@ -152,8 +152,8 @@ kotlin {
                 api(libs.secp256k1.kmp.jni.android)
 
                 // LibSodium for ChaCha encryption (NIP-44)
-                implementation (libs.lazysodium.android)
-                implementation (libs.jna)
+                implementation ("com.goterl:lazysodium-android:5.2.0@aar")
+                implementation ("net.java.dev.jna:jna:5.17.0@aar")
 
                 // Performant Parser of JSONs into Events
                 api(libs.jackson.module.kotlin)
