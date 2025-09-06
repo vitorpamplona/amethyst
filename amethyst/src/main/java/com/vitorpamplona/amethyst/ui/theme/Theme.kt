@@ -38,6 +38,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -58,7 +59,6 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 
 private val DarkColorPalette =
     darkColorScheme(
@@ -484,20 +484,20 @@ val ColorScheme.chartStyle: VicoTheme
 
 @Composable
 fun AmethystTheme(
-    sharedPrefsViewModel: SharedPreferencesViewModel,
+    prefTheme: ThemeType,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     val darkTheme =
-        when (sharedPrefsViewModel.sharedPrefs.theme) {
+        when (prefTheme) {
             ThemeType.DARK -> {
-                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager?
-                uiManager!!.nightMode = UiModeManager.MODE_NIGHT_YES
+                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+                uiManager.nightMode = UiModeManager.MODE_NIGHT_YES
                 true
             }
             ThemeType.LIGHT -> {
-                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager?
-                uiManager!!.nightMode = UiModeManager.MODE_NIGHT_NO
+                val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+                uiManager.nightMode = UiModeManager.MODE_NIGHT_NO
                 false
             }
             else -> isSystemInDarkTheme()
