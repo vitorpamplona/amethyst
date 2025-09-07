@@ -50,8 +50,8 @@ class Request(
 
         try {
             val httpURLConnection = url.openConnection() as HttpURLConnection
-            httpURLConnection.setReadTimeout(10000)
-            httpURLConnection.setConnectTimeout(10000)
+            httpURLConnection.readTimeout = 10000
+            httpURLConnection.connectTimeout = 10000
             httpURLConnection.setRequestProperty("User-Agent", "OpenTimestamps Java")
             httpURLConnection.setRequestProperty("Accept", "application/json")
             httpURLConnection.setRequestProperty("Accept-Encoding", "gzip")
@@ -62,7 +62,7 @@ class Request(
 
             if (data != null) {
                 httpURLConnection.setDoOutput(true)
-                httpURLConnection.setRequestMethod("POST")
+                httpURLConnection.requestMethod = "POST"
                 httpURLConnection.setRequestProperty(
                     "Content-Length",
                     "" + this.data!!.size.toString(),
@@ -72,7 +72,7 @@ class Request(
                     wr.flush()
                 }
             } else {
-                httpURLConnection.setRequestMethod("GET")
+                httpURLConnection.requestMethod = "GET"
             }
 
             httpURLConnection.connect()
@@ -84,7 +84,7 @@ class Request(
             response.status = responseCode
             response.fromUrl = url.toString()
             var `is` = httpURLConnection.getInputStream()
-            if ("gzip" == httpURLConnection.getContentEncoding()) {
+            if ("gzip" == httpURLConnection.contentEncoding) {
                 `is` = GZIPInputStream(`is`)
             }
             response.setStream(`is`)

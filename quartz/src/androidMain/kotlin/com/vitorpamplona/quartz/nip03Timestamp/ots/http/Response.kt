@@ -54,7 +54,7 @@ class Response : Closeable {
 
     @get:Throws(IOException::class)
     val string: String
-        get() = kotlin.text.String(this.bytes, StandardCharsets.UTF_8)
+        get() = String(this.bytes, StandardCharsets.UTF_8)
 
     @get:Throws(IOException::class)
     val bytes: ByteArray
