@@ -498,7 +498,7 @@ object LocalPreferences {
         Log.d("LocalPreferences", "Saved to encrypted storage")
     }
 
-    suspend fun loadCurrentAccountFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
+    suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
     suspend fun saveSharedSettings(
         sharedSettings: Settings,
@@ -529,7 +529,7 @@ object LocalPreferences {
 
     val mutex = Mutex()
 
-    suspend fun loadCurrentAccountFromEncryptedStorage(npub: String): AccountSettings? {
+    suspend fun loadAccountConfigFromEncryptedStorage(npub: String): AccountSettings? {
         // if already loaded, return right away
         if (cachedAccounts.containsKey(npub)) {
             return cachedAccounts[npub]

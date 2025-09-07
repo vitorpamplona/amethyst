@@ -66,7 +66,7 @@ class EventNotificationConsumer(
         var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
-                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
                         consumeIfMatchesAccount(event, acc)
@@ -124,7 +124,7 @@ class EventNotificationConsumer(
         var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
-                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { accountSettings ->
+                LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
                         val account = Amethyst.instance.loadAccount(accountSettings)

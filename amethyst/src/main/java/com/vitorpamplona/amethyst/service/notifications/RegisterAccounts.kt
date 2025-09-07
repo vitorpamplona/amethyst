@@ -80,7 +80,7 @@ class RegisterAccounts(
                     if (account.hasPrivKey || account.loggedInWithExternalSigner) {
                         Log.d(tag, "Register Account ${account.npub}")
 
-                        val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(account.npub)
+                        val acc = LocalPreferences.loadAccountConfigFromEncryptedStorage(account.npub)
                         if (acc != null && acc.isWriteable()) {
                             val nip65Read = acc.backupNIP65RelayList?.readRelaysNorm() ?: emptyList()
                             val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList()

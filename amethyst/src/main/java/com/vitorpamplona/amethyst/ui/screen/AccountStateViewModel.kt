@@ -98,7 +98,7 @@ class AccountStateViewModel : ViewModel() {
     private suspend fun loginWithDefaultAccount(route: Route? = null) {
         val accountSettings =
             withContext(Dispatchers.IO) {
-                LocalPreferences.loadCurrentAccountFromEncryptedStorage()
+                LocalPreferences.loadAccountConfigFromEncryptedStorage()
             }
 
         if (accountSettings != null) {
