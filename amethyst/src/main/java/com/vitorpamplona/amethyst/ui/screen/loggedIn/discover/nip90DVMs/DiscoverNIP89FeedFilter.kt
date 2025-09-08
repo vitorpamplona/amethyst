@@ -113,11 +113,16 @@ open class DiscoverNIP89FeedFilter(
         val participantCounts =
             items.associateWith { counter.countFollowsThatParticipateOn(it, followingKeySet) }
 
+        val createdNote =
+            items.associateWith { note ->
+                ((note.event?.createdAt ?: 0) / 86400).toInt()
+            }
+
         val feedOrder: Comparator<Note> =
             compareByDescending<Note> {
                 participantCounts[it]
             }.thenByDescending {
-                ((it.event?.createdAt ?: 0) / 86400).toInt()
+                createdNote[it]
             }.thenBy { it.idHex }
 
         return items.sortedWith(feedOrder)
