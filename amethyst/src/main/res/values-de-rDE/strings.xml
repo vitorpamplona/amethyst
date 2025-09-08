@@ -166,6 +166,7 @@ erie gespeichert</string>
     <string name="blocked_users">Blockierte Benutzer</string>
     <string name="new_threads">Neue Threads</string>
     <string name="conversations">Unterhaltungen</string>
+    <string name="feed">Feed</string>
     <string name="mod_queue">Moderationswarteschlange</string>
     <string name="notes">Notizen</string>
     <string name="replies">Antworten</string>
