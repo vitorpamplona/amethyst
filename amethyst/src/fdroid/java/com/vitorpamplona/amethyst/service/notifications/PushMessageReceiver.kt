@@ -27,8 +27,6 @@ import android.util.LruCache
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateDMChannel
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CancellationException
@@ -95,8 +93,8 @@ class PushMessageReceiver : MessagingReceiver() {
                 PushNotificationUtils.checkAndInit(sanitizedEndpoint, LocalPreferences.allSavedAccounts()) {
                     Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
                 }
-                notificationManager().getOrCreateZapChannel(appContext)
-                notificationManager().getOrCreateDMChannel(appContext)
+                NotificationUtils.getOrCreateZapChannel(appContext)
+                NotificationUtils.getOrCreateDMChannel(appContext)
             }
         } else {
             Log.d(TAG, "Same endpoint provided:- $endpoint for Instance: $instance $sanitizedEndpoint")
