@@ -28,8 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.util.Base64
 
 class OtsState(
@@ -39,6 +41,19 @@ class OtsState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    var lastTimeItTriedToUpdateAttestations: Long = 0
+
+    fun upgradeAttestationsIfNeeded(onReady: (List<OtsEvent>) -> Unit) {
+        // only tries to upgrade every hour
+        val now = TimeUtils.now()
+        if (now - lastTimeItTriedToUpdateAttestations > TimeUtils.ONE_HOUR) {
+            lastTimeItTriedToUpdateAttestations = now
+            scope.launch {
+                onReady(updateAttestations())
+            }
+        }
+    }
+
     suspend fun updateAttestations(): List<OtsEvent> {
         Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
 

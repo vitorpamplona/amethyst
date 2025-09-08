@@ -25,6 +25,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
@@ -91,6 +92,7 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -330,6 +332,8 @@ class Account(
         )
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
+
+    val newNotesPreProcessor = EventProcessor(this, LocalCache)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
@@ -828,7 +832,7 @@ class Account(
         }
     }
 
-    suspend fun updateAttestations() = sendAutomatic(otsState.updateAttestations())
+    fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
 
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
@@ -1765,7 +1769,7 @@ class Account(
     init {
         Log.d("AccountRegisterObservers", "Init")
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch {
             cache.antiSpam.flowSpam.collect {
                 it.cache.spamMessages.snapshot().values.forEach { spammer ->
                     if (!hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.shouldHide()) {
@@ -1773,6 +1777,23 @@ class Account(
                             hiddenUsers.hideUser(spammer.pubkeyHex)
                         }
                     }
+                }
+            }
+        }
+
+        scope.launch {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                logTime("Account ${userProfile()} newEventBundle Update with ${newNotes.size} new notes") {
+                    upgradeAttestations()
+                    newNotesPreProcessor.runNew(newNotes)
+                }
+            }
+        }
+
+        scope.launch {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
+                logTime("Account ${userProfile()} deletedEventBundle Update with ${newNotes.size} new notes") {
+                    newNotesPreProcessor.runDeleted(newNotes)
                 }
             }
         }

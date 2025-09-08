@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
-import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -168,8 +167,6 @@ class AccountViewModel(
     val app: Amethyst,
 ) : ViewModel(),
     Dao {
-    val newNotesPreProcessor = EventProcessor(account, LocalCache)
-
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
@@ -708,17 +705,6 @@ class AccountViewModel(
 
     fun timestamp(note: Note) = runIOCatching { account.otsState.timestamp(note) }
 
-    var lastTimeItTriedToUpdateAttestations: Long = 0
-
-    fun upgradeAttestations() {
-        // only tries to upgrade every hour
-        val now = TimeUtils.now()
-        if (now - lastTimeItTriedToUpdateAttestations > TimeUtils.ONE_HOUR) {
-            lastTimeItTriedToUpdateAttestations = now
-            runIOCatching { account.updateAttestations() }
-        }
-    }
-
     fun delete(notes: List<Note>) = runIOCatching { account.delete(notes) }
 
     fun delete(note: Note) = runIOCatching { account.delete(note) }
@@ -1146,32 +1132,15 @@ class AccountViewModel(
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
             LocalCache.live.newEventBundles.collect { newNotes ->
-                if (isDebug) {
-                    Log.d(
-                        "Rendering Metrics",
-                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                    )
-                }
                 logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.updateFeedsWith(newNotes)
-                    upgradeAttestations()
-                    viewModelScope.launch(Dispatchers.Default) {
-                        newNotesPreProcessor.runNew(newNotes)
-                    }
                 }
             }
         }
 
         viewModelScope.launch(Dispatchers.Default) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
-                if (isDebug) {
-                    Log.d(
-                        "Rendering Metrics",
-                        "Delete feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                    )
-                }
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
-                    newNotesPreProcessor.runDeleted(newNotes)
                     feedStates.deleteNotes(newNotes)
                 }
             }
