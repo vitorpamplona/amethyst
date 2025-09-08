@@ -93,6 +93,7 @@ abstract class OpCrypto internal constructor() : OpUnary() {
             count = inputStream.read(chunk, 0, 1048576)
         }
 
+        // TODO: Is this needed? Closing of stream should be callers responsibility?
         inputStream.close()
         val hash = digest.digest()
 
