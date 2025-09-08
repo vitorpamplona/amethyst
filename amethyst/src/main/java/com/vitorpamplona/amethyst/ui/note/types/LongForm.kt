@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -37,11 +39,15 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
@@ -71,16 +77,24 @@ fun LongFormHeader(
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         image?.let {
-            MyAsyncImage(
-                imageUrl = it,
-                contentDescription = stringRes(R.string.preview_card_image_for, it),
-                contentScale = ContentScale.FillWidth,
-                mainImageModifier = Modifier.fillMaxWidth(),
-                loadedImageModifier = Modifier,
-                accountViewModel = accountViewModel,
-                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
-                onError = { DefaultImageHeader(note, accountViewModel) },
-            )
+            Box {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentScale = ContentScale.FillWidth,
+                    mainImageModifier = Modifier.fillMaxWidth(),
+                    loadedImageModifier = Modifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
+                    onError = { DefaultImageHeader(note, accountViewModel) },
+                )
+
+                WatchAuthor(baseNote = note, accountViewModel) { user ->
+                    Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
+                        BaseUserPicture(user, Size55dp, accountViewModel, Modifier)
+                    }
+                }
+            }
         } ?: run {
             DefaultImageHeader(note, accountViewModel, Modifier.fillMaxWidth())
         }
