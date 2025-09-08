@@ -164,6 +164,7 @@
     <string name="blocked_users">Usuários</string>
     <string name="new_threads">Novos Tópicos</string>
     <string name="conversations">Conversas</string>
+    <string name="feed">Feed</string>
     <string name="mod_queue">Fila de moderação</string>
     <string name="notes">Notas</string>
     <string name="replies">Respostas</string>
