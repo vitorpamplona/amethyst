@@ -109,18 +109,20 @@ class Nip96Uploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return upload(
-            imageInputStream,
-            length,
-            myContentType,
-            alt,
-            sensitiveContent,
-            server,
-            okHttpClient,
-            onProgress,
-            httpAuth,
-            context,
-        )
+        return imageInputStream.use { stream ->
+            upload(
+                stream,
+                length,
+                myContentType,
+                alt,
+                sensitiveContent,
+                server,
+                okHttpClient,
+                onProgress,
+                httpAuth,
+                context,
+            )
+        }
     }
 
     suspend fun upload(

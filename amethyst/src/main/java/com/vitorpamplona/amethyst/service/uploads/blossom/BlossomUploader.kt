@@ -96,19 +96,21 @@ class BlossomUploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return upload(
-            imageInputStream,
-            hash,
-            payload.size,
-            fileName,
-            myContentType,
-            alt,
-            sensitiveContent,
-            serverBaseUrl,
-            okHttpClient,
-            httpAuth,
-            context,
-        )
+        return imageInputStream.use { stream ->
+            upload(
+                stream,
+                hash,
+                payload.size,
+                fileName,
+                myContentType,
+                alt,
+                sensitiveContent,
+                serverBaseUrl,
+                okHttpClient,
+                httpAuth,
+                context,
+            )
+        }
     }
 
     fun encodeAuth(event: BlossomAuthorizationEvent): String {
