@@ -24,6 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
@@ -209,6 +210,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -1794,6 +1796,14 @@ class Account(
             LocalCache.live.deletedEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile()} deletedEventBundle Update with ${newNotes.size} new notes") {
                     newNotesPreProcessor.runDeleted(newNotes)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.IO) {
+            settings.saveable.debounce(1000).collect {
+                if (it.accountSettings != null) {
+                    LocalPreferences.saveToEncryptedStorage(it.accountSettings)
                 }
             }
         }

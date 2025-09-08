@@ -67,11 +67,9 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -83,8 +81,6 @@ val EMAIL_PATTERN: Pattern = Pattern.compile(".+@.+\\.[a-z]+")
 class AccountStateViewModel : ViewModel() {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
-
-    private var collectorJob: Job? = null
 
     fun loginWithDefaultAccountIfLoggedOff() {
         // pulls account from storage.
@@ -187,22 +183,11 @@ class AccountStateViewModel : ViewModel() {
         _accountContent.update {
             AccountState.LoggedIn(Amethyst.instance.accountsCache.loadAccount(accountSettings), route)
         }
-
-        collectorJob?.cancel()
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                accountSettings.saveable.debounce(1000).collect {
-                    if (it.accountSettings != null) {
-                        LocalPreferences.saveToEncryptedStorage(it.accountSettings)
-                    }
-                }
-            }
     }
 
     private fun prepareLogoutOrSwitch() =
         when (val state = _accountContent.value) {
             is AccountState.LoggedIn -> {
-                collectorJob?.cancel()
                 state.currentViewModelStore.viewModelStore.clear()
             }
 
