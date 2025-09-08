@@ -71,7 +71,7 @@ class EventNotificationConsumer(
                 LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
-                        val account = Amethyst.instance.loadAccount(acc)
+                        val account = Amethyst.instance.accountsCache.loadAccount(acc)
                         consumeIfMatchesAccount(event, account)
                         matchAccount = true
                     } catch (e: Exception) {
@@ -128,7 +128,7 @@ class EventNotificationConsumer(
                 LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
-                        val account = Amethyst.instance.loadAccount(accountSettings)
+                        val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
                         consumeNotificationEvent(event, account)
                         matchAccount = true
                     } catch (e: Exception) {

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.accountsCache
 
+import android.content.ContentResolver
+import android.util.Log
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -27,21 +29,58 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 
 class AccountCacheState(
     val geolocationFlow: StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
+    val contentResolver: ContentResolver,
     val cache: LocalCache,
     val client: INostrClient,
-    val scope: CoroutineScope,
 ) {
-    val accounts = LruCache<HexKey, Account>(20)
+    val accounts =
+        object : LruCache<HexKey, Account>(20) {
+            override fun entryRemoved(
+                evicted: Boolean,
+                key: HexKey,
+                oldValue: Account,
+                newValue: Account?,
+            ) {
+                super.entryRemoved(evicted, key, oldValue, newValue)
+                oldValue.scope.cancel()
+            }
+        }
 
     fun removeAccount(pubkey: HexKey) = accounts.remove(pubkey)
+
+    fun loadAccount(accountSettings: AccountSettings): Account =
+        loadAccount(
+            signer =
+                if (accountSettings.keyPair.privKey != null) {
+                    NostrSignerInternal(accountSettings.keyPair)
+                } else {
+                    when (val packageName = accountSettings.externalSignerPackageName) {
+                        null -> NostrSignerInternal(accountSettings.keyPair)
+                        else ->
+                            NostrSignerExternal(
+                                pubKey = accountSettings.keyPair.pubKey.toHexKey(),
+                                packageName = packageName,
+                                contentResolver = contentResolver,
+                            )
+                    }
+                },
+            accountSettings = accountSettings,
+        )
 
     fun loadAccount(
         signer: NostrSigner,
@@ -57,7 +96,14 @@ class AccountCacheState(
             nwcFilterAssembler = nwcFilterAssembler,
             cache = cache,
             client = client,
-            scope = scope,
+            scope =
+                CoroutineScope(
+                    Dispatchers.Default +
+                        SupervisorJob() +
+                        CoroutineExceptionHandler { _, throwable ->
+                            Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
+                        },
+                ),
         ).also {
             accounts.put(signer.pubKey, it)
         }

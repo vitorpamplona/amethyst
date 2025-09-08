@@ -59,7 +59,7 @@ class RegisterAccounts(
         }
 
         return mapNotNullAsync(remainingTos) { info ->
-            val account = Amethyst.instance.loadAccount(info.accountSettings)
+            val account = Amethyst.instance.accountsCache.loadAccount(info.accountSettings)
             RelayAuthEvent.create(info.relays, notificationToken, account.signer)
         }
     }
