@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.RandomInstance
 
 class NostrClientSubscription(
-    val client: NostrClient,
+    val client: INostrClient,
     val filter: () -> Map<NormalizedRelayUrl, List<Filter>> = { emptyMap() },
     val onEvent: (event: Event) -> Unit = {},
 ) : IRelayClientListener {

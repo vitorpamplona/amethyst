@@ -36,6 +36,8 @@ interface INostrClient {
 
     fun disconnect()
 
+    fun reconnect(onlyIfChanged: Boolean = false)
+
     fun isActive(): Boolean
 
     fun openReqSubscription(
@@ -75,6 +77,8 @@ object EmptyNostrClient : INostrClient {
     override fun connect() { }
 
     override fun disconnect() { }
+
+    override fun reconnect(onlyIfChanged: Boolean) { }
 
     override fun isActive() = false
 

@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01No
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to logged-in accounts.
 class AccountQueryState(
@@ -41,7 +41,7 @@ class AccountQueryState(
  * This assembler loads everything eech account needs.
  */
 class AccountFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
     val group =
         listOf(

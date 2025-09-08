@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogg
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OtsBlockHeightCache
@@ -136,7 +137,7 @@ class Amethyst : Application() {
     val trimmingService = MemoryTrimmingService(cache)
 
     // Provides a relay pool
-    val client: NostrClient = NostrClient(websocketBuilder, applicationIOScope)
+    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
 
     // Watches for changes on Tor and Relay List Settings
     val relayProxyClientConnector = RelayProxyClientConnector(torProxySettingsAnchor, okHttpClients, connManager, client, torManager, applicationIOScope)

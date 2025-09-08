@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.makeLongFormFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.makeContentDVMsFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.makeClassifiedsFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<DiscoveryQueryState>,
 ) : PerUserAndFollowListEoseManager<DiscoveryQueryState, String>(client, allKeys) {
     override fun updateFilter(

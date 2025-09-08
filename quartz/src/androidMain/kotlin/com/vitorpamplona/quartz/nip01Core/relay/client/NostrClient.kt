@@ -137,7 +137,7 @@ class NostrClient(
     override fun isActive() = isActive
 
     @Synchronized
-    fun reconnect(onlyIfChanged: Boolean = false) {
+    override fun reconnect(onlyIfChanged: Boolean) {
         if (onlyIfChanged) {
             relayPool.reconnectIfNeedsToORIfItIsTime()
         } else {

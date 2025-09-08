@@ -27,12 +27,12 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class EventWatcherSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys) {
     var lastNotesOnFilter = emptyList<Note>()

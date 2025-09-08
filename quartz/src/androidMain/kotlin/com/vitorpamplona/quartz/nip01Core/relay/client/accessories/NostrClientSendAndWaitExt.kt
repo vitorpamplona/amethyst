@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -32,7 +32,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 @OptIn(DelicateCoroutinesApi::class)
-suspend fun NostrClient.sendAndWaitForResponse(
+suspend fun INostrClient.sendAndWaitForResponse(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,

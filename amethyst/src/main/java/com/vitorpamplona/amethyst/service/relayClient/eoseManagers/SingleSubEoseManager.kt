@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.service.relays.EOSERelayList
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * shares all EOSEs among all users.
  */
 abstract class SingleSubEoseManager<T>(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {

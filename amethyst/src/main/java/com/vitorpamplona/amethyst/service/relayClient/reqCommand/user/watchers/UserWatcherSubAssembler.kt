@@ -26,12 +26,12 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class UserWatcherSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys) {
     var lastUsersOnFilter: Set<User> = emptySet()

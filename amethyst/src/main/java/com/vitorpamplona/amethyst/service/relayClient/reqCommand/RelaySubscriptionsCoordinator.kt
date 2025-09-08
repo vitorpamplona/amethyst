@@ -39,12 +39,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 
 class RelaySubscriptionsCoordinator(
     cache: LocalCache,
-    client: NostrClient,
+    client: INostrClient,
     scope: CoroutineScope,
 ) {
     // main one: notifications, dms and account settings
