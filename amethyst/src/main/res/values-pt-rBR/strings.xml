@@ -1016,4 +1016,19 @@
     <string name="option_of">Opção %1$s de %2$s</string>
     <string name="feed_filter_selected">Filtro de feed, %1$s selecionado</string>
     <string name="feed_filter_select_an_option">Filtro de feed, %1$s</string>
+    <string name="feed">Feed</string>
+    <string name="mod_queue">Fila de moderação</string>
+    <string name="invalid_nip47_uri_title">URI NIP-47 inválido</string>
+    <string name="invalid_nip47_uri_description">O URI %1$s não é um URI de login NIP-47 válido.</string>
+    <string name="public_home_section_explainer_profile">O usuário está publicando seu conteúdo nesses relays</string>
+    <string name="public_notif_section_explainer_profile">O usuário está recebendo notificações nesses relays</string>
+    <string name="private_inbox_section_explainer_profile">O usuário recebe mensagens diretas (DMs) nesses relays</string>
+    <string name="this_message_will_disappear_in_days">Esta mensagem desaparecerá em %1$d dias</string>
+    <string name="crashreport_found">Relatório de falha encontrado</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Gostaria de enviar o relatório de falha recente para o Amethyst em uma DM? Nenhuma informação pessoal será compartilhada</string>
+    <string name="crashreport_found_send">Enviar</string>
+    <string name="community_description">Sobre nós</string>
+    <string name="guidelines">Diretrizes</string>
+    <string name="moderators">Moderadores</string>
+    <string name="open_dropdown_menu">Abrir menu suspenso</string>
 </resources>
