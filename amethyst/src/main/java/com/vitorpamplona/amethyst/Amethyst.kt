@@ -161,7 +161,7 @@ class Amethyst : Application() {
         AccountCacheState(
             geolocationFlow = locationManager.geohashStateFlow,
             nwcFilterAssembler = sources.nwc,
-            contentResolver = contentResolver,
+            contentResolverFn = ::contentResolverFn,
             cache = cache,
             client = client,
         )

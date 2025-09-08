@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.StateFlow
 class AccountCacheState(
     val geolocationFlow: StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
-    val contentResolver: ContentResolver,
+    val contentResolverFn: () -> ContentResolver,
     val cache: LocalCache,
     val client: INostrClient,
 ) {
@@ -75,7 +75,7 @@ class AccountCacheState(
                             NostrSignerExternal(
                                 pubKey = accountSettings.keyPair.pubKey.toHexKey(),
                                 packageName = packageName,
-                                contentResolver = contentResolver,
+                                contentResolver = contentResolverFn(),
                             )
                     }
                 },
