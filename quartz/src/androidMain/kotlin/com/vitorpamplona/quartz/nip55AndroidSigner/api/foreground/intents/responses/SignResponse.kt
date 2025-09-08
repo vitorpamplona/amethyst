@@ -39,6 +39,10 @@ class SignResponse {
             intent: IntentResult,
             unsignedEvent: Event,
         ): SignerResult.RequestAddressed<SignResult> {
+            if (intent.rejected) {
+                return SignerResult.RequestAddressed.ManuallyRejected()
+            }
+
             val eventJson = intent.event
             return if (eventJson != null) {
                 if (eventJson.startsWith("{")) {
