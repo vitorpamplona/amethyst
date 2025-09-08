@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
@@ -43,33 +43,35 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedConte
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
+import kotlinx.coroutines.CoroutineScope
 
 class AccountFeedContentStates(
-    val accountViewModel: AccountViewModel,
+    val account: Account,
+    val scope: CoroutineScope,
 ) {
-    val homeLive = ChannelFeedContentState(HomeLiveFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val homeReplies = FeedContentState(HomeConversationsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
+    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope)
+    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope)
 
-    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val dmNew = FeedContentState(ChatroomListNewFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope)
+    val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope)
 
-    val videoFeed = FeedContentState(VideoFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val videoFeed = FeedContentState(VideoFeedFilter(account), scope)
 
-    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val discoverLive = FeedContentState(DiscoverLiveFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(account), scope)
+    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(account), scope)
+    val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(account), scope)
+    val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(account), scope)
+    val discoverLive = FeedContentState(DiscoverLiveFeedFilter(account), scope)
+    val discoverCommunities = FeedContentState(DiscoverCommunityFeedFilter(account), scope)
+    val discoverPublicChats = FeedContentState(DiscoverChatFeedFilter(account), scope)
 
-    val notifications = CardFeedContentState(NotificationFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
-    val notificationSummary = NotificationSummaryState(accountViewModel.account)
+    val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
+    val notificationSummary = NotificationSummaryState(account)
 
-    val feedListOptions = FollowListState(accountViewModel.account, accountViewModel.viewModelScope)
+    val feedListOptions = FollowListState(account, scope)
 
-    val drafts = FeedContentState(DraftEventsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val drafts = FeedContentState(DraftEventsFeedFilter(account), scope)
 
     suspend fun init() {
         notificationSummary.initializeSuspend()

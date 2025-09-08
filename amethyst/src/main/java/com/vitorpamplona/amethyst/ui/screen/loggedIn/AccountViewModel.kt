@@ -173,7 +173,7 @@ class AccountViewModel(
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
-    val feedStates = AccountFeedContentStates(this)
+    val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
