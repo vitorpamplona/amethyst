@@ -30,13 +30,19 @@ import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
 
+interface IHttpClientManager {
+    fun getHttpClient(useProxy: Boolean): OkHttpClient
+
+    fun getCurrentProxyPort(useProxy: Boolean): Int?
+}
+
 class DualHttpClientManager(
     userAgent: String,
     proxyPortProvider: StateFlow<Int?>,
     isMobileDataProvider: StateFlow<Boolean?>,
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
-) {
+) : IHttpClientManager {
     val factory = OkHttpClientFactory(keyCache)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
@@ -60,17 +66,30 @@ class DualHttpClientManager(
 
     fun getCurrentProxy(): Proxy? = defaultHttpClient.value.proxy
 
-    fun getCurrentProxyPort(useProxy: Boolean): Int? =
+    override fun getCurrentProxyPort(useProxy: Boolean): Int? =
         if (useProxy) {
             (getCurrentProxy()?.address() as? InetSocketAddress)?.port
         } else {
             null
         }
 
-    fun getHttpClient(useProxy: Boolean): OkHttpClient =
+    override fun getHttpClient(useProxy: Boolean): OkHttpClient =
         if (useProxy) {
             defaultHttpClient.value
         } else {
             defaultHttpClientWithoutProxy.value
         }
+}
+
+object EmptyHttpClientManager : IHttpClientManager {
+    val rootOkHttpClient =
+        OkHttpClient
+            .Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+
+    override fun getHttpClient(useProxy: Boolean) = rootOkHttpClient
+
+    override fun getCurrentProxyPort(useProxy: Boolean) = null
 }
