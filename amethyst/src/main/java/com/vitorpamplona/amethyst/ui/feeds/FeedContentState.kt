@@ -113,6 +113,8 @@ class FeedContentState(
             if (lastNoteTime != lastNoteCreatedAtWhenFullyLoaded.value) {
                 lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNoteTime)
             }
+        } else {
+            lastNoteCreatedAtWhenFullyLoaded.tryEmit(null)
         }
 
         val currentState = _feedContent.value
