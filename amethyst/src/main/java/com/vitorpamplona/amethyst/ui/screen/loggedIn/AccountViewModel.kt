@@ -38,7 +38,6 @@ import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
@@ -67,6 +66,9 @@ import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.okhttp.EmptyHttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.IHttpClientManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -164,13 +166,13 @@ import java.util.Locale
 class AccountViewModel(
     val account: Account,
     val settings: SharedSettingsState,
-    val app: Amethyst,
+    val dataSources: RelaySubscriptionsCoordinator,
+    val okHttpClient: IHttpClientManager,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
-
     val feedStates = AccountFeedContentStates(this)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -905,7 +907,7 @@ class AccountViewModel(
                 .verifyNip05(
                     nip05,
                     okHttpClient = {
-                        app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForNIP05(it))
+                        okHttpClient.getHttpClient(account.privacyState.shouldUseTorForNIP05(it))
                     },
                     onSuccess = {
                         // Marks user as verified
@@ -1120,10 +1122,17 @@ class AccountViewModel(
     class Factory(
         val account: Account,
         val settings: SharedSettingsState,
-        val app: Amethyst,
+        val dataSources: RelaySubscriptionsCoordinator,
+        val okHttpClient: IHttpClientManager,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(account, settings, app) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            AccountViewModel(
+                account,
+                settings,
+                dataSources,
+                okHttpClient,
+            ) as T
     }
 
     init {
@@ -1395,23 +1404,23 @@ class AccountViewModel(
         }
     }
 
-    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.privacyState.shouldUseTorForVideoDownload(url))
+    fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(account.privacyState.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(url))
+    fun okHttpClientForNip96(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForUploads(url))
 
-    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForImageDownload(url))
+    fun okHttpClientForImage(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForImageDownload(url))
 
-    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForVideoDownload(url))
+    fun okHttpClientForVideo(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForMoneyOperations(url))
+    fun okHttpClientForMoney(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForMoneyOperations(url))
 
-    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForPreviewUrl(url))
+    fun okHttpClientForPreview(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForPreviewUrl(url))
 
-    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = app.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(url))
+    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = okHttpClient.getHttpClient(account.torRelayState.shouldUseTorForClean(url))
 
-    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForTrustedRelays())
+    fun okHttpClientForPushRegistration(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForTrustedRelays())
 
-    fun dataSources() = app.sources
+    fun dataSources() = dataSources
 
     suspend fun createTempDraftNote(noteEvent: DraftWrapEvent): Note? = draftNoteCache.update(noteEvent)
 
@@ -1697,7 +1706,8 @@ fun mockAccountViewModel(): AccountViewModel {
     return AccountViewModel(
         account = account,
         settings = sharedPreferencesViewModel.sharedPrefs,
-        app = Amethyst(),
+        okHttpClient = EmptyHttpClientManager,
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
     ).also {
         mockedCache = it
     }
@@ -1737,7 +1747,8 @@ fun mockVitorAccountViewModel(): AccountViewModel {
     return AccountViewModel(
         account = account,
         settings = sharedPreferencesViewModel.sharedPrefs,
-        app = Amethyst(),
+        okHttpClient = EmptyHttpClientManager,
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
     ).also {
         vitorCache = it
     }

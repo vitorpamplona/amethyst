@@ -71,7 +71,8 @@ fun LoggedInPage(
                 AccountViewModel.Factory(
                     account = account,
                     settings = sharedPreferencesViewModel.sharedPrefs,
-                    app = Amethyst.instance,
+                    dataSources = Amethyst.instance.sources,
+                    okHttpClient = Amethyst.instance.okHttpClients,
                 ),
         )
 
@@ -157,7 +158,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
                 scope.launch {
                     PushNotificationUtils.checkAndInit(
                         LocalPreferences.allSavedAccounts(),
-                        accountViewModel::okHttpClientForTrustedRelays,
+                        accountViewModel::okHttpClientForPushRegistration,
                     )
                 }
 
@@ -172,7 +173,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
             scope.launch {
                 PushNotificationUtils.checkAndInit(
                     LocalPreferences.allSavedAccounts(),
-                    accountViewModel::okHttpClientForTrustedRelays,
+                    accountViewModel::okHttpClientForPushRegistration,
                 )
             }
 

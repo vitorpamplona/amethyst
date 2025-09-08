@@ -121,7 +121,7 @@ fun VoiceHeader(
                 callbackUri = callbackUri,
                 mimeType = null,
                 aspectRatio = null,
-                proxyPort = accountViewModel.proxyPortFor(media),
+                proxyPort = accountViewModel.proxyPortForVideo(media),
                 keepPlaying = false,
                 waveformData = waveform,
             ) { mediaItem ->
