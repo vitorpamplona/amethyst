@@ -1784,7 +1784,7 @@ class Account(
         }
 
         scope.launch {
-            LocalCache.live.newEventBundles.collect { newNotes ->
+            cache.live.newEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
                     newNotesPreProcessor.runNew(newNotes)
@@ -1793,7 +1793,7 @@ class Account(
         }
 
         scope.launch {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
+            cache.live.deletedEventBundles.collect { newNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} deletedEventBundle Update with ${newNotes.size} new notes") {
                     newNotesPreProcessor.runDeleted(newNotes)
                 }
