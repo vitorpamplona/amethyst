@@ -156,6 +156,16 @@ class HomeLiveFilter(
     ): Boolean {
         val createdAt = note.createdAt() ?: return false
         val noteEvent = note.event
+
+        if (noteEvent is LiveActivitiesChatMessageEvent) {
+            val stream = noteEvent.activityAddress()
+            if (stream == null) return false
+            val streamChannel = LocalCache.getLiveActivityChannelIfExists(stream)
+            if (streamChannel == null) return false
+
+            if (streamChannel.info?.status() != StatusTag.STATUS.LIVE) return false
+        }
+
         return (noteEvent is EphemeralChatEvent || noteEvent is LiveActivitiesChatMessageEvent) &&
             createdAt > timeLimit &&
             filterParams.match(noteEvent, note.relays)
