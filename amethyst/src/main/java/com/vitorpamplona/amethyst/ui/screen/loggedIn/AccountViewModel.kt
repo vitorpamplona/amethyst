@@ -967,7 +967,7 @@ class AccountViewModel(
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    private fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(key: HexKey): Note = LocalCache.getOrCreateNote(key)
 

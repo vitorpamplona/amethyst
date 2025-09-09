@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 fun PublicChatChannelView(
     channelId: String?,
     draft: Note? = null,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -56,6 +57,7 @@ fun PublicChatChannelView(
         PrepareChannelViewModels(
             baseChannel = it,
             draft = draft,
+            replyTo = replyTo,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -66,6 +68,7 @@ fun PublicChatChannelView(
 fun PrepareChannelViewModels(
     baseChannel: PublicChatChannel,
     draft: Note? = null,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -86,6 +89,12 @@ fun PrepareChannelViewModels(
     if (draft != null) {
         LaunchedEffect(draft, channelScreenModel, accountViewModel) {
             channelScreenModel.editFromDraft(draft)
+        }
+    }
+
+    if (replyTo != null) {
+        LaunchedEffect(replyTo, channelScreenModel, accountViewModel) {
+            channelScreenModel.reply(replyTo)
         }
     }
 

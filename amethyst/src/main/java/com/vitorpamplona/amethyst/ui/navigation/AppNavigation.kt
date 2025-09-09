@@ -151,6 +151,7 @@ fun AppNavigation(
                 PublicChatChannelScreen(
                     it.id,
                     it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
                     accountViewModel,
                     nav,
                 )
@@ -160,6 +161,7 @@ fun AppNavigation(
                 LiveActivityChannelScreen(
                     Address(it.kind, it.pubKeyHex, it.dTag),
                     draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
                     accountViewModel,
                     nav,
                 )
@@ -170,6 +172,7 @@ fun AppNavigation(
                     EphemeralChatScreen(
                         channelId = RoomId(it.id, relay),
                         draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

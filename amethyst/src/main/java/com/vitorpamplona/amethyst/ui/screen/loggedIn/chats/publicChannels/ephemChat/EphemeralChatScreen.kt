@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 fun EphemeralChatScreen(
     channelId: RoomId,
     draft: Note? = null,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -49,7 +50,7 @@ fun EphemeralChatScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it).statusBarsPadding()) {
-            EphemeralChatChannelView(channelId, draft, accountViewModel, nav)
+            EphemeralChatChannelView(channelId, draft, replyTo, accountViewModel, nav)
         }
     }
 }
