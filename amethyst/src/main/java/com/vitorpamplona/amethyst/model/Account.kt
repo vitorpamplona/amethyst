@@ -136,6 +136,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -225,6 +226,7 @@ class Account(
     val signer: NostrSigner,
     val geolocationFlow: StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
+    val otsVerifCache: VerificationStateCache,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
@@ -335,7 +337,7 @@ class Account(
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
-    val newNotesPreProcessor = EventProcessor(this, LocalCache)
+    val newNotesPreProcessor = EventProcessor(this, otsVerifCache, cache)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(

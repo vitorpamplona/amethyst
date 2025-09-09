@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.util.Log
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -30,6 +29,8 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -43,10 +44,11 @@ import kotlinx.coroutines.CancellationException
 
 class EventProcessor(
     private val account: Account,
+    private val otsVerifCache: VerificationStateCache,
     private val cache: LocalCache,
 ) {
     private val chatHandler = ChatHandler(account.chatroomList)
-    private val otsHandler = OtsEventHandler(account)
+    private val otsHandler = OtsEventHandler(account.otsResolverBuilder, otsVerifCache)
 
     private val draftHandler = DraftEventHandler(account, cache)
 
@@ -179,14 +181,15 @@ class ChatHandler(
 }
 
 class OtsEventHandler(
-    private val account: Account,
+    private val otsResolverBuilder: OkHttpOtsResolverBuilder,
+    private val otsVerifCache: VerificationStateCache,
 ) : EventHandler<OtsEvent> {
     override suspend fun add(
         event: OtsEvent,
         eventNote: Note,
         publicNote: Note,
     ) {
-        Amethyst.instance.otsVerifCache.cacheVerify(event, account.otsResolverBuilder)
+        otsVerifCache.cacheVerify(event, otsResolverBuilder)
     }
 }
 

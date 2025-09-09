@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -94,6 +95,7 @@ class AccountCacheState(
             signer = signer,
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
+            otsVerifCache = VerificationStateCache(),
             cache = cache,
             client = client,
             scope =

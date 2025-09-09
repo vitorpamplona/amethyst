@@ -106,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -1698,6 +1699,7 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
             nwcFilterAssembler = nwcFilters,
+            otsVerifCache = VerificationStateCache(),
             cache = LocalCache,
             client = client,
             scope = scope,
@@ -1739,6 +1741,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
             nwcFilterAssembler = nwcFilters,
+            otsVerifCache = VerificationStateCache(),
             cache = LocalCache,
             client = EmptyNostrClient,
             scope = scope,
