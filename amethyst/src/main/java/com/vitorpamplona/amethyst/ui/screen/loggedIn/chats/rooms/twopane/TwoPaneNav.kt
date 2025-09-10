@@ -30,7 +30,7 @@ import kotlin.reflect.KClass
 
 class TwoPaneNav(
     val nav: INav,
-    override val scope: CoroutineScope,
+    override val navigationScope: CoroutineScope,
 ) : INav {
     override val drawerState: DrawerState = nav.drawerState
 
@@ -45,7 +45,7 @@ class TwoPaneNav(
     }
 
     override fun nav(computeRoute: suspend () -> Route?) {
-        scope.launch {
+        navigationScope.launch {
             val route = computeRoute()
             if (route != null) {
                 if (route is Route.Room || route is Route.PublicChatChannel) {
