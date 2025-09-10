@@ -27,16 +27,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -226,25 +219,41 @@ private fun ManyImageGallery(
     roundedCorner: Boolean,
     modifier: Modifier,
 ) {
-    Surface(
+    // Calculate optimal grid layout for many images
+    val columns =
+        when {
+            images.size <= 6 -> 3 // 3 columns for 5-6 images
+            images.size <= 9 -> 3 // 3 columns for 7-9 images
+            else -> 4 // 4 columns for 10+ images
+        }
+
+    val rows = (images.size + columns - 1) / columns // Ceiling division
+
+    Column(
         modifier = modifier.aspectRatio(4f / 3f),
-        color = MaterialTheme.colorScheme.surface,
+        verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(100.dp),
-            verticalItemSpacing = Size5dp,
-            horizontalArrangement = Arrangement.spacedBy(Size5dp),
-            modifier = Modifier.padding(Size5dp),
-        ) {
-            items(images) { image ->
-                GalleryImage(
-                    image = image,
-                    allImages = images,
-                    modifier = Modifier.aspectRatio(1f),
-                    roundedCorner = roundedCorner,
-                    contentScale = ContentScale.Crop,
-                    accountViewModel = accountViewModel,
-                )
+        repeat(rows) { rowIndex ->
+            Row(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Size5dp),
+            ) {
+                repeat(columns) { colIndex ->
+                    val imageIndex = rowIndex * columns + colIndex
+                    if (imageIndex < images.size) {
+                        GalleryImage(
+                            image = images[imageIndex],
+                            allImages = images,
+                            modifier = Modifier.weight(1f).fillMaxSize(),
+                            roundedCorner = roundedCorner,
+                            contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
+                        )
+                    } else {
+                        // Empty space for incomplete rows
+                        Box(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
