@@ -42,7 +42,7 @@ class PushMessageReceiver : MessagingReceiver() {
         private val TAG = "Amethyst-OSSPushReceiver"
     }
 
-    private val appContext = Amethyst.instance.applicationContext
+    private val appContext = Amethyst.instance.appContext
     private val scope = Amethyst.instance.applicationIOScope
     private val eventCache = LruCache<String, String>(100)
     private val pushHandler = PushDistributorHandler

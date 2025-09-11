@@ -217,7 +217,7 @@ fun PushNotificationSettingsRow(sharedPrefs: UiSettingsFlow) {
         SettingsRow(
             R.string.push_server_title,
             R.string.push_server_explainer,
-            selectedItens = readableListWithExplainer,
+            selectedItems = readableListWithExplainer,
             selectedIndex = list.indexOf(currentDistributor),
         ) { index ->
             if (list[index] == "None") {
