@@ -22,31 +22,37 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.collections.immutable.ImmutableList
 
+private const val ASPECT_RATIO = 4f / 3f
+private val IMAGE_SPACING: Dp = Size5dp
+
 @Composable
 private fun GalleryImage(
     image: MediaUrlImage,
     allImages: ImmutableList<MediaUrlImage>,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     roundedCorner: Boolean,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
@@ -69,61 +75,33 @@ fun ImageGallery(
     modifier: Modifier = Modifier,
     roundedCorner: Boolean = true,
 ) {
-    // Add vertical padding around the entire gallery for better text separation
+    if (images.isEmpty()) return
+
     Column(modifier = modifier.padding(vertical = Size10dp)) {
-        when {
-            images.isEmpty() -> {
-                // No images to display
-            }
-            images.size == 1 -> {
-                // Single image - display full width
-                GalleryImage(
-                    image = images.first(),
-                    allImages = images,
-                    modifier = Modifier.fillMaxWidth(),
-                    roundedCorner = roundedCorner,
-                    contentScale = ContentScale.FillWidth,
-                    accountViewModel = accountViewModel,
-                )
-            }
-            images.size == 2 -> {
-                // Two images - side by side in 4:3 ratio
-                TwoImageGallery(
-                    images = images,
-                    accountViewModel = accountViewModel,
-                    roundedCorner = roundedCorner,
-                    modifier = Modifier,
-                )
-            }
-            images.size == 3 -> {
-                // Three images - one large, two small
-                ThreeImageGallery(
-                    images = images,
-                    accountViewModel = accountViewModel,
-                    roundedCorner = roundedCorner,
-                    modifier = Modifier,
-                )
-            }
-            images.size == 4 -> {
-                // Four images - 2x2 grid
-                FourImageGallery(
-                    images = images,
-                    accountViewModel = accountViewModel,
-                    roundedCorner = roundedCorner,
-                    modifier = Modifier,
-                )
-            }
-            else -> {
-                // Many images - use staggered grid with 4:3 ratio
-                ManyImageGallery(
-                    images = images,
-                    accountViewModel = accountViewModel,
-                    roundedCorner = roundedCorner,
-                    modifier = Modifier,
-                )
-            }
+        when (images.size) {
+            1 -> SingleImageGallery(images, accountViewModel, roundedCorner)
+            2 -> TwoImageGallery(images, accountViewModel, roundedCorner)
+            3 -> ThreeImageGallery(images, accountViewModel, roundedCorner)
+            4 -> FourImageGallery(images, accountViewModel, roundedCorner)
+            else -> ManyImageGallery(images, accountViewModel, roundedCorner)
         }
     }
+}
+
+@Composable
+private fun SingleImageGallery(
+    images: ImmutableList<MediaUrlImage>,
+    accountViewModel: AccountViewModel,
+    roundedCorner: Boolean,
+) {
+    GalleryImage(
+        image = images.first(),
+        allImages = images,
+        modifier = Modifier.fillMaxWidth(),
+        roundedCorner = roundedCorner,
+        contentScale = ContentScale.FillWidth,
+        accountViewModel = accountViewModel,
+    )
 }
 
 @Composable
@@ -131,15 +109,14 @@ private fun TwoImageGallery(
     images: ImmutableList<MediaUrlImage>,
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
-    modifier: Modifier,
 ) {
     Row(
-        modifier = modifier.aspectRatio(4f / 3f),
-        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+        modifier = Modifier.aspectRatio(ASPECT_RATIO),
+        horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
     ) {
-        repeat(2) { index ->
+        images.take(2).forEach { image ->
             GalleryImage(
-                image = images[index],
+                image = image,
                 allImages = images,
                 modifier = Modifier.weight(1f).fillMaxSize(),
                 roundedCorner = roundedCorner,
@@ -155,13 +132,11 @@ private fun ThreeImageGallery(
     images: ImmutableList<MediaUrlImage>,
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
-    modifier: Modifier,
 ) {
     Row(
-        modifier = modifier.aspectRatio(4f / 3f),
-        horizontalArrangement = Arrangement.spacedBy(Size5dp),
+        modifier = Modifier.aspectRatio(ASPECT_RATIO),
+        horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
     ) {
-        // Large image on the left
         GalleryImage(
             image = images[0],
             allImages = images,
@@ -171,14 +146,13 @@ private fun ThreeImageGallery(
             accountViewModel = accountViewModel,
         )
 
-        // Two smaller images on the right
         Column(
             modifier = Modifier.weight(1f).fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(Size5dp),
+            verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
         ) {
-            repeat(2) { index ->
+            images.drop(1).forEach { image ->
                 GalleryImage(
-                    image = images[index + 1],
+                    image = image,
                     allImages = images,
                     modifier = Modifier.weight(1f).fillMaxSize(),
                     roundedCorner = roundedCorner,
@@ -195,21 +169,19 @@ private fun FourImageGallery(
     images: ImmutableList<MediaUrlImage>,
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
-    modifier: Modifier,
 ) {
     Column(
-        modifier = modifier.aspectRatio(4f / 3f),
-        verticalArrangement = Arrangement.spacedBy(Size5dp),
+        modifier = Modifier.aspectRatio(ASPECT_RATIO),
+        verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
     ) {
-        repeat(2) { rowIndex ->
+        images.chunked(2).forEach { rowImages ->
             Row(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
             ) {
-                repeat(2) { colIndex ->
-                    val imageIndex = rowIndex * 2 + colIndex
+                rowImages.forEach { image ->
                     GalleryImage(
-                        image = images[imageIndex],
+                        image = image,
                         allImages = images,
                         modifier = Modifier.weight(1f).fillMaxSize(),
                         roundedCorner = roundedCorner,
@@ -227,71 +199,65 @@ private fun ManyImageGallery(
     images: ImmutableList<MediaUrlImage>,
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
-    modifier: Modifier,
 ) {
-    // Calculate optimal grid layout for many images
     val columns =
         when {
-            images.size <= 6 -> 3 // 3 columns for 5-6 images
-            images.size <= 9 -> 3 // 3 columns for 7-9 images
-            else -> 4 // 4 columns for 10+ images
+            images.size <= 9 -> 3
+            else -> 4
         }
 
     if (images.size <= 20) {
-        // For smaller sets, use non-lazy Column/Row approach (simpler, no constraint issues)
-        val rows = (images.size + columns - 1) / columns // Ceiling division
-
-        Column(
-            modifier = modifier,
-            verticalArrangement = Arrangement.spacedBy(Size5dp),
-        ) {
-            repeat(rows) { rowIndex ->
+        // Non-lazy for small sets
+        Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+            images.chunked(columns).forEach { rowImages ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Size5dp),
                 ) {
-                    repeat(columns) { colIndex ->
-                        val imageIndex = rowIndex * columns + colIndex
-                        if (imageIndex < images.size) {
-                            GalleryImage(
-                                image = images[imageIndex],
-                                allImages = images,
-                                modifier = Modifier.weight(1f).aspectRatio(1f),
-                                roundedCorner = roundedCorner,
-                                contentScale = ContentScale.Crop,
-                                accountViewModel = accountViewModel,
-                            )
-                        } else {
-                            // Empty space for incomplete rows
-                            Box(modifier = Modifier.weight(1f))
-                        }
+                    rowImages.forEach { image ->
+                        GalleryImage(
+                            image = image,
+                            allImages = images,
+                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                            roundedCorner = roundedCorner,
+                            contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                    repeat(columns - rowImages.size) {
+                        Spacer(Modifier.weight(1f))
                     }
                 }
             }
         }
     } else {
-        // For larger sets, use LazyVerticalGrid with explicit height constraint
-        val rows = (images.size + columns - 1) / columns
-        // Calculate height: (image height + spacing) * rows - last spacing
-        // Assume square images with 5dp spacing
-        val gridHeight = (100 * rows + 5 * (rows - 1)).dp
+        // Lazy for large sets — expands fully, no independent scroll
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val totalSpacing = Size5dp * (columns - 1)
+            val imageSize = (maxWidth - totalSpacing) / columns
+            val rows = (images.size + columns - 1) / columns
+            val gridHeight = (imageSize * rows) + (Size5dp * (rows - 1))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            modifier = modifier.height(gridHeight), // Explicit height constraint
-            verticalArrangement = Arrangement.spacedBy(Size5dp),
-            horizontalArrangement = Arrangement.spacedBy(Size5dp),
-            userScrollEnabled = false,
-        ) {
-            items(images) { image ->
-                GalleryImage(
-                    image = image,
-                    allImages = images,
-                    modifier = Modifier.aspectRatio(1f),
-                    roundedCorner = roundedCorner,
-                    contentScale = ContentScale.Crop,
-                    accountViewModel = accountViewModel,
-                )
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(gridHeight),
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+                horizontalArrangement = Arrangement.spacedBy(Size5dp),
+                userScrollEnabled = false,
+            ) {
+                items(images) { image ->
+                    GalleryImage(
+                        image = image,
+                        allImages = images,
+                        modifier = Modifier.size(imageSize),
+                        roundedCorner = roundedCorner,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
     }
