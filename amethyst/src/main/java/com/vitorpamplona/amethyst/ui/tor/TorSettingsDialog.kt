@@ -168,6 +168,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 
         AnimatedVisibility(
             visible = dialogViewModel.torType.value == TorType.EXTERNAL,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
         ) {
             SettingsRow(
                 R.string.orbot_socks_port,
@@ -194,6 +196,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 
     AnimatedVisibility(
         visible = dialogViewModel.torType.value != TorType.OFF,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 5.dp),
