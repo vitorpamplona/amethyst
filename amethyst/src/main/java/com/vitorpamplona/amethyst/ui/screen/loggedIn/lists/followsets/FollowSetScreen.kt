@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -29,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.DropdownMenu
@@ -52,7 +56,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
@@ -65,8 +72,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,7 +82,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowSetScreen(
-    // TODO: Investigate passing follow set properties rather than follow set object.
     selectedSetIdentifier: String,
     accountViewModel: AccountViewModel,
     navigator: INav,
@@ -88,60 +95,44 @@ fun FollowSetScreen(
     val followSetState by followSetViewModel.feedContent.collectAsState()
     val uiScope = rememberCoroutineScope()
 
-    val selectedSet by remember(followSetState) {
-        derivedStateOf {
-            uiScope.launch {
-                delay(500L)
-            }
-            val note =
-                followSetViewModel.getFollowSetNote(
-                    selectedSetIdentifier,
-                    accountViewModel.account,
-                )
-
-            if (note != null) {
-                val event = note.event as PeopleListEvent
-                println("Found list, with title: ${event.nameOrTitle()}")
-                val selectedFollowSet =
-                    FollowSet.mapEventToSet(
-                        event,
-                        accountViewModel.account.signer,
+    val selectedSetState =
+        remember(followSetState) {
+            derivedStateOf {
+                uiScope.launch {
+                    delay(500L)
+                }
+                val note =
+                    followSetViewModel.getFollowSetNote(
+                        selectedSetIdentifier,
+                        accountViewModel.account,
                     )
-                return@derivedStateOf selectedFollowSet
-            } else {
-                null
+
+                if (note != null) {
+                    val event = note.event as PeopleListEvent
+                    println("Found list, with title: ${event.nameOrTitle()}")
+                    val selectedFollowSet =
+                        FollowSet.mapEventToSet(
+                            event,
+                            accountViewModel.account.signer,
+                        )
+                    return@derivedStateOf selectedFollowSet
+                } else {
+                    null
+                }
             }
         }
-    }
 
     BackHandler { navigator.popBack() }
 
     when {
-        selectedSet != null -> {
-            // TODO: Investigate moving the mapping function to a VM.(related to above TODO).
+        selectedSetState.value != null -> {
+            val selectedSet = selectedSetState.value
             val users = selectedSet!!.profileList.mapToUsers(accountViewModel).filterNotNull()
             Scaffold(
                 topBar = {
                     TopAppBar(
                         title = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = selectedSet!!.title,
-                                )
-                                Icon(
-                                    painter =
-                                        painterResource(
-                                            when (selectedSet!!.listVisibility) {
-                                                ListVisibility.Public -> R.drawable.ic_public
-                                                ListVisibility.Private -> R.drawable.lock
-                                                ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                                            },
-                                        ),
-                                    contentDescription = null,
-                                )
-                            }
+                            TitleAndDescription(followSet = selectedSet)
                         },
                         navigationIcon = {
                             BackButton(
@@ -149,13 +140,18 @@ fun FollowSetScreen(
                             )
                         },
                         actions = {
-                            // TODO: Fix onSaveList and onBroadcastList
                             ListActionsMenuButton(
-                                onSaveList = {},
-                                onBroadcastList = {},
+                                onBroadcastList = {
+                                    val updatedSetNote =
+                                        followSetViewModel.getFollowSetNote(
+                                            selectedSet.identifierTag,
+                                            accountViewModel.account,
+                                        )
+                                    accountViewModel.broadcast(updatedSetNote!!)
+                                },
                                 onDeleteList = {
                                     followSetViewModel.deleteFollowSet(
-                                        selectedSet!!,
+                                        selectedSet,
                                         accountViewModel.account,
                                     )
                                 },
@@ -183,7 +179,7 @@ fun FollowSetScreen(
                     onDeleteUser = {
                         followSetViewModel.removeUserFromSet(
                             it,
-                            selectedSet!!,
+                            selectedSet,
                             accountViewModel.account,
                         )
                     },
@@ -193,7 +189,7 @@ fun FollowSetScreen(
             }
         }
 
-        selectedSet == null -> {
+        selectedSetState.value == null -> {
             accountViewModel.toastManager.toast(
                 "Follow Set Error",
                 "Could not find requested follow set",
@@ -205,6 +201,46 @@ fun FollowSetScreen(
 }
 
 fun Set<String>.mapToUsers(accountViewModel: AccountViewModel): List<User?> = map { accountViewModel.checkGetOrCreateUser(it) }
+
+@Composable
+fun TitleAndDescription(
+    modifier: Modifier = Modifier,
+    followSet: FollowSet,
+) {
+    Column(
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = followSet.title,
+            )
+            Spacer(modifier = StdHorzSpacer)
+            Icon(
+                painter =
+                    painterResource(
+                        when (followSet.listVisibility) {
+                            ListVisibility.Public -> R.drawable.ic_public
+                            ListVisibility.Private -> R.drawable.lock
+                            ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
+                        },
+                    ),
+                contentDescription = null,
+            )
+        }
+
+        if (followSet.description != null) {
+            Text(
+                text = followSet.description,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Thin,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
 
 @Composable
 private fun FollowSetListView(
@@ -222,30 +258,60 @@ private fun FollowSetListView(
         state = listState,
     ) {
         itemsIndexed(followSetList, key = { _, item -> item.pubkeyHex }) { _, item ->
-            Row {
-                IconButton(
-                    onClick = {
-                        onDeleteUser(item.pubkeyHex)
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                    )
-                }
-                UserCompose(item, accountViewModel = accountViewModel, nav = nav)
-                HorizontalDivider(
-                    thickness = DividerThickness,
+            FollowSetListItem(
+                modifier = Modifier.animateItem(),
+                user = item,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onDeleteUser = onDeleteUser,
+            )
+        }
+    }
+}
+
+@Composable
+fun FollowSetListItem(
+    modifier: Modifier = Modifier,
+    user: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDeleteUser: (String) -> Unit,
+) {
+    Column(
+        modifier = modifier,
+    ) {
+        Row {
+            UserCompose(
+                user,
+                overallModifier = StdPadding.weight(1f, fill = false),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+            IconButton(
+                onClick = {
+                    onDeleteUser(user.pubkeyHex)
+                },
+                modifier =
+                    StdPadding
+                        .align(Alignment.CenterVertically)
+                        .background(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(size = 5.dp),
+                        ),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
                 )
             }
         }
+        HorizontalDivider()
     }
 }
 
 @Composable
 fun ListActionsMenuButton(
     modifier: Modifier = Modifier,
-    onSaveList: () -> Unit,
     onBroadcastList: () -> Unit,
     onDeleteList: () -> Unit,
 ) {
@@ -258,7 +324,6 @@ fun ListActionsMenuButton(
         ListActionsMenu(
             onCloseMenu = { isActionListOpen.value = false },
             isOpen = isActionListOpen.value,
-            onSaveList = onSaveList,
             onBroadcastList = onBroadcastList,
             onDeleteList = onDeleteList,
         )
@@ -270,7 +335,6 @@ fun ListActionsMenu(
     modifier: Modifier = Modifier,
     onCloseMenu: () -> Unit,
     isOpen: Boolean,
-    onSaveList: () -> Unit,
     onBroadcastList: () -> Unit,
     onDeleteList: () -> Unit,
 ) {
@@ -278,15 +342,6 @@ fun ListActionsMenu(
         expanded = isOpen,
         onDismissRequest = onCloseMenu,
     ) {
-        DropdownMenuItem(
-            text = {
-                Text("Save Changes")
-            },
-            onClick = {
-                onSaveList()
-                onCloseMenu()
-            },
-        )
         DropdownMenuItem(
             text = {
                 Text("Broadcast List")

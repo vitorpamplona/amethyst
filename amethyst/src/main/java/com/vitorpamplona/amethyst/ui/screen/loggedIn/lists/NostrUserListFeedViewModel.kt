@@ -230,7 +230,6 @@ class NostrUserListFeedViewModel(
     private val bundler = BundledUpdate(2000, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-//        refresh()
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
