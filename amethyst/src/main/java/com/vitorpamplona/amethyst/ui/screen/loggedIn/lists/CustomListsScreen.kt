@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -314,7 +315,9 @@ fun NewListCreationDialog(
             }
         },
         text = {
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
                 // For the new list name
                 TextField(
                     value = newListName.value,
@@ -323,7 +326,7 @@ fun NewListCreationDialog(
                         Text("List name")
                     },
                 )
-                Spacer(modifier = StdVertSpacer)
+                Spacer(modifier = DoubleVertSpacer)
                 // For the list description
                 TextField(
                     value =
@@ -331,6 +334,9 @@ fun NewListCreationDialog(
                             if (newListDescription.value != null) newListDescription.value else ""
                         ).toString(),
                     onValueChange = { newListDescription.value = it },
+                    label = {
+                        Text("List description(optional)")
+                    },
                 )
             }
         },
