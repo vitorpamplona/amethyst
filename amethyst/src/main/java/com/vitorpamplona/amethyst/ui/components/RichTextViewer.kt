@@ -329,27 +329,13 @@ fun RenderRegularWithGallery(
 
             if (isImageOnlyParagraph && paragraph.words.isNotEmpty()) {
                 // Collect consecutive image-only paragraphs
-                val imageParagraphs = mutableListOf<ParagraphState>()
-                var j = i
-                while (j < state.paragraphs.size) {
-                    val currentParagraph = state.paragraphs[j]
-                    val isCurrentImageOnly =
-                        currentParagraph.words.all { word ->
-                            word is ImageSegment || word is Base64Segment
-                        }
-                    if (isCurrentImageOnly && currentParagraph.words.isNotEmpty()) {
-                        imageParagraphs.add(currentParagraph)
-                        j++
-                    } else {
-                        break
-                    }
-                }
+                val (imageParagraphs, totalProcessedCount) = collectConsecutiveImageParagraphs(state.paragraphs, i)
 
                 // Combine all image words from consecutive paragraphs
                 val allImageWords = imageParagraphs.flatMap { it.words }.toImmutableList()
 
                 if (allImageWords.size > 1) {
-                    // Multiple images - render as gallery
+                    // Multiple images - render as gallery (no FlowRow wrapper needed)
                     RenderWordsWithImageGallery(
                         allImageWords,
                         state,
@@ -361,63 +347,113 @@ fun RenderRegularWithGallery(
                     )
                 } else {
                     // Single image - render normally
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides
-                            if (paragraph.isRTL) {
-                                LayoutDirection.Rtl
-                            } else {
-                                LayoutDirection.Ltr
-                            },
-                        LocalTextStyle provides LocalTextStyle.current,
-                    ) {
-                        FlowRow(
-                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                        ) {
-                            RenderWordsWithImageGallery(
-                                paragraph.words.toImmutableList(),
-                                state,
-                                backgroundColor,
-                                quotesLeft,
-                                callbackUri,
-                                accountViewModel,
-                                nav,
-                            )
-                        }
-                    }
+                    RenderParagraphWithFlowRow(
+                        paragraph,
+                        paragraph.words.toImmutableList(),
+                        spaceWidth,
+                        state,
+                        backgroundColor,
+                        quotesLeft,
+                        callbackUri,
+                        accountViewModel,
+                        nav,
+                    )
                 }
 
-                i = j // Skip processed paragraphs
+                i += totalProcessedCount // Skip processed paragraphs (including empty ones)
             } else {
                 // Non-image paragraph - render normally
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides
-                        if (paragraph.isRTL) {
-                            LayoutDirection.Rtl
-                        } else {
-                            LayoutDirection.Ltr
-                        },
-                    LocalTextStyle provides LocalTextStyle.current,
-                ) {
-                    FlowRow(
-                        modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                    ) {
-                        RenderWordsWithImageGallery(
-                            paragraph.words.toImmutableList(),
-                            state,
-                            backgroundColor,
-                            quotesLeft,
-                            callbackUri,
-                            accountViewModel,
-                            nav,
-                        )
-                    }
-                }
+                RenderParagraphWithFlowRow(
+                    paragraph,
+                    paragraph.words.toImmutableList(),
+                    spaceWidth,
+                    state,
+                    backgroundColor,
+                    quotesLeft,
+                    callbackUri,
+                    accountViewModel,
+                    nav,
+                )
                 i++
             }
         }
     }
+}
+
+@Composable
+private fun RenderParagraphWithFlowRow(
+    paragraph: ParagraphState,
+    words: ImmutableList<Segment>,
+    spaceWidth: Dp,
+    state: RichTextViewerState,
+    backgroundColor: MutableState<Color>,
+    quotesLeft: Int,
+    callbackUri: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides
+            if (paragraph.isRTL) {
+                LayoutDirection.Rtl
+            } else {
+                LayoutDirection.Ltr
+            },
+        LocalTextStyle provides LocalTextStyle.current,
+    ) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+        ) {
+            RenderWordsWithImageGallery(
+                words,
+                state,
+                backgroundColor,
+                quotesLeft,
+                callbackUri,
+                accountViewModel,
+                nav,
+            )
+        }
+    }
+}
+
+private fun collectConsecutiveImageParagraphs(
+    paragraphs: ImmutableList<ParagraphState>,
+    startIndex: Int,
+): Pair<List<ParagraphState>, Int> {
+    val imageParagraphs = mutableListOf<ParagraphState>()
+    var j = startIndex
+    while (j < paragraphs.size) {
+        val currentParagraph = paragraphs[j]
+        val isEmpty =
+            currentParagraph.words.isEmpty() ||
+                (
+                    currentParagraph.words.size == 1 &&
+                        currentParagraph.words.first() is RegularTextSegment &&
+                        currentParagraph.words
+                            .first()
+                            .segmentText
+                            .isBlank()
+                )
+
+        val isCurrentImageOnly =
+            currentParagraph.words.isNotEmpty() &&
+                currentParagraph.words.all { word ->
+                    word is ImageSegment || word is Base64Segment
+                }
+
+        if (isCurrentImageOnly) {
+            imageParagraphs.add(currentParagraph)
+            j++
+        } else if (isEmpty) {
+            // Skip empty paragraphs but continue looking for consecutive images
+            j++
+        } else {
+            // Hit a non-empty, non-image paragraph - stop collecting
+            break
+        }
+    }
+    return Pair(imageParagraphs, j - startIndex) // Return paragraphs and total processed count
 }
 
 @OptIn(ExperimentalLayoutApi::class)
