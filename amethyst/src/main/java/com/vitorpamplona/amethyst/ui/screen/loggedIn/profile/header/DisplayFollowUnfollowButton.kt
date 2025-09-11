@@ -38,7 +38,7 @@ fun DisplayFollowUnfollowButton(
     val isUserFollowingLoggedIn by observeUserIsFollowing(baseUser, accountViewModel.account.userProfile(), accountViewModel)
 
     if (isLoggedInFollowingUser) {
-        UnfollowButton {
+        UnfollowButton(isInProfileActions = true) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(
                     R.string.read_only_user,
@@ -50,7 +50,7 @@ fun DisplayFollowUnfollowButton(
         }
     } else {
         if (isUserFollowingLoggedIn) {
-            FollowButton(R.string.follow_back) {
+            FollowButton(R.string.follow_back, isInProfileActions = true) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toastManager.toast(
                         R.string.read_only_user,
@@ -61,7 +61,7 @@ fun DisplayFollowUnfollowButton(
                 }
             }
         } else {
-            FollowButton(R.string.follow) {
+            FollowButton(R.string.follow, true) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toastManager.toast(
                         R.string.read_only_user,
