@@ -358,11 +358,8 @@ private fun renderParagraphWithFlowRow(
 ): Int {
     val paragraph = paragraphs[paragraphIndex]
 
-    // Check if this paragraph contains only images
-    val isImageOnlyParagraph =
-        paragraph.words.all { word ->
-            word is ImageSegment || word is Base64Segment
-        }
+    // Check if this paragraph contains only images (ignoring whitespace)
+    val isImageOnlyParagraph = isImageOnlyParagraph(paragraph)
 
     if (isImageOnlyParagraph && paragraph.words.isNotEmpty()) {
         // Collect consecutive image-only paragraphs for gallery
@@ -415,6 +412,22 @@ private fun RenderSingleParagraphWithFlowRow(
     }
 }
 
+private fun isImageOnlyParagraph(paragraph: ParagraphState): Boolean {
+    // A paragraph is "image only" if all non-whitespace words are images
+    val nonWhitespaceWords =
+        paragraph.words.filter { word ->
+            when (word) {
+                is RegularTextSegment -> word.segmentText.isNotBlank()
+                else -> true // All other word types (images, links, etc.) are considered non-whitespace
+            }
+        }
+
+    return nonWhitespaceWords.isNotEmpty() &&
+        nonWhitespaceWords.all { word ->
+            word is ImageSegment || word is Base64Segment
+        }
+}
+
 private fun collectConsecutiveImageParagraphs(
     paragraphs: ImmutableList<ParagraphState>,
     startIndex: Int,
@@ -435,10 +448,7 @@ private fun collectConsecutiveImageParagraphs(
                 )
 
         val isCurrentImageOnly =
-            currentParagraph.words.isNotEmpty() &&
-                currentParagraph.words.all { word ->
-                    word is ImageSegment || word is Base64Segment
-                }
+            currentParagraph.words.isNotEmpty() && isImageOnlyParagraph(currentParagraph)
 
         if (isCurrentImageOnly) {
             imageParagraphs.add(currentParagraph)
@@ -556,13 +566,15 @@ private fun RenderWordsWithImageGallery(
         val word = words[i]
 
         if (word is ImageSegment || word is Base64Segment) {
-            // Collect consecutive images
-            val imageSegments = mutableListOf<Segment>()
-            var j = i
-            while (j < words.size && (words[j] is ImageSegment || words[j] is Base64Segment)) {
-                imageSegments.add(words[j])
-                j++
-            }
+            // Collect consecutive images (skipping whitespace) using takeWhile
+            fun isImageOrWhitespace(segment: Segment): Boolean =
+                segment is ImageSegment ||
+                    segment is Base64Segment ||
+                    (segment is RegularTextSegment && segment.segmentText.isBlank())
+
+            val consecutiveSegments = words.drop(i).takeWhile { isImageOrWhitespace(it) }
+            val imageSegments = consecutiveSegments.filter { it is ImageSegment || it is Base64Segment }
+            val j = i + consecutiveSegments.size
 
             if (imageSegments.size > 1) {
                 // Multiple images - render as gallery
