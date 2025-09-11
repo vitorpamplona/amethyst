@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
+import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlaybackCalculator
 import okhttp3.OkHttpClient
 
 class PlaybackService : MediaSessionService() {
@@ -42,7 +43,11 @@ class PlaybackService : MediaSessionService() {
     @OptIn(UnstableApi::class)
     fun newPool(okHttp: OkHttpClient): MediaSessionPool =
         MediaSessionPool(
-            ExoPlayerPool(ExoPlayerBuilder(okHttp)),
+            exoPlayerPool =
+                ExoPlayerPool(
+                    ExoPlayerBuilder(okHttp),
+                    poolSize = SimultaneousPlaybackCalculator.max(applicationContext),
+                ),
             okHttpClient = okHttp,
             reset = { session, keepPlaying ->
                 (session.player as ExoPlayer).apply {
