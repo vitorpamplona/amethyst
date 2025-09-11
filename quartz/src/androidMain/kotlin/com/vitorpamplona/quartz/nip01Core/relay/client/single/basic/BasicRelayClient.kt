@@ -459,7 +459,7 @@ open class BasicRelayClient(
             )
         }
         socket?.let {
-            Log.d(logTag, "Sending: $str")
+            // Log.d(logTag, "Sending: $str")
             val result = it.send(str)
             listener.onSend(this@BasicRelayClient, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())
