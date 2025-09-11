@@ -334,10 +334,9 @@ class Account(
             privacyState::shouldUseTorForMoneyOperations,
             Amethyst.instance.otsBlockHeightCache,
         )
+    val newNotesPreProcessor = EventProcessor(this, cache)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
-
-    val newNotesPreProcessor = EventProcessor(this, otsVerifCache, cache)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(

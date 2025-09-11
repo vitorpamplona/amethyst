@@ -28,9 +28,6 @@ import com.vitorpamplona.amethyst.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -44,12 +41,9 @@ import kotlinx.coroutines.CancellationException
 
 class EventProcessor(
     private val account: Account,
-    private val otsVerifCache: VerificationStateCache,
     private val cache: LocalCache,
 ) {
     private val chatHandler = ChatHandler(account.chatroomList)
-    private val otsHandler = OtsEventHandler(account.otsResolverBuilder, otsVerifCache)
-
     private val draftHandler = DraftEventHandler(account, cache)
 
     private val giftWrapHandler = GiftWrapEventHandler(account, cache, this)
@@ -75,7 +69,6 @@ class EventProcessor(
     ) {
         when (event) {
             is ChatroomKeyable -> chatHandler.add(event, eventNote, publicNote)
-            is OtsEvent -> otsHandler.add(event, eventNote, publicNote)
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
             is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
@@ -99,7 +92,6 @@ class EventProcessor(
     ) {
         when (event) {
             is ChatroomKeyable -> chatHandler.delete(event, note)
-            is OtsEvent -> otsHandler.delete(event, note)
             is DraftWrapEvent -> draftHandler.delete(event, note)
             is GiftWrapEvent -> giftWrapHandler.delete(event, note)
             is SealedRumorEvent -> sealHandler.delete(event, note)
@@ -177,19 +169,6 @@ class ChatHandler(
         eventNote: Note,
     ) {
         chatroomList.delete(event, eventNote)
-    }
-}
-
-class OtsEventHandler(
-    private val otsResolverBuilder: OkHttpOtsResolverBuilder,
-    private val otsVerifCache: VerificationStateCache,
-) : EventHandler<OtsEvent> {
-    override suspend fun add(
-        event: OtsEvent,
-        eventNote: Note,
-        publicNote: Note,
-    ) {
-        otsVerifCache.cacheVerify(event, otsResolverBuilder)
     }
 }
 
