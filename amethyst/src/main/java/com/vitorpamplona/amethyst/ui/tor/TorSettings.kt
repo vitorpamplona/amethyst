@@ -27,7 +27,7 @@ class TorSettings(
     val externalSocksPort: Int = 9050,
     val onionRelaysViaTor: Boolean = true,
     val dmRelaysViaTor: Boolean = true,
-    val newRelaysViaTor: Boolean = false,
+    val newRelaysViaTor: Boolean = true,
     val trustedRelaysViaTor: Boolean = false,
     val urlPreviewsViaTor: Boolean = false,
     val profilePicsViaTor: Boolean = false,
