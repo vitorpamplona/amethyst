@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
@@ -37,7 +37,7 @@ import java.util.Base64
 class OtsState(
     val signer: NostrSigner,
     val cache: LocalCache,
-    val otsResolver: OkHttpOtsResolverBuilder,
+    val otsResolver: OtsResolverBuilder,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
