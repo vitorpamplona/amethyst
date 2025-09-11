@@ -296,7 +296,7 @@ fun FollowSetListItem(
                         .align(Alignment.CenterVertically)
                         .background(
                             color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(size = 5.dp),
+                            shape = RoundedCornerShape(size = 15.dp),
                         ),
             ) {
                 Icon(
