@@ -43,6 +43,26 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.collections.immutable.ImmutableList
 
 @Composable
+private fun GalleryImage(
+    image: MediaUrlImage,
+    allImages: ImmutableList<MediaUrlImage>,
+    modifier: Modifier,
+    roundedCorner: Boolean,
+    contentScale: ContentScale,
+    accountViewModel: AccountViewModel,
+) {
+    Box(modifier = modifier) {
+        ZoomableContentView(
+            content = image,
+            images = allImages,
+            roundedCorner = roundedCorner,
+            contentScale = contentScale,
+            accountViewModel = accountViewModel,
+        )
+    }
+}
+
+@Composable
 fun ImageGallery(
     images: ImmutableList<MediaUrlImage>,
     accountViewModel: AccountViewModel,
@@ -55,15 +75,14 @@ fun ImageGallery(
         }
         images.size == 1 -> {
             // Single image - display full width
-            Box(modifier = modifier.fillMaxWidth()) {
-                ZoomableContentView(
-                    content = images.first(),
-                    images = images,
-                    roundedCorner = roundedCorner,
-                    contentScale = ContentScale.FillWidth,
-                    accountViewModel = accountViewModel,
-                )
-            }
+            GalleryImage(
+                image = images.first(),
+                allImages = images,
+                modifier = modifier.fillMaxWidth(),
+                roundedCorner = roundedCorner,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
         }
         images.size == 2 -> {
             // Two images - side by side in 4:3 ratio
@@ -116,15 +135,14 @@ private fun TwoImageGallery(
         horizontalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         repeat(2) { index ->
-            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                ZoomableContentView(
-                    content = images[index],
-                    images = images,
-                    roundedCorner = roundedCorner,
-                    contentScale = ContentScale.Crop,
-                    accountViewModel = accountViewModel,
-                )
-            }
+            GalleryImage(
+                image = images[index],
+                allImages = images,
+                modifier = Modifier.weight(1f).fillMaxSize(),
+                roundedCorner = roundedCorner,
+                contentScale = ContentScale.Crop,
+                accountViewModel = accountViewModel,
+            )
         }
     }
 }
@@ -141,15 +159,14 @@ private fun ThreeImageGallery(
         horizontalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         // Large image on the left
-        Box(modifier = Modifier.weight(2f).fillMaxSize()) {
-            ZoomableContentView(
-                content = images[0],
-                images = images,
-                roundedCorner = roundedCorner,
-                contentScale = ContentScale.Crop,
-                accountViewModel = accountViewModel,
-            )
-        }
+        GalleryImage(
+            image = images[0],
+            allImages = images,
+            modifier = Modifier.weight(2f).fillMaxSize(),
+            roundedCorner = roundedCorner,
+            contentScale = ContentScale.Crop,
+            accountViewModel = accountViewModel,
+        )
 
         // Two smaller images on the right
         Column(
@@ -157,15 +174,14 @@ private fun ThreeImageGallery(
             verticalArrangement = Arrangement.spacedBy(Size5dp),
         ) {
             repeat(2) { index ->
-                Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                    ZoomableContentView(
-                        content = images[index + 1],
-                        images = images,
-                        roundedCorner = roundedCorner,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
-                }
+                GalleryImage(
+                    image = images[index + 1],
+                    allImages = images,
+                    modifier = Modifier.weight(1f).fillMaxSize(),
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
             }
         }
     }
@@ -189,15 +205,14 @@ private fun FourImageGallery(
             ) {
                 repeat(2) { colIndex ->
                     val imageIndex = rowIndex * 2 + colIndex
-                    Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                        ZoomableContentView(
-                            content = images[imageIndex],
-                            images = images,
-                            roundedCorner = roundedCorner,
-                            contentScale = ContentScale.Crop,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
+                    GalleryImage(
+                        image = images[imageIndex],
+                        allImages = images,
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        roundedCorner = roundedCorner,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
+                    )
                 }
             }
         }
@@ -222,15 +237,14 @@ private fun ManyImageGallery(
             modifier = Modifier.padding(Size5dp),
         ) {
             items(images) { image ->
-                Box(modifier = Modifier.aspectRatio(1f)) {
-                    ZoomableContentView(
-                        content = image,
-                        images = images,
-                        roundedCorner = roundedCorner,
-                        contentScale = ContentScale.Crop,
-                        accountViewModel = accountViewModel,
-                    )
-                }
+                GalleryImage(
+                    image = image,
+                    allImages = images,
+                    modifier = Modifier.aspectRatio(1f),
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
             }
         }
     }
