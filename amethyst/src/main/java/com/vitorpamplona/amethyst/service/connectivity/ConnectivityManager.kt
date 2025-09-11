@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.connectivity
 
-import android.app.Application
+import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,11 +34,11 @@ import kotlinx.coroutines.flow.stateIn
  * Tor will connect as soon as status is listened to.
  */
 class ConnectivityManager(
-    app: Application,
+    context: Context,
     scope: CoroutineScope,
 ) {
     val status: StateFlow<ConnectivityStatus> =
-        ConnectivityFlow(app).status.distinctUntilChanged().stateIn(
+        ConnectivityFlow(context).status.distinctUntilChanged().stateIn(
             scope,
             SharingStarted.WhileSubscribed(30000),
             ConnectivityStatus.Off,
