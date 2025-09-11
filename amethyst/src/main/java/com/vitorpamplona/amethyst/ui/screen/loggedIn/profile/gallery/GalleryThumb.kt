@@ -297,7 +297,7 @@ fun UrlVideoView(
                 callbackUri = content.uri,
                 mimeType = content.mimeType,
                 aspectRatio = ratio,
-                proxyPort = accountViewModel.proxyPortForVideo(content.url),
+                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(content.url),
             ) { mediaItem ->
                 GetVideoController(
                     mediaItem = mediaItem,

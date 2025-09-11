@@ -18,15 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.connectivity
+package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
-sealed class ConnectivityStatus {
-    data class Active(
-        val networkId: Long,
-        val isMobile: Boolean,
-    ) : ConnectivityStatus()
+import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.produceState
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 
-    object Off : ConnectivityStatus()
+@Composable
+fun loadRelayInfo(relay: NormalizedRelayUrl): State<Nip11RelayInformation> = loadRelayInfo(relay, Amethyst.instance.nip11Cache)
 
-    object StartingService : ConnectivityStatus()
-}
+@Composable
+fun loadRelayInfo(
+    relay: NormalizedRelayUrl,
+    nip11Cache: Nip11CachedRetriever,
+): State<Nip11RelayInformation> =
+    produceState(
+        nip11Cache.getFromCache(relay),
+        relay,
+    ) {
+        nip11Cache.loadRelayInfo(
+            relay = relay,
+            onInfo = {
+                value = it
+            },
+            onError = { url, errorCode, exceptionMessage ->
+                Log.e("RelayInfo", "Error loading relay info for ${relay.url}: $errorCode - $exceptionMessage")
+            },
+        )
+    }

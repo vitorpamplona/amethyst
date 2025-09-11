@@ -96,7 +96,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
@@ -670,7 +669,7 @@ private fun SlidingAnimationCount(
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
+    if (accountViewModel.settings.isPerformanceMode()) {
         TextCount(baseCount, textColor)
     } else {
         AnimatedContent<Int>(
@@ -719,7 +718,7 @@ fun SlidingAnimationAmount(
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
+    if (accountViewModel.settings.isPerformanceMode()) {
         Text(
             text = amount,
             fontSize = Font14SP,

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.tor
 
 import com.vitorpamplona.amethyst.R
 
-class TorSettings(
+data class TorSettings(
     val torType: TorType = TorType.INTERNAL,
     val externalSocksPort: Int = 9050,
     val onionRelaysViaTor: Boolean = true,

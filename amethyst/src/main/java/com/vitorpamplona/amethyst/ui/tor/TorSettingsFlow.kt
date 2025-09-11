@@ -94,6 +94,8 @@ class TorSettingsFlow(
     fun update(torSettings: TorSettings): Boolean {
         var any = false
 
+        println("AABBCC updating 1 $torSettings")
+
         if (torType.value != torSettings.torType) {
             torType.tryEmit(torSettings.torType)
             any = true
@@ -147,6 +149,8 @@ class TorSettingsFlow(
             nip96UploadsViaTor.tryEmit(torSettings.nip96UploadsViaTor)
             any = true
         }
+
+        println("AABBCC updating 2 ${toSettings()}")
 
         return any
     }

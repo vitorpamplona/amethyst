@@ -18,15 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.connectivity
+package com.vitorpamplona.amethyst.model.privacyOptions
 
-sealed class ConnectivityStatus {
-    data class Active(
-        val networkId: Long,
-        val isMobile: Boolean,
-    ) : ConnectivityStatus()
+import okhttp3.OkHttpClient
+import java.net.InetSocketAddress
 
-    object Off : ConnectivityStatus()
+class EmptyRoleBasedHttpClientBuilder : IRoleBasedHttpClientBuilder {
+    val rootOkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
 
-    object StartingService : ConnectivityStatus()
+    override fun proxyPortForVideo(url: String) = (rootOkHttpClient.proxy?.address() as? InetSocketAddress)?.port
+
+    override fun okHttpClientForNip05(url: String) = rootOkHttpClient
+
+    override fun okHttpClientForUploads(url: String) = rootOkHttpClient
+
+    override fun okHttpClientForImage(url: String) = rootOkHttpClient
+
+    override fun okHttpClientForVideo(url: String) = rootOkHttpClient
+
+    override fun okHttpClientForMoney(url: String) = rootOkHttpClient
+
+    override fun okHttpClientForPreview(url: String) = rootOkHttpClient
+
+    override fun okHttpClientForPushRegistration(url: String) = rootOkHttpClient
 }

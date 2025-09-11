@@ -41,7 +41,7 @@ class ConnectivityManager(
         ConnectivityFlow(context).status.distinctUntilChanged().stateIn(
             scope,
             SharingStarted.WhileSubscribed(30000),
-            ConnectivityStatus.Off,
+            ConnectivityStatus.StartingService,
         )
 
     val isMobileOrNull: StateFlow<Boolean?> =

@@ -62,7 +62,7 @@ fun VideoViewInner(
         callbackUri = nostrUriCallback,
         mimeType = mimeType,
         aspectRatio = aspectRatio,
-        proxyPort = accountViewModel.proxyPortForVideo(videoUri),
+        proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(videoUri),
         keepPlaying = true,
         waveformData = waveform,
     ) { mediaItem ->

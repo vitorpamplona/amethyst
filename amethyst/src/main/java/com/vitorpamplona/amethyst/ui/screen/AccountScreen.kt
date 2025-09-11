@@ -34,16 +34,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun AccountScreen(
-    accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-) {
+fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
+    // Pauses relay services when the app pauses
+    ManageRelayServices()
+
     val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
     Log.d("ActivityLifecycle", "AccountScreen $accountState $accountStateViewModel")
@@ -55,9 +56,15 @@ fun AccountScreen(
         when (state) {
             is AccountState.Loading -> LoadingSetup()
             is AccountState.LoggedOff -> LoggedOffSetup(accountStateViewModel)
-            is AccountState.LoggedIn -> LoggedInSetup(state, accountStateViewModel, sharedPreferencesViewModel)
+            is AccountState.LoggedIn -> LoggedInSetup(state, accountStateViewModel)
         }
     }
+}
+
+@Composable
+fun ManageRelayServices() {
+    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -91,14 +98,12 @@ fun LoggedOffSetup(accountStateViewModel: AccountStateViewModel) {
 fun LoggedInSetup(
     state: AccountState.LoggedIn,
     accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
     SetAccountCentricViewModelStore(state) {
         LoggedInPage(
-            state.account,
-            state.route,
-            accountStateViewModel,
-            sharedPreferencesViewModel,
+            account = state.account,
+            route = state.route,
+            accountStateViewModel = accountStateViewModel,
         )
     }
 }

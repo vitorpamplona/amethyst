@@ -20,33 +20,36 @@
  */
 package com.vitorpamplona.amethyst.model.torState
 
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
-import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
+import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import okhttp3.OkHttpClient
 
 class TorRelayState(
-    val trustedRelayState: TrustedRelayListsState,
-    val dmRelayState: DmRelayListState,
-    val settings: AccountSettings,
+    val okHttpClient: DualHttpClientManager,
+    val torSettingsFlow: TorSettingsFlow,
     val scope: CoroutineScope,
 ) {
+    val dmRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+    val trustedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
     val torSettings =
         combine(
-            settings.torSettings.torType,
-            settings.torSettings.onionRelaysViaTor,
-            settings.torSettings.dmRelaysViaTor,
-            settings.torSettings.trustedRelaysViaTor,
-            settings.torSettings.newRelaysViaTor,
+            torSettingsFlow.torType,
+            torSettingsFlow.onionRelaysViaTor,
+            torSettingsFlow.dmRelaysViaTor,
+            torSettingsFlow.trustedRelaysViaTor,
+            torSettingsFlow.newRelaysViaTor,
         ) {
             torType: TorType,
             onionRelaysViaTor: Boolean,
@@ -64,11 +67,11 @@ class TorRelayState(
         }.onStart {
             emit(
                 TorRelaySettings(
-                    torType = settings.torSettings.torType.value,
-                    onionRelaysViaTor = settings.torSettings.onionRelaysViaTor.value,
-                    dmRelaysViaTor = settings.torSettings.dmRelaysViaTor.value,
-                    trustedRelaysViaTor = settings.torSettings.trustedRelaysViaTor.value,
-                    newRelaysViaTor = settings.torSettings.newRelaysViaTor.value,
+                    torType = torSettingsFlow.torType.value,
+                    onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
+                    dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
+                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
+                    newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -76,20 +79,21 @@ class TorRelayState(
                 scope,
                 SharingStarted.Eagerly,
                 TorRelaySettings(
-                    torType = settings.torSettings.torType.value,
-                    onionRelaysViaTor = settings.torSettings.onionRelaysViaTor.value,
-                    dmRelaysViaTor = settings.torSettings.dmRelaysViaTor.value,
-                    trustedRelaysViaTor = settings.torSettings.trustedRelaysViaTor.value,
-                    newRelaysViaTor = settings.torSettings.newRelaysViaTor.value,
+                    torType = torSettingsFlow.torType.value,
+                    onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
+                    dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
+                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
+                    newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
                 ),
             )
 
     val flow =
         combineTransform(
             torSettings,
-            trustedRelayState.flow,
-            dmRelayState.flow,
+            trustedRelays,
+            dmRelays,
         ) { torSettings: TorRelaySettings, trustedRelayList: Set<NormalizedRelayUrl>, dmRelayList: Set<NormalizedRelayUrl> ->
+            println("AABBCC New tor evaluation: $torSettings $trustedRelayList $dmRelayList")
             emit(
                 TorRelayEvaluation(
                     torSettings = torSettings,
@@ -101,8 +105,8 @@ class TorRelayState(
             emit(
                 TorRelayEvaluation(
                     torSettings = torSettings.value,
-                    trustedRelayList = trustedRelayState.flow.value,
-                    dmRelayList = dmRelayState.flow.value,
+                    trustedRelayList = trustedRelays.value,
+                    dmRelayList = dmRelays.value,
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -111,10 +115,12 @@ class TorRelayState(
                 SharingStarted.Eagerly,
                 TorRelayEvaluation(
                     torSettings = torSettings.value,
-                    trustedRelayList = trustedRelayState.flow.value,
-                    dmRelayList = dmRelayState.flow.value,
+                    trustedRelayList = trustedRelays.value,
+                    dmRelayList = dmRelays.value,
                 ),
             )
 
-    fun shouldUseTorForClean(relay: NormalizedRelayUrl) = flow.value.useTor(relay)
+    fun shouldUseTorForRelay(relay: NormalizedRelayUrl) = flow.value.useTor(relay)
+
+    fun okHttpClientForRelay(url: NormalizedRelayUrl): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForRelay(url))
 }

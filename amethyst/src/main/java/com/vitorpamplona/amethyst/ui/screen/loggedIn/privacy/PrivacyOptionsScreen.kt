@@ -28,32 +28,47 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.torSettings
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.tor.PrivacySettingsBody
 import com.vitorpamplona.amethyst.ui.tor.TorDialogViewModel
+import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacyOptionsScreen(
-    accountViewModel: AccountViewModel,
+    torSettingsFlow: TorSettingsFlow,
     nav: INav,
 ) {
     val dialogViewModel = viewModel<TorDialogViewModel>()
 
-    LaunchedEffect(dialogViewModel, accountViewModel) {
-        dialogViewModel.reset(
-            accountViewModel.account.settings.torSettings
-                .toSettings(),
-        )
-    }
+    // runs only once and before the rest of the screen is build
+    // to avoid blinking and animations from the default/previous
+    // state to the current state
+    val init =
+        remember(dialogViewModel) {
+            val torSettings = torSettingsFlow.toSettings()
+            dialogViewModel.reset(torSettings)
+            torSettings
+        }
 
+    PrivacyOptionsScreenContents(dialogViewModel, onPost = torSettingsFlow::update, nav)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PrivacyOptionsScreenContents(
+    dialogViewModel: TorDialogViewModel,
+    onPost: (TorSettings) -> Unit,
+    nav: INav,
+) {
     Scaffold(
         topBar = {
             SavingTopBar(
@@ -62,7 +77,7 @@ fun PrivacyOptionsScreen(
                     nav.popBack()
                 },
                 onPost = {
-                    accountViewModel.setTorSettings(dialogViewModel.save())
+                    onPost(dialogViewModel.save())
                     nav.popBack()
                 },
             )

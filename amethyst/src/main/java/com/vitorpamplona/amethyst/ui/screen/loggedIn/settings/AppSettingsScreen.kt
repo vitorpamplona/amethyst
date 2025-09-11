@@ -24,7 +24,6 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +34,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
@@ -61,11 +63,9 @@ import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.mockSharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
@@ -77,6 +77,55 @@ import kotlinx.collections.immutable.toImmutableMap
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
+
+@Composable
+fun SettingsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    DisappearingScaffold(
+        isInvertedLayout = false,
+        topBar = {
+            TopBarWithBackButton(stringRes(id = R.string.application_preferences), nav::popBack)
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(Modifier.padding(it)) {
+            SettingsScreen(accountViewModel.settings.uiSettingsFlow)
+        }
+    }
+}
+
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
+@Composable
+fun SettingsScreenPreview() {
+    ThemeComparisonRow {
+        SettingsScreen(UiSettingsFlow())
+    }
+}
+
+@Composable
+fun SettingsScreen(sharedPrefs: UiSettingsFlow) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(top = Size10dp, start = Size20dp, end = Size20dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = RowColSpacing,
+    ) {
+        ShowLanguageChoice(sharedPrefs)
+        ShowThemeChoice(sharedPrefs)
+        ShowImagePreviewChoice(sharedPrefs)
+        ShowVideoPlaybackChoice(sharedPrefs)
+        ShowUrlPreviewChoice(sharedPrefs)
+        ShowProfilePictureChoice(sharedPrefs)
+        ImmersiveScrollingChoice(sharedPrefs)
+        FeatureSetChoice(sharedPrefs)
+        GalleryChoice(sharedPrefs)
+        PushNotificationSettingsRow(sharedPrefs)
+    }
+}
 
 fun Context.getLocaleListFromXml(): LocaleListCompat {
     val tagsList = mutableListOf<CharSequence>()
@@ -116,9 +165,8 @@ fun Context.getLangPreferenceDropdownEntries(): ImmutableMap<String, String> {
 
 fun getLanguageIndex(
     languageEntries: ImmutableMap<String, String>,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    language: String?,
 ): Int {
-    val language = sharedPreferencesViewModel.sharedPrefs.language
     var languageIndex: Int
     languageIndex =
         if (language != null) {
@@ -134,48 +182,134 @@ fun getLanguageIndex(
 }
 
 @Composable
-fun SettingsScreen(
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    DisappearingScaffold(
-        isInvertedLayout = false,
-        topBar = {
-            TopBarWithBackButton(stringRes(id = R.string.application_preferences), nav::popBack)
-        },
-        accountViewModel = accountViewModel,
+fun ShowLanguageChoice(sharedPrefs: UiSettingsFlow) {
+    val context = LocalContext.current
+
+    val languageEntries = remember { context.getLangPreferenceDropdownEntries() }
+    val languageList = remember { languageEntries.keys.map { TitleExplainer(it) }.toImmutableList() }
+
+    val language by sharedPrefs.preferredLanguage.collectAsState()
+
+    val languageIndex = getLanguageIndex(languageEntries, language)
+
+    SettingsRow(
+        R.string.language,
+        R.string.language_description,
+        languageList,
+        languageIndex,
     ) {
-        Column(Modifier.padding(it)) {
-            SettingsScreen(sharedPreferencesViewModel)
-        }
-    }
-}
-
-@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
-@Composable
-fun SettingsScreenPreview() {
-    val sharedPreferencesViewModel = mockSharedPreferencesViewModel()
-    ThemeComparisonRow {
-        SettingsScreen(sharedPreferencesViewModel)
+        sharedPrefs.preferredLanguage.tryEmit(languageEntries[languageList[it].title])
     }
 }
 
 @Composable
-fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-    val selectedItens =
+fun ShowThemeChoice(sharedPrefs: UiSettingsFlow) {
+    val themeOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(ThemeType.SYSTEM.resourceId)),
+            TitleExplainer(stringRes(ThemeType.LIGHT.resourceId)),
+            TitleExplainer(stringRes(ThemeType.DARK.resourceId)),
+        )
+
+    val themeIndex by sharedPrefs.theme.collectAsState()
+
+    SettingsRow(
+        R.string.theme,
+        R.string.theme_description,
+        themeOptions,
+        themeIndex.screenCode,
+    ) {
+        sharedPrefs.theme.tryEmit(parseThemeType(it))
+    }
+}
+
+@Composable
+fun ShowImagePreviewChoice(sharedPrefs: UiSettingsFlow) {
+    val connectivityBasedOptions =
         persistentListOf(
             TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
             TitleExplainer(stringRes(ConnectivityType.WIFI_ONLY.resourceId)),
             TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
         )
 
-    val themeItens =
+    val showImagesIndex by sharedPrefs.automaticallyShowImages.collectAsState()
+
+    SettingsRow(
+        R.string.automatically_load_images_gifs,
+        R.string.automatically_load_images_gifs_description,
+        connectivityBasedOptions,
+        showImagesIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyShowImages.tryEmit(parseConnectivityType(it))
+    }
+}
+
+@Composable
+fun ShowVideoPlaybackChoice(sharedPrefs: UiSettingsFlow) {
+    val connectivityBasedOptions =
         persistentListOf(
-            TitleExplainer(stringRes(ThemeType.SYSTEM.resourceId)),
-            TitleExplainer(stringRes(ThemeType.LIGHT.resourceId)),
-            TitleExplainer(stringRes(ThemeType.DARK.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.WIFI_ONLY.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
         )
+
+    val videoIndex by sharedPrefs.automaticallyStartPlayback.collectAsState()
+
+    SettingsRow(
+        R.string.automatically_play_videos,
+        R.string.automatically_play_videos_description,
+        connectivityBasedOptions,
+        videoIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyStartPlayback.tryEmit(parseConnectivityType(it))
+    }
+}
+
+@Composable
+fun ShowUrlPreviewChoice(sharedPrefs: UiSettingsFlow) {
+    val connectivityBasedOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.WIFI_ONLY.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
+        )
+
+    val linkIndex by sharedPrefs.automaticallyShowUrlPreview.collectAsState()
+
+    SettingsRow(
+        R.string.automatically_show_url_preview,
+        R.string.automatically_show_url_preview_description,
+        connectivityBasedOptions,
+        linkIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyShowUrlPreview.tryEmit(parseConnectivityType(it))
+    }
+}
+
+@Composable
+fun ShowProfilePictureChoice(sharedPrefs: UiSettingsFlow) {
+    val profilePictureIndex by sharedPrefs.automaticallyShowProfilePictures.collectAsState()
+
+    val connectivityBasedOptions =
+        persistentListOf(
+            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.WIFI_ONLY.resourceId)),
+            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
+        )
+
+    SettingsRow(
+        R.string.automatically_show_profile_picture,
+        R.string.automatically_show_profile_picture_description,
+        connectivityBasedOptions,
+        profilePictureIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyShowProfilePictures.tryEmit(parseConnectivityType(it))
+    }
+}
+
+@Composable
+fun ImmersiveScrollingChoice(sharedPrefs: UiSettingsFlow) {
+    val hideNavBarsIndex by sharedPrefs.automaticallyHideNavigationBars.collectAsState()
 
     val booleanItems =
         persistentListOf(
@@ -183,6 +317,18 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
         )
 
+    SettingsRow(
+        R.string.automatically_hide_nav_bars,
+        R.string.automatically_hide_nav_bars_description,
+        booleanItems,
+        hideNavBarsIndex.screenCode,
+    ) {
+        sharedPrefs.automaticallyHideNavigationBars.tryEmit(parseBooleanType(it))
+    }
+}
+
+@Composable
+fun FeatureSetChoice(sharedPrefs: UiSettingsFlow) {
     val featureItems =
         persistentListOf(
             TitleExplainer(stringRes(FeatureSetType.COMPLETE.resourceId)),
@@ -190,136 +336,35 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             TitleExplainer(stringRes(FeatureSetType.PERFORMANCE.resourceId)),
         )
 
+    val featureSetIndex by sharedPrefs.featureSet.collectAsState()
+
+    SettingsRow(
+        R.string.ui_style,
+        R.string.ui_style_description,
+        featureItems,
+        featureSetIndex.screenCode,
+    ) {
+        sharedPrefs.featureSet.tryEmit(parseFeatureSetType(it))
+    }
+}
+
+@Composable
+fun GalleryChoice(sharedPrefs: UiSettingsFlow) {
     val galleryItems =
         persistentListOf(
             TitleExplainer(stringRes(ProfileGalleryType.CLASSIC.resourceId)),
             TitleExplainer(stringRes(ProfileGalleryType.MODERN.resourceId)),
         )
 
-    val showImagesIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowImages.screenCode
-    val videoIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyStartPlayback.screenCode
-    val linkIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowUrlPreview.screenCode
-    val hideNavBarsIndex =
-        sharedPreferencesViewModel.sharedPrefs.automaticallyHideNavigationBars.screenCode
-    val profilePictureIndex =
-        sharedPreferencesViewModel.sharedPrefs.automaticallyShowProfilePictures.screenCode
-    val themeIndex = sharedPreferencesViewModel.sharedPrefs.theme.screenCode
+    val galleryIndex by sharedPrefs.gallerySet.collectAsState()
 
-    val context = LocalContext.current
-
-    val languageEntries = remember { context.getLangPreferenceDropdownEntries() }
-    val languageList = remember { languageEntries.keys.map { TitleExplainer(it) }.toImmutableList() }
-    val languageIndex = getLanguageIndex(languageEntries, sharedPreferencesViewModel)
-
-    val featureSetIndex =
-        sharedPreferencesViewModel.sharedPrefs.featureSet.screenCode
-    val galleryIndex =
-        sharedPreferencesViewModel.sharedPrefs.gallerySet.screenCode
-
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(top = Size10dp, start = Size20dp, end = Size20dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    SettingsRow(
+        R.string.gallery_style,
+        R.string.gallery_style_description,
+        galleryItems,
+        galleryIndex.screenCode,
     ) {
-        SettingsRow(
-            R.string.language,
-            R.string.language_description,
-            languageList,
-            languageIndex,
-        ) {
-            sharedPreferencesViewModel.updateLanguage(languageEntries[languageList[it].title])
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.theme,
-            R.string.theme_description,
-            themeItens,
-            themeIndex,
-        ) {
-            sharedPreferencesViewModel.updateTheme(parseThemeType(it))
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.automatically_load_images_gifs,
-            R.string.automatically_load_images_gifs_description,
-            selectedItens,
-            showImagesIndex,
-        ) {
-            sharedPreferencesViewModel.updateAutomaticallyShowImages(parseConnectivityType(it))
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.automatically_play_videos,
-            R.string.automatically_play_videos_description,
-            selectedItens,
-            videoIndex,
-        ) {
-            sharedPreferencesViewModel.updateAutomaticallyStartPlayback(parseConnectivityType(it))
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.automatically_show_url_preview,
-            R.string.automatically_show_url_preview_description,
-            selectedItens,
-            linkIndex,
-        ) {
-            sharedPreferencesViewModel.updateAutomaticallyShowUrlPreview(parseConnectivityType(it))
-        }
-
-        SettingsRow(
-            R.string.automatically_show_profile_picture,
-            R.string.automatically_show_profile_picture_description,
-            selectedItens,
-            profilePictureIndex,
-        ) {
-            sharedPreferencesViewModel.updateAutomaticallyShowProfilePicture(parseConnectivityType(it))
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.automatically_hide_nav_bars,
-            R.string.automatically_hide_nav_bars_description,
-            booleanItems,
-            hideNavBarsIndex,
-        ) {
-            sharedPreferencesViewModel.updateAutomaticallyHideNavBars(parseBooleanType(it))
-        }
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.ui_style,
-            R.string.ui_style_description,
-            featureItems,
-            featureSetIndex,
-        ) {
-            sharedPreferencesViewModel.updateFeatureSetType(parseFeatureSetType(it))
-        }
-        Spacer(modifier = HalfVertSpacer)
-
-        Spacer(modifier = HalfVertSpacer)
-
-        SettingsRow(
-            R.string.gallery_style,
-            R.string.gallery_style_description,
-            galleryItems,
-            galleryIndex,
-        ) {
-            sharedPreferencesViewModel.updateGallerySetType(parseGalleryType(it))
-        }
-
-        PushNotificationSettingsRow(sharedPreferencesViewModel)
+        sharedPrefs.gallerySet.tryEmit(parseGalleryType(it))
     }
 }
 
@@ -327,15 +372,15 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
 fun SettingsRow(
     name: Int,
     description: Int,
-    selectedItens: ImmutableList<TitleExplainer>,
+    selectedItems: ImmutableList<TitleExplainer>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
     SettingsRow(name, description) {
         TextSpinner(
             label = "",
-            placeholder = selectedItens[selectedIndex].title,
-            options = selectedItens,
+            placeholder = selectedItems[selectedIndex].title,
+            options = selectedItems,
             onSelect = onSelect,
             modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
         )

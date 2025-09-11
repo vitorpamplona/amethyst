@@ -24,7 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
 
 @Stable
-data class Settings(
+data class UiSettings(
     val theme: ThemeType = ThemeType.SYSTEM,
     val preferredLanguage: String? = null,
     val automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,

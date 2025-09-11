@@ -18,15 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.connectivity
+package com.vitorpamplona.amethyst.service
 
-sealed class ConnectivityStatus {
-    data class Active(
-        val networkId: Long,
-        val isMobile: Boolean,
-    ) : ConnectivityStatus()
+import android.content.Context
+import java.io.File
 
-    object Off : ConnectivityStatus()
-
-    object StartingService : ConnectivityStatus()
+fun Context.safeCacheDir(): File {
+    val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
+    return cacheDir.apply { mkdirs() }
 }

@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
 
 class LoginViewModel : ViewModel() {
     lateinit var accountStateViewModel: AccountStateViewModel
@@ -39,7 +38,6 @@ class LoginViewModel : ViewModel() {
     var acceptedTerms by mutableStateOf(false)
     var termsAcceptanceIsRequiredError by mutableStateOf(false)
 
-    var torSettings by mutableStateOf(TorSettings())
     var offerTemporaryLogin by mutableStateOf(false)
     var isTemporary by mutableStateOf(false)
 
@@ -77,7 +75,6 @@ class LoginViewModel : ViewModel() {
         processingLogin = false
         isTemporary = false
         offerTemporaryLogin = false
-        torSettings = TorSettings()
         isFirstLogin = false
     }
 
@@ -96,10 +93,6 @@ class LoginViewModel : ViewModel() {
     fun updatePassword(newPassword: TextFieldValue) {
         password = newPassword
         errorManager.clearErrors()
-    }
-
-    fun updateTorSettings(newTorSettings: TorSettings) {
-        torSettings = newTorSettings
     }
 
     fun updateAcceptedTerms(newAcceptedTerms: Boolean) {
@@ -140,7 +133,6 @@ class LoginViewModel : ViewModel() {
             accountStateViewModel.login(
                 key = key.text,
                 password = password.text,
-                torSettings = torSettings,
                 transientAccount = isTemporary,
             ) {
                 processingLogin = false
@@ -158,7 +150,6 @@ class LoginViewModel : ViewModel() {
             processingLogin = true
             accountStateViewModel.login(
                 key = key.text,
-                torSettings = torSettings,
                 transientAccount = isTemporary,
                 loginWithExternalSigner = true,
                 packageName = packageName,

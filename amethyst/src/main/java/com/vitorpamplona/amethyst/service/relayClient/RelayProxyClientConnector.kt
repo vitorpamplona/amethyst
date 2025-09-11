@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
-import com.vitorpamplona.amethyst.service.okhttp.ProxySettingsAnchor
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -45,7 +44,7 @@ import net.freehaven.tor.control.TorControlCommands
 import okhttp3.OkHttpClient
 
 class RelayProxyClientConnector(
-    val torProxySettingsAnchor: ProxySettingsAnchor,
+    val torEvaluator: StateFlow<TorRelayEvaluation>,
     val okHttpClients: DualHttpClientManager,
     val connManager: ConnectivityManager,
     val client: INostrClient,
@@ -53,7 +52,7 @@ class RelayProxyClientConnector(
     val scope: CoroutineScope,
 ) {
     data class RelayServiceInfra(
-        val torSettings: StateFlow<TorRelayEvaluation>,
+        val evaluator: TorRelayEvaluation,
         val torConnection: OkHttpClient,
         val clearConnection: OkHttpClient,
         val connectivity: ConnectivityStatus,
@@ -62,7 +61,7 @@ class RelayProxyClientConnector(
     @OptIn(FlowPreview::class)
     val relayServices =
         combine(
-            torProxySettingsAnchor.flow,
+            torEvaluator,
             okHttpClients.defaultHttpClient,
             okHttpClients.defaultHttpClientWithoutProxy,
             connManager.status,
@@ -70,7 +69,9 @@ class RelayProxyClientConnector(
             RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity)
         }.debounce(100)
             .onEach {
-                if (it.connectivity is ConnectivityStatus.Off) {
+                if (it.connectivity is ConnectivityStatus.StartingService) {
+                    // ignore
+                } else if (it.connectivity is ConnectivityStatus.Off) {
                     Log.d("ManageRelayServices", "Pausing Relay Services ${it.connectivity}")
                     if (client.isActive()) {
                         client.disconnect()

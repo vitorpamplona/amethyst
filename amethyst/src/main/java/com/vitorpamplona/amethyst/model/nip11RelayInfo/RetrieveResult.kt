@@ -18,37 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip03Timestamp
+package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
-import android.util.LruCache
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-class VerificationStateCache(
-    val otsResolverBuilder: OtsResolverBuilder,
+sealed class RetrieveResult(
+    val data: Nip11RelayInformation,
+    val time: Long,
 ) {
-    private val cache = LruCache<HexKey, VerificationState>(200)
+    class Error(
+        data: Nip11RelayInformation,
+        val error: Nip11Retriever.ErrorCode,
+        val msg: String? = null,
+    ) : RetrieveResult(data, TimeUtils.now())
 
-    fun verify(event: OtsEvent): VerificationState {
-        cache.put(event.id, VerificationState.Verifying)
-        return event.verifyState(otsResolverBuilder.build()).also { cache.put(event.id, it) }
-    }
+    class Success(
+        data: Nip11RelayInformation,
+    ) : RetrieveResult(data, TimeUtils.now())
 
-    fun cacheVerify(event: OtsEvent): VerificationState =
-        when (val verif = cache[event.id]) {
-            is VerificationState.Verifying -> verif
-            is VerificationState.Verified -> verif
-            is VerificationState.NetworkError -> {
-                // try again in 5 mins
-                if (verif.time < TimeUtils.fiveMinutesAgo()) {
-                    event.verifyState(otsResolverBuilder.build()).also { cache.put(event.id, it) }
-                } else {
-                    verify(event)
-                }
-            }
-            is VerificationState.Error -> verif
-            else -> {
-                verify(event)
-            }
-        }
+    class Loading(
+        data: Nip11RelayInformation,
+    ) : RetrieveResult(data, TimeUtils.now())
+
+    class Empty(
+        data: Nip11RelayInformation,
+    ) : RetrieveResult(data, TimeUtils.now())
+
+    fun isValid() = time > TimeUtils.oneHourAgo()
 }

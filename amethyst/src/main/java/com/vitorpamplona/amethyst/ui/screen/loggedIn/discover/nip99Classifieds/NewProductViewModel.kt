@@ -541,10 +541,9 @@ open class NewProductViewModel :
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaDescription.downloadAndPrepare(
-                item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url) ?: false) },
-            )
+            iMetaDescription.downloadAndPrepare(item.link.url) {
+                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link.url)
+            }
         }
 
         message = message.replaceCurrentWord(wordToInsert)

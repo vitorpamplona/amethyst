@@ -18,15 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.connectivity
+package com.vitorpamplona.amethyst.model.privacyOptions
 
-sealed class ConnectivityStatus {
-    data class Active(
-        val networkId: Long,
-        val isMobile: Boolean,
-    ) : ConnectivityStatus()
+import okhttp3.OkHttpClient
+import java.net.InetSocketAddress
 
-    object Off : ConnectivityStatus()
+class SingleRoleBasedHttpClientBuilder(
+    val okHttpClient: OkHttpClient,
+) : IRoleBasedHttpClientBuilder {
+    override fun proxyPortForVideo(url: String) = (okHttpClient.proxy?.address() as? InetSocketAddress)?.port
 
-    object StartingService : ConnectivityStatus()
+    override fun okHttpClientForNip05(url: String) = okHttpClient
+
+    override fun okHttpClientForUploads(url: String) = okHttpClient
+
+    override fun okHttpClientForImage(url: String) = okHttpClient
+
+    override fun okHttpClientForVideo(url: String) = okHttpClient
+
+    override fun okHttpClientForMoney(url: String) = okHttpClient
+
+    override fun okHttpClientForPreview(url: String) = okHttpClient
+
+    override fun okHttpClientForPushRegistration(url: String) = okHttpClient
 }

@@ -311,9 +311,9 @@ private suspend fun saveMediaToGallery(
             mimeType = content.mimeType,
             okHttpClient = {
                 if (isImage) {
-                    accountViewModel.okHttpClientForImage(it)
+                    accountViewModel.httpClientBuilder.okHttpClientForImage(it)
                 } else {
-                    accountViewModel.okHttpClientForVideo(it)
+                    accountViewModel.httpClientBuilder.okHttpClientForVideo(it)
                 }
             },
             localContext,

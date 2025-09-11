@@ -55,8 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -294,7 +293,7 @@ private fun DisplaySearchResults(
                 channelLastContent = item.summary(),
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 onClick = { nav.nav(routeFor(item)) },
             )
 
@@ -308,7 +307,7 @@ private fun DisplaySearchResults(
             ephemeralChannels,
             key = { _, item -> "ephem" + item.roomId.toKey() },
         ) { _, item ->
-            val relayInfo by loadRelayInfo(item.roomId.relayUrl, accountViewModel)
+            val relayInfo by loadRelayInfo(item.roomId.relayUrl)
 
             ChannelName(
                 channelIdHex = item.roomId.toKey(),
@@ -323,7 +322,7 @@ private fun DisplaySearchResults(
                 channelLastContent = stringRes(R.string.ephemeral_relay_chat),
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 onClick = { nav.nav(routeFor(item)) },
             )
 
@@ -350,7 +349,7 @@ private fun DisplaySearchResults(
                 channelLastContent = item.summary(),
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 onClick = { nav.nav(routeFor(item)) },
             )
 

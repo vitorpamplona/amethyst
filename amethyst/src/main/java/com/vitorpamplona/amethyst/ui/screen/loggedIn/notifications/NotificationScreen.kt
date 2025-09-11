@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
-import android.Manifest
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -31,29 +28,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionState
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun NotificationScreen(
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     NotificationScreen(
         notifFeedContentState = accountViewModel.feedStates.notifications,
         notifSummaryState = accountViewModel.feedStates.notificationSummary,
-        sharedPreferencesViewModel = sharedPreferencesViewModel,
+        sharedPrefs = accountViewModel.settings.uiSettingsFlow,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -63,11 +55,11 @@ fun NotificationScreen(
 fun NotificationScreen(
     notifFeedContentState: CardFeedContentState,
     notifSummaryState: NotificationSummaryState,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    sharedPrefs: UiSettingsFlow,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    SelectNotificationProvider(sharedPreferencesViewModel)
+    SelectNotificationProvider(sharedPrefs)
 
     WatchAccountForNotifications(notifFeedContentState, accountViewModel)
 
@@ -104,29 +96,6 @@ fun NotificationScreen(
             )
         }
     }
-}
-
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: SharedPreferencesViewModel): PermissionState {
-    val notificationPermissionState =
-        rememberPermissionState(
-            Manifest.permission.POST_NOTIFICATIONS,
-        )
-
-    if (!sharedPreferencesViewModel.sharedPrefs.dontAskForNotificationPermissions) {
-        if (!notificationPermissionState.status.isGranted) {
-            sharedPreferencesViewModel.dontAskForNotificationPermissions()
-
-            // This will pause the APP, including the connection with relays.
-            LaunchedEffect(notificationPermissionState) {
-                notificationPermissionState.launchPermissionRequest()
-            }
-        }
-    }
-
-    return notificationPermissionState
 }
 
 @Composable

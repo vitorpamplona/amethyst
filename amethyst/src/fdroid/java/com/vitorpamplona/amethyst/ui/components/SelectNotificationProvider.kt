@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.Manifest
+import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,8 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.commonmark.MarkdownParseOptions
 import com.halilibo.richtext.markdown.BasicMarkdown
@@ -53,11 +58,10 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
 import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.checkifItNeedsToRequestNotificationPermission
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -65,12 +69,31 @@ import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-    val notificationPermissionState =
-        checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel)
+fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
+    val notificationPermissionGranted =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val notificationPermissionState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
 
-    if (notificationPermissionState.status.isGranted) {
-        if (!sharedPreferencesViewModel.sharedPrefs.dontShowPushNotificationSelector) {
+            if (!notificationPermissionState.status.isGranted) {
+                val dontAskForNotificationPermissions by sharedPrefs.dontAskForNotificationPermissions.collectAsStateWithLifecycle()
+                if (!dontAskForNotificationPermissions) {
+                    sharedPrefs.dontAskForNotificationPermissions()
+
+                    // This will pause the APP, including the connection with relays.
+                    LaunchedEffect(notificationPermissionState) {
+                        notificationPermissionState.launchPermissionRequest()
+                    }
+                }
+            }
+
+            notificationPermissionState.status.isGranted
+        } else {
+            true
+        }
+
+    if (notificationPermissionGranted) {
+        val pushNotificationSelector by sharedPrefs.dontShowPushNotificationSelector.collectAsStateWithLifecycle()
+        if (!pushNotificationSelector) {
             val context = LocalContext.current
             var distributorPresent by remember {
                 mutableStateOf(PushDistributorHandler.savedDistributorExists())
@@ -84,8 +107,8 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                             onSelect = { index ->
                                 if (list[index] == "None") {
                                     PushDistributorHandler.forceRemoveDistributor(context)
-                                    sharedPreferencesViewModel.dontAskForNotificationPermissions()
-                                    sharedPreferencesViewModel.dontShowPushNotificationSelector()
+                                    sharedPrefs.dontAskForNotificationPermissions()
+                                    sharedPrefs.dontShowPushNotificationSelector()
                                 } else {
                                     val fullDistributorName = list[index]
                                     PushDistributorHandler.saveDistributor(fullDistributorName)
@@ -125,7 +148,7 @@ fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesView
                                     TextButton(
                                         onClick = {
                                             distributorPresent = true
-                                            sharedPreferencesViewModel.dontShowPushNotificationSelector()
+                                            sharedPrefs.dontShowPushNotificationSelector()
                                         },
                                     ) {
                                         Text(stringRes(R.string.quick_action_dont_show_again_button))
@@ -187,7 +210,7 @@ fun LoadDistributors(onInner: @Composable (String, ImmutableList<String>, Immuta
 }
 
 @Composable
-fun PushNotificationSettingsRow(sharedPreferencesViewModel: SharedPreferencesViewModel) {
+fun PushNotificationSettingsRow(sharedPrefs: UiSettingsFlow) {
     val context = LocalContext.current
 
     LoadDistributors { currentDistributor, list, readableListWithExplainer ->
@@ -198,8 +221,8 @@ fun PushNotificationSettingsRow(sharedPreferencesViewModel: SharedPreferencesVie
             selectedIndex = list.indexOf(currentDistributor),
         ) { index ->
             if (list[index] == "None") {
-                sharedPreferencesViewModel.dontAskForNotificationPermissions()
-                sharedPreferencesViewModel.dontShowPushNotificationSelector()
+                sharedPrefs.dontAskForNotificationPermissions()
+                sharedPrefs.dontShowPushNotificationSelector()
                 PushDistributorHandler.forceRemoveDistributor(context)
             } else {
                 PushDistributorHandler.saveDistributor(list[index])

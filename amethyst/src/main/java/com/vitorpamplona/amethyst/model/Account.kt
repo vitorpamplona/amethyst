@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -80,7 +79,6 @@ import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
-import com.vitorpamplona.amethyst.model.privacyOptions.PrivacyState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
@@ -89,7 +87,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
-import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
@@ -136,8 +133,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -226,7 +222,7 @@ class Account(
     val signer: NostrSigner,
     val geolocationFlow: StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
-    val otsVerifCache: VerificationStateCache,
+    val otsResolverBuilder: OtsResolverBuilder,
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
@@ -323,17 +319,6 @@ class Account(
 
     val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
 
-    val privacyState = PrivacyState(settings)
-    val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)
-
-    val otsResolverBuilder: OkHttpOtsResolverBuilder =
-        OkHttpOtsResolverBuilder(
-            {
-                Amethyst.instance.okHttpClients.getHttpClient(privacyState.shouldUseTorForMoneyOperations(it))
-            },
-            privacyState::shouldUseTorForMoneyOperations,
-            Amethyst.instance.otsBlockHeightCache,
-        )
     val newNotesPreProcessor = EventProcessor(this, cache)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
