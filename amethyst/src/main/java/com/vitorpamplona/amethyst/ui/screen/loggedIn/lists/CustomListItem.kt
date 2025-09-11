@@ -47,14 +47,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -225,7 +231,8 @@ fun ListOptionsMenu(
 
     if (isRenameDialogOpen.value) {
         RenameDialog(
-            renameString = renameString.value,
+            currentName = listName,
+            newName = renameString.value,
             onStringRenameChange = {
                 renameString.value = it
             },
@@ -240,26 +247,53 @@ fun ListOptionsMenu(
 @Composable
 fun RenameDialog(
     modifier: Modifier = Modifier,
-    renameString: String,
+    currentName: String,
+    newName: String,
     onStringRenameChange: (String) -> Unit,
     onDismissDialog: () -> Unit,
     onListRename: (String) -> Unit,
 ) {
+    val renameIndicator =
+        buildAnnotatedString {
+            append("You are renaming from ")
+            withStyle(
+                SpanStyle(
+                    fontWeight = FontWeight.Bold,
+                    fontStyle = FontStyle.Normal,
+                    fontSize = 15.sp,
+                ),
+            ) {
+                append("\"" + currentName + "\"")
+            }
+            append(" to..")
+        }
+
     AlertDialog(
         onDismissRequest = onDismissDialog,
         title = {
             Text(text = "Rename List")
         },
         text = {
-            TextField(
-                value = renameString,
-                onValueChange = onStringRenameChange,
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = renameIndicator,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Light,
+                    fontStyle = FontStyle.Italic,
+                )
+                TextField(
+                    value = newName,
+                    onValueChange = onStringRenameChange,
+                )
+            }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onListRename(renameString)
+                    onListRename(newName)
                     onDismissDialog()
                 },
             ) { Text(text = "Rename") }
