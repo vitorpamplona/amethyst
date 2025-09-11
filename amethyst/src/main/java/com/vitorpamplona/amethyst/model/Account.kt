@@ -81,6 +81,9 @@ import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListSt
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexAndSearchRelayListsState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexRelayListsState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithSearchRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
@@ -305,7 +308,10 @@ class Account(
 
     // Follows Relays
     val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
+    val followPlusAllMineWithIndex = MergedFollowPlusMineWithIndexRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
+    val followPlusAllMineWithSearch = MergedFollowPlusMineWithSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, searchRelayList, scope)
+    val followPlusAllMineWithIndexAndSearch = MergedFollowPlusMineWithIndexAndSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, searchRelayList, scope)
+    val defaultGlobalRelays = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
@@ -338,7 +344,7 @@ class Account(
             feedFilterListName = settings.defaultHomeFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -353,7 +359,7 @@ class Account(
             feedFilterListName = settings.defaultStoriesFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -368,7 +374,7 @@ class Account(
             feedFilterListName = settings.defaultDiscoveryFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -383,7 +389,7 @@ class Account(
             feedFilterListName = settings.defaultNotificationFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -686,7 +692,8 @@ class Account(
 
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
         if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
-            return followPlusAllMine.flow.value + client.relayStatusFlow().value.available
+            // everywhere
+            return followPlusAllMineWithIndex.flow.value + client.relayStatusFlow().value.available
         }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
@@ -886,7 +893,7 @@ class Account(
     }
 
     fun sendLiterallyEverywhere(event: Event) {
-        client.send(event, outboxRelays.flow.value + indexerRelayList.flow.value + client.relayStatusFlow().value.available)
+        client.send(event, followPlusAllMineWithIndex.flow.value + client.relayStatusFlow().value.available)
         cache.justConsumeMyOwnEvent(event)
     }
 

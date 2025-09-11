@@ -93,7 +93,6 @@ class TorRelayState(
             trustedRelays,
             dmRelays,
         ) { torSettings: TorRelaySettings, trustedRelayList: Set<NormalizedRelayUrl>, dmRelayList: Set<NormalizedRelayUrl> ->
-            println("AABBCC New tor evaluation: $torSettings $trustedRelayList $dmRelayList")
             emit(
                 TorRelayEvaluation(
                     torSettings = torSettings,

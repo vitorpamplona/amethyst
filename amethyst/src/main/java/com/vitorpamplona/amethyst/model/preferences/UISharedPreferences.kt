@@ -158,9 +158,7 @@ class TorSharedPreferences(
         try {
             // Get the preference flow and take the first value.
             val preferences = context.sharedPreferencesDataStore.data.first()
-            println("AABBCC Loading TorSettings: ${preferences[TOR_SETTINGS]}")
             preferences[TOR_SETTINGS]?.let {
-                println("AABBCC Loading TorSettings: $it")
                 JsonMapper.mapper.readValue<TorSettings>(it)
             }
         } catch (e: Exception) {
@@ -171,7 +169,6 @@ class TorSharedPreferences(
 
     suspend fun save(torSettings: TorSettings) {
         try {
-            println("AABBCC Saving TorSettings: $torSettings")
             val str = JsonMapper.mapper.writeValueAsString(torSettings)
             context.sharedPreferencesDataStore.edit { preferences ->
                 preferences[TOR_SETTINGS] = str

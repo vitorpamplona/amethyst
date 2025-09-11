@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.serverList
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
+import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -34,11 +35,12 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
-class MergedFollowPlusMineRelayListsState(
+class MergedFollowPlusMineWithSearchRelayListsState(
     val followsOutboxOrProxyRelayList: FollowListOutboxOrProxyRelays,
     val nip65RelayList: Nip65RelayListState,
     val privateOutboxRelayList: PrivateStorageRelayListState,
     val localRelayList: LocalRelayListState,
+    val searchRelayListsState: SearchRelayListState,
     val scope: CoroutineScope,
 ) {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
@@ -51,6 +53,7 @@ class MergedFollowPlusMineRelayListsState(
                 nip65RelayList.inboxFlow,
                 privateOutboxRelayList.flow,
                 localRelayList.flow,
+                searchRelayListsState.flow,
             ),
             ::mergeLists,
         ).onStart {
@@ -62,6 +65,7 @@ class MergedFollowPlusMineRelayListsState(
                         nip65RelayList.inboxFlow.value,
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
+                        searchRelayListsState.flow.value,
                     ),
                 ),
             )
@@ -76,6 +80,7 @@ class MergedFollowPlusMineRelayListsState(
                         nip65RelayList.inboxFlow.value,
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
+                        searchRelayListsState.flow.value,
                     ),
                 ),
             )
