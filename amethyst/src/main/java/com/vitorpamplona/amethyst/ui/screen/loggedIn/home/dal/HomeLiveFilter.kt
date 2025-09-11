@@ -88,7 +88,9 @@ class HomeLiveFilter(
     ): Boolean {
         val liveChannel =
             channel.info?.let {
+                val startedAt = it.starts()
                 it.createdAt > timeLimit &&
+                    (startedAt == null || (it.createdAt - startedAt) < TimeUtils.ONE_DAY) &&
                     it.status() == StatusTag.STATUS.LIVE &&
                     filterParams.match(it, channel.relays().toList())
             }
