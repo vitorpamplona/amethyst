@@ -82,12 +82,13 @@ class DualHttpClientManager(
 }
 
 object EmptyHttpClientManager : IHttpClientManager {
-    val rootOkHttpClient =
+    val rootOkHttpClient by lazy {
         OkHttpClient
             .Builder()
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
+    }
 
     override fun getHttpClient(useProxy: Boolean) = rootOkHttpClient
 
