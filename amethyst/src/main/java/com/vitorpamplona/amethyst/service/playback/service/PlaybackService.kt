@@ -49,6 +49,7 @@ class PlaybackService : MediaSessionService() {
                     poolSize = SimultaneousPlaybackCalculator.max(applicationContext),
                 ),
             okHttpClient = okHttp,
+            appContext = applicationContext,
             reset = { session, keepPlaying ->
                 (session.player as ExoPlayer).apply {
                     repeatMode = if (keepPlaying) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF

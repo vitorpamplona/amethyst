@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import android.app.PendingIntent
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -30,7 +28,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
@@ -129,16 +126,6 @@ class MainActivity : AppCompatActivity() {
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
 
         super.onDestroy()
-    }
-
-    companion object {
-        fun createIntent(callbackUri: String): PendingIntent =
-            PendingIntent.getActivity(
-                Amethyst.instance,
-                0,
-                Intent(Intent.ACTION_VIEW, callbackUri.toUri(), Amethyst.instance, MainActivity::class.java),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
     }
 }
 
