@@ -78,8 +78,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
@@ -2153,7 +2153,7 @@ object LocalCache : ILocalCache {
 
     fun findEarliestOtsForNote(
         note: Note,
-        resolverBuilder: OtsResolverBuilder,
+        otsVerifCache: VerificationStateCache,
     ): Long? {
         checkNotInMainThread()
 
@@ -2163,7 +2163,7 @@ object LocalCache : ILocalCache {
         notes.forEach { _, item ->
             val noteEvent = item.event
             if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                (Amethyst.instance.otsVerifCache.cacheVerify(noteEvent, resolverBuilder) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+                (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                     if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                         minTime = stampedTime
                     }
