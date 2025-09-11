@@ -1010,16 +1010,6 @@ class AccountViewModel(
 
     fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
-    suspend fun findStatusesForUser(myUser: User) =
-        withContext(Dispatchers.IO) {
-            LocalCache.findStatusesForUser(myUser)
-        }
-
-    suspend fun findOtsEventsForNote(note: Note) =
-        withContext(Dispatchers.Default) {
-            LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
-        }
-
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
     suspend fun findModificationEventsForNote(note: Note): List<Note> =

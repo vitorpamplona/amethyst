@@ -31,7 +31,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
@@ -44,7 +46,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 @Composable
@@ -129,7 +133,14 @@ fun LoadOts(
     val noteStatus by observeNoteOts(note, accountViewModel)
 
     LaunchedEffect(key1 = noteStatus) {
-        val newOts = accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note)
+        val newOts =
+            withContext(Dispatchers.Default) {
+                LocalCache.findEarliestOtsForNote(
+                    note = noteStatus?.note ?: note,
+                    otsVerifCache = Amethyst.instance.otsVerifCache,
+                )
+            }
+
         earliestDate =
             if (newOts == null) {
                 GenericLoadable.Empty()
