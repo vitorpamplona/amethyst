@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
@@ -107,6 +109,8 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -143,8 +147,6 @@ fun RichTextViewer(
 @Preview
 @Composable
 fun RenderStrangeNamePreview() {
-    val nav = EmptyNav
-
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
             "If you want to stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm can you here",
@@ -167,7 +169,6 @@ fun RenderStrangeNamePreview() {
 @Composable
 fun RenderRegularPreview() {
     val nav = EmptyNav
-    val accountViewModel = mockAccountViewModel()
 
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
@@ -194,7 +195,7 @@ fun RenderRegularPreview() {
                     )
                 }
 
-                is HashTagSegment -> HashTag(word, accountViewModel, nav)
+                is HashTagSegment -> HashTag(word, nav)
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -208,7 +209,7 @@ fun RenderRegularPreview() {
 @Composable
 fun RenderRegularPreview2() {
     val nav = EmptyNav
-    val accountViewModel = mockAccountViewModel()
+
     RenderRegular(
         "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
         EmptyTagList,
@@ -223,7 +224,7 @@ fun RenderRegularPreview2() {
             is EmailSegment -> ClickableEmail(word.segmentText)
             is PhoneSegment -> ClickablePhone(word.segmentText)
             // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-            is HashTagSegment -> HashTag(word, accountViewModel, nav)
+            is HashTagSegment -> HashTag(word, nav)
             // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
             // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
             is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -264,7 +265,7 @@ fun RenderRegularPreview3() {
             is EmailSegment -> ClickableEmail(word.segmentText)
             is PhoneSegment -> ClickablePhone(word.segmentText)
             // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-            is HashTagSegment -> HashTag(word, accountViewModel, nav)
+            is HashTagSegment -> HashTag(word, nav)
             // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
             // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
             is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -284,18 +285,10 @@ private fun RenderRegular(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    RenderRegular(content, tags, callbackUri) { word, state ->
-        if (canPreview) {
-            RenderWordWithPreview(
-                word,
-                state,
-                backgroundColor,
-                quotesLeft,
-                callbackUri,
-                accountViewModel,
-                nav,
-            )
-        } else {
+    if (canPreview) {
+        RenderRegularWithGallery(content, tags, backgroundColor, quotesLeft, callbackUri, accountViewModel, nav)
+    } else {
+        RenderRegular(content, tags, callbackUri) { word, state ->
             RenderWordWithoutPreview(
                 word,
                 state,
@@ -303,6 +296,126 @@ private fun RenderRegular(
                 accountViewModel,
                 nav,
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RenderRegularWithGallery(
+    content: String,
+    tags: ImmutableListOfLists<String>,
+    backgroundColor: MutableState<Color>,
+    quotesLeft: Int,
+    callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri)) }
+
+    val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+
+    Column {
+        // Process paragraphs and group consecutive image-only paragraphs
+        var i = 0
+        while (i < state.paragraphs.size) {
+            val paragraph = state.paragraphs[i]
+
+            // Check if this paragraph contains only images
+            val isImageOnlyParagraph =
+                paragraph.words.all { word ->
+                    word is ImageSegment || word is Base64Segment
+                }
+
+            if (isImageOnlyParagraph && paragraph.words.isNotEmpty()) {
+                // Collect consecutive image-only paragraphs
+                val imageParagraphs = mutableListOf<ParagraphState>()
+                var j = i
+                while (j < state.paragraphs.size) {
+                    val currentParagraph = state.paragraphs[j]
+                    val isCurrentImageOnly =
+                        currentParagraph.words.all { word ->
+                            word is ImageSegment || word is Base64Segment
+                        }
+                    if (isCurrentImageOnly && currentParagraph.words.isNotEmpty()) {
+                        imageParagraphs.add(currentParagraph)
+                        j++
+                    } else {
+                        break
+                    }
+                }
+
+                // Combine all image words from consecutive paragraphs
+                val allImageWords = imageParagraphs.flatMap { it.words }.toImmutableList()
+
+                if (allImageWords.size > 1) {
+                    // Multiple images - render as gallery
+                    RenderWordsWithImageGallery(
+                        allImageWords,
+                        state,
+                        backgroundColor,
+                        quotesLeft,
+                        callbackUri,
+                        accountViewModel,
+                        nav,
+                    )
+                } else {
+                    // Single image - render normally
+                    CompositionLocalProvider(
+                        LocalLayoutDirection provides
+                            if (paragraph.isRTL) {
+                                LayoutDirection.Rtl
+                            } else {
+                                LayoutDirection.Ltr
+                            },
+                        LocalTextStyle provides LocalTextStyle.current,
+                    ) {
+                        FlowRow(
+                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                        ) {
+                            RenderWordsWithImageGallery(
+                                paragraph.words.toImmutableList(),
+                                state,
+                                backgroundColor,
+                                quotesLeft,
+                                callbackUri,
+                                accountViewModel,
+                                nav,
+                            )
+                        }
+                    }
+                }
+
+                i = j // Skip processed paragraphs
+            } else {
+                // Non-image paragraph - render normally
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides
+                        if (paragraph.isRTL) {
+                            LayoutDirection.Rtl
+                        } else {
+                            LayoutDirection.Ltr
+                        },
+                    LocalTextStyle provides LocalTextStyle.current,
+                ) {
+                    FlowRow(
+                        modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                    ) {
+                        RenderWordsWithImageGallery(
+                            paragraph.words.toImmutableList(),
+                            state,
+                            backgroundColor,
+                            quotesLeft,
+                            callbackUri,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
+                }
+                i++
+            }
         }
     }
 }
@@ -391,11 +504,64 @@ private fun RenderWordWithoutPreview(
         is SecretEmoji -> Text(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
-        is HashTagSegment -> HashTag(word, accountViewModel, nav)
+        is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
+    }
+}
+
+@Composable
+private fun RenderWordsWithImageGallery(
+    words: ImmutableList<Segment>,
+    state: RichTextViewerState,
+    backgroundColor: MutableState<Color>,
+    quotesLeft: Int,
+    callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var i = 0
+    while (i < words.size) {
+        val word = words[i]
+
+        if (word is ImageSegment || word is Base64Segment) {
+            // Collect consecutive images
+            val imageSegments = mutableListOf<Segment>()
+            var j = i
+            while (j < words.size && (words[j] is ImageSegment || words[j] is Base64Segment)) {
+                imageSegments.add(words[j])
+                j++
+            }
+
+            if (imageSegments.size > 1) {
+                // Multiple images - render as gallery
+                val imageContents =
+                    imageSegments
+                        .mapNotNull { segment ->
+                            val imageUrl = segment.segmentText
+                            state.imagesForPager[imageUrl] as? MediaUrlImage
+                        }.toImmutableList()
+
+                if (imageContents.isNotEmpty()) {
+                    ImageGallery(
+                        images = imageContents,
+                        accountViewModel = accountViewModel,
+                        roundedCorner = true,
+                    )
+                }
+            } else {
+                // Single image - render normally
+                RenderWordWithPreview(word, state, backgroundColor, quotesLeft, callbackUri, accountViewModel, nav)
+            }
+
+            i = j // Skip processed images
+        } else {
+            // Non-image word - render normally
+            RenderWordWithPreview(word, state, backgroundColor, quotesLeft, callbackUri, accountViewModel, nav)
+            i++
+        }
     }
 }
 
@@ -420,7 +586,7 @@ private fun RenderWordWithPreview(
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
-        is HashTagSegment -> HashTag(word, accountViewModel, nav)
+        is HashTagSegment -> HashTag(word, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -585,17 +751,15 @@ fun CoreSecretMessage(
     nav: INav,
 ) {
     if (localSecretContent.paragraphs.size == 1) {
-        localSecretContent.paragraphs[0].words.forEach { word ->
-            RenderWordWithPreview(
-                word,
-                localSecretContent,
-                backgroundColor,
-                quotesLeft,
-                callbackUri,
-                accountViewModel,
-                nav,
-            )
-        }
+        RenderWordsWithImageGallery(
+            localSecretContent.paragraphs[0].words.toImmutableList(),
+            localSecretContent,
+            backgroundColor,
+            quotesLeft,
+            callbackUri,
+            accountViewModel,
+            nav,
+        )
     } else if (localSecretContent.paragraphs.size > 1) {
         val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
 
@@ -605,17 +769,15 @@ fun CoreSecretMessage(
                     modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
                     horizontalArrangement = Arrangement.spacedBy(spaceWidth),
                 ) {
-                    paragraph.words.forEach { word ->
-                        RenderWordWithPreview(
-                            word,
-                            localSecretContent,
-                            backgroundColor,
-                            quotesLeft,
-                            callbackUri,
-                            accountViewModel,
-                            nav,
-                        )
-                    }
+                    RenderWordsWithImageGallery(
+                        paragraph.words.toImmutableList(),
+                        localSecretContent,
+                        backgroundColor,
+                        quotesLeft,
+                        callbackUri,
+                        accountViewModel,
+                        nav,
+                    )
                 }
             }
         }
@@ -625,7 +787,6 @@ fun CoreSecretMessage(
 @Composable
 fun HashTag(
     segment: HashTagSegment,
-    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val primary = MaterialTheme.colorScheme.primary
@@ -693,8 +854,8 @@ fun TagLink(
         } else {
             Row {
                 DisplayUserFromTag(it, accountViewModel, nav)
-                word.extras?.let {
-                    Text(text = it)
+                word.extras?.let { it2 ->
+                    Text(text = it2)
                 }
             }
         }
@@ -708,7 +869,7 @@ fun LoadNote(
     content: @Composable (Note?) -> Unit,
 ) {
     var note by
-        remember(baseNoteHex) { mutableStateOf<Note?>(accountViewModel.getNoteIfExists(baseNoteHex)) }
+        remember(baseNoteHex) { mutableStateOf(accountViewModel.getNoteIfExists(baseNoteHex)) }
 
     if (note == null) {
         LaunchedEffect(key1 = baseNoteHex) {
