@@ -20,26 +20,32 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.singlepane.MessagesSinglePane
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane.MessagesTwoPane
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun MessagesScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val windowSizeClass by accountViewModel.settings.windowSizeClass
+    val act = LocalContext.current.getActivity()
+    val windowSizeClass = calculateWindowSizeClass(act)
 
     val twoPane by remember {
         derivedStateOf {
-            when (windowSizeClass?.widthSizeClass) {
+            when (windowSizeClass.widthSizeClass) {
                 WindowWidthSizeClass.Compact -> false
                 WindowWidthSizeClass.Expanded,
                 WindowWidthSizeClass.Medium,
@@ -49,11 +55,11 @@ fun MessagesScreen(
         }
     }
 
-    if (twoPane && windowSizeClass != null) {
+    if (twoPane) {
         MessagesTwoPane(
             knownFeedContentState = accountViewModel.feedStates.dmKnown,
             newFeedContentState = accountViewModel.feedStates.dmNew,
-            widthSizeClass = windowSizeClass!!.widthSizeClass,
+            widthSizeClass = windowSizeClass.widthSizeClass,
             accountViewModel = accountViewModel,
             nav = nav,
         )
