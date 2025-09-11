@@ -42,7 +42,7 @@ data class FollowSet(
             val address = event.address()
             val dTag = event.dTag()
             val listTitle = event.nameOrTitle() ?: dTag
-            val listDescription = event.description() ?: ""
+            val listDescription = event.description()
             val publicFollows = event.publicPeople().map { it.toTagArray() }.map { it.value() }
             val privateFollows =
                 runBlocking { event.privatePeople(signer) }
