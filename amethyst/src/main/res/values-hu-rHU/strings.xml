@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">Nem sikerült elmenteni a videót</string>
     <string name="upload_image">Kép feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
+    <string name="record_a_video">Videó rögzítése</string>
     <string name="record_a_message">Hangüzenet rögzítése</string>
     <string name="record_a_message_title">Hangüzenet rögzítése</string>
     <string name="record_a_message_description">Hangüzenet rögzítéséhez kattintson és tartsa lenyomva a gombot</string>
@@ -891,10 +892,13 @@
     <string name="dm_upload">Feltöltés közvetlen üzenetbe</string>
     <string name="relay_settings">Átjátszók beállításai</string>
     <string name="public_home_section">Nyilvános kimenő és saját átjátszók</string>
+    <string name="public_home_section_explainer_profile">A felhasználó a bejegyzéseit ezeken az átjátszókon teszi közzé</string>
     <string name="public_home_section_explainer">Ez az átjátszótípus tárolja az összes tartalmat. Az Amethyst ide küldi az Ön bejegyzéseit, és mások ezeket az átjátszókat fogják használni, hogy megtalálják az Ön tartalmát. Adjon hozzá 1–3 átjátszót. Ezek lehetnek személyes-, fizetett- vagy nyilvános átjátszók.</string>
     <string name="public_notif_section">Nyilvános bejövő átjátszók</string>
+    <string name="public_notif_section_explainer_profile">A felhasználó ezeken az átjátszókon keresztül fogadja az értesítéseket</string>
     <string name="public_notif_section_explainer">Ez az átjátszótípus fogadja az összes választ, hozzászólást, kedvelést és Zap-et az Ön bejegyzéseire. Ezek lehetnek fizetős vagy ingyenes átjátszók. Az átjátszó üzemeltetője által beállított korlátok korlátozhatják a jó és a rossz értesítések számát. Ha például a hozzászólásokban kéretlen üzenet-támadások érik, a fizetős átjátszók kiszűrhetik a kéretlen tartalmakat. Vegyen fel 1–3 átjátszót.</string>
     <string name="private_inbox_section">Bejövő közvetlen üzenet-átjátszók</string>
+    <string name="private_inbox_section_explainer_profile">A felhasználó ezeken az átjátszókon keresztül fogadja a közvetlen üzeneteket</string>
     <string name="private_inbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy privát postafiókként szolgáljon. Mások ezeket az átjátszókat használják, hogy Önnek privát üzeneteket küldjenek. A bejövő privát üzenetek átjátszóinak bárkitől el kell fogadniuk minden üzenetet, de azok letöltését csak Ön engedélyezheti. Jó választási lehetőségek:\n - inbox.nostr.wine (fizetős)\n - auth.nostr1.com (ingyenes)\n - you.nostr1.com (személyes átjátszók - fizetős)</string>
     <string name="private_outbox_section">Privát saját átjátszók</string>
     <string name="private_outbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy olyan eseményeket tároljanak, amelyeket senki más nem láthat, például a piszkozatait és/vagy az alkalmazásbeállításait. Ideális esetben ezek az átjátszók vagy helyi szintűek, vagy hitelesítést igényelnek az egyes felhasználói tartalmak letöltése előtt.</string>
@@ -1028,4 +1032,5 @@
     <string name="crashreport_found">Összeomlási jelentés megtalálva</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Szeretné elküldeni a legutóbbi összeomlási jelentést az Amethystnek egy közvetlen üzenetben? A személyes adatait nem osztja meg</string>
     <string name="crashreport_found_send">Küldés</string>
+    <string name="this_message_will_disappear_in_days">Ez az üzenet %1$d nap múlva eltűnik</string>
 </resources>
