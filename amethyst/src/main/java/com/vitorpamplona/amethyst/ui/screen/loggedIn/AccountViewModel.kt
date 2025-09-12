@@ -1084,6 +1084,13 @@ class AccountViewModel(
                     account.markAsRead("Channel/${noteEvent.channelId()}", noteEvent.createdAt)
                 } else if (noteEvent is ChatroomKeyable) {
                     account.markAsRead("Room/${noteEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
+                } else if (noteEvent is DraftWrapEvent) {
+                    val innerEvent = account.draftsDecryptionCache.preCachedDraft(noteEvent)
+                    if (innerEvent is IsInPublicChatChannel) {
+                        account.markAsRead("Channel/${innerEvent.channelId()}", noteEvent.createdAt)
+                    } else if (innerEvent is ChatroomKeyable) {
+                        account.markAsRead("Room/${innerEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
+                    }
                 }
             }
         }
