@@ -43,7 +43,7 @@ abstract class Channel : NotesGatherer {
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
         val current = changesFlow.get()
         if (current != null) return current
-        val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
+        val new = MutableSharedFlow<ListChange<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
         changesFlow = WeakReference(new)
         return new
     }

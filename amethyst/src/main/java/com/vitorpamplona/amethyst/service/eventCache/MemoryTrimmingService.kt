@@ -33,13 +33,13 @@ class MemoryTrimmingService(
     var isTrimmingMemoryMutex = AtomicBoolean(false)
 
     private suspend fun doTrim(
-        account: Account? = null,
+        account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
     ) {
         cache.cleanMemory()
         cache.cleanObservers()
 
-        account?.let {
+        account.forEach {
             cache.pruneHiddenEvents(it)
             cache.pruneHiddenMessages(it)
         }
@@ -53,7 +53,7 @@ class MemoryTrimmingService(
     }
 
     suspend fun run(
-        account: Account?,
+        account: Collection<Account>,
         otherAccounts: List<AccountInfo>,
     ) {
         if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
