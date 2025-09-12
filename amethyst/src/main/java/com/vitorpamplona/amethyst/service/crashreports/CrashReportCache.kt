@@ -41,7 +41,7 @@ class CrashReportCache(
             null
         }
 
-    suspend fun writeReport(report: String) {
+    fun writeReport(report: String) {
         val trace = outputStream()
         trace.write(report.toByteArray())
         trace.close()
@@ -50,8 +50,10 @@ class CrashReportCache(
     suspend fun loadAndDelete(): String? =
         withContext(Dispatchers.IO) {
             val stack =
-                inputStreamOrNull()?.let { inStream ->
-                    InputStreamReader(inStream).readText()
+                inputStreamOrNull()?.use { inStream ->
+                    InputStreamReader(inStream).use { reader ->
+                        reader.readText()
+                    }
                 }
             deleteReport()
             stack

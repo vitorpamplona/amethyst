@@ -27,25 +27,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.ThemeType
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 
 @Composable
 fun ThemeComparisonColumn(toPreview: @Composable () -> Unit) {
     Column {
         Box {
-            val darkTheme: SharedPreferencesViewModel = viewModel()
-            darkTheme.updateTheme(ThemeType.DARK)
-            AmethystTheme(darkTheme) {
+            AmethystTheme(ThemeType.DARK) {
                 Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
 
         Box {
-            val lightTheme: SharedPreferencesViewModel = viewModel()
-            lightTheme.updateTheme(ThemeType.LIGHT)
-            AmethystTheme(lightTheme) {
+            AmethystTheme(ThemeType.LIGHT) {
                 Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
@@ -56,17 +50,13 @@ fun ThemeComparisonColumn(toPreview: @Composable () -> Unit) {
 fun ThemeComparisonRow(toPreview: @Composable () -> Unit) {
     Row {
         Box(modifier = Modifier.weight(1f)) {
-            val darkTheme: SharedPreferencesViewModel = viewModel()
-            darkTheme.updateTheme(ThemeType.DARK)
-            AmethystTheme(darkTheme) {
+            AmethystTheme(ThemeType.DARK) {
                 Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }
 
         Box(modifier = Modifier.weight(1f)) {
-            val lightTheme: SharedPreferencesViewModel = viewModel()
-            lightTheme.updateTheme(ThemeType.LIGHT)
-            AmethystTheme(lightTheme) {
+            AmethystTheme(ThemeType.LIGHT) {
                 Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
             }
         }

@@ -36,6 +36,7 @@ class IntentResultJsonDeserializer : StdDeserializer<IntentResult>(IntentResult:
             result = jsonObject.get("result")?.asText()?.intern(),
             event = jsonObject.get("event")?.asText()?.intern(),
             id = jsonObject.get("id")?.asText()?.intern(),
+            rejected = jsonObject.get("rejected")?.asBoolean() ?: false,
         )
     }
 }

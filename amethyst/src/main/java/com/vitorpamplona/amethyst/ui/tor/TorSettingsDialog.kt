@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,8 +38,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -103,9 +107,14 @@ fun TorDialogContents(
 ) {
     val dialogViewModel = viewModel<TorDialogViewModel>()
 
-    LaunchedEffect(dialogViewModel, torSettings) {
-        dialogViewModel.reset(torSettings)
-    }
+    // runs only once and before the rest of the screen is build
+    // to avoid blinking and animations from the default/previous
+    // state to the current state
+    val init =
+        remember(dialogViewModel) {
+            dialogViewModel.reset(torSettings)
+            torSettings
+        }
 
     TorDialogContents(dialogViewModel, onClose, onPost, onError)
 }
@@ -168,6 +177,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 
         AnimatedVisibility(
             visible = dialogViewModel.torType.value == TorType.EXTERNAL,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
         ) {
             SettingsRow(
                 R.string.orbot_socks_port,
@@ -194,6 +205,8 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
 
     AnimatedVisibility(
         visible = dialogViewModel.torType.value != TorType.OFF,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 5.dp),

@@ -34,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -194,7 +193,7 @@ private fun RenderBadgeImage(
             robot = "badgenotfound",
             contentDescription = description,
             modifier = BadgePictureModifier,
-            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     } else {
         RobohashFallbackAsyncImage(
@@ -203,7 +202,7 @@ private fun RenderBadgeImage(
             contentDescription = description,
             modifier = BadgePictureModifier,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     }
 }

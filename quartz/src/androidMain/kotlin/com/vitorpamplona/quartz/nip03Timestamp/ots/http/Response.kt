@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip03Timestamp.ots.http
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
 import java.io.ByteArrayOutputStream
+import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
@@ -30,7 +31,7 @@ import java.nio.charset.StandardCharsets
 /**
  * Holds the response from an HTTP request.
  */
-class Response {
+class Response : Closeable {
     private var stream: InputStream? = null
 
     var fromUrl: String? = null
@@ -53,7 +54,7 @@ class Response {
 
     @get:Throws(IOException::class)
     val string: String
-        get() = kotlin.text.String(this.bytes, StandardCharsets.UTF_8)
+        get() = String(this.bytes, StandardCharsets.UTF_8)
 
     @get:Throws(IOException::class)
     val bytes: ByteArray
@@ -79,4 +80,9 @@ class Response {
                 JsonMapper.builder().build()
             return builder.readTree(jsonString)
         }
+
+    override fun close() {
+        stream?.close()
+        stream = null
+    }
 }

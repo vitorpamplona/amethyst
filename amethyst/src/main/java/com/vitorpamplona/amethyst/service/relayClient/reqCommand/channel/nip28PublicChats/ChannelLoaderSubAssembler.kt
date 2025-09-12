@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28P
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
  * This is one filter for everybody.
  */
 class ChannelLoaderSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<ChannelFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(keys: List<ChannelFinderQueryState>): List<RelayBasedFilter>? = filterMissingChannelsById(keys)

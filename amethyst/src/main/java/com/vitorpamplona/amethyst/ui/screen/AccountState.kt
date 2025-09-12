@@ -26,7 +26,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 
 sealed class AccountState {
@@ -36,7 +36,7 @@ sealed class AccountState {
 
     @Stable
     class LoggedIn(
-        val accountSettings: AccountSettings,
+        val account: Account,
         var route: Route? = null,
     ) : AccountState() {
         val currentViewModelStore = AccountCentricViewModelStore()

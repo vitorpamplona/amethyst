@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.util.fastForEach
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -50,7 +49,7 @@ fun <T> CrossfadeIfEnabled(
     accountViewModel: AccountViewModel,
     content: @Composable (T) -> Unit,
 ) {
-    if (accountViewModel.settings.featureSet == FeatureSetType.PERFORMANCE) {
+    if (accountViewModel.settings.isPerformanceMode()) {
         Box(modifier, contentAlignment) {
             content(targetState)
         }

@@ -74,6 +74,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -170,15 +171,12 @@ fun LoginPage(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
         PasswordField(loginViewModel)
 
         Spacer(modifier = Modifier.height(10.dp))
 
         TorSettingsSetup(
-            torSettings = loginViewModel.torSettings,
-            onCheckedChange = loginViewModel::updateTorSettings,
+            torSettingsFlow = Amethyst.instance.torPrefs.value,
             onError = {
                 scope.launch {
                     Toast
@@ -262,6 +260,8 @@ fun OfferTemporaryAccount(
 @Composable
 private fun PasswordField(loginViewModel: LoginViewModel) {
     if (loginViewModel.needsPassword) {
+        Spacer(modifier = Modifier.height(10.dp))
+
         val passwordFocusRequester = remember { FocusRequester() }
 
         PasswordField(

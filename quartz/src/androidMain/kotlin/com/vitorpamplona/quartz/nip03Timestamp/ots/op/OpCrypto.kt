@@ -62,7 +62,7 @@ abstract class OpCrypto internal constructor() : OpUnary() {
         val digest = MessageDigest.getInstance(this.hashLibName())
         var chunk = ctx.read(1048576)
 
-        while (chunk != null && chunk.size > 0) {
+        while (chunk.isNotEmpty()) {
             digest.update(chunk)
             chunk = ctx.read(1048576)
         }
@@ -73,7 +73,7 @@ abstract class OpCrypto internal constructor() : OpUnary() {
     }
 
     @Throws(IOException::class, NoSuchAlgorithmException::class)
-    fun hashFd(file: File?): ByteArray = hashFd(FileInputStream(file))
+    fun hashFd(file: File?): ByteArray = FileInputStream(file).use { inputStream -> hashFd(inputStream) }
 
     @Throws(IOException::class, NoSuchAlgorithmException::class)
     fun hashFd(bytes: ByteArray): ByteArray {
@@ -93,6 +93,7 @@ abstract class OpCrypto internal constructor() : OpUnary() {
             count = inputStream.read(chunk, 0, 1048576)
         }
 
+        // TODO: Is this needed? Closing of stream should be callers responsibility?
         inputStream.close()
         val hash = digest.digest()
 

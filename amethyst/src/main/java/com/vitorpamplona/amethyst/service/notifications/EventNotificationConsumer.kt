@@ -24,16 +24,19 @@ import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.chatroomList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDMNotification
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -65,10 +68,11 @@ class EventNotificationConsumer(
         var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner)) {
-                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { acc ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
-                        consumeIfMatchesAccount(event, acc)
+                        val account = Amethyst.instance.accountsCache.loadAccount(acc)
+                        consumeIfMatchesAccount(event, account)
                         matchAccount = true
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
@@ -81,34 +85,31 @@ class EventNotificationConsumer(
 
     private suspend fun consumeIfMatchesAccount(
         pushWrappedEvent: GiftWrapEvent,
-        account: AccountSettings,
+        account: Account,
     ) {
-        val signer = account.createSigner(applicationContext.contentResolver)
-
-        val notificationEvent = pushWrappedEvent.unwrapThrowing(signer)
-        consumeNotificationEvent(notificationEvent, signer, account)
+        val notificationEvent = pushWrappedEvent.unwrapThrowing(account.signer)
+        consumeNotificationEvent(notificationEvent, account)
     }
 
     suspend fun consumeNotificationEvent(
         notificationEvent: Event,
-        signer: NostrSigner,
-        account: AccountSettings,
+        account: Account,
     ) {
         val consumed = LocalCache.hasConsumed(notificationEvent)
-        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed")
+        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${account.signer.pubKey} consumed= $consumed")
         if (!consumed) {
             Log.d(TAG, "New Notification was verified")
             if (!notificationManager().areNotificationsEnabled()) return
             Log.d(TAG, "Notifications are enabled")
 
-            unwrapAndConsume(notificationEvent, signer)?.let { innerEvent ->
+            unwrapAndConsume(notificationEvent, account.signer)?.let { innerEvent ->
                 Log.d(TAG, "Unwrapped consume ${innerEvent.javaClass.simpleName}")
 
                 when (innerEvent) {
-                    is PrivateDmEvent -> notify(innerEvent, signer, account)
-                    is LnZapEvent -> notify(innerEvent, signer, account)
-                    is ChatMessageEvent -> notify(innerEvent, signer, account)
-                    is ChatMessageEncryptedFileHeaderEvent -> notify(innerEvent, signer, account)
+                    is PrivateDmEvent -> notify(innerEvent, account)
+                    is LnZapEvent -> notify(innerEvent, account)
+                    is ChatMessageEvent -> notify(innerEvent, account)
+                    is ChatMessageEncryptedFileHeaderEvent -> notify(innerEvent, account)
                 }
             }
         }
@@ -124,11 +125,11 @@ class EventNotificationConsumer(
         var matchAccount = false
         LocalPreferences.allSavedAccounts().forEach {
             if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
-                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                LocalPreferences.loadAccountConfigFromEncryptedStorage(it.npub)?.let { accountSettings ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
-                        val signer = acc.createSigner(applicationContext.contentResolver)
-                        consumeNotificationEvent(event, signer, acc)
+                        val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
+                        consumeNotificationEvent(event, account)
                         matchAccount = true
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
@@ -184,22 +185,21 @@ class EventNotificationConsumer(
 
     private fun notify(
         event: ChatMessageEncryptedFileHeaderEvent,
-        signer: NostrSigner,
-        acc: AccountSettings,
+        account: Account,
     ) {
         Log.d(TAG, "New ChatMessage File to Notify")
         if (
             // old event being re-broadcasted
             event.createdAt > TimeUtils.fifteenMinutesAgo() &&
             // don't display if it comes from me.
-            event.pubKey != signer.pubKey
+            event.pubKey != account.signer.pubKey
         ) { // from the user
             Log.d(TAG, "Notifying")
-            val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
+            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
             val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
-            val chatRoom = event.chatroomKey(signer.pubKey)
+            val chatRoom = event.chatroomKey(account.signer.pubKey)
 
-            val followingKeySet = acc.backupContactList?.unverifiedFollowKeySet()?.toSet() ?: return
+            val followingKeySet = account.followingKeySet()
 
             val isKnownRoom =
                 (
@@ -210,7 +210,11 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
+                val noteUri =
+                    chatNote.toNEvent() + "?account=" +
+                        account.signer.pubKey
+                            .hexToByteArray()
+                            .toNpub()
 
                 // TODO: Show Image on notification
                 notificationManager()
@@ -229,22 +233,21 @@ class EventNotificationConsumer(
 
     private fun notify(
         event: ChatMessageEvent,
-        signer: NostrSigner,
-        acc: AccountSettings,
+        account: Account,
     ) {
         Log.d(TAG, "New ChatMessage to Notify")
         if (
             // old event being re-broadcasted
             event.createdAt > TimeUtils.fifteenMinutesAgo() &&
             // don't display if it comes from me.
-            event.pubKey != signer.pubKey
+            event.pubKey != account.signer.pubKey
         ) { // from the user
             Log.d(TAG, "Notifying")
-            val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
+            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
             val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
-            val chatRoom = event.chatroomKey(signer.pubKey)
+            val chatRoom = event.chatroomKey(account.signer.pubKey)
 
-            val followingKeySet = acc.backupContactList?.unverifiedFollowKeySet()?.toSet() ?: return
+            val followingKeySet = account.followingKeySet()
 
             val isKnownRoom = chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
 
@@ -252,7 +255,11 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
+                val noteUri =
+                    chatNote.toNEvent() + "?account=" +
+                        account.signer.pubKey
+                            .hexToByteArray()
+                            .toNpub()
                 notificationManager()
                     .sendDMNotification(
                         event.id,
@@ -269,29 +276,32 @@ class EventNotificationConsumer(
 
     private suspend fun notify(
         event: PrivateDmEvent,
-        signer: NostrSigner,
-        acc: AccountSettings,
+        account: Account,
     ) {
         Log.d(TAG, "New Nip-04 DM to Notify")
-        val note = LocalCache.getNoteIfExists(event.id) ?: return
-        val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
-
         // old event being re-broadcast
         if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return
 
-        if (signer.pubKey == event.verifiedRecipientPubKey()) {
-            val followingKeySet = acc.backupContactList?.unverifiedFollowKeySet()?.toSet() ?: return
+        if (account.signer.pubKey == event.verifiedRecipientPubKey()) {
+            val note = LocalCache.getNoteIfExists(event.id) ?: return
+            val chatroomList = LocalCache.getOrCreateChatroomList(account.signer.pubKey)
 
-            val chatRoom = event.chatroomKey(signer.pubKey)
+            val followingKeySet = account.followingKeySet()
+
+            val chatRoom = event.chatroomKey(account.signer.pubKey)
 
             val isKnownRoom = chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
 
             if (isKnownRoom) {
                 note.author?.let {
-                    decryptContent(note, signer)?.let { content ->
+                    decryptContent(note, account.signer)?.let { content ->
                         val user = note.author?.toBestDisplayName() ?: ""
                         val userPicture = note.author?.profilePicture()
-                        val noteUri = note.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
+                        val noteUri =
+                            note.toNEvent() + "?account=" +
+                                account.signer.pubKey
+                                    .hexToByteArray()
+                                    .toNpub()
                         notificationManager()
                             .sendDMNotification(event.id, content, user, event.createdAt, userPicture, noteUri, applicationContext)
                     }
@@ -332,8 +342,7 @@ class EventNotificationConsumer(
 
     private suspend fun notify(
         event: LnZapEvent,
-        signer: NostrSigner,
-        acc: AccountSettings,
+        account: Account,
     ) {
         Log.d(TAG, "New Zap to Notify")
         Log.d(TAG, "Notify Start ${event.toNostrUri()}")
@@ -355,20 +364,20 @@ class EventNotificationConsumer(
 
         Log.d(TAG, "Notify Amount Bigger than 10")
 
-        if (event.isTaggedUser(signer.pubKey)) {
+        if (event.isTaggedUser(account.signer.pubKey)) {
             val amount = showAmount(event.amount)
 
             Log.d(TAG, "Notify Amount $amount")
 
             (noteZapRequest.event as? LnZapRequestEvent)?.let { event ->
-                decryptZapContentAuthor(event, signer)?.let { decryptedEvent ->
+                decryptZapContentAuthor(event, account.signer)?.let { decryptedEvent ->
                     Log.d(TAG, "Notify Decrypted if Private Zap ${event.id}")
 
                     val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
                     val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
 
                     if (noteZapped.event?.content != null) {
-                        decryptContent(noteZapped, signer)?.let { decrypted ->
+                        decryptContent(noteZapped, account.signer)?.let { decrypted ->
                             Log.d(TAG, "Notify Decrypted if Private Note")
 
                             val zappedContent = decrypted.split("\n")[0]
@@ -393,7 +402,11 @@ class EventNotificationConsumer(
                                     )
                             }
                             val userPicture = senderInfo.first.profilePicture()
-                            val noteUri = "notifications?account=" + acc.keyPair.pubKey.toNpub()
+                            val noteUri =
+                                "notifications?account=" +
+                                    account.signer.pubKey
+                                        .hexToByteArray()
+                                        .toNpub()
 
                             Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
 
@@ -424,7 +437,11 @@ class EventNotificationConsumer(
                             )
 
                         val userPicture = senderInfo.first.profilePicture()
-                        val noteUri = "notifications?account=" + acc.keyPair.pubKey.toNpub()
+                        val noteUri =
+                            "notifications?account=" +
+                                account.signer.pubKey
+                                    .hexToByteArray()
+                                    .toNpub()
 
                         Log.d(TAG, "Notify ${event.id} $title $noteUri")
 

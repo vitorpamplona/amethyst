@@ -23,3 +23,7 @@ package com.vitorpamplona.quartz.nip03Timestamp
 interface OtsResolverBuilder {
     fun build(): OtsResolver
 }
+
+class DefaultOtsResolverBuilder : OtsResolverBuilder {
+    override fun build(): OtsResolver = OtsResolver()
+}

@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -164,7 +163,7 @@ fun NormalChatNote(
         isLoggedInUser = isLoggedInUser,
         isDraft = note.event is DraftWrapEvent,
         innerQuote = innerQuote,
-        isComplete = accountViewModel.settings.featureSet == FeatureSetType.COMPLETE,
+        isComplete = accountViewModel.settings.isCompleteUIMode(),
         hasDetailsToShow = note.zaps.isNotEmpty() || note.zapPayments.isNotEmpty() || note.reactions.isNotEmpty(),
         drawAuthorInfo = drawAuthorInfo,
         parentBackgroundColor = parentBackgroundColor,

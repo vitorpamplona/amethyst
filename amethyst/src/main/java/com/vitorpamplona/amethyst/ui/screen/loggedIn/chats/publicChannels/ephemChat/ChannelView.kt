@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 fun EphemeralChatChannelView(
     channelId: RoomId?,
     draft: Note? = null,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -56,6 +57,7 @@ fun EphemeralChatChannelView(
         PrepareChannelViewModels(
             baseChannel = ephem,
             draft = draft,
+            replyTo = replyTo,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -66,6 +68,7 @@ fun EphemeralChatChannelView(
 private fun PrepareChannelViewModels(
     baseChannel: EphemeralChatChannel,
     draft: Note? = null,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -86,6 +89,12 @@ private fun PrepareChannelViewModels(
     if (draft != null) {
         LaunchedEffect(draft, channelScreenModel, accountViewModel) {
             channelScreenModel.editFromDraft(draft)
+        }
+    }
+
+    if (replyTo != null) {
+        LaunchedEffect(replyTo, channelScreenModel, accountViewModel) {
+            channelScreenModel.reply(replyTo)
         }
     }
 

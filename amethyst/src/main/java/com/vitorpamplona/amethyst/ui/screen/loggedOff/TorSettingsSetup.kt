@@ -32,15 +32,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.preferences.AccountPreferenceStores.Companion.torSettings
 import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
 @Composable
 fun TorSettingsSetup(
-    torSettings: TorSettings,
-    onCheckedChange: (TorSettings) -> Unit,
+    torSettingsFlow: TorSettingsFlow,
     onError: (String) -> Unit,
 ) {
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
@@ -57,11 +57,11 @@ fun TorSettingsSetup(
 
     if (connectOrbotDialogOpen) {
         ConnectTorDialog(
-            torSettings = torSettings,
+            torSettings = torSettingsFlow.toSettings(),
             onClose = { connectOrbotDialogOpen = false },
             onPost = { torSettings ->
                 connectOrbotDialogOpen = false
-                onCheckedChange(torSettings)
+                torSettingsFlow.update(torSettings)
             },
             onError = onError,
         )

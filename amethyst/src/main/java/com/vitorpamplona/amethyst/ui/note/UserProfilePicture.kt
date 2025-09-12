@@ -36,7 +36,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -94,7 +93,7 @@ fun DisplayBlankAuthor(
         robot = "authornotfound",
         contentDescription = stringRes(R.string.unknown_author),
         modifier = nullModifier,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }
 
@@ -360,7 +359,7 @@ fun InnerUserPicture(
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }
 

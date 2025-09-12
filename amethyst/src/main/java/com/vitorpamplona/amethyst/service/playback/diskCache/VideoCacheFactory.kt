@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.playback.diskCache
 
-import android.app.Application
+import android.content.Context
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import kotlinx.coroutines.runBlocking
 
 class VideoCacheFactory {
     companion object {
-        fun new(app: Application): VideoCache {
+        fun new(app: Context): VideoCache {
             val newCache = VideoCache()
             runBlocking {
                 newCache.initFileCache(

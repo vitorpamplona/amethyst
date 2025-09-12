@@ -20,12 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import android.app.Application
+import android.content.Context
+import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 
 /**
  * There should be only one instance of the Tor binding per app.
@@ -33,15 +40,41 @@ import kotlinx.coroutines.flow.stateIn
  * Tor will connect as soon as status is listened to.
  */
 class TorManager(
-    app: Application,
+    torPrefs: TorSharedPreferences,
+    app: Context,
     scope: CoroutineScope,
 ) {
-    val status: StateFlow<TorServiceStatus> =
-        TorService(app).status.stateIn(
-            scope,
-            SharingStarted.WhileSubscribed(30000),
-            TorServiceStatus.Off,
-        )
+    val service = TorService(app)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val status =
+        combine(
+            torPrefs.value.torType,
+            torPrefs.value.externalSocksPort,
+        ) { torType, externalSocksPort ->
+            Pair(torType, externalSocksPort)
+        }.transformLatest { (torType, externalSocksPort) ->
+            when (torType) {
+                TorType.INTERNAL -> {
+                    emitAll(service.status)
+                }
+                TorType.OFF -> {
+                    emit(TorServiceStatus.Off)
+                }
+                TorType.EXTERNAL -> {
+                    if (externalSocksPort > 0) {
+                        emit(TorServiceStatus.Active(externalSocksPort))
+                    } else {
+                        emitAll(service.status)
+                    }
+                }
+            }
+        }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(30000),
+                TorServiceStatus.Off,
+            )
 
     val activePortOrNull: StateFlow<Int?> =
         status

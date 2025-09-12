@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableEmail
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -126,7 +125,7 @@ fun RelayInformationScreen(
             )
         },
     ) { pad ->
-        val relayInfo by loadRelayInfo(relay, accountViewModel)
+        val relayInfo by loadRelayInfo(relay)
 
         val messages =
             remember(relay) {
@@ -158,7 +157,7 @@ fun RelayInformationScreen(
                             displayUrl = relay.displayUrl(),
                             iconUrl = relayInfo.icon,
                             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                             RelayStats.get(relay).pingInMs,
                             iconModifier = LargeRelayIconModifier,
                         )

@@ -39,6 +39,7 @@ import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
@@ -54,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
@@ -109,7 +109,6 @@ import java.net.URI
 fun AppNavigation(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
     listsViewModel: NostrUserListFeedViewModel,
 ) {
     val nav = rememberNav()
@@ -125,7 +124,7 @@ fun AppNavigation(
             composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
             composable<Route.Video> { VideoScreen(accountViewModel, nav) }
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
-            composable<Route.Notification> { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+            composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.Lists> { ListsScreen(accountViewModel, listsViewModel, nav) }
             composableArgs<Route.FollowSetRoute> {
@@ -136,10 +135,10 @@ fun AppNavigation(
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
-            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(accountViewModel, nav) }
+            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
-            composableFromEnd<Route.Settings> { SettingsScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+            composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
             composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
@@ -160,6 +159,7 @@ fun AppNavigation(
                 PublicChatChannelScreen(
                     it.id,
                     it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
                     accountViewModel,
                     nav,
                 )
@@ -169,6 +169,7 @@ fun AppNavigation(
                 LiveActivityChannelScreen(
                     Address(it.kind, it.pubKeyHex, it.dTag),
                     draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
                     accountViewModel,
                     nav,
                 )
@@ -179,6 +180,7 @@ fun AppNavigation(
                     EphemeralChatScreen(
                         channelId = RoomId(it.id, relay),
                         draft = it.draftId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                        replyTo = it.replyTo?.let { hex -> accountViewModel.checkGetOrCreateNote(hex) },
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

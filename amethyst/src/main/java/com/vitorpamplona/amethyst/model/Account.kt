@@ -22,9 +22,10 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
@@ -78,18 +79,21 @@ import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
-import com.vitorpamplona.amethyst.model.privacyOptions.PrivacyState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexAndSearchRelayListsState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexRelayListsState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithSearchRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
-import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -122,7 +126,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -133,7 +137,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -207,6 +211,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -220,9 +225,11 @@ import kotlin.coroutines.cancellation.CancellationException
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     val signer: NostrSigner,
-    geolocationFlow: StateFlow<LocationState.LocationResult>,
+    val geolocationFlow: StateFlow<LocationState.LocationResult>,
+    val nwcFilterAssembler: NWCPaymentFilterAssembler,
+    val otsResolverBuilder: OtsResolverBuilder,
     val cache: LocalCache,
-    val client: NostrClient,
+    val client: INostrClient,
     val scope: CoroutineScope,
 ) {
     private var userProfileCache: User? = null
@@ -231,7 +238,7 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    val nip47SignerState = NwcSignerState(signer, cache, scope, settings)
+    val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
@@ -303,7 +310,10 @@ class Account(
 
     // Follows Relays
     val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
+    val followPlusAllMineWithIndex = MergedFollowPlusMineWithIndexRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
+    val followPlusAllMineWithSearch = MergedFollowPlusMineWithSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, searchRelayList, scope)
+    val followPlusAllMineWithIndexAndSearch = MergedFollowPlusMineWithIndexAndSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, searchRelayList, scope)
+    val defaultGlobalRelays = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
@@ -317,17 +327,7 @@ class Account(
 
     val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
 
-    val privacyState = PrivacyState(settings)
-    val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)
-
-    val otsResolverBuilder: OkHttpOtsResolverBuilder =
-        OkHttpOtsResolverBuilder(
-            {
-                Amethyst.instance.okHttpClients.getHttpClient(privacyState.shouldUseTorForMoneyOperations(it))
-            },
-            privacyState::shouldUseTorForMoneyOperations,
-            Amethyst.instance.otsBlockHeightCache,
-        )
+    val newNotesPreProcessor = EventProcessor(this, cache)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
@@ -346,7 +346,7 @@ class Account(
             feedFilterListName = settings.defaultHomeFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -361,7 +361,7 @@ class Account(
             feedFilterListName = settings.defaultStoriesFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -376,7 +376,7 @@ class Account(
             feedFilterListName = settings.defaultDiscoveryFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -391,7 +391,7 @@ class Account(
             feedFilterListName = settings.defaultNotificationFollowList,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
-            followsRelays = followPlusAllMine.flow,
+            followsRelays = defaultGlobalRelays.flow,
             blockedRelays = blockedRelayList.flow,
             proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
@@ -694,7 +694,8 @@ class Account(
 
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
         if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
-            return followPlusAllMine.flow.value + client.relayStatusFlow().value.available
+            // everywhere
+            return followPlusAllMineWithIndex.flow.value + client.relayStatusFlow().value.available
         }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
@@ -828,6 +829,8 @@ class Account(
         }
     }
 
+    fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
+
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.Default) {
             val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
@@ -841,8 +844,6 @@ class Account(
                 event = note.event as PeopleListEvent,
                 signer,
             )
-
-    suspend fun updateAttestations() = sendAutomatic(otsState.updateAttestations())
 
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
@@ -908,7 +909,7 @@ class Account(
     }
 
     fun sendLiterallyEverywhere(event: Event) {
-        client.send(event, outboxRelays.flow.value + indexerRelayList.flow.value + client.relayStatusFlow().value.available)
+        client.send(event, followPlusAllMineWithIndex.flow.value + client.relayStatusFlow().value.available)
         cache.justConsumeMyOwnEvent(event)
     }
 
@@ -1779,7 +1780,7 @@ class Account(
     init {
         Log.d("AccountRegisterObservers", "Init")
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch {
             cache.antiSpam.flowSpam.collect {
                 it.cache.spamMessages.snapshot().values.forEach { spammer ->
                     if (!hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.shouldHide()) {
@@ -1787,6 +1788,31 @@ class Account(
                             hiddenUsers.hideUser(spammer.pubkeyHex)
                         }
                     }
+                }
+            }
+        }
+
+        scope.launch {
+            cache.live.newEventBundles.collect { newNotes ->
+                logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
+                    upgradeAttestations()
+                    newNotesPreProcessor.runNew(newNotes)
+                }
+            }
+        }
+
+        scope.launch {
+            cache.live.deletedEventBundles.collect { newNotes ->
+                logTime("Account ${userProfile().toBestDisplayName()} deletedEventBundle Update with ${newNotes.size} new notes") {
+                    newNotesPreProcessor.runDeleted(newNotes)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.IO) {
+            settings.saveable.debounce(1000).collect {
+                if (it.accountSettings != null) {
+                    LocalPreferences.saveToEncryptedStorage(it.accountSettings)
                 }
             }
         }

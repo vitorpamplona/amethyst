@@ -61,17 +61,30 @@ class OtsEvent(
         const val KIND = 1040
         const val ALT = "Opentimestamps Attestation"
 
+        /**
+         * Stamp is used to save OTS requests locally while we want for the bitcoin
+         * blockchain to include the block with the proof.
+         */
         fun stamp(
             eventId: HexKey,
             resolver: OtsResolver,
         ) = resolver.stamp(eventId.hexToByteArray())
 
+        /**
+         * Converts a stamp into an attestation as soon as the bitcoin chain confirms
+         * the block with it. If the return is not null, the attestation can be sent
+         * to Nostr.
+         */
         fun upgrade(
             otsState: ByteArray,
             eventId: HexKey,
             resolver: OtsResolver,
         ) = resolver.upgrade(otsState, eventId.hexToByteArray())
 
+        /**
+         * Verifies if the attestation contained in a Nostr Event is valid by checking
+         * with the blockchain.
+         */
         fun verify(
             otsState: ByteArray,
             eventId: HexKey,

@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
@@ -544,7 +543,7 @@ fun InnerNoteWithReactions(
                     baseNote.event !is GenericRepostEvent &&
                     !isBoostedNote &&
                     !isQuotedNote &&
-                    accountViewModel.settings.featureSet == FeatureSetType.COMPLETE
+                    accountViewModel.settings.isCompleteUIMode()
             NoteBody(
                 baseNote = baseNote,
                 showAuthorPicture = isQuotedNote,
@@ -1256,7 +1255,7 @@ fun BadgeBox(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
+    if (accountViewModel.settings.isCompleteUIMode()) {
         if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
             baseNote.replyTo?.lastOrNull()?.let { RelayBadges(it, accountViewModel, nav) }
         } else {
@@ -1309,7 +1308,7 @@ private fun ChannelNotePicture(
         contentDescription = stringRes(R.string.group_picture),
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }
 

@@ -43,7 +43,7 @@ object NotificationUtils {
     private const val DM_GROUP_KEY = "com.vitorpamplona.amethyst.DM_NOTIFICATION"
     private const val ZAP_GROUP_KEY = "com.vitorpamplona.amethyst.ZAP_NOTIFICATION"
 
-    fun NotificationManager.getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
+    fun getOrCreateDMChannel(applicationContext: Context): NotificationChannel {
         if (dmChannel != null) return dmChannel!!
 
         dmChannel =
@@ -65,7 +65,7 @@ object NotificationUtils {
         return dmChannel!!
     }
 
-    fun NotificationManager.getOrCreateZapChannel(applicationContext: Context): NotificationChannel {
+    fun getOrCreateZapChannel(applicationContext: Context): NotificationChannel {
         if (zapChannel != null) return zapChannel!!
 
         zapChannel =
@@ -153,7 +153,7 @@ object NotificationUtils {
 
             val imageLoader = ImageLoader(applicationContext)
             val imageResult = imageLoader.executeBlocking(request)
-            sendNotification(
+            sendNotificationInner(
                 id = id,
                 messageBody = messageBody,
                 messageTitle = messageTitle,
@@ -165,7 +165,7 @@ object NotificationUtils {
                 applicationContext = applicationContext,
             )
         } else {
-            sendNotification(
+            sendNotificationInner(
                 id = id,
                 messageBody = messageBody,
                 messageTitle = messageTitle,
@@ -179,7 +179,7 @@ object NotificationUtils {
         }
     }
 
-    private fun NotificationManager.sendNotification(
+    private fun NotificationManager.sendNotificationInner(
         id: String,
         messageBody: String,
         messageTitle: String,

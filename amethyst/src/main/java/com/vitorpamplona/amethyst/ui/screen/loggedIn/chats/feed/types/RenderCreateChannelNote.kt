@@ -49,8 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Constants
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -160,7 +159,7 @@ fun RenderChannelData(
                     contentDescription = stringRes(R.string.channel_image),
                     modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                     loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                    loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 )
             }
         }
@@ -237,7 +236,7 @@ fun RenderRelayLinePublicChat(
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo by loadRelayInfo(relay, accountViewModel)
+    val relayInfo by loadRelayInfo(relay)
 
     val clipboardManager = LocalClipboardManager.current
     val clickableModifier =
@@ -255,7 +254,7 @@ fun RenderRelayLinePublicChat(
         relayInfo.icon,
         clickableModifier,
         showPicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }
 

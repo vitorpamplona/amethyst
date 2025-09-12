@@ -18,51 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
-import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.coroutines.executeAsync
 
-object Nip11CachedRetriever {
-    sealed class RetrieveResult(
-        val data: Nip11RelayInformation,
-        val time: Long,
-    ) {
-        class Error(
-            data: Nip11RelayInformation,
-            val error: Nip11Retriever.ErrorCode,
-            val msg: String? = null,
-        ) : RetrieveResult(data, TimeUtils.now())
-
-        class Success(
-            data: Nip11RelayInformation,
-        ) : RetrieveResult(data, TimeUtils.now())
-
-        class Loading(
-            data: Nip11RelayInformation,
-        ) : RetrieveResult(data, TimeUtils.now())
-
-        class Empty(
-            data: Nip11RelayInformation,
-        ) : RetrieveResult(data, TimeUtils.now())
-
-        fun isValid() = time > TimeUtils.oneHourAgo()
-    }
-
+class Nip11CachedRetriever(
+    val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
+) {
     private val relayInformationEmptyCache = LruCache<NormalizedRelayUrl, Nip11RelayInformation>(1000)
     private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult?>(1000)
-    private val retriever = Nip11Retriever()
+    private val retriever = Nip11Retriever(okHttpClient)
 
     fun getEmpty(relay: NormalizedRelayUrl): Nip11RelayInformation {
         relayInformationEmptyCache.get(relay)?.let { return it }
@@ -98,7 +68,6 @@ object Nip11CachedRetriever {
 
     suspend fun loadRelayInfo(
         relay: NormalizedRelayUrl,
-        okHttpClient: (String) -> OkHttpClient,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
@@ -110,33 +79,31 @@ object Nip11CachedRetriever {
                     if (doc.isValid()) {
                         // just wait.
                     } else {
-                        retrieve(relay, okHttpClient, onInfo, onError)
+                        retrieve(relay, onInfo, onError)
                     }
                 }
                 is RetrieveResult.Error -> {
                     if (doc.isValid()) {
                         onError(relay, doc.error, null)
                     } else {
-                        retrieve(relay, okHttpClient, onInfo, onError)
+                        retrieve(relay, onInfo, onError)
                     }
                 }
-                is RetrieveResult.Empty -> retrieve(relay, okHttpClient, onInfo, onError)
+                is RetrieveResult.Empty -> retrieve(relay, onInfo, onError)
             }
         } else {
-            retrieve(relay, okHttpClient, onInfo, onError)
+            retrieve(relay, onInfo, onError)
         }
     }
 
     private suspend fun retrieve(
         relay: NormalizedRelayUrl,
-        okHttpClient: (String) -> OkHttpClient,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         relayInformationDocumentCache.put(relay, RetrieveResult.Loading(getEmpty(relay)))
         retriever.loadRelayInfo(
             relay = relay,
-            okHttpClient = okHttpClient,
             onInfo = {
                 relayInformationDocumentCache.put(relay, RetrieveResult.Success(it))
                 relayInformationEmptyCache.remove(relay)
@@ -148,62 +115,5 @@ object Nip11CachedRetriever {
                 onError(relay, code, errorMsg)
             },
         )
-    }
-}
-
-class Nip11Retriever {
-    enum class ErrorCode {
-        FAIL_TO_ASSEMBLE_URL,
-        FAIL_TO_REACH_SERVER,
-        FAIL_TO_PARSE_RESULT,
-        FAIL_WITH_HTTP_STATUS,
-    }
-
-    suspend fun loadRelayInfo(
-        relay: NormalizedRelayUrl,
-        okHttpClient: (String) -> OkHttpClient,
-        onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (NormalizedRelayUrl, ErrorCode, String?) -> Unit,
-    ) {
-        val url = relay.toHttp()
-        try {
-            val request: Request =
-                Request
-                    .Builder()
-                    .header("Accept", "application/nostr+json")
-                    .url(url)
-                    .build()
-
-            val client = okHttpClient(url)
-
-            client.newCall(request).executeAsync().use { response ->
-                withContext(Dispatchers.IO) {
-                    val body = response.body.string()
-                    try {
-                        if (response.isSuccessful) {
-                            if (body.startsWith("{")) {
-                                onInfo(Nip11RelayInformation.fromJson(body))
-                            } else {
-                                onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, body)
-                            }
-                        } else {
-                            onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
-                        }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e(
-                            "RelayInfoFail",
-                            "Resulting Message from Relay ${relay.url} in not parseable: $body",
-                            e,
-                        )
-                        onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e("RelayInfoFail", "Invalid URL ${relay.url}", e)
-            onError(relay, ErrorCode.FAIL_TO_ASSEMBLE_URL, e.message)
-        }
     }
 }

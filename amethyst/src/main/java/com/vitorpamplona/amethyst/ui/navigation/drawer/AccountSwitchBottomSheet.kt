@@ -57,7 +57,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -218,7 +217,7 @@ private fun AccountPicture(
         contentDescription = stringRes(R.string.profile_image),
         modifier = AccountPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }
 

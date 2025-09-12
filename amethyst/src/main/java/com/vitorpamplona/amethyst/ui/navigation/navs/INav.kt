@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
 
 @Stable
 interface INav {
-    val scope: CoroutineScope
+    val navigationScope: CoroutineScope
     val drawerState: DrawerState
 
     fun closeDrawer()

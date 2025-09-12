@@ -63,7 +63,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
@@ -605,7 +604,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     }
 

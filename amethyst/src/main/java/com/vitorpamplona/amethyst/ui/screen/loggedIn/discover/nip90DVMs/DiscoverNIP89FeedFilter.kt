@@ -23,6 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ParticipantListBuilder
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -33,8 +41,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 open class DiscoverNIP89FeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    val lastAnnounced = 365 * 24 * 60 * 60 // 365 Days ago
-    // TODO better than announced would be last active, as this requires the DVM provider to regularly update the NIP89 announcement
+    val lastAnnounced = TimeUtils.oneYearAgo()
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
@@ -77,7 +84,7 @@ open class DiscoverNIP89FeedFilter(
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent) &&
             noteEvent.includeKind(5300) &&
-            noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+            noteEvent.createdAt > lastAnnounced // && params.match(noteEvent)
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
@@ -85,5 +92,39 @@ open class DiscoverNIP89FeedFilter(
             acceptDVM(it)
         }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+    override fun sort(items: Set<Note>): List<Note> {
+        val topFilter = account.liveDiscoveryFollowLists.value
+        val discoveryTopFilterAuthors =
+            when (topFilter) {
+                is AuthorsByOutboxTopNavFilter -> topFilter.authors
+                is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
+                is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+                is SingleCommunityTopNavFilter -> topFilter.authors
+                is AuthorsByProxyTopNavFilter -> topFilter.authors
+                is MutedAuthorsByProxyTopNavFilter -> topFilter.authors
+                is AllFollowsByProxyTopNavFilter -> topFilter.authors
+                else -> null
+            }
+
+        val followingKeySet =
+            discoveryTopFilterAuthors ?: account.kind3FollowList.flow.value.authors
+
+        val counter = ParticipantListBuilder()
+        val participantCounts =
+            items.associateWith { counter.countFollowsThatParticipateOn(it, followingKeySet) }
+
+        val createdNote =
+            items.associateWith { note ->
+                ((note.event?.createdAt ?: 0) / 86400).toInt()
+            }
+
+        val feedOrder: Comparator<Note> =
+            compareByDescending<Note> {
+                participantCounts[it]
+            }.thenByDescending {
+                createdNote[it]
+            }.thenBy { it.idHex }
+
+        return items.sortedWith(feedOrder)
+    }
 }

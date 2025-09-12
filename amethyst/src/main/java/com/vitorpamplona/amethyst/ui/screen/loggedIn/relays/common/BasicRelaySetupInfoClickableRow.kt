@@ -37,11 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
@@ -80,7 +80,7 @@ fun BasicRelaySetupInfoClickableRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,
         ) {
-            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, accountViewModel)
+            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay)
 
             RenderRelayIcon(
                 iconUrlFromRelayInfoDoc.id ?: item.relay.displayUrl(),

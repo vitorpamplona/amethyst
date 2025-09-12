@@ -59,8 +59,8 @@ class RegisterAccounts(
         }
 
         return mapNotNullAsync(remainingTos) { info ->
-            val signer = info.accountSettings.createSigner(Amethyst.instance.contentResolver)
-            RelayAuthEvent.create(info.relays, notificationToken, signer)
+            val account = Amethyst.instance.accountsCache.loadAccount(info.accountSettings)
+            RelayAuthEvent.create(info.relays, notificationToken, account.signer)
         }
     }
 
@@ -80,7 +80,7 @@ class RegisterAccounts(
                     if (account.hasPrivKey || account.loggedInWithExternalSigner) {
                         Log.d(tag, "Register Account ${account.npub}")
 
-                        val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(account.npub)
+                        val acc = LocalPreferences.loadAccountConfigFromEncryptedStorage(account.npub)
                         if (acc != null && acc.isWriteable()) {
                             val nip65Read = acc.backupNIP65RelayList?.readRelaysNorm() ?: emptyList()
                             val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList()

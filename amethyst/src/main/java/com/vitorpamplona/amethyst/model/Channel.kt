@@ -48,7 +48,15 @@ abstract class Channel : NotesGatherer {
         return new
     }
 
-    open fun participatingAuthors() = notes.mapNotNull { key, value -> value.author }
+    open fun participatingAuthors(maxTimeLimit: Long) =
+        notes.mapNotNull { key, value ->
+            val createdAt = value.createdAt()
+            if (createdAt != null && createdAt > maxTimeLimit) {
+                value.author
+            } else {
+                null
+            }
+        }
 
     abstract fun toBestDisplayName(): String
 

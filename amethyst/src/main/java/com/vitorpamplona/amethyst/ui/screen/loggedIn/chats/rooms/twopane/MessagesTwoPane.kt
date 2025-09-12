@@ -31,9 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.adaptive.FoldAwareConfiguration
 import com.google.accompanist.adaptive.HorizontalTwoPaneStrategy
 import com.google.accompanist.adaptive.TwoPane
+import com.google.accompanist.adaptive.calculateDisplayFeatures
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -67,6 +70,9 @@ fun MessagesTwoPane(
                 HorizontalTwoPaneStrategy(splitFraction = 1f / 2.5f)
             }
         }
+
+    val act = LocalContext.current.getActivity()
+    val displayFeatures = calculateDisplayFeatures(act)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -126,7 +132,7 @@ fun MessagesTwoPane(
                 }
             },
             strategy = strategy,
-            displayFeatures = accountViewModel.settings.displayFeatures.value,
+            displayFeatures = displayFeatures,
             foldAwareConfiguration = FoldAwareConfiguration.VerticalFoldsOnly,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize(),
         )

@@ -215,6 +215,21 @@ fun routeReplyTo(
 ): Route? {
     val noteEvent = note.event
     return when (noteEvent) {
+        is ChannelMessageEvent -> {
+            noteEvent.channelId()?.let { channelId ->
+                Route.PublicChatChannel(channelId, replyTo = note.idHex)
+            }
+        }
+        is LiveActivitiesChatMessageEvent -> {
+            noteEvent.activityAddress()?.let {
+                Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag, replyTo = note.idHex)
+            }
+        }
+        is EphemeralChatEvent -> {
+            noteEvent.roomId()?.let {
+                Route.EphemeralChat(it.id, it.relayUrl.url, replyTo = note.idHex)
+            }
+        }
         is PublicMessageEvent ->
             Route.NewPublicMessage(
                 users = noteEvent.groupKeySet() - account.userProfile().pubkeyHex,

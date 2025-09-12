@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 
@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
  * Listens to NostrClient's onEvent messages for caching purposes.
  */
 class RelayInsertConfirmationCollector(
-    val client: NostrClient,
+    val client: INostrClient,
     val onRelayReceived: (eventId: HexKey, relay: IRelayClient) -> Unit,
 ) {
     private val clientListener =

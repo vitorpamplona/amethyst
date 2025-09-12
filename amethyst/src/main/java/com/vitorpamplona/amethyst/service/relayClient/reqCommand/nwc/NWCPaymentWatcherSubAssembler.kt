@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class NWCPaymentWatcherSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<NWCPaymentQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<NWCPaymentQueryState>(client, allKeys) {
     override fun updateFilter(keys: List<NWCPaymentQueryState>): List<RelayBasedFilter>? {

@@ -33,14 +33,35 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.http.CalendarPureJavaBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA256
 import kotlinx.coroutines.CancellationException
 
+/**
+ * Resolver class for OpenTimestamps operations.
+ *
+ * This class provides functionality to stamp data with OpenTimestamps,
+ * upgrade existing timestamps, and verify timestamp proofs against data.
+ *
+ * @property explorer The Bitcoin explorer used for verification operations.
+ * @property calendarBuilder The calendar builder used for stamping operations.
+ */
 class OtsResolver(
     explorer: BitcoinExplorer = BlockstreamExplorer(),
     calendarBuilder: CalendarBuilder = CalendarPureJavaBuilder(),
 ) {
     val ots: OpenTimestamps = OpenTimestamps(explorer, calendarBuilder)
 
+    /**
+     * Returns a human-readable information string about the given OTS file.
+     *
+     * @param otsState The serialized OpenTimestamps file data.
+     * @return A string containing information about the timestamp.
+     */
     fun info(otsState: ByteArray): String = ots.info(DetachedTimestampFile.deserialize(otsState))
 
+    /**
+     * Creates a local timestamp proof for the given data.
+     *
+     * @param data The data to be timestamped.
+     * @return A serialized DetachedTimestampFile containing the timestamp proof.
+     */
     fun stamp(data: ByteArray): ByteArray {
         val hash = Hash(data, OpSHA256.TAG)
         val file = DetachedTimestampFile.from(hash)
@@ -49,6 +70,13 @@ class OtsResolver(
         return detachedToSerialize.serialize()
     }
 
+    /**
+     * Attempts to upgrade an existing timestamp to a verified proof.
+     *
+     * @param otsState The serialized OpenTimestamps file data to upgrade.
+     * @param data The original data that was timestamped.
+     * @return A serialized DetachedTimestampFile with upgraded proof if successful, null otherwise.
+     */
     fun upgrade(
         otsState: ByteArray,
         data: ByteArray,
@@ -67,11 +95,25 @@ class OtsResolver(
         }
     }
 
+    /**
+     * Verifies an OpenTimestamps proof against the original data.
+     *
+     * @param otsFile The serialized OpenTimestamps file data.
+     * @param data The original data to verify against.
+     * @return VerificationState indicating the result of the verification.
+     */
     fun verify(
         otsFile: ByteArray,
         data: ByteArray,
     ): VerificationState = verify(DetachedTimestampFile.deserialize(otsFile), data)
 
+    /**
+     * Verifies an OpenTimestamps proof against the original data.
+     *
+     * @param detachedOts The DetachedTimestampFile containing the proof.
+     * @param data The original data to verify against.
+     * @return VerificationState indicating the result of the verification.
+     */
     fun verify(
         detachedOts: DetachedTimestampFile,
         data: ByteArray,

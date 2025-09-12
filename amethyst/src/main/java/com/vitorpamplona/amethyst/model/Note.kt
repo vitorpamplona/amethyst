@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -100,14 +99,6 @@ class AddressableNote(
     }
 
     fun dTag(): String = address.dTag
-
-    override fun wasOrShouldBeDeletedBy(
-        deletionEvents: Set<HexKey>,
-        deletionAddressables: Set<Address>,
-    ): Boolean {
-        val thisEvent = event
-        return deletionAddressables.contains(address) || (thisEvent != null && deletionEvents.contains(thisEvent.id))
-    }
 
     fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
 
@@ -909,14 +900,6 @@ open class Note(
         if (flowSet != null && flowSet?.isInUse() == false) {
             createOrDestroyFlowSync(false)
         }
-    }
-
-    open fun wasOrShouldBeDeletedBy(
-        deletionEvents: Set<HexKey>,
-        deletionAddressables: Set<Address>,
-    ): Boolean {
-        val thisEvent = event
-        return deletionEvents.contains(idHex) || (thisEvent is AddressableEvent && deletionAddressables.contains(thisEvent.address()))
     }
 
     fun toETag(): ETag {

@@ -42,7 +42,7 @@ class LiveActivitiesChannel(
 
     fun address() = address
 
-    override fun relays() = info?.allRelayUrls()?.toSet() ?: super.relays()
+    override fun relays() = info?.allRelayUrls()?.toSet()?.ifEmpty { null } ?: super.relays()
 
     fun relayHintUrl() = relays().firstOrNull()
 

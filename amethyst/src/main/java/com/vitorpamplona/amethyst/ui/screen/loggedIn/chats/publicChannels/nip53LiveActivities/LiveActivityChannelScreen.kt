@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 fun LiveActivityChannelScreen(
     channelId: Address?,
     draft: Note? = null,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -58,7 +59,7 @@ fun LiveActivityChannelScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {
-            LiveActivityChannelView(channelId, draft, accountViewModel, nav)
+            LiveActivityChannelView(channelId, draft, replyTo, accountViewModel, nav)
         }
     }
 }

@@ -18,12 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.model.privacyOptions
 
-import android.app.Application
-import java.io.File
+import okhttp3.OkHttpClient
 
-fun Application.safeCacheDir(): File {
-    val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
-    return cacheDir.apply { mkdirs() }
+interface IRoleBasedHttpClientBuilder {
+    fun proxyPortForVideo(url: String): Int?
+
+    fun okHttpClientForNip05(url: String): OkHttpClient
+
+    fun okHttpClientForUploads(url: String): OkHttpClient
+
+    fun okHttpClientForImage(url: String): OkHttpClient
+
+    fun okHttpClientForVideo(url: String): OkHttpClient
+
+    fun okHttpClientForMoney(url: String): OkHttpClient
+
+    fun okHttpClientForPreview(url: String): OkHttpClient
+
+    fun okHttpClientForPushRegistration(url: String): OkHttpClient
 }

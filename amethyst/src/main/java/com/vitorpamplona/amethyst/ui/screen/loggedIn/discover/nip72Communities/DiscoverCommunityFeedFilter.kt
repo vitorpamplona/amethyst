@@ -125,13 +125,20 @@ open class DiscoverCommunityFeedFilter(
                 max
             }
 
-        return items
-            .sortedWith(
-                compareBy(
-                    { lastNotesCreatedAt[it] },
-                    { it.createdAt() },
-                    { it.idHex },
-                ),
-            ).reversed()
+        val createdNote =
+            items.associateWith { note ->
+                note.createdAt() ?: 0
+            }
+
+        val comparator: Comparator<Note> =
+            compareByDescending<Note> {
+                lastNotesCreatedAt[it]
+            }.thenByDescending {
+                createdNote[it]
+            }.thenBy {
+                it.idHex
+            }
+
+        return items.sortedWith(comparator)
     }
 }

@@ -97,6 +97,7 @@ sealed class Route {
     @Serializable data class PublicChatChannel(
         val id: String,
         val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
     ) : Route()
 
     @Serializable data class LiveActivityChannel(
@@ -104,6 +105,7 @@ sealed class Route {
         val pubKeyHex: HexKey,
         val dTag: String,
         val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
     ) : Route()
 
     @Serializable data class RelayInfo(
@@ -114,6 +116,7 @@ sealed class Route {
         val id: String,
         val relayUrl: String,
         val draftId: HexKey? = null,
+        val replyTo: HexKey? = null,
     ) : Route()
 
     @Serializable object NewEphemeralChat : Route()

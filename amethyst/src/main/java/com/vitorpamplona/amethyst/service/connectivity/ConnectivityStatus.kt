@@ -28,5 +28,5 @@ sealed class ConnectivityStatus {
 
     object Off : ConnectivityStatus()
 
-    object Connecting : ConnectivityStatus()
+    object StartingService : ConnectivityStatus()
 }

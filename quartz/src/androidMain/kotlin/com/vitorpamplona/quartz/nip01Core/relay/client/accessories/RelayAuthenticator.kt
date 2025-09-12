@@ -21,14 +21,14 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class RelayAuthenticator(
-    val client: NostrClient,
+    val client: INostrClient,
     val scope: CoroutineScope,
     val authenticate: suspend (challenge: String, relay: IRelayClient) -> Unit,
 ) {
