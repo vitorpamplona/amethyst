@@ -78,6 +78,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -106,6 +109,7 @@ import java.net.URI
 fun AppNavigation(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
+    listsViewModel: NostrUserListFeedViewModel,
 ) {
     val nav = rememberNav()
 
@@ -122,6 +126,11 @@ fun AppNavigation(
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
 
+            composableFromEnd<Route.Lists> { ListsScreen(accountViewModel, listsViewModel, nav) }
+            composableArgs<Route.FollowSetRoute> {
+                FollowSetScreen(it.setIdentifier, accountViewModel, listsViewModel, nav)
+            }
+
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
@@ -136,7 +145,7 @@ fun AppNavigation(
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, listsViewModel, nav) }
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }

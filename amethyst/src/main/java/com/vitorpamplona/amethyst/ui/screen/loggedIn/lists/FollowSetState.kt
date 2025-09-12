@@ -18,18 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
-import androidx.compose.runtime.Immutable
+sealed class FollowSetState {
+    data object Loading : FollowSetState()
 
-@Immutable
-class StringToastMsg(
-    val title: String,
-    val msg: String,
-) : ToastMsg()
+    data class Loaded(
+        val feed: List<FollowSet>,
+    ) : FollowSetState()
 
-class ActionableStringToastMsg(
-    val title: String,
-    val msg: String,
-    val action: () -> Unit,
-) : ToastMsg()
+    data object Empty : FollowSetState()
+
+    data class FeedError(
+        val errorMessage: String,
+    ) : FollowSetState()
+}
