@@ -72,7 +72,7 @@ class ChatroomListNewFeedFilter(
 
                 if (newNotePair.key == oldRoom) {
                     hasUpdated = true
-                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
                     }
                 }
@@ -120,7 +120,7 @@ class ChatroomListNewFeedFilter(
                 ) {
                     val lastNote = newRelevantPrivateMessages.get(roomKey)
                     if (lastNote != null) {
-                        if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                        if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                             newRelevantPrivateMessages.put(roomKey, newNote)
                         }
                     } else {

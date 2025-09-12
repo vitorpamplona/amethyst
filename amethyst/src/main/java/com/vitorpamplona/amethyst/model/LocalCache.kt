@@ -700,7 +700,7 @@ object LocalCache : ILocalCache {
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0)) {
+            if (event.createdAt > (note.createdAt() ?: 0L)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -743,7 +743,7 @@ object LocalCache : ILocalCache {
         }
 
         if (isVerified || justVerify(event)) {
-            if (event.createdAt > (note.createdAt() ?: 0)) {
+            if (event.createdAt > (note.createdAt() ?: 0L)) {
                 val replyTo = computeReplyTo(event)
 
                 note.loadEvent(event, author, replyTo)
@@ -845,7 +845,7 @@ object LocalCache : ILocalCache {
 
         if (note.event?.id == event.id) return false
 
-        if (event.createdAt > (note.createdAt() ?: 0) && (isVerified || justVerify(event))) {
+        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
             note.loadEvent(event, author, emptyList())
 
             val channel = getOrCreateLiveChannel(note.address)
@@ -1073,7 +1073,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event?.id == event.id) return false
 
-        if (event.createdAt > (note.createdAt() ?: 0) && (isVerified || justVerify(event))) {
+        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
             note.loadEvent(event, author, emptyList())
 
             author.flowSet?.statuses?.invalidateData()
@@ -1196,7 +1196,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (replaceableNote.event?.id == event.id) return isVerified
 
-        if (event.createdAt > (replaceableNote.createdAt() ?: 0) && (isVerified || justVerify(event))) {
+        if (event.createdAt > (replaceableNote.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
             // clear index from previous tags
             replaceableNote.replyTo?.forEach {
                 it.removeNote(replaceableNote)
@@ -1257,7 +1257,7 @@ object LocalCache : ILocalCache {
                         val deleteNoteEvent = deleteNote.event
                         if (deleteNoteEvent is AddressableEvent) {
                             val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
-                            if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0) <= event.createdAt) {
+                            if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0L) <= event.createdAt) {
                                 // Counts the replies
                                 deleteNote(addressableNote)
 
@@ -1279,7 +1279,7 @@ object LocalCache : ILocalCache {
                     .mapNotNull { getAddressableNoteIfExists(it) }
                     .forEach { deleteNote ->
                         // must be the same author
-                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0) <= event.createdAt) {
+                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0L) <= event.createdAt) {
                             // Counts the replies
                             deleteNote(deleteNote)
 

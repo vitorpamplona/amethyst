@@ -115,7 +115,7 @@ class HomeLiveFilter(
             oldList.filter { channel ->
                 val channelTime = (channel as? LiveActivitiesChannel)?.info?.createdAt
                 (channelTime == null || channelTime > fifteenMinsAgo) ||
-                    (channel.lastNote?.createdAt() ?: 0) > fifteenMinsAgo
+                    (channel.lastNote?.createdAt() ?: 0L) > fifteenMinsAgo
             }
 
         val newItemsToBeAdded = applyFilter(newItems)

@@ -746,7 +746,7 @@ open class Note(
         val dayAgo = TimeUtils.oneDayAgo()
         return reports.isNotEmpty() ||
             (
-                author?.reports?.any { it.value.firstOrNull { (it.createdAt() ?: 0) > dayAgo } != null }
+                author?.reports?.any { it.value.firstOrNull { (it.createdAt() ?: 0L) > dayAgo } != null }
                     ?: false
             )
     }
@@ -778,14 +778,14 @@ open class Note(
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
         val fiveMinsAgo = TimeUtils.fiveMinutesAgo()
         return boosts.any {
-            it.author == loggedIn && (it.createdAt() ?: 0) > fiveMinsAgo
+            it.author == loggedIn && (it.createdAt() ?: 0L) > fiveMinsAgo
         }
     }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: HexKey): Boolean {
         val fiveMinsAgo = TimeUtils.fiveMinutesAgo()
         return boosts.any {
-            (it.createdAt() ?: 0) > fiveMinsAgo && it.author?.pubkeyHex == loggedIn
+            (it.createdAt() ?: 0L) > fiveMinsAgo && it.author?.pubkeyHex == loggedIn
         }
     }
 
