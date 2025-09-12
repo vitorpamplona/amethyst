@@ -38,7 +38,7 @@ class EventBookmark(
     val relay: NormalizedRelayUrl? = null,
     val author: HexKey? = null,
 ) : BookmarkIdTag {
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             eventId.bytesUsedInMemory() +
             (relay?.url?.bytesUsedInMemory() ?: 0) +

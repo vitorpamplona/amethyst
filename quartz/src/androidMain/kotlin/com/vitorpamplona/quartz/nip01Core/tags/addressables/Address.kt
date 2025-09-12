@@ -39,9 +39,9 @@ data class Address(
     Parcelable {
     fun toValue() = assemble(kind, pubKeyHex, dTag)
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         3 * pointerSizeInBytes +
-            8L + // kind
+            8 + // kind
             pubKeyHex.bytesUsedInMemory() +
             dTag.bytesUsedInMemory()
 

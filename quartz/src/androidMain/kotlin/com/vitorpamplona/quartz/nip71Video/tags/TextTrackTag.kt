@@ -31,7 +31,7 @@ data class TextTrackTag(
     val eventId: HexKey,
     var relay: String? = null,
 ) {
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         2 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             eventId.bytesUsedInMemory() +
             (relay?.bytesUsedInMemory() ?: 0)

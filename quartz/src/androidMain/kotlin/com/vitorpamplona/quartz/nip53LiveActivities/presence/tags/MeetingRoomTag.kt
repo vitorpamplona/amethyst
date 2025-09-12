@@ -35,7 +35,7 @@ class MeetingRoomTag(
     val address: Address,
     val relayHint: NormalizedRelayUrl? = null,
 ) {
-    fun countMemory(): Long = 2 * pointerSizeInBytes + address.countMemory() + (relayHint?.url?.bytesUsedInMemory() ?: 0)
+    fun countMemory(): Int = 2 * pointerSizeInBytes + address.countMemory() + (relayHint?.url?.bytesUsedInMemory() ?: 0)
 
     fun toTag() = Address.assemble(address.kind, address.pubKeyHex, address.dTag)
 

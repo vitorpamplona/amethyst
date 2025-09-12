@@ -47,9 +47,9 @@ open class Event(
 
     open fun extraIndexableTagNames() = emptySet<String>()
 
-    open fun countMemory(): Long =
+    open fun countMemory(): Int =
         7 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
-            12L + // createdAt + kind
+            12 + // createdAt + kind
             id.bytesUsedInMemory() +
             pubKey.bytesUsedInMemory() +
             tags.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } +

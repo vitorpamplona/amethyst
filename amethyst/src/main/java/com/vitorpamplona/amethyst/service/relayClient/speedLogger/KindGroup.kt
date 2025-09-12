@@ -24,22 +24,21 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @OptIn(ExperimentalAtomicApi::class)
 class KindGroup(
     var count: AtomicInteger = AtomicInteger(0),
-    var memory: AtomicLong = AtomicLong(0L),
+    var memory: AtomicInteger = AtomicInteger(0),
     val subs: LargeCache<String, AtomicInteger> = LargeCache<String, AtomicInteger>(),
     val relays: LargeCache<NormalizedRelayUrl, AtomicInteger> = LargeCache<NormalizedRelayUrl, AtomicInteger>(),
 ) {
     companion object {
-        const val MB: Long = 1024
+        const val MB: Int = 1024
     }
 
     fun increment(
-        mem: Long,
+        mem: Int,
         subId: String,
         relayUrl: NormalizedRelayUrl,
     ) {
@@ -63,7 +62,7 @@ class KindGroup(
 
     fun reset() {
         count.set(0)
-        memory.set(0L)
+        memory.set(0)
         subs.forEach { key, value -> value.set(0) }
         relays.forEach { key, value -> value.set(0) }
     }

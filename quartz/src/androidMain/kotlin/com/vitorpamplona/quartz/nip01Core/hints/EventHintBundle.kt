@@ -45,7 +45,7 @@ data class EventHintBundle<T : Event>(
         this.authorHomeRelay = authorHomeRelay
     }
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
             event.countMemory() +
             (relay?.url?.bytesUsedInMemory() ?: 0)

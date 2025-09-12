@@ -50,7 +50,7 @@ data class ContactTag(
         this.petname = petname
     }
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         3 * pointerSizeInBytes +
             pubKey.bytesUsedInMemory() +
             (relayUri?.url?.bytesUsedInMemory() ?: 0) +

@@ -108,6 +108,42 @@ fun debugState(context: Context) {
     )
     Log.d(
         "STATE DUMP",
+        "Public Chat Channels: " +
+            LocalCache.publicChatChannels.filter { _, it -> it.flowSet != null }.size +
+            " / " +
+            LocalCache.publicChatChannels.size() +
+            " / " +
+            LocalCache.publicChatChannels.values().sumOf { it.notes.size() },
+    )
+    Log.d(
+        "STATE DUMP",
+        "Live Chat Channels: " +
+            LocalCache.liveChatChannels.filter { _, it -> it.flowSet != null }.size +
+            " / " +
+            LocalCache.liveChatChannels.size() +
+            " / " +
+            LocalCache.liveChatChannels.values().sumOf { it.notes.size() },
+    )
+    Log.d(
+        "STATE DUMP",
+        "Ephemeral Chat Channels: " +
+            LocalCache.ephemeralChannels.filter { _, it -> it.flowSet != null }.size +
+            " / " +
+            LocalCache.ephemeralChannels.size() +
+            " / " +
+            LocalCache.ephemeralChannels.values().sumOf { it.notes.size() },
+    )
+    LocalCache.chatroomList.forEach { key, room ->
+        Log.d(
+            "STATE DUMP",
+            "Private Chats $key: " +
+                room.rooms.size() +
+                " / " +
+                room.rooms.sumOf { key, value -> value.messages.size },
+        )
+    }
+    Log.d(
+        "STATE DUMP",
         "Deletion Events: " +
             LocalCache.deletionIndex.size(),
     )
@@ -128,7 +164,7 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Memory used by Events: " +
-            LocalCache.notes.sumOfLong { _, note -> note.event?.countMemory() ?: 0L } / (1024 * 1024) +
+            LocalCache.notes.sumOf { _, note -> note.event?.countMemory() ?: 0 } / (1024 * 1024) +
             " MB",
     )
 
@@ -137,10 +173,10 @@ fun debugState(context: Context) {
 
     val bytesNotes =
         LocalCache.notes
-            .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
+            .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory()?.toLong() ?: 0L })
     val bytesAddressables =
         LocalCache.addressables
-            .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
+            .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory()?.toLong() ?: 0L })
 
     qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
         Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes[kind]?.div((1024 * 1024))}MB ")

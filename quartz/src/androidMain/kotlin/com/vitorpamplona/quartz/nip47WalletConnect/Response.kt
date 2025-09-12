@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 abstract class Response(
     @field:JsonProperty("result_type") val resultType: String,
 ) {
-    abstract fun countMemory(): Long
+    abstract fun countMemory(): Int
 }
 
 // PayInvoice Call
@@ -39,10 +39,10 @@ class PayInvoiceSuccessResponse(
     class PayInvoiceResultParams(
         val preimage: String? = null,
     ) {
-        fun countMemory(): Long = pointerSizeInBytes + (preimage?.bytesUsedInMemory() ?: 0)
+        fun countMemory(): Int = pointerSizeInBytes + (preimage?.bytesUsedInMemory() ?: 0)
     }
 
-    override fun countMemory(): Long = pointerSizeInBytes + (result?.countMemory() ?: 0)
+    override fun countMemory(): Int = pointerSizeInBytes + (result?.countMemory() ?: 0)
 }
 
 class PayInvoiceErrorResponse(
@@ -52,10 +52,10 @@ class PayInvoiceErrorResponse(
         val code: ErrorType? = null,
         val message: String? = null,
     ) {
-        fun countMemory(): Long = pointerSizeInBytes + pointerSizeInBytes + (message?.bytesUsedInMemory() ?: 0)
+        fun countMemory(): Int = pointerSizeInBytes + pointerSizeInBytes + (message?.bytesUsedInMemory() ?: 0)
     }
 
-    override fun countMemory(): Long = pointerSizeInBytes + (error?.countMemory() ?: 0)
+    override fun countMemory(): Int = pointerSizeInBytes + (error?.countMemory() ?: 0)
 
     enum class ErrorType {
         @JsonProperty(value = "RATE_LIMITED")

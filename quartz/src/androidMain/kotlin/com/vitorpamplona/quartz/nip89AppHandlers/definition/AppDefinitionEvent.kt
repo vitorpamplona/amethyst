@@ -49,7 +49,7 @@ class AppDefinitionEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PublishedAtProvider {
-    override fun countMemory(): Long = super.countMemory() + (cachedMetadata?.countMemory() ?: 8L)
+    override fun countMemory(): Int = super.countMemory() + (cachedMetadata?.countMemory() ?: 8)
 
     @Transient private var cachedMetadata: AppMetadata? = null
 
