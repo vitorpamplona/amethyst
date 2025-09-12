@@ -194,7 +194,7 @@ class HomeLiveFilter(
 
         return collection.sortedWith(
             compareByDescending<Channel> { followCounts[it] }
-                .thenByDescending<Channel> { it.lastNote?.createdAt() ?: 0 }
+                .thenByDescending<Channel> { it.lastNote?.createdAt() ?: 0L }
                 .thenBy { it.hashCode() },
         )
     }
