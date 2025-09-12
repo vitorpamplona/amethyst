@@ -22,19 +22,13 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -206,57 +200,24 @@ private fun ManyImageGallery(
             else -> 4
         }
 
-    if (images.size <= 20) {
-        // Non-lazy for small sets
-        Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
-            images.chunked(columns).forEach { rowImages ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Size5dp),
-                ) {
-                    rowImages.forEach { image ->
-                        GalleryImage(
-                            image = image,
-                            allImages = images,
-                            modifier = Modifier.weight(1f).aspectRatio(1f),
-                            roundedCorner = roundedCorner,
-                            contentScale = ContentScale.Crop,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
-                    repeat(columns - rowImages.size) {
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-    } else {
-        // Lazy for large sets — expands fully, no independent scroll
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val totalSpacing = Size5dp * (columns - 1)
-            val imageSize = (maxWidth - totalSpacing) / columns
-            val rows = (images.size + columns - 1) / columns
-            val gridHeight = (imageSize * rows) + (Size5dp * (rows - 1))
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(gridHeight),
-                verticalArrangement = Arrangement.spacedBy(Size5dp),
+    Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+        images.chunked(columns).forEach { rowImages ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Size5dp),
-                userScrollEnabled = false,
             ) {
-                items(images) { image ->
+                rowImages.forEach { image ->
                     GalleryImage(
                         image = image,
                         allImages = images,
-                        modifier = Modifier.size(imageSize),
+                        modifier = Modifier.weight(1f).aspectRatio(1f),
                         roundedCorner = roundedCorner,
                         contentScale = ContentScale.Crop,
                         accountViewModel = accountViewModel,
                     )
+                }
+                repeat(columns - rowImages.size) {
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }
