@@ -69,6 +69,10 @@ class PayInvoiceErrorResponse(
         @JsonProperty(value = "INSUFFICIENT_BALANCE")
         INSUFFICIENT_BALANCE,
 
+        // The command is not known or is intentionally not implemented.
+        @JsonProperty(value = "PAYMENT_FAILED")
+        PAYMENT_FAILED,
+
         // The wallet does not have enough funds to cover a fee reserve or the payment amount.
         @JsonProperty(value = "QUOTA_EXCEEDED")
         QUOTA_EXCEEDED,
