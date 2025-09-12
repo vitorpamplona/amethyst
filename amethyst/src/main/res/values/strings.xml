@@ -502,6 +502,7 @@
 
     <string name="follow_list_selection">Follow List</string>
     <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_kind3follows_users_only">All User Follows</string>
     <string name="follow_list_kind3follows_proxy">Follows via Proxy</string>
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
