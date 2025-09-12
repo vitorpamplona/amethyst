@@ -37,9 +37,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 @OptIn(UnstableApi::class)
 class ExoPlayerPool(
     val builder: ExoPlayerBuilder,
+    private val poolSize: Int,
 ) {
     private val playerPool = ConcurrentLinkedQueue<ExoPlayer>()
-    private val poolSize = SimultaneousPlaybackCalculator.max()
     private val poolStartingSize = 3
 
     // Exists to avoid exceptions stopping the coroutine

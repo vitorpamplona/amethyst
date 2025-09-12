@@ -25,7 +25,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
@@ -91,9 +90,8 @@ class Nip65RelayListViewModel : ViewModel() {
     fun loadRelayDocuments() {
         viewModelScope.launch(Dispatchers.IO) {
             _homeRelays.value.forEach { item ->
-                Nip11CachedRetriever.loadRelayInfo(
+                Amethyst.instance.nip11Cache.loadRelayInfo(
                     relay = item.relay,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay)) },
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -102,9 +100,8 @@ class Nip65RelayListViewModel : ViewModel() {
             }
 
             _notificationRelays.value.forEach { item ->
-                Nip11CachedRetriever.loadRelayInfo(
+                Amethyst.instance.nip11Cache.loadRelayInfo(
                     relay = item.relay,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay)) },
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
                     },

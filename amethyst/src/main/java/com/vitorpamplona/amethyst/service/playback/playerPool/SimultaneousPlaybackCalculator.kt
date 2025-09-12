@@ -27,7 +27,6 @@ import androidx.core.content.getSystemService
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
-import com.vitorpamplona.amethyst.Amethyst
 
 class SimultaneousPlaybackCalculator {
     companion object {
@@ -37,7 +36,7 @@ class SimultaneousPlaybackCalculator {
         }
 
         @OptIn(UnstableApi::class)
-        fun max(): Int {
+        fun max(appContext: Context): Int {
             val maxInstances =
                 try {
                     val info = MediaCodecUtil.getDecoderInfo(MimeTypes.VIDEO_H264, false, false)
@@ -54,7 +53,7 @@ class SimultaneousPlaybackCalculator {
                 return maxInstances
             }
 
-            return if (isLowMemory(Amethyst.instance)) {
+            return if (isLowMemory(appContext)) {
                 5
             } else {
                 10

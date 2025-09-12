@@ -28,8 +28,6 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateDMChannel
-import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -92,8 +90,8 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
             PushNotificationUtils.checkAndInit(token, LocalPreferences.allSavedAccounts()) {
                 Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
             }
-            notificationManager().getOrCreateZapChannel(applicationContext)
-            notificationManager().getOrCreateDMChannel(applicationContext)
+            NotificationUtils.getOrCreateZapChannel(applicationContext)
+            NotificationUtils.getOrCreateDMChannel(applicationContext)
         }
     }
 

@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolSubscriptionRepo
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -73,7 +72,8 @@ import kotlinx.coroutines.flow.stateIn
 class NostrClient(
     private val websocketBuilder: WebsocketBuilder,
     private val scope: CoroutineScope,
-) : IRelayClientListener {
+) : INostrClient,
+    IRelayClientListener {
     private val relayPool: RelayPool = RelayPool(this, ::buildRelay)
     private val activeRequests: PoolSubscriptionRepository = PoolSubscriptionRepository()
     private val activeCounts: PoolSubscriptionRepository = PoolSubscriptionRepository()
@@ -124,20 +124,20 @@ class NostrClient(
         }
 
     // Reconnects all relays that may have disconnected
-    fun connect() {
+    override fun connect() {
         isActive = true
         relayPool.connect()
     }
 
-    fun disconnect() {
+    override fun disconnect() {
         isActive = false
         relayPool.disconnect()
     }
 
-    fun isActive() = isActive
+    override fun isActive() = isActive
 
     @Synchronized
-    fun reconnect(onlyIfChanged: Boolean = false) {
+    override fun reconnect(onlyIfChanged: Boolean) {
         if (onlyIfChanged) {
             relayPool.reconnectIfNeedsToORIfItIsTime()
         } else {
@@ -204,8 +204,8 @@ class NostrClient(
         return false
     }
 
-    fun openReqSubscription(
-        subId: String = newSubId(),
+    override fun openReqSubscription(
+        subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
         val oldFilters = activeRequests.getSubscriptionFiltersOrNull(subId) ?: emptyMap()
@@ -240,8 +240,8 @@ class NostrClient(
         }
     }
 
-    fun openCountSubscription(
-        subId: String = newSubId(),
+    override fun openCountSubscription(
+        subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
         val oldFilters = activeCounts.getSubscriptionFiltersOrNull(subId) ?: emptyMap()
@@ -276,7 +276,7 @@ class NostrClient(
         }
     }
 
-    fun sendIfExists(
+    override fun sendIfExists(
         event: Event,
         connectedRelay: NormalizedRelayUrl,
     ) {
@@ -288,7 +288,7 @@ class NostrClient(
         }
     }
 
-    fun send(
+    override fun send(
         event: Event,
         relayList: Set<NormalizedRelayUrl>,
     ) {
@@ -301,7 +301,7 @@ class NostrClient(
         }
     }
 
-    fun close(subscriptionId: String) {
+    override fun close(subscriptionId: String) {
         activeRequests.remove(subscriptionId)
         activeCounts.remove(subscriptionId)
         relayPool.close(subscriptionId)
@@ -386,13 +386,13 @@ class NostrClient(
         listeners.forEach { it.onError(relay, subId, error) }
     }
 
-    fun subscribe(listener: IRelayClientListener) {
+    override fun subscribe(listener: IRelayClientListener) {
         listeners = listeners.plus(listener)
     }
 
     fun isSubscribed(listener: IRelayClientListener): Boolean = listeners.contains(listener)
 
-    fun unsubscribe(listener: IRelayClientListener) {
+    override fun unsubscribe(listener: IRelayClientListener) {
         listeners = listeners.minus(listener)
     }
 
@@ -402,7 +402,9 @@ class NostrClient(
 
     fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = eventOutbox.activeOutboxCacheFor(url)
 
-    fun getSubscriptionFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeRequests.getSubscriptionFiltersOrNull(subId)
+    override fun getReqFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeRequests.getSubscriptionFiltersOrNull(subId)
 
-    fun relayStatusFlow() = relayPool.statusFlow
+    override fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeCounts.getSubscriptionFiltersOrNull(subId)
+
+    override fun relayStatusFlow() = relayPool.statusFlow
 }

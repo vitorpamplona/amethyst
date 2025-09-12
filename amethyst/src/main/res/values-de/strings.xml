@@ -977,4 +977,19 @@ anz der Bedingungen ist erforderlich</string>
     <string name="option_of">Option %1$s von %2$s</string>
     <string name="feed_filter_selected">Feed-Filter, %1$s ausgewählt</string>
     <string name="feed_filter_select_an_option">Feed-Filter, %1$s</string>
+    <string name="feed">Feed</string>
+    <string name="mod_queue">Moderationswarteschlange</string>
+    <string name="invalid_nip47_uri_title">Ungültige NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">Die URI %1$s ist keine gültige NIP-47 Anmelde-URI.</string>
+    <string name="public_home_section_explainer_profile">Der Benutzer veröffentlicht seine Inhalte auf diesen Relays</string>
+    <string name="public_notif_section_explainer_profile">Der Benutzer erhält Benachrichtigungen auf diesen Relays</string>
+    <string name="private_inbox_section_explainer_profile">Der Benutzer empfängt Direktnachrichten auf diesen Relays</string>
+    <string name="this_message_will_disappear_in_days">Diese Nachricht verschwindet in %1$d Tagen</string>
+    <string name="crashreport_found">Absturzbericht gefunden</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Möchten Sie den letzten Absturzbericht per Direktnachricht an Amethyst senden? Es werden keine persönlichen Daten weitergegeben</string>
+    <string name="crashreport_found_send">Senden</string>
+    <string name="community_description">Über uns</string>
+    <string name="guidelines">Richtlinien</string>
+    <string name="moderators">Moderatoren</string>
+    <string name="open_dropdown_menu">Dropdown-Menü öffnen</string>
 </resources>

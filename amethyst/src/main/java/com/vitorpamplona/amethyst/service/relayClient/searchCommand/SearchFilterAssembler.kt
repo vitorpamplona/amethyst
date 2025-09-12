@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableQueryState
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchWatcherSubAssembler
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +40,7 @@ class SearchQueryState(
 }
 
 class SearchFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
     scope: CoroutineScope,
     val cache: LocalCache,
 ) : MutableComposeSubscriptionManager<SearchQueryState>(scope) {

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.nip47WalletConnect
 
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentQueryState
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
  */
 class NwcSignerState(
     val signer: NostrSigner,
+    val nwcFilterAssembler: NWCPaymentFilterAssembler,
     val cache: LocalCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
@@ -163,13 +164,11 @@ class NwcSignerState(
                 relay = walletService.relayUri,
             )
 
-        Amethyst.instance.sources.nwc
-            .subscribe(filter)
+        nwcFilterAssembler.subscribe(filter)
 
         scope.launch(Dispatchers.IO) {
             delay(60000) // waits 1 minute to complete payment.
-            Amethyst.instance.sources.nwc
-                .unsubscribe(filter)
+            nwcFilterAssembler.unsubscribe(filter)
         }
 
         cache.consume(event, zappedNote, true, walletService.relayUri) {

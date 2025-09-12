@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomeOutboxEventsEoseManager
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -35,7 +35,7 @@ class HomeQueryState(
 )
 
 class HomeFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
 ) : ComposeSubscriptionManager<HomeQueryState>() {
     val group =
         listOf(

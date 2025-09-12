@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -165,6 +166,20 @@ fun SignUpPage(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        TorSettingsSetup(
+            torSettingsFlow = Amethyst.instance.torPrefs.value,
+            onError = {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            context,
+                            it,
+                            Toast.LENGTH_LONG,
+                        ).show()
+                }
+            },
+        )
+
         AcceptTerms(
             checked = signUpViewModel.acceptedTerms,
             onCheckedChange = signUpViewModel::updateAcceptedTerms,
@@ -177,21 +192,6 @@ fun SignUpPage(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-
-        TorSettingsSetup(
-            torSettings = signUpViewModel.torSettings,
-            onCheckedChange = signUpViewModel::updateTorSettings,
-            onError = {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            context,
-                            it,
-                            Toast.LENGTH_LONG,
-                        ).show()
-                }
-            },
-        )
 
         Spacer(modifier = Modifier.height(Size10dp))
 

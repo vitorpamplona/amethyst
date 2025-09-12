@@ -71,7 +71,7 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
     val eventsPerRelay =
         mapOfSet {
             keys.forEach { key ->
-                val default = key.account.followPlusAllMine.flow.value
+                val default = key.account.followPlusAllMineWithSearch.flow.value
 
                 if (key.note !is AddressableNote && key.note.event == null) {
                     potentialRelaysToFindEvent(key.note).ifEmpty { default }.forEach { relayUrl ->

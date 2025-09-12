@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -75,66 +75,27 @@ import kotlinx.coroutines.runBlocking
 fun ZapTheDevsCardPreview() {
     runBlocking(Dispatchers.IO) {
         val releaseNotes =
-            """
-            {
-              "id": "0465b20da0adf45dd612024d124e1ed384f7ecd2cd7358e77998828e7bf35fa2",
-              "pubkey": "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-              "created_at": 1708014675,
-              "kind": 1,
-              "tags": [
-                [
-                  "p",
-                  "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b",
-                  "",
-                  "mention"
-                ],
-                [
-                  "p",
-                  "7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf",
-                  "",
-                  "mention"
-                ],
-                [
-                  "t",
-                  "Amethyst"
-                ],
-                [
-                  "t",
-                  "amethyst"
-                ],
-                [
-                  "zap",
-                  "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-                  "wss://vitor.nostr1.com",
-                  "0.6499999761581421"
-                ],
-                [
-                  "zap",
-                  "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b",
-                  "wss://nos.lol",
-                  "0.25"
-                ],
-                [
-                  "zap",
-                  "7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf",
-                  "wss://vitor.nostr1.com",
-                  "0.10000000149011612"
-                ],
-                [
-                  "r",
-                  "https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-googleplay-universal-v0.84.2.apk"
-                ],
-                [
-                  "r",
-                  "https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-fdroid-universal-v0.84.2.apk"
-                ]
-              ],
-              "content": "#Amethyst v0.84.2: Text alignment fix\n\nBugfixes:\n- Fixes link misalignment in posts\n\nUpdated translations: \n- Czech, German, Swedish, and Portuguese by nostr:npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef\n- French by nostr:npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz\n\nDownload:\n- [Play Edition](https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-googleplay-universal-v0.84.2.apk )\n- [FOSS Edition - No translations](https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-fdroid-universal-v0.84.2.apk )",
-              "sig": "e036ecce534e22efd47634c56328af62576ab3a36c565f7c8c5fbea67f48cd46d4041ecfc0ca01dafa0ebe8a0b119d125527a28f88aa30356b80c26dd0953aed"
-            }
-            """.trimIndent()
+            TextNoteEvent(
+                id = "0465b20da0adf45dd612024d124e1ed384f7ecd2cd7358e77998828e7bf35fa2",
+                pubKey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
+                createdAt = 1708014675,
+                tags =
+                    arrayOf(
+                        arrayOf("p", "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b", "", "mention"),
+                        arrayOf("p", "7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf", "", "mention"),
+                        arrayOf("t", "Amethyst"),
+                        arrayOf("t", "amethyst"),
+                        arrayOf("zap", "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", "wss://vitor.nostr1.com", "0.6499999761581421"),
+                        arrayOf("zap", "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b", "wss://nos.lol", "0.25"),
+                        arrayOf("zap", "7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf", "wss://vitor.nostr1.com", "0.10000000149011612"),
+                        arrayOf("r", "https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-googleplay-universal-v0.84.2.apk"),
+                        arrayOf("r", "https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-fdroid-universal-v0.84.2.apk"),
+                    ),
+                content = "#Amethyst v0.84.2: Text alignment fix\n\nBugfixes:\n- Fixes link misalignment in posts\n\nUpdated translations: \n- Czech, German, Swedish, and Portuguese by nostr:npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef\n- French by nostr:npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz\n\nDownload:\n- [Play Edition](https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-googleplay-universal-v0.84.2.apk )\n- [FOSS Edition - No translations](https://github.com/vitorpamplona/amethyst/releases/download/v0.84.2/amethyst-fdroid-universal-v0.84.2.apk )",
+                sig = "e036ecce534e22efd47634c56328af62576ab3a36c565f7c8c5fbea67f48cd46d4041ecfc0ca01dafa0ebe8a0b119d125527a28f88aa30356b80c26dd0953aed",
+            )
 
-        LocalCache.justConsume(Event.fromJson(releaseNotes), null, false)
+        LocalCache.consume(releaseNotes, null, true)
     }
 
     val accountViewModel = mockAccountViewModel()
@@ -162,7 +123,7 @@ fun ZapTheDevsCard(
     nav: INav,
 ) {
     val releaseNoteState by observeNote(baseNote, accountViewModel)
-    val releaseNote = releaseNoteState?.note ?: return
+    val releaseNote = releaseNoteState.note
 
     Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {
         Card(

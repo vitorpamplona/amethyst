@@ -41,7 +41,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
@@ -89,7 +88,7 @@ fun LongPublicChatChannelHeader(
                 contentDescription = stringRes(R.string.channel_image),
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             )
         }
     }

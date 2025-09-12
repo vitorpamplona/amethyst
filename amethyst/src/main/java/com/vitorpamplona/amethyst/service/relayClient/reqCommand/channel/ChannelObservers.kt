@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -85,10 +86,11 @@ fun observeChannelNoteAuthors(
 private fun channelToParticipatingUsers(
     channel: Channel,
     accountViewModel: AccountViewModel,
+    maxTimeLimit: Long = TimeUtils.fifteenMinutesAgo(),
 ): ImmutableList<User> {
     val users = mutableSetOf<User>()
 
-    channel.participatingAuthors().forEach {
+    channel.participatingAuthors(maxTimeLimit).forEach {
         users.add(it)
     }
 

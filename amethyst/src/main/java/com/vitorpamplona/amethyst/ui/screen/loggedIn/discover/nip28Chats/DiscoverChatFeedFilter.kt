@@ -103,18 +103,26 @@ open class DiscoverChatFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> {
+        // precache to avoid breaking the contract
         val lastNote =
             items.associateWith { note ->
                 LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0
             }
 
-        return items
-            .sortedWith(
-                compareBy(
-                    { lastNote[it] },
-                    { it.createdAt() },
-                    { it.idHex },
-                ),
-            ).reversed()
+        val createdNote =
+            items.associateWith { note ->
+                note.createdAt() ?: 0
+            }
+
+        val comparator: Comparator<Note> =
+            compareByDescending<Note> {
+                lastNote[it]
+            }.thenByDescending {
+                createdNote[it]
+            }.thenBy {
+                it.idHex
+            }
+
+        return items.sortedWith(comparator)
     }
 }

@@ -35,6 +35,7 @@ class IntentResultJsonSerializer : StdSerializer<IntentResult>(IntentResult::cla
         result.result?.let { gen.writeStringField("result", it) }
         result.event?.let { gen.writeStringField("event", it) }
         result.id?.let { gen.writeStringField("id", it) }
+        result.rejected.let { gen.writeBooleanField("rejected", it) }
         gen.writeEndObject()
     }
 }

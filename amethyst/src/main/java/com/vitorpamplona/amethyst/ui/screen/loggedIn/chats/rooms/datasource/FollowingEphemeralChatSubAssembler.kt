@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class FollowingEphemeralChatSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<ChatroomListState>,
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
     override fun updateFilter(

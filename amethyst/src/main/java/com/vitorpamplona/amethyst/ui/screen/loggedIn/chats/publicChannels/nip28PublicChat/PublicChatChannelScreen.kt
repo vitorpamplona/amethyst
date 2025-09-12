@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 fun PublicChatChannelScreen(
     channelId: HexKey?,
     draft: Note?,
+    replyTo: Note? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -52,7 +53,7 @@ fun PublicChatChannelScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it).statusBarsPadding()) {
-            PublicChatChannelView(channelId, draft, accountViewModel, nav)
+            PublicChatChannelView(channelId, draft, replyTo, accountViewModel, nav)
         }
     }
 }

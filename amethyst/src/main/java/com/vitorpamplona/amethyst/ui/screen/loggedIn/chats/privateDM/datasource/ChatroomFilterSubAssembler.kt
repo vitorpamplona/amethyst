@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 class ChatroomFilterSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
     override fun updateFilter(

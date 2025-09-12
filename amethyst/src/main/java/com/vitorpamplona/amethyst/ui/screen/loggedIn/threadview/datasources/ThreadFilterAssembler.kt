@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadFilterSubAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ThreadQueryState(
@@ -34,7 +34,7 @@ class ThreadQueryState(
 )
 
 class ThreadFilterAssembler(
-    client: NostrClient,
+    client: INostrClient,
 ) : ComposeSubscriptionManager<ThreadQueryState>() {
     val group =
         listOf(

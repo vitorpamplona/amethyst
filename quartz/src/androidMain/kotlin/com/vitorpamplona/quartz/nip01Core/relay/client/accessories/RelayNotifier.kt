@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 
@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
  * Listens to NostrClient's onNotify messages from the relay
  */
 class RelayNotifier(
-    val client: NostrClient,
+    val client: INostrClient,
     val notify: (message: String, relay: IRelayClient) -> Unit,
 ) {
     companion object {

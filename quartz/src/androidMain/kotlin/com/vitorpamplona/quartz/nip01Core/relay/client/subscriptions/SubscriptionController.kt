@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -47,7 +47,7 @@ import com.vitorpamplona.quartz.utils.LargeCache
  * - Dismiss subscriptions with [dismissSubscription].
  */
 class SubscriptionController(
-    val client: NostrClient,
+    val client: INostrClient,
 ) {
     private val subscriptions = LargeCache<String, Subscription>()
     private val stats = SubscriptionStats()
@@ -108,7 +108,7 @@ class SubscriptionController(
     fun updateRelays() {
         val currentFilters =
             subscriptions.associateWith { id, sub ->
-                client.getSubscriptionFiltersOrNull(id)
+                client.getReqFiltersOrNull(id)
             }
 
         subscriptions.forEach { id, sub ->

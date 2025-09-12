@@ -30,7 +30,7 @@ import kotlin.reflect.KClass
 
 @Stable
 object EmptyNav : INav {
-    override val scope: CoroutineScope get() = TODO("Not yet implemented")
+    override val navigationScope: CoroutineScope get() = TODO("Not yet implemented")
     override val drawerState = DrawerState(DrawerValue.Closed)
 
     override fun closeDrawer() = runBlocking { drawerState.close() }

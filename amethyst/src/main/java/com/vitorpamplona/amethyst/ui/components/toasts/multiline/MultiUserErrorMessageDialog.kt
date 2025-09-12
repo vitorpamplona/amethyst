@@ -57,9 +57,9 @@ fun MultiUserErrorMessageContentPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            user1 = LocalCache.getOrCreateUser("aaabccaabbccaabbccabdd")
-            user2 = LocalCache.getOrCreateUser("bbbccabbbccabbbccaabdd")
-            user3 = LocalCache.getOrCreateUser("ccaadaccaadaccaadaabdd")
+            user1 = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+            user2 = LocalCache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+            user3 = LocalCache.getOrCreateUser("7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf")
         }
     }
 

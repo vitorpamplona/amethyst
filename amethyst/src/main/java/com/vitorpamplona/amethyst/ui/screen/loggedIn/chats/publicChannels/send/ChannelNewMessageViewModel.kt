@@ -582,9 +582,7 @@ open class ChannelNewMessageViewModel :
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(item.link.url) {
-                Amethyst.instance.okHttpClients.getHttpClient(
-                    accountViewModel.account.privacyState.shouldUseTorForImageDownload(item.link.url),
-                )
+                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link.url)
             }
         }
 

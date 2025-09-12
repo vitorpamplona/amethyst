@@ -28,21 +28,19 @@ import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
-import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -50,6 +48,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
@@ -57,15 +56,19 @@ import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
+import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
@@ -80,12 +83,12 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.screen.SharedSettingsState
+import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -95,12 +98,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip03Timestamp.DefaultOtsResolverBuilder
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -153,33 +158,21 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.util.Locale
 
 @Stable
 class AccountViewModel(
-    accountSettings: AccountSettings,
-    val settings: SharedSettingsState,
-    val app: Amethyst,
+    val account: Account,
+    val settings: UiSettingsState,
+    val torSettings: TorSettingsFlow,
+    val dataSources: RelaySubscriptionsCoordinator,
+    val httpClientBuilder: IRoleBasedHttpClientBuilder,
 ) : ViewModel(),
     Dao {
-    val account =
-        Account(
-            settings = accountSettings,
-            signer = accountSettings.createSigner(app.contentResolver),
-            geolocationFlow = app.locationManager.geohashStateFlow,
-            cache = LocalCache,
-            client = app.client,
-            scope = viewModelScope,
-        )
-
-    val newNotesPreProcessor = EventProcessor(account, LocalCache)
-
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
-
-    val feedStates = AccountFeedContentStates(this)
+    val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
@@ -655,7 +648,7 @@ class AccountViewModel(
             message = message,
             context = context,
             showErrorIfNoLnAddress = showErrorIfNoLnAddress,
-            okHttpClient = ::okHttpClientForMoney,
+            okHttpClient = httpClientBuilder::okHttpClientForMoney,
             onError = onError,
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
@@ -712,17 +705,6 @@ class AccountViewModel(
     fun broadcast(note: Note) = runIOCatching { account.broadcast(note) }
 
     fun timestamp(note: Note) = runIOCatching { account.otsState.timestamp(note) }
-
-    var lastTimeItTriedToUpdateAttestations: Long = 0
-
-    fun upgradeAttestations() {
-        // only tries to upgrade every hour
-        val now = TimeUtils.now()
-        if (now - lastTimeItTriedToUpdateAttestations > TimeUtils.ONE_HOUR) {
-            lastTimeItTriedToUpdateAttestations = now
-            runIOCatching { account.updateAttestations() }
-        }
-    }
 
     fun delete(notes: List<Note>) = runIOCatching { account.delete(notes) }
 
@@ -902,7 +884,7 @@ class AccountViewModel(
         onResult: suspend (UrlPreviewState) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            UrlCachedPreviewer.previewInfo(url, ::okHttpClientForPreview, onResult)
+            UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
         }
     }
 
@@ -923,9 +905,7 @@ class AccountViewModel(
             Nip05NostrAddressVerifier()
                 .verifyNip05(
                     nip05,
-                    okHttpClient = {
-                        app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForNIP05(it))
-                    },
+                    okHttpClient = httpClientBuilder::okHttpClientForNip05,
                     onSuccess = {
                         // Marks user as verified
                         if (it == pubkeyHex) {
@@ -952,21 +932,6 @@ class AccountViewModel(
         }
     }
 
-    fun retrieveRelayDocument(
-        relay: NormalizedRelayUrl,
-        onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            Nip11CachedRetriever.loadRelayInfo(
-                relay,
-                okHttpClient = { okHttpClientForClean(relay) },
-                onInfo,
-                onError,
-            )
-        }
-    }
-
     fun runOnIO(runOnIO: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
@@ -984,7 +949,7 @@ class AccountViewModel(
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    private fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(key: HexKey): Note = LocalCache.getOrCreateNote(key)
 
@@ -1025,16 +990,6 @@ class AccountViewModel(
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
-
-    suspend fun findStatusesForUser(myUser: User) =
-        withContext(Dispatchers.IO) {
-            LocalCache.findStatusesForUser(myUser)
-        }
-
-    suspend fun findOtsEventsForNote(note: Note) =
-        withContext(Dispatchers.Default) {
-            LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
-        }
 
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
@@ -1099,7 +1054,7 @@ class AccountViewModel(
 
     suspend fun checkVideoIsOnline(videoUrl: String): Boolean =
         withContext(Dispatchers.IO) {
-            OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo)
+            OnlineChecker.isOnline(videoUrl, httpClientBuilder::okHttpClientForVideo)
         }
 
     fun loadAndMarkAsRead(
@@ -1134,15 +1089,22 @@ class AccountViewModel(
         }
     }
 
-    fun setTorSettings(newTorSettings: TorSettings) = runIOCatching { account.settings.setTorSettings(newTorSettings) }
-
     class Factory(
-        val accountSettings: AccountSettings,
-        val settings: SharedSettingsState,
-        val app: Amethyst,
+        val account: Account,
+        val settings: UiSettingsState,
+        val torSettings: TorSettingsFlow,
+        val dataSources: RelaySubscriptionsCoordinator,
+        val okHttpClient: RoleBasedHttpClientBuilder,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings, app) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            AccountViewModel(
+                account,
+                settings,
+                torSettings,
+                dataSources,
+                okHttpClient,
+            ) as T
     }
 
     init {
@@ -1151,32 +1113,15 @@ class AccountViewModel(
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
             LocalCache.live.newEventBundles.collect { newNotes ->
-                if (isDebug) {
-                    Log.d(
-                        "Rendering Metrics",
-                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                    )
-                }
                 logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.updateFeedsWith(newNotes)
-                    upgradeAttestations()
-                    viewModelScope.launch(Dispatchers.Default) {
-                        newNotesPreProcessor.runNew(newNotes)
-                    }
                 }
             }
         }
 
         viewModelScope.launch(Dispatchers.Default) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
-                if (isDebug) {
-                    Log.d(
-                        "Rendering Metrics",
-                        "Delete feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                    )
-                }
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
-                    newNotesPreProcessor.runDeleted(newNotes)
                     feedStates.deleteNotes(newNotes)
                 }
             }
@@ -1314,7 +1259,7 @@ class AccountViewModel(
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val meltResult = MeltProcessor().melt(token, lud16, ::okHttpClientForMoney, context)
+                    val meltResult = MeltProcessor().melt(token, lud16, httpClientBuilder::okHttpClientForMoney, context)
                     onDone(
                         stringRes(context, R.string.cashu_successful_redemption),
                         stringRes(
@@ -1431,23 +1376,7 @@ class AccountViewModel(
         }
     }
 
-    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.privacyState.shouldUseTorForVideoDownload(url))
-
-    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(url))
-
-    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForImageDownload(url))
-
-    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForVideoDownload(url))
-
-    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForMoneyOperations(url))
-
-    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForPreviewUrl(url))
-
-    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = app.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(url))
-
-    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForTrustedRelays())
-
-    fun dataSources() = app.sources
+    fun dataSources() = dataSources
 
     suspend fun createTempDraftNote(noteEvent: DraftWrapEvent): Note? = draftNoteCache.update(noteEvent)
 
@@ -1562,7 +1491,7 @@ class AccountViewModel(
                         milliSats = milliSats,
                         message = message,
                         nostrRequest = zapRequest,
-                        okHttpClient = ::okHttpClientForMoney,
+                        okHttpClient = httpClientBuilder::okHttpClientForMoney,
                         onProgress = onProgress,
                         context = context,
                     )
@@ -1585,7 +1514,7 @@ class AccountViewModel(
         viewModelScope.launch {
             MediaSaverToDisk.saveDownloadingIfNeeded(
                 videoUri = videoUri,
-                okHttpClient = ::okHttpClientForVideo,
+                okHttpClient = httpClientBuilder::okHttpClientForVideo,
                 mimeType = mimeType,
                 localContext = localContext,
                 onSuccess = {
@@ -1599,8 +1528,6 @@ class AccountViewModel(
     }
 
     fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
-
-    fun relayStatusFlow() = app.client.relayStatusFlow()
 
     fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> =
         loggedInAccounts
@@ -1706,21 +1633,46 @@ var mockedCache: AccountViewModel? = null
 fun mockAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-    sharedPreferencesViewModel.init()
+    val otsResolver = DefaultOtsResolverBuilder()
+
+    val scope = rememberCoroutineScope()
+
+    val uiState =
+        UiSettingsState(
+            uiSettingsFlow = UiSettingsFlow(),
+            isMobileOrMeteredConnection = MutableStateFlow(false),
+            scope = scope,
+        )
+
+    val keyPair =
+        KeyPair(
+            privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
+            pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
+            forceReplacePubkey = false,
+        )
+
+    val client = EmptyNostrClient
+
+    val nwcFilters = NWCPaymentFilterAssembler(client)
+
+    val account =
+        Account(
+            settings = AccountSettings(keyPair),
+            signer = NostrSignerInternal(keyPair),
+            geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
+            nwcFilterAssembler = nwcFilters,
+            otsResolverBuilder = otsResolver,
+            cache = LocalCache,
+            client = client,
+            scope = scope,
+        )
 
     return AccountViewModel(
-        AccountSettings(
-            // blank keys
-            keyPair =
-                KeyPair(
-                    privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
-                    pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-                    forceReplacePubkey = false,
-                ),
-        ),
-        sharedPreferencesViewModel.sharedPrefs,
-        Amethyst(),
+        account = account,
+        settings = uiState,
+        torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
+        httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
     ).also {
         mockedCache = it
     }
@@ -1733,19 +1685,44 @@ var vitorCache: AccountViewModel? = null
 fun mockVitorAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-    sharedPreferencesViewModel.init()
+    val scope = rememberCoroutineScope()
+
+    val otsResolver = DefaultOtsResolverBuilder()
+
+    val uiState =
+        UiSettingsState(
+            uiSettingsFlow = UiSettingsFlow(),
+            isMobileOrMeteredConnection = MutableStateFlow(false),
+            scope = scope,
+        )
+
+    val keyPair =
+        KeyPair(
+            pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+        )
+
+    val client = EmptyNostrClient
+
+    val nwcFilters = NWCPaymentFilterAssembler(client)
+
+    val account =
+        Account(
+            settings = AccountSettings(keyPair),
+            signer = NostrSignerInternal(keyPair),
+            geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
+            nwcFilterAssembler = nwcFilters,
+            otsResolverBuilder = otsResolver,
+            cache = LocalCache,
+            client = EmptyNostrClient,
+            scope = scope,
+        )
 
     return AccountViewModel(
-        AccountSettings(
-            // blank keys
-            keyPair =
-                KeyPair(
-                    pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                ),
-        ),
-        sharedPreferencesViewModel.sharedPrefs,
-        Amethyst(),
+        account = account,
+        settings = uiState,
+        torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
+        httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
     ).also {
         vitorCache = it
     }

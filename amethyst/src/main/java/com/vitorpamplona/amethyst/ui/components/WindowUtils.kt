@@ -26,8 +26,10 @@ import android.content.ContextWrapper
 import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
+import com.vitorpamplona.amethyst.Amethyst
 
 // Window utils
 @Composable
@@ -44,7 +46,7 @@ private tailrec fun Context.getActivityWindow(): Window? =
     }
 
 @Composable
-fun getActivity(): Activity? = LocalView.current.context.getActivity()
+fun getActivity(): Activity? = LocalContext.current.getActivity()
 
 tailrec fun Context.getActivity(): ComponentActivity =
     when (this) {
@@ -52,3 +54,8 @@ tailrec fun Context.getActivity(): ComponentActivity =
         is ContextWrapper -> baseContext.getActivity()
         else -> throw IllegalStateException("Requires a ComponentActivity to run")
     }
+
+@Composable
+fun amethystApp(): Amethyst = LocalContext.current.asAmethystApp()
+
+fun Context.asAmethystApp(): Amethyst = this.applicationContext as Amethyst

@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.Channel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.filterChannelMetadataUpdatesById
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities.filterLiveStreamUpdatesByAddress
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.utils.mapOfSet
  * only one EOSE for everybody.
  */
 class ChannelMetadataAndLiveActivityWatcherSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
 ) : SingleSubEoseManager<ChannelFinderQueryState>(client, allKeys) {
     override fun updateFilter(

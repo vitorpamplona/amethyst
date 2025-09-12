@@ -52,7 +52,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlin.math.abs
@@ -70,7 +69,7 @@ fun DisappearingScaffold(
     val shouldShow = remember { mutableStateOf(isActive()) }
 
     val modifier =
-        if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+        if (accountViewModel.settings.isImmersiveScrollingActive()) {
             val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
             val bottomBarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
 
@@ -90,7 +89,7 @@ fun DisappearingScaffold(
 
                             val newOffset = bottomBarOffsetHeightPx.floatValue + available.y
 
-                            if (accountViewModel.settings.automaticallyHideNavigationBars == BooleanType.ALWAYS) {
+                            if (accountViewModel.settings.isImmersiveScrollingActive()) {
                                 val newBottomBarOffset =
                                     if (!isInvertedLayout) {
                                         newOffset.coerceIn(-bottomBarHeightPx, 0f)

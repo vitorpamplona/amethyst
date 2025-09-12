@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.feeds
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -112,6 +113,8 @@ class FeedContentState(
             if (lastNoteTime != lastNoteCreatedAtWhenFullyLoaded.value) {
                 lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNoteTime)
             }
+        } else {
+            lastNoteCreatedAtWhenFullyLoaded.tryEmit(null)
         }
 
         val currentState = _feedContent.value
@@ -144,11 +147,15 @@ class FeedContentState(
                     if (deletionEvents.isEmpty()) {
                         oldNotesState.feed.value.list
                     } else {
-                        val deletedEventIds = deletionEvents.flatMapTo(HashSet()) { it.deleteEventIds() }
-                        val deletedEventAddresses = deletionEvents.flatMapTo(HashSet()) { it.deleteAddresses() }
                         oldNotesState.feed.value.list
-                            .filter { !it.wasOrShouldBeDeletedBy(deletedEventIds, deletedEventAddresses) }
-                            .toImmutableList()
+                            .filter {
+                                val noteEvent = it.event
+                                if (noteEvent != null) {
+                                    !LocalCache.deletionIndex.hasBeenDeleted(noteEvent)
+                                } else {
+                                    false
+                                }
+                            }.toImmutableList()
                     }
 
                 val newList =
@@ -156,6 +163,7 @@ class FeedContentState(
                         .updateListWith(oldList, newItems)
                         .distinctBy { it.idHex }
                         .toImmutableList()
+
                 if (!equalImmutableLists(newList, oldNotesState.feed.value.list)) {
                     updateFeed(newList)
                 }

@@ -78,8 +78,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
@@ -417,7 +417,7 @@ object LocalCache : ILocalCache {
     private fun isValidHex(key: String): Boolean {
         if (key.isBlank()) return false
         if (key.length != 64) return false
-        if (key.contains(":")) return false
+        if (key.contains(':')) return false
 
         return Hex.isHex(key)
     }
@@ -1842,15 +1842,15 @@ object LocalCache : ILocalCache {
             note.addRelay(relay)
         }
 
-        var isVerified =
+        val isVerified =
             try {
                 val cachePath = Amethyst.instance.nip95cache
                 cachePath.mkdirs()
                 val file = File(cachePath, event.id)
                 if (!file.exists() && (wasVerified || justVerify(event))) {
-                    val stream = FileOutputStream(file)
-                    stream.write(event.decode())
-                    stream.close()
+                    FileOutputStream(file).use { stream ->
+                        stream.write(event.decode())
+                    }
                     Log.i(
                         "FileStorageEvent",
                         "NIP95 File received from $relay and saved to disk as $file",
@@ -2147,7 +2147,7 @@ object LocalCache : ILocalCache {
             }
     }
 
-    suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
+    fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
         checkNotInMainThread()
 
         return addressables
@@ -2164,9 +2164,9 @@ object LocalCache : ILocalCache {
             .toImmutableList()
     }
 
-    suspend fun findEarliestOtsForNote(
+    fun findEarliestOtsForNote(
         note: Note,
-        resolverBuilder: OtsResolverBuilder,
+        otsVerifCache: VerificationStateCache,
     ): Long? {
         checkNotInMainThread()
 
@@ -2176,7 +2176,7 @@ object LocalCache : ILocalCache {
         notes.forEach { _, item ->
             val noteEvent = item.event
             if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                (Amethyst.instance.otsVerifCache.cacheVerify(noteEvent, resolverBuilder) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+                (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                     if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                         minTime = stampedTime
                     }
@@ -2191,7 +2191,7 @@ object LocalCache : ILocalCache {
 
     fun cachedModificationEventsForNote(note: Note): List<Note>? = modificationCache[note.idHex]
 
-    suspend fun findLatestModificationForNote(note: Note): List<Note> {
+    fun findLatestModificationForNote(note: Note): List<Note> {
         checkNotInMainThread()
 
         val noteAuthor = note.author ?: return emptyList()
@@ -2353,9 +2353,9 @@ object LocalCache : ILocalCache {
         val children =
             if (noteEvent is WrappedEvent) {
                 noteEvent.host?.id?.let {
-                    getNoteIfExists(it)?.let {
-                        removeFromCache(it)
-                        it.removeAllChildNotes()
+                    getNoteIfExists(it)?.let { it2 ->
+                        removeFromCache(it2)
+                        it2.removeAllChildNotes()
                     }
                 }
             } else {

@@ -152,7 +152,7 @@ class UploadOrchestrator {
                     alt = alt,
                     sensitiveContent = contentWarningReason,
                     serverBaseUrl = serverBaseUrl,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                     onProgress = { percent: Float ->
                         updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
                     },
@@ -165,7 +165,7 @@ class UploadOrchestrator {
                 localContentType = contentType,
                 originalContentType = contentTypeForResult,
                 originalHash = originalHash,
-                okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
+                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
             )
         } catch (_: SignerExceptions.ReadOnlyException) {
             error(R.string.login_with_a_private_key_to_be_able_to_upload)
@@ -198,7 +198,7 @@ class UploadOrchestrator {
                         alt = alt,
                         sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )
@@ -206,7 +206,7 @@ class UploadOrchestrator {
             verifyHeader(
                 uploadResult = result,
                 localContentType = contentType,
-                okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
+                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                 originalHash = originalHash,
                 originalContentType = contentTypeForResult,
             )

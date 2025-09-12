@@ -193,7 +193,7 @@ class NewUserMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -206,7 +206,7 @@ class NewUserMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )

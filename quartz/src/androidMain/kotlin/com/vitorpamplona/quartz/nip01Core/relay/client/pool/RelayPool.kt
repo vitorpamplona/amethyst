@@ -94,24 +94,31 @@ class RelayPool(
                 relay.connectAndSyncFiltersIfDisconnected()
             }
         }
+        updateStatus()
     }
 
-    fun connect() =
+    fun connect() {
         relays.forEach { url, relay ->
             relay.connect()
         }
+        updateStatus()
+    }
 
-    fun connectIfDisconnected() =
+    fun connectIfDisconnected() {
         relays.forEach { url, relay ->
             relay.connectAndSyncFiltersIfDisconnected()
         }
+        updateStatus()
+    }
 
     fun connectIfDisconnected(relay: NormalizedRelayUrl) = relays.get(relay)?.connectAndSyncFiltersIfDisconnected()
 
-    fun disconnect() =
+    fun disconnect() {
         relays.forEach { url, relay ->
             relay.disconnect()
         }
+        updateStatus()
+    }
 
     fun sendRequest(
         relay: NormalizedRelayUrl,

@@ -28,7 +28,6 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
 
 class SignUpViewModel : ViewModel() {
     lateinit var accountStateViewModel: AccountStateViewModel
@@ -40,8 +39,6 @@ class SignUpViewModel : ViewModel() {
     var acceptedTerms by mutableStateOf(false)
     var termsAcceptanceIsRequiredError by mutableStateOf(false)
 
-    var torSettings by mutableStateOf(TorSettings())
-
     fun init(accountStateViewModel: AccountStateViewModel) {
         this.accountStateViewModel = accountStateViewModel
     }
@@ -49,10 +46,6 @@ class SignUpViewModel : ViewModel() {
     fun updateDisplayName(value: TextFieldValue) {
         displayName = value
         errorManager.clearErrors()
-    }
-
-    fun updateTorSettings(newTorSettings: TorSettings) {
-        torSettings = newTorSettings
     }
 
     fun updateAcceptedTerms(newAcceptedTerms: Boolean) {
@@ -80,7 +73,7 @@ class SignUpViewModel : ViewModel() {
 
     fun signup() {
         if (checkCanSignup()) {
-            accountStateViewModel.newKey(torSettings, displayName.text)
+            accountStateViewModel.newKey(displayName.text)
         }
     }
 }

@@ -64,4 +64,6 @@ object TimeUtils {
     fun randomWithTwoDays() = now() - RandomInstance.int(twoDays())
 
     fun ninetyDaysFromNow() = now() + NINETY_DAYS
+
+    fun oneYearAgo() = now() - ONE_YEAR
 }

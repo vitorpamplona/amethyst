@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNIP05
@@ -166,7 +165,7 @@ fun ShowQRDialog(
                                         contentDescription = stringRes(R.string.profile_image),
                                         modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                                         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                                        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                                        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                                     )
                                 }
                                 Row(

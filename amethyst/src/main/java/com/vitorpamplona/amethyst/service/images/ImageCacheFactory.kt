@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.images
 
-import android.app.Application
+import android.content.Context
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.service.safeCacheDir
@@ -28,7 +28,7 @@ import okio.Path.Companion.toOkioPath
 
 class ImageCacheFactory {
     companion object {
-        fun newDisk(app: Application): DiskCache =
+        fun newDisk(app: Context): DiskCache =
             DiskCache
                 .Builder()
                 .directory(app.safeCacheDir().resolve("image_cache").toOkioPath())
@@ -36,7 +36,7 @@ class ImageCacheFactory {
                 .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
                 .build()
 
-        fun newMemory(app: Application): MemoryCache =
+        fun newMemory(app: Context): MemoryCache =
             MemoryCache
                 .Builder()
                 .maxSizePercent(app)

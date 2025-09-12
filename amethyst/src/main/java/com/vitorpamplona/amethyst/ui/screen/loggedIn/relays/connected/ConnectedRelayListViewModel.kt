@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
@@ -36,7 +37,7 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
                     relay = it,
                     relayStat = RelayStats.get(it),
                     forcesTor =
-                        account.torRelayState.flow.value
+                        Amethyst.instance.torEvaluatorFlow.flow.value
                             .useTor(it),
                     users =
                         account.followsPerRelay.value[it]?.mapNotNull { hex ->

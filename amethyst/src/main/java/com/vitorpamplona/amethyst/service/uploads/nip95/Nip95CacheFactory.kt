@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.nip95
 
-import android.app.Application
+import android.content.Context
 import com.vitorpamplona.amethyst.service.safeCacheDir
 
 class Nip95CacheFactory {
     companion object {
-        fun new(app: Application) = app.safeCacheDir().resolve("NIP95")
+        fun new(app: Context) = app.safeCacheDir().resolve("NIP95")
     }
 }

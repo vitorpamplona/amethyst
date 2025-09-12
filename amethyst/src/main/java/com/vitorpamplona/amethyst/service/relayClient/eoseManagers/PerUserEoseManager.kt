@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * the subscription disappears and comes back later.
  */
 abstract class PerUserEoseManager<T>(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {

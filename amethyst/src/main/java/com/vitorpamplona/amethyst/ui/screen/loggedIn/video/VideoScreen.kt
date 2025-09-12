@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -327,7 +326,7 @@ private fun RenderAuthorInformation(
                 NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
                 VideoUserOptionAction(note, accountViewModel, nav)
             }
-            if (accountViewModel.settings.featureSet == FeatureSetType.COMPLETE) {
+            if (accountViewModel.settings.isCompleteUIMode()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ObserveDisplayNip05Status(
                         note.author!!,

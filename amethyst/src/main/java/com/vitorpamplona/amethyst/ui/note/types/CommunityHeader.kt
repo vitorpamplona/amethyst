@@ -61,7 +61,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -328,7 +327,7 @@ fun ShortCommunityHeader(
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             )
         }
 
@@ -378,7 +377,7 @@ fun ShortCommunityHeaderNoActions(
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             )
         }
 

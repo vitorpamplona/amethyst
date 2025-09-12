@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Context.RECEIVER_EXPORTED
@@ -28,8 +27,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.util.Log
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class PokeyReceiver : BroadcastReceiver() {
@@ -39,7 +42,14 @@ class PokeyReceiver : BroadcastReceiver() {
         val INTENT = IntentFilter(POKEY_ACTION)
     }
 
-    fun register(app: Application) {
+    val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            Log.e("AmethystCoroutine", "Caught exception: ${throwable.message}", throwable)
+        }
+
+    val scope = CoroutineScope(Dispatchers.Default + SupervisorJob() + exceptionHandler)
+
+    fun register(app: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             app.registerReceiver(this, INTENT, RECEIVER_EXPORTED)
         } else {
@@ -48,8 +58,9 @@ class PokeyReceiver : BroadcastReceiver() {
         }
     }
 
-    fun unregister(app: Application) {
+    fun unregister(app: Context) {
         app.unregisterReceiver(this)
+        scope.cancel()
     }
 
     override fun onReceive(
@@ -62,13 +73,9 @@ class PokeyReceiver : BroadcastReceiver() {
 
             if (eventStr == null) return
 
-            val app = context.applicationContext as Amethyst
-
-            app.applicationIOScope.launch {
+            scope.launch {
                 try {
-                    EventNotificationConsumer(app).findAccountAndConsume(
-                        Event.fromJson(eventStr),
-                    )
+                    EventNotificationConsumer(context.applicationContext).findAccountAndConsume(Event.fromJson(eventStr))
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse Pokey Event", e)
                 }

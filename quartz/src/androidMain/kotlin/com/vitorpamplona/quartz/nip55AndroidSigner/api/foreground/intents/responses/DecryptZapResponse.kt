@@ -34,6 +34,9 @@ class DecryptZapResponse {
             )
 
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<ZapEventDecryptionResult> {
+            if (intent.rejected) {
+                return SignerResult.RequestAddressed.ManuallyRejected()
+            }
             val eventJson = intent.result
             return if (!eventJson.isNullOrBlank()) {
                 if (eventJson.startsWith("{")) {

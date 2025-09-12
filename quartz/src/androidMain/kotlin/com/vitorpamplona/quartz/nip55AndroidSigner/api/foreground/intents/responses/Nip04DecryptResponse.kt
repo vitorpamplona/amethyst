@@ -32,6 +32,9 @@ class Nip04DecryptResponse {
             )
 
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<DecryptionResult> {
+            if (intent.rejected) {
+                return SignerResult.RequestAddressed.ManuallyRejected()
+            }
             val plaintext = intent.result
             return if (plaintext != null) {
                 SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))

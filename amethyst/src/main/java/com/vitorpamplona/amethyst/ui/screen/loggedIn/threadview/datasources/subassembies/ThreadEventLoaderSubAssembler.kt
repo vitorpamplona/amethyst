@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadQueryState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
  * saves the of the thread EOSEs in the long run to avoid re-downloading
  */
 class ThreadEventLoaderSubAssembler(
-    client: NostrClient,
+    client: INostrClient,
     allKeys: () -> Set<ThreadQueryState>,
 ) : PerUniqueIdEoseManager<ThreadQueryState, HexKey>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(
@@ -46,7 +46,7 @@ class ThreadEventLoaderSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val branches = ThreadAssembler().findThreadFor(key.eventId) ?: return null
-        val defaultRelays = key.account.followPlusAllMine.flow.value
+        val defaultRelays = key.account.followPlusAllMineWithSearch.flow.value
         return filterMissingEventsForThread(branches, defaultRelays)
     }
 

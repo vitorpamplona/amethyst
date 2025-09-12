@@ -29,6 +29,7 @@ data class IntentResult(
     val result: String? = null,
     val event: String? = null,
     val id: String? = null,
+    val rejected: Boolean = false,
 ) {
     fun toJson(): String = JsonMapper.mapper.writeValueAsString(this)
 
@@ -48,6 +49,7 @@ data class IntentResult(
                 result = data.getStringExtra("result"),
                 event = data.getStringExtra("event"),
                 `package` = data.getStringExtra("package"),
+                rejected = data.extras?.containsKey("rejected") == true,
             )
 
         fun fromJson(json: String): IntentResult = JsonMapper.mapper.readValue<IntentResult>(json)
