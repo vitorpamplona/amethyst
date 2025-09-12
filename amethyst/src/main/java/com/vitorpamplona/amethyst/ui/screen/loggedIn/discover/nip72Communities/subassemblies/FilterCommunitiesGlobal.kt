@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterCommunitiesGlobal(
@@ -41,8 +42,8 @@ fun filterCommunitiesGlobal(
                 relay = it.key,
                 filter =
                     Filter(
-                        kinds = CommunityPostApprovalEvent.KIND_LIST,
-                        limit = 100,
+                        kinds = listOf(CommunityDefinitionEvent.KIND),
+                        limit = 500,
                         since = since,
                     ),
             ),
@@ -52,7 +53,7 @@ fun filterCommunitiesGlobal(
                     Filter(
                         kinds = CommunityPostApprovalEvent.KIND_LIST,
                         limit = 100,
-                        since = since ?: TimeUtils.oneWeekAgo(),
+                        since = since ?: TimeUtils.oneMonthAgo(),
                     ),
             ),
         )
