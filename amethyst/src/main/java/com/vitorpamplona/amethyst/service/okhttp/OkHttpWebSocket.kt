@@ -72,7 +72,7 @@ class OkHttpWebSocket(
             webSocket: okhttp3.WebSocket,
             response: Response,
         ) = out.onOpen(
-            response.receivedResponseAtMillis - response.sentRequestAtMillis,
+            (response.receivedResponseAtMillis - response.sentRequestAtMillis).toInt(),
             response.headers["Sec-WebSocket-Extensions"]?.contains("permessage-deflate") ?: false,
         )
 

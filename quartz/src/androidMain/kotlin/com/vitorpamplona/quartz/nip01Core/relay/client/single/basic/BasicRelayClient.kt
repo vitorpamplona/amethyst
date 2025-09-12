@@ -157,7 +157,7 @@ open class BasicRelayClient(
         val onConnected: () -> Unit,
     ) : WebSocketListener {
         override fun onOpen(
-            pingMillis: Long,
+            pingMillis: Int,
             compression: Boolean,
         ) {
             Log.d(logTag, "OnOpen (ping: ${pingMillis}ms${if (compression) ", using compression" else ""})")
@@ -260,7 +260,7 @@ open class BasicRelayClient(
     }
 
     fun markConnectionAsReady(
-        pingInMs: Long,
+        pingInMs: Int,
         usingCompression: Boolean,
     ) {
         this.resetEOSEStatuses()
@@ -459,7 +459,7 @@ open class BasicRelayClient(
             )
         }
         socket?.let {
-            // Log.d(logTag, "Sending: $str")
+            Log.d(logTag, "Sending: $str")
             val result = it.send(str)
             listener.onSend(this@BasicRelayClient, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())

@@ -38,7 +38,7 @@ class UserTag(
     val pubKey: HexKey,
     val relayHint: NormalizedRelayUrl? = null,
 ) : MuteTag {
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
             pubKey.bytesUsedInMemory() +
             (relayHint?.url?.bytesUsedInMemory() ?: 0)

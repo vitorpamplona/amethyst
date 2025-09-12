@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 class ZapRaiserTag(
     val amountInSats: Long,
 ) {
-    fun countMemory(): Long = 1 * pointerSizeInBytes + amountInSats.bytesUsedInMemory()
+    fun countMemory(): Int = 1 * pointerSizeInBytes + amountInSats.bytesUsedInMemory()
 
     fun toTagArray() = assemble(amountInSats)
 

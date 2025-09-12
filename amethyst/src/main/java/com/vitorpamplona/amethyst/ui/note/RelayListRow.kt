@@ -195,7 +195,7 @@ fun RenderRelayIcon(
     iconUrl: String?,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
-    pingInMs: Long,
+    pingInMs: Int,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     val green = MaterialTheme.colorScheme.allGoodColor

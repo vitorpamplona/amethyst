@@ -63,7 +63,7 @@ fun NormalTimeAgo(
     val nowStr = stringRes(id = R.string.now)
 
     val time by
-        remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) } }
+        remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0L, nowStr) } }
 
     Text(
         text = time,

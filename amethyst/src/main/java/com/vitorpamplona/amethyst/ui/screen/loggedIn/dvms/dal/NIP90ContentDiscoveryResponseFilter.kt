@@ -80,9 +80,9 @@ open class NIP90ContentDiscoveryResponseFilter(
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // val params = buildFilterParams(account)
 
-        val maxNote = collection.filter { acceptableEvent(it) }.maxByOrNull { it.createdAt() ?: 0 } ?: return emptySet()
+        val maxNote = collection.filter { acceptableEvent(it) }.maxByOrNull { it.createdAt() ?: 0L } ?: return emptySet()
 
-        if ((maxNote.createdAt() ?: 0) > (latestNote?.createdAt() ?: 0)) {
+        if ((maxNote.createdAt() ?: 0L) > (latestNote?.createdAt() ?: 0L)) {
             latestNote = maxNote
         }
 

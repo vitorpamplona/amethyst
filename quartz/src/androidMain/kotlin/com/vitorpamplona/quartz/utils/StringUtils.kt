@@ -24,13 +24,13 @@ import kotlin.math.min
 
 val pointerSizeInBytes = 4
 
-fun String.bytesUsedInMemory(): Long = (8 * (((this.length * 2L) + 45) / 8))
+fun String.bytesUsedInMemory(): Int = (8 * (((this.length * 2) + 45) / 8))
 
-fun Long.bytesUsedInMemory(): Long = 8
+fun Long.bytesUsedInMemory(): Int = 8
 
-fun Int.bytesUsedInMemory(): Long = 4
+fun Int.bytesUsedInMemory(): Int = 4
 
-fun Boolean.bytesUsedInMemory(): Long = 8
+fun Boolean.bytesUsedInMemory(): Int = 8
 
 fun String.containsIgnoreCase(term: String): Boolean {
     if (term.isEmpty()) return true // Empty string is contained

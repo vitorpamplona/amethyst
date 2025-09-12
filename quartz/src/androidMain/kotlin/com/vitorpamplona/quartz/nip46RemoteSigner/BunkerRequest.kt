@@ -36,7 +36,7 @@ open class BunkerRequest(
     val method: String,
     val params: Array<String> = emptyArray(),
 ) : BunkerMessage() {
-    override fun countMemory(): Long =
+    override fun countMemory(): Int =
         3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             id.bytesUsedInMemory() +
             method.bytesUsedInMemory() +

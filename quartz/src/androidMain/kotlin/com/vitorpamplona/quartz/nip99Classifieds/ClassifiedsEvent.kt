@@ -70,7 +70,18 @@ class ClassifiedsEvent(
 
     fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
 
-    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt(): Long? {
+        val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+
+        if (publishedAt == null) return null
+
+        // removes posts in the future.
+        return if (publishedAt <= createdAt) {
+            publishedAt
+        } else {
+            null
+        }
+    }
 
     fun categories() = tags.hashtags()
 

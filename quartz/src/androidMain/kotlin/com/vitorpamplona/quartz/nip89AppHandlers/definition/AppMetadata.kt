@@ -50,25 +50,25 @@ class AppMetadata {
     var lud06: String? = null
     var lud16: String? = null
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         20 * pointerSizeInBytes + // 20 fields, 4 bytes for each reference
-            (name?.bytesUsedInMemory() ?: 0L) +
-            (username?.bytesUsedInMemory() ?: 0L) +
-            (displayName?.bytesUsedInMemory() ?: 0L) +
-            (picture?.bytesUsedInMemory() ?: 0L) +
-            (banner?.bytesUsedInMemory() ?: 0L) +
-            (image?.bytesUsedInMemory() ?: 0L) +
-            (website?.bytesUsedInMemory() ?: 0L) +
-            (about?.bytesUsedInMemory() ?: 0L) +
-            (subscription?.bytesUsedInMemory() ?: 0L) +
-            (acceptsNutZaps?.bytesUsedInMemory() ?: 0L) +
-            (supportsEncryption?.bytesUsedInMemory() ?: 0L) +
-            (personalized?.bytesUsedInMemory() ?: 0L) + // A Boolean has 8 bytes of header, plus 1 byte of payload, for a total of 9 bytes of information. The JVM then rounds it up to the next multiple of 8. so the one instance of java.lang.Boolean takes up 16 bytes of memory.
-            (amount?.bytesUsedInMemory() ?: 0L) +
-            (nip05?.bytesUsedInMemory() ?: 0L) +
-            (domain?.bytesUsedInMemory() ?: 0L) +
-            (lud06?.bytesUsedInMemory() ?: 0L) +
-            (lud16?.bytesUsedInMemory() ?: 0L)
+            (name?.bytesUsedInMemory() ?: 0) +
+            (username?.bytesUsedInMemory() ?: 0) +
+            (displayName?.bytesUsedInMemory() ?: 0) +
+            (picture?.bytesUsedInMemory() ?: 0) +
+            (banner?.bytesUsedInMemory() ?: 0) +
+            (image?.bytesUsedInMemory() ?: 0) +
+            (website?.bytesUsedInMemory() ?: 0) +
+            (about?.bytesUsedInMemory() ?: 0) +
+            (subscription?.bytesUsedInMemory() ?: 0) +
+            (acceptsNutZaps?.bytesUsedInMemory() ?: 0) +
+            (supportsEncryption?.bytesUsedInMemory() ?: 0) +
+            (personalized?.bytesUsedInMemory() ?: 0) + // A Boolean has 8 bytes of header, plus 1 byte of payload, for a total of 9 bytes of information. The JVM then rounds it up to the next multiple of 8. so the one instance of java.lang.Boolean takes up 16 bytes of memory.
+            (amount?.bytesUsedInMemory() ?: 0) +
+            (nip05?.bytesUsedInMemory() ?: 0) +
+            (domain?.bytesUsedInMemory() ?: 0) +
+            (lud06?.bytesUsedInMemory() ?: 0) +
+            (lud16?.bytesUsedInMemory() ?: 0)
 
     fun anyName(): String? = displayName ?: name ?: username
 

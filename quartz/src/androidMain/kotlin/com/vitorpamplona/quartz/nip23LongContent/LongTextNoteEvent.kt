@@ -132,7 +132,18 @@ class LongTextNoteEvent(
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt(): Long? {
+        val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+
+        if (publishedAt == null) return null
+
+        // removes posts in the future.
+        return if (publishedAt <= createdAt) {
+            publishedAt
+        } else {
+            null
+        }
+    }
 
     companion object {
         const val KIND = 30023

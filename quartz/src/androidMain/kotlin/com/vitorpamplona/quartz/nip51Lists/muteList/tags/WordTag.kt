@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 class WordTag(
     val word: String,
 ) : MuteTag {
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         1 * pointerSizeInBytes + // 1 fields, 4 bytes each reference (32bit)
             word.bytesUsedInMemory()
 

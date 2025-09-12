@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
+import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag.Companion.parse
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -129,12 +131,18 @@ class WikiNoteEvent(
 
     fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
 
-    override fun publishedAt() =
-        try {
-            tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
-        } catch (_: Exception) {
+    override fun publishedAt(): Long? {
+        val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+
+        if (publishedAt == null) return null
+
+        // removes posts in the future.
+        return if (publishedAt <= createdAt) {
+            publishedAt
+        } else {
             null
         }
+    }
 
     companion object {
         const val KIND = 30818

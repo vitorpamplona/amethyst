@@ -106,12 +106,12 @@ open class DiscoverChatFeedFilter(
         // precache to avoid breaking the contract
         val lastNote =
             items.associateWith { note ->
-                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0
+                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0L
             }
 
         val createdNote =
             items.associateWith { note ->
-                note.createdAt() ?: 0
+                note.createdAt() ?: 0L
             }
 
         val comparator: Comparator<Note> =

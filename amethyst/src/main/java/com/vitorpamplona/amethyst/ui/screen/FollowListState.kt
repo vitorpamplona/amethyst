@@ -26,6 +26,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
+import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -82,6 +83,15 @@ class FollowListState(
             unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
+    val kind3FollowUsers =
+        PeopleListOutBoxFeedDefinition(
+            code = ALL_USER_FOLLOWS,
+            name = ResourceName(R.string.follow_list_kind3follows_users_only),
+            type = CodeNameType.HARDCODED,
+            kinds = DEFAULT_FEED_KINDS,
+            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
+        )
+
     val globalFollow =
         GlobalFeedDefinition(
             code = GLOBAL_FOLLOWS,
@@ -107,7 +117,7 @@ class FollowListState(
             unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
         )
 
-    val defaultLists = persistentListOf(kind3Follow, aroundMe, globalFollow, muteListFollow)
+    val defaultLists = persistentListOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow, muteListFollow)
 
     fun getPeopleLists(): List<FeedDefinition> =
         account
@@ -218,7 +228,7 @@ class FollowListState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(kind3Follow, aroundMe, globalFollow),
+                    listOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow),
                     myLivePeopleListsFlow,
                     myLiveKind3FollowsFlow,
                     listOf(muteListFollow),
@@ -234,7 +244,7 @@ class FollowListState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(kind3Follow, aroundMe, globalFollow),
+                    listOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow),
                     myLivePeopleListsFlow,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),

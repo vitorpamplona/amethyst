@@ -43,7 +43,7 @@ class NIP90ContentDiscoveryResponseEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient var events: List<HexKey>? = null
 
-    override fun countMemory(): Long =
+    override fun countMemory(): Int =
         super.countMemory() +
             pointerSizeInBytes + (events?.sumOf { it.bytesUsedInMemory() } ?: 0)
 

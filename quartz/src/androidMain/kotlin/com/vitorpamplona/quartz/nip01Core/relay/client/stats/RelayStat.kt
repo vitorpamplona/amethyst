@@ -24,11 +24,11 @@ import androidx.collection.LruCache
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class RelayStat(
-    var receivedBytes: Long = 0L,
-    var sentBytes: Long = 0L,
-    var spamCounter: Long = 0L,
-    var errorCounter: Long = 0L,
-    var pingInMs: Long = 0L,
+    var receivedBytes: Int = 0,
+    var sentBytes: Int = 0,
+    var spamCounter: Int = 0,
+    var errorCounter: Int = 0,
+    var pingInMs: Int = 0,
 ) {
     val messages = LruCache<RelayDebugMessage, RelayDebugMessage>(100)
 
@@ -54,11 +54,11 @@ class RelayStat(
         messages.put(debugMessage, debugMessage)
     }
 
-    fun addBytesReceived(bytesUsedInMemory: Long) {
+    fun addBytesReceived(bytesUsedInMemory: Int) {
         receivedBytes += bytesUsedInMemory
     }
 
-    fun addBytesSent(bytesUsedInMemory: Long) {
+    fun addBytesSent(bytesUsedInMemory: Int) {
         sentBytes += bytesUsedInMemory
     }
 

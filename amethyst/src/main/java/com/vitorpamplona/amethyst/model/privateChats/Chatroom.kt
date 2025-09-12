@@ -70,14 +70,14 @@ class Chatroom : NotesGatherer {
                 }
             }
 
-            val createdAt = msg.createdAt() ?: 0
-            if (createdAt > (newestMessage?.createdAt() ?: 0)) {
+            val createdAt = msg.createdAt() ?: 0L
+            if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
                 newestMessage = msg
             }
 
             val newSubject = msg.event?.subject()
 
-            if (newSubject != null && (msg.createdAt() ?: 0) > (subjectCreatedAt ?: 0)) {
+            if (newSubject != null && (msg.createdAt() ?: 0L) > (subjectCreatedAt ?: 0)) {
                 subject.tryEmit(newSubject)
                 subjectCreatedAt = msg.createdAt()
             }
@@ -96,7 +96,7 @@ class Chatroom : NotesGatherer {
             msg.removeGatherer(this)
 
             if (msg == newestMessage) {
-                newestMessage = messages.maxByOrNull { it.createdAt() ?: 0 }
+                newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
             }
 
             if (msg.event?.subject() == subject.value) {
@@ -127,7 +127,7 @@ class Chatroom : NotesGatherer {
         val sorted = messages.sortedWith(DefaultFeedOrder)
 
         val toKeep =
-            if ((sorted.firstOrNull()?.createdAt() ?: 0) > TimeUtils.oneWeekAgo()) {
+            if ((sorted.firstOrNull()?.createdAt() ?: 0L) > TimeUtils.oneWeekAgo()) {
                 // Recent messages, keep last 100
                 sorted.take(100).toSet()
             } else {

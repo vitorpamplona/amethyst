@@ -53,7 +53,7 @@ data class QAddressableTag(
         this.relay = relayHint
     }
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         2 * pointerSizeInBytes +
             address.countMemory() +
             (relay?.url?.bytesUsedInMemory() ?: 0)

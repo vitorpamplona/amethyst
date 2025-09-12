@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 class DTag(
     val dId: String,
 ) {
-    fun countMemory(): Long = 1 * pointerSizeInBytes + dId.bytesUsedInMemory()
+    fun countMemory(): Int = 1 * pointerSizeInBytes + dId.bytesUsedInMemory()
 
     fun toTagArray() = assemble(dId)
 

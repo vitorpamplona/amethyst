@@ -72,7 +72,7 @@ class LnZapEvent(
         }
     }
 
-    override fun countMemory(): Long =
+    override fun countMemory(): Int =
         super.countMemory() +
             pointerSizeInBytes + (zapRequest?.countMemory() ?: 0) + // rough calculation
             pointerSizeInBytes + 36 // bigdecimal size

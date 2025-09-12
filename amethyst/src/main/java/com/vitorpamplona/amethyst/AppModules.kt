@@ -69,7 +69,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.run
 
 class AppModules(
     val appContext: Context,
@@ -178,9 +177,6 @@ class AppModules(
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
 
-    // Organizes cache clearing
-    val trimmingService = MemoryTrimmingService(cache)
-
     // Provides a relay pool
     val client: INostrClient = NostrClient(websocketBuilder, applicationDefaultScope)
 
@@ -214,6 +210,9 @@ class AppModules(
             cache = cache,
             client = client,
         )
+
+    // Organizes cache clearing
+    val trimmingService = MemoryTrimmingService(cache)
 
     // as new accounts are loaded, updates the state of the TorRelaySettings, which produces new TorRelayEvaluator
     // and reconnects relays if the configuration has been changed.
@@ -283,7 +282,8 @@ class AppModules(
 
     fun trim() {
         applicationDefaultScope.launch {
-            trimmingService.run(null, LocalPreferences.allSavedAccounts())
+            val loggedIn = accountsCache.accounts.value.values
+            trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
         }
     }
 }
