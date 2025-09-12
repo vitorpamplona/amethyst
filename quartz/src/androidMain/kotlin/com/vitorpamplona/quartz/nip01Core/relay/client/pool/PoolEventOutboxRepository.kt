@@ -40,6 +40,16 @@ class PoolEventOutboxRepository {
         }
     }
 
+    fun activeOutboxCacheFor(url: NormalizedRelayUrl): Set<HexKey> {
+        val myEvents = mutableSetOf<HexKey>()
+        eventOutbox.forEach { eventId, outboxCache ->
+            if (url in outboxCache.relays) {
+                myEvents.add(eventId)
+            }
+        }
+        return myEvents
+    }
+
     fun markAsSending(
         event: Event,
         relays: Set<NormalizedRelayUrl>,

@@ -18,29 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
+package com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.model.FeatureSetType
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-@Composable
-fun BasicRelaySetupInfoDialog(
-    item: BasicRelaySetupInfo,
-    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    BasicRelaySetupInfoClickableRow(
-        item = item,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-        onDelete = onDelete,
-        accountViewModel = accountViewModel,
-        onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
-        nav = nav,
-    )
+class EndpointUrlTag {
+    companion object Companion {
+        const val TAG_NAME = "endpoint"
+
+        @JvmStatic
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        @JvmStatic
+        fun assemble(url: String) = arrayOf(TAG_NAME, url)
+    }
 }

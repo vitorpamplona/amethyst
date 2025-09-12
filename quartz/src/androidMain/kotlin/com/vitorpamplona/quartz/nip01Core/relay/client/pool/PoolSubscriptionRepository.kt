@@ -40,6 +40,17 @@ class PoolSubscriptionRepository {
         }
     }
 
+    fun activeFiltersFor(url: NormalizedRelayUrl): Map<String, List<Filter>> {
+        val myRelays = mutableMapOf<String, List<Filter>>()
+        subscriptions.forEach { sub, perRelayFilters ->
+            val filters = perRelayFilters.get(url)
+            if (filters != null) {
+                myRelays.put(sub, filters)
+            }
+        }
+        return myRelays
+    }
+
     fun addOrUpdate(
         subscriptionId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,

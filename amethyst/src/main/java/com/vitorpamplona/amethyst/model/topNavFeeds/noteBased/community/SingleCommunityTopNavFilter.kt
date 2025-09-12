@@ -67,7 +67,7 @@ class SingleCommunityTopNavFilter(
 
         if (authors != null) {
             // go by authors
-            val authorsPerRelay = OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache) { it }
+            val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
 
             return combine(authorsPerRelay, blockedRelays) { authorsPerRelay, blocked ->
                 SingleCommunityTopNavPerRelayFilterSet(
@@ -100,7 +100,7 @@ class SingleCommunityTopNavFilter(
 
         if (authors != null) {
             // go by authors
-            val authorsPerRelay = OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache) { it }
+            val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
 
             return SingleCommunityTopNavPerRelayFilterSet(
                 authorsPerRelay.minus(blockedRelays.value).mapValues {

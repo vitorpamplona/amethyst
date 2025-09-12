@@ -52,7 +52,7 @@ class AuthorsByOutboxTopNavFilter(
         )
 
     override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> {
-        val authorsPerRelay = OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache) { it }
+        val authorsPerRelay = OutboxRelayLoader().toAuthorsPerRelayFlow(authors, cache) { it }
 
         return combine(authorsPerRelay, blockedRelays) { authors, blocked ->
             convert(authors.minus(blocked))
@@ -60,7 +60,7 @@ class AuthorsByOutboxTopNavFilter(
     }
 
     override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet {
-        val authorsPerRelay = OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache) { it }
+        val authorsPerRelay = OutboxRelayLoader().authorsPerRelaySnapshot(authors, cache) { it }
 
         return convert(authorsPerRelay.minus(blockedRelays.value))
     }

@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
@@ -75,18 +76,20 @@ fun VideoDisplay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event = (note.event as? VideoEvent) ?: return
-    val imeta = event.imetaTags().firstOrNull() ?: return
+    val videoEvent = (note.event as? VideoEvent) ?: return
+    val event = (videoEvent as? Event) ?: return
 
-    val title = event.title()
-    val summary = event.content.ifBlank { null }?.takeIf { title != it }
+    val imeta = videoEvent.imetaTags().firstOrNull() ?: return
+
+    val title = videoEvent.title()
+    val summary = videoEvent.content.ifBlank { null }?.takeIf { title != it }
     val image = imeta.image.firstOrNull()
     val isYouTube = imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be")
     val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     val content by
         remember(note) {
-            val description = event.content.ifBlank { null } ?: event.alt()
+            val description = videoEvent.content.ifBlank { null } ?: event.alt()
             val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
             val uri = note.toNostrUri()
 
@@ -187,11 +190,11 @@ fun VideoDisplay(
                     nav = nav,
                 )
 
-                if (event.hasHashtags()) {
+                if (videoEvent.hasHashtags()) {
                     Row(
                         Modifier.fillMaxWidth(),
                     ) {
-                        DisplayUncitedHashtags(event, summary, callbackUri, accountViewModel, nav)
+                        DisplayUncitedHashtags(videoEvent, summary, callbackUri, accountViewModel, nav)
                     }
                 }
             }

@@ -18,29 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
+package com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.model.FeatureSetType
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
-@Composable
-fun BasicRelaySetupInfoDialog(
-    item: BasicRelaySetupInfo,
-    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    BasicRelaySetupInfoClickableRow(
-        item = item,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-        onDelete = onDelete,
-        accountViewModel = accountViewModel,
-        onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
-        nav = nav,
-    )
+@Immutable
+class PinnedEventTag {
+    companion object {
+        const val TAG_NAME = "pinned"
+
+        fun isIn(
+            tag: Array<String>,
+            eventIds: Set<HexKey>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in eventIds
+
+        @JvmStatic
+        fun parse(tag: Tag): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            return tag[1]
+        }
+
+        @JvmStatic
+        fun assemble(eventId: HexKey) = arrayOfNotNull(TAG_NAME, eventId)
+    }
 }

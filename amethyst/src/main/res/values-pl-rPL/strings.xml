@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="take_a_picture">Zrób zdjęcie</string>
+    <string name="record_a_video">Nagraj film</string>
     <string name="record_a_message">Nagraj wiadomość</string>
     <string name="record_a_message_title">Nagrywanie wiadomości</string>
     <string name="record_a_message_description">Kliknij i przytrzymaj aby nagrać wiadomość</string>
@@ -163,6 +164,7 @@
     <string name="blocked_users">Zablokowani użytkownicy</string>
     <string name="new_threads">Nowe Wpisy</string>
     <string name="conversations">Komentarze</string>
+    <string name="feed">Aktualności</string>
     <string name="mod_queue">Moderacja</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
@@ -887,10 +889,13 @@
     <string name="dm_upload">Wgrywanie DM</string>
     <string name="relay_settings">Ustawienia Transmiterów</string>
     <string name="public_home_section">Publiczne transmitery domowe</string>
+    <string name="public_home_section_explainer_profile">Użytkownik publikuje swoje wpisy na tych transmiterach</string>
     <string name="public_home_section_explainer">Ten typ transmitera przechowuje całą zawartość. Amethyst będzie wysyłać Twoje posty tutaj, a inni będą korzystać z tych transmiterów, aby znaleźć Twoje treści. Wstaw od 1 do 3 transmiterów. Mogą to być transmitery prywatne, płatne lub publiczne.</string>
     <string name="public_notif_section">Publiczne transmitery odbiorcze</string>
+    <string name="public_notif_section_explainer_profile">Użytkownik otrzymuje powiadomienia na tych transmiterach</string>
     <string name="public_notif_section_explainer">Ten typ transmitera odbiera wszystkie odpowiedzi, komentarze, polubienia i zapy do Twoich postów. Mogą to być płatne lub bezpłatne transmitery. Limity ustawione przez operatora transmitera mogą ograniczać otrzymywane powiadomienia, zarówno te dobre, jak i złe. Na przykład, jeśli jesteś atakowany przez spam w komentarzach, płatne transmitery mogą odfiltrować spam. Wstaw od 1 do 3 transmiterów.</string>
     <string name="private_inbox_section">Odbiorcze transmitery DM</string>
+    <string name="private_inbox_section_explainer_profile">Użytkownik otrzymuje DM na tych transmiterach</string>
     <string name="private_inbox_section_explainer">Wstaw od 1 do 3 transmiterów, które będą służyć jako Twoja prywatna skrzynka odbiorcza. Inni będą używać tych transmiterów do wysyłania wiadomości DM do Ciebie. Transmitery odbiorcze DM powinny akceptować dowolne wiadomości od każdego, ale pozwalać tylko na ich pobieranie. Dobre opcje to:\n - inbox.nostr.wine (płatny)\n - you.nostr1.com (transmitery osobiste - płatny)</string>
     <string name="private_outbox_section">Transmitery Prywatne</string>
     <string name="private_outbox_section_explainer">Wstaw od 1 do 3 transmiterów przechowujących dane zdarzeń, których nikt inny nie widzi, takich jak Wersje robocze i/lub ustawienia aplikacji. Idealnie byłoby, gdyby te transmitery były lokalne lub wymagały uwierzytelnienia przed pobraniem treści każdego użytkownika.</string>
@@ -1005,7 +1010,7 @@
     <string name="torrent_download">Pobierz</string>
     <string name="torrent_failure">Nie udało się otworzyć pliku</string>
     <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
-    <string name="select_list_to_filter">Wybierz listę, aby filtrować kanał</string>
+    <string name="select_list_to_filter">Wybierz listę, aby filtrować aktualności</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
     <string name="public_message">Publiczna wiadomość</string>
@@ -1019,6 +1024,8 @@
     <string name="play">Odtwórz</string>
     <string name="open_dropdown_menu">Otwórz rozwijane menu</string>
     <string name="option_of">Opcja %1$s dla %2$s</string>
+    <string name="feed_filter_selected">Wybrano filtr aktualności %1$s</string>
+    <string name="feed_filter_select_an_option">Filtr aktualności, %1$s</string>
     <string name="crashreport_found">Znaleziono raport o błędzie</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Czy chcesz wysłać ostatni raport o awarii do Amethyst w DM? Żadne dane osobowe nie będą udostępnione</string>
     <string name="crashreport_found_send">Prześlij</string>
