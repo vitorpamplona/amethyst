@@ -56,7 +56,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -73,15 +72,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun ListsScreen(
     accountViewModel: AccountViewModel,
+    followSetsViewModel: NostrUserListFeedViewModel,
     nav: INav,
 ) {
-    val followSetsViewModel: NostrUserListFeedViewModel =
-        viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    val currentCoroutineScope = rememberCoroutineScope()
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifeCycleOwner) {

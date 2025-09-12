@@ -60,7 +60,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -84,14 +83,9 @@ import kotlinx.coroutines.launch
 fun FollowSetScreen(
     selectedSetIdentifier: String,
     accountViewModel: AccountViewModel,
+    followSetViewModel: NostrUserListFeedViewModel,
     navigator: INav,
 ) {
-    val followSetViewModel: NostrUserListFeedViewModel =
-        viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
-        )
-
     val followSetState by followSetViewModel.feedContent.collectAsState()
     val uiScope = rememberCoroutineScope()
 

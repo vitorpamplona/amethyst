@@ -104,6 +104,7 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     userId: String?,
     accountViewModel: AccountViewModel,
+    nostrListsViewModel: NostrUserListFeedViewModel,
     nav: INav,
 ) {
     if (userId == null) return
@@ -123,6 +124,7 @@ fun ProfileScreen(
         PrepareViewModels(
             baseUser = it,
             accountViewModel = accountViewModel,
+            nostrListsViewModel = nostrListsViewModel,
             nav = nav,
         )
     }
@@ -132,6 +134,7 @@ fun ProfileScreen(
 fun PrepareViewModels(
     baseUser: User,
     accountViewModel: AccountViewModel,
+    nostrListsViewModel: NostrUserListFeedViewModel,
     nav: INav,
 ) {
     val followsFeedViewModel: UserProfileFollowsUserFeedViewModel =
@@ -228,15 +231,6 @@ fun PrepareViewModels(
                 ),
         )
 
-    val followSetsViewModel: NostrUserListFeedViewModel =
-        viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory =
-                NostrUserListFeedViewModel.Factory(
-                    accountViewModel.account,
-                ),
-        )
-
     ProfileScreen(
         baseUser = baseUser,
         threadsViewModel,
@@ -249,7 +243,7 @@ fun PrepareViewModels(
         bookmarksFeedViewModel,
         galleryFeedViewModel,
         reportsFeedViewModel,
-        followSetsViewModel,
+        nostrListsViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
