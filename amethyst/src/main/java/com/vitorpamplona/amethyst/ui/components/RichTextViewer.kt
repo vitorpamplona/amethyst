@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -434,34 +433,36 @@ private fun collectConsecutiveImageParagraphs(
 ): Pair<List<ParagraphState>, Int> {
     val imageParagraphs = mutableListOf<ParagraphState>()
     var j = startIndex
+
     while (j < paragraphs.size) {
         val currentParagraph = paragraphs[j]
-        val isEmpty =
-            currentParagraph.words.isEmpty() ||
-                (
-                    currentParagraph.words.size == 1 &&
-                        currentParagraph.words.first() is RegularTextSegment &&
-                        currentParagraph.words
-                            .first()
-                            .segmentText
-                            .isBlank()
-                )
+        val words = currentParagraph.words
 
-        val isCurrentImageOnly =
-            currentParagraph.words.isNotEmpty() && isImageOnlyParagraph(currentParagraph)
+        // Fast path for empty check
+        if (words.isEmpty()) {
+            j++
+            continue
+        }
 
-        if (isCurrentImageOnly) {
+        // Check for single whitespace word
+        if (words.size == 1) {
+            val firstWord = words.first()
+            if (firstWord is RegularTextSegment && firstWord.segmentText.isBlank()) {
+                j++
+                continue
+            }
+        }
+
+        // Check if it's an image-only paragraph
+        if (isImageOnlyParagraph(currentParagraph)) {
             imageParagraphs.add(currentParagraph)
             j++
-        } else if (isEmpty) {
-            // Skip empty paragraphs but continue looking for consecutive images
-            j++
         } else {
-            // Hit a non-empty, non-image paragraph - stop collecting
             break
         }
     }
-    return Pair(imageParagraphs, j) // Return collected paragraphs and next index to process
+
+    return imageParagraphs to j
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -561,8 +562,6 @@ private fun RenderWordsWithImageGallery(
     words: ImmutableList<Segment>,
     context: RenderContext,
 ) {
-    val startTime = System.currentTimeMillis()
-
     var i = 0
     val n = words.size
 
@@ -609,8 +608,6 @@ private fun RenderWordsWithImageGallery(
             i++
         }
     }
-
-    Log.d("RichTextViewer", "RenderWordsWithImageGallery took ${System.currentTimeMillis() - startTime}ms for ${words.size} segments")
 }
 
 @Composable
