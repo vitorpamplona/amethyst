@@ -440,6 +440,7 @@
     <string name="no">否</string>
     <string name="follow_list_selection">关注列表</string>
     <string name="follow_list_kind3follows">所有关注</string>
+    <string name="follow_list_kind3follows_users_only">所有用户关注</string>
     <string name="follow_list_kind3follows_proxy">通过代理关注</string>
     <string name="follow_list_aroundme">周围的人</string>
     <string name="follow_list_global">全球</string>
