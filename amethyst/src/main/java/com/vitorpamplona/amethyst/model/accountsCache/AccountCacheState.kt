@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
 import android.util.Log
-import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -33,35 +32,34 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 class AccountCacheState(
     val geolocationFlow: StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
     val contentResolverFn: () -> ContentResolver,
+    val otsResolverBuilder: OtsResolverBuilder,
     val cache: LocalCache,
     val client: INostrClient,
 ) {
-    val accounts =
-        object : LruCache<HexKey, Account>(20) {
-            override fun entryRemoved(
-                evicted: Boolean,
-                key: HexKey,
-                oldValue: Account,
-                newValue: Account?,
-            ) {
-                super.entryRemoved(evicted, key, oldValue, newValue)
-                oldValue.scope.cancel()
-            }
-        }
+    val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
-    fun removeAccount(pubkey: HexKey) = accounts.remove(pubkey)
+    fun removeAccount(pubkey: HexKey) {
+        accounts.update { existingAccounts ->
+            val oldValue = existingAccounts[pubkey]
+            oldValue?.scope?.cancel()
+            existingAccounts.minus(pubkey)
+        }
+    }
 
     fun loadAccount(accountSettings: AccountSettings): Account =
         loadAccount(
@@ -86,7 +84,7 @@ class AccountCacheState(
         signer: NostrSigner,
         accountSettings: AccountSettings,
     ): Account {
-        val cached = accounts[signer.pubKey]
+        val cached = accounts.value[signer.pubKey]
         if (cached != null) return cached
 
         return Account(
@@ -94,6 +92,7 @@ class AccountCacheState(
             signer = signer,
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
+            otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,
             scope =
@@ -104,8 +103,19 @@ class AccountCacheState(
                             Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
                         },
                 ),
-        ).also {
-            accounts.put(signer.pubKey, it)
+        ).also { newAccount ->
+            accounts.update { existingAccounts ->
+                existingAccounts.plus(Pair(signer.pubKey, newAccount))
+            }
+        }
+    }
+
+    fun clear() {
+        accounts.update { existingAccounts ->
+            existingAccounts.forEach {
+                it.value.scope.cancel()
+            }
+            emptyMap()
         }
     }
 }

@@ -21,11 +21,13 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
 import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
+import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
@@ -60,6 +62,7 @@ class FeedTopNavFilterState(
         when (listName) {
             GLOBAL_FOLLOWS -> GlobalFeedFlow(followsRelays, proxyRelays)
             ALL_FOLLOWS -> AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+            ALL_USER_FOLLOWS -> AllUserFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
             AROUND_ME -> AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)

@@ -54,10 +54,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
 import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.ThemeType
 
 private val DarkColorPalette =
@@ -481,6 +483,14 @@ val chartDarkColors =
 
 val ColorScheme.chartStyle: VicoTheme
     get() = if (isLight) chartLightColors else chartDarkColors
+
+@Composable
+fun AmethystTheme(content: @Composable () -> Unit) {
+    val theme by Amethyst.instance.uiPrefs.value.theme
+        .collectAsStateWithLifecycle()
+
+    AmethystTheme(theme, content)
+}
 
 @Composable
 fun AmethystTheme(

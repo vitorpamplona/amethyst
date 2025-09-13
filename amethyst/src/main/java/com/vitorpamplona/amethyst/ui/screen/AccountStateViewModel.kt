@@ -35,8 +35,6 @@ import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -108,7 +106,6 @@ class AccountStateViewModel : ViewModel() {
 
     suspend fun loginAndStartUI(
         key: String,
-        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
@@ -142,31 +139,26 @@ class AccountStateViewModel : ViewModel() {
                     keyPair = KeyPair(pubKey = pubKeyParsed),
                     transientAccount = transientAccount,
                     externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
-                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else if (key.startsWith("nsec")) {
                 AccountSettings(
                     keyPair = KeyPair(privKey = key.bechToBytes()),
                     transientAccount = transientAccount,
-                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else if (key.contains(" ") && Nip06().isValidMnemonic(key)) {
                 AccountSettings(
                     keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
                     transientAccount = transientAccount,
-                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else if (pubKeyParsed != null) {
                 AccountSettings(
                     keyPair = KeyPair(pubKey = pubKeyParsed),
                     transientAccount = transientAccount,
-                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             } else {
                 AccountSettings(
                     keyPair = KeyPair(Hex.decode(key)),
                     transientAccount = transientAccount,
-                    torSettings = TorSettingsFlow.build(torSettings),
                 )
             }
 
@@ -197,7 +189,6 @@ class AccountStateViewModel : ViewModel() {
     fun login(
         key: String,
         password: String,
-        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
@@ -222,41 +213,39 @@ class AccountStateViewModel : ViewModel() {
                     onError("Could not decrypt key with provided password")
                     Log.e("Login", "Could not decrypt ncryptsec")
                 } else {
-                    loginSync(newKey, torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
+                    loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 Nip05NostrAddressVerifier().verifyNip05(
                     key,
                     okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
                     onSuccess = { publicKey ->
-                        loginSync(Hex.decode(publicKey).toNpub(), torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
+                        loginSync(Hex.decode(publicKey).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
                     },
                     onError = {
                         onError(it)
                     },
                 )
             } else {
-                loginSync(key, torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
+                loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
             }
         }
     }
 
     fun login(
         key: String,
-        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         onError: (String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            loginSync(key, torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
+            loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
         }
     }
 
     suspend fun loginSync(
         key: String,
-        torSettings: TorSettings,
         transientAccount: Boolean,
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
@@ -266,7 +255,7 @@ class AccountStateViewModel : ViewModel() {
             if (_accountContent.value is AccountState.LoggedIn) {
                 prepareLogoutOrSwitch()
             }
-            loginAndStartUI(key, torSettings, transientAccount, loginWithExternalSigner, packageName)
+            loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("Login", "Could not sign in", e)
@@ -274,10 +263,7 @@ class AccountStateViewModel : ViewModel() {
         }
     }
 
-    fun newKey(
-        torSettings: TorSettings,
-        name: String? = null,
-    ) {
+    fun newKey(name: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             if (_accountContent.value is AccountState.LoggedIn) {
                 prepareLogoutOrSwitch()
@@ -285,7 +271,7 @@ class AccountStateViewModel : ViewModel() {
 
             _accountContent.update { AccountState.Loading }
 
-            val accountSettings = createNewAccount(torSettings, name)
+            val accountSettings = createNewAccount(name)
 
             LocalPreferences.setDefaultAccount(accountSettings)
 
@@ -306,10 +292,7 @@ class AccountStateViewModel : ViewModel() {
         }
     }
 
-    fun createNewAccount(
-        torSettings: TorSettings,
-        name: String? = null,
-    ): AccountSettings {
+    fun createNewAccount(name: String? = null): AccountSettings {
         val keyPair = KeyPair()
         val tempSigner = NostrSignerSync(keyPair)
 
@@ -327,7 +310,6 @@ class AccountStateViewModel : ViewModel() {
             backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
             backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
             backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
-            torSettings = TorSettingsFlow.build(torSettings),
         )
     }
 

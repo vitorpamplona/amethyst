@@ -30,12 +30,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.Settings
+import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -210,7 +208,7 @@ object LocalPreferences {
         }
 
     private val prefsDirPath: String
-        get() = "${Amethyst.instance.filesDir.parent}/shared_prefs/"
+        get() = "${Amethyst.instance.appContext.filesDir.parent}/shared_prefs/"
 
     private suspend fun addAccount(accInfo: AccountInfo) {
         val accounts = savedAccounts().filter { it.npub != accInfo.npub }.plus(accInfo)
@@ -255,7 +253,7 @@ object LocalPreferences {
         return if (BuildConfig.DEBUG && DEBUG_PLAINTEXT_PREFERENCES) {
             val preferenceFile =
                 if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
-            Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
+            Amethyst.instance.appContext.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
             Amethyst.instance.encryptedStorage(npub)
         }
@@ -475,8 +473,6 @@ object LocalPreferences {
                     remove(PrefKeys.USE_PROXY)
                     remove(PrefKeys.PROXY_PORT)
 
-                    putString(PrefKeys.TOR_SETTINGS, JsonMapper.mapper.writeValueAsString(settings.torSettings.toSettings()))
-
                     val regularMap =
                         settings.lastReadPerRoute.value.mapValues {
                             it.value.value
@@ -501,7 +497,7 @@ object LocalPreferences {
     suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
     suspend fun saveSharedSettings(
-        sharedSettings: Settings,
+        sharedSettings: UiSettings,
         prefs: SharedPreferences = encryptedPreferences(),
     ) {
         Log.d("LocalPreferences", "Saving to shared settings")
@@ -510,11 +506,13 @@ object LocalPreferences {
         }
     }
 
-    suspend fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): Settings? {
+    suspend fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
         Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
             return try {
-                getString(PrefKeys.SHARED_SETTINGS, "{}")?.let { JsonMapper.mapper.readValue<Settings>(it) }
+                getString(PrefKeys.SHARED_SETTINGS, "{}")?.let {
+                    JsonMapper.mapper.readValue<UiSettings>(it)
+                }
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 Log.w(
@@ -598,8 +596,6 @@ object LocalPreferences {
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
 
-                    val torSettings = parseOrNull<TorSettings>(PrefKeys.TOR_SETTINGS) ?: TorSettings()
-
                     val lastReadPerRoute =
                         parseOrNull<Map<String, Long>>(PrefKeys.LAST_READ_PER_ROUTE)?.mapValues {
                             MutableStateFlow(it.value)
@@ -637,7 +633,6 @@ object LocalPreferences {
                         backupHashtagList = latestHashtagList,
                         backupGeohashList = latestGeohashList,
                         backupEphemeralChatList = latestEphemeralList,
-                        torSettings = TorSettingsFlow.build(torSettings),
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         pendingAttestations = MutableStateFlow(pendingAttestations),

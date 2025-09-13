@@ -104,7 +104,6 @@ fun RenderTextEvent(
         note,
         accountViewModel,
     ) { body ->
-        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
         val newBody =
             if (editState.value is GenericLoadable.Loaded) {
                 (editState.value as? GenericLoadable.Loaded)
@@ -118,10 +117,13 @@ fun RenderTextEvent(
             }
 
         val eventContent =
-            if (!subject.isNullOrBlank() && !newBody.startsWith(subject)) {
-                "### $subject\n$newBody"
-            } else {
-                newBody
+            remember(newBody) {
+                val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
+                if (!subject.isNullOrBlank() && !newBody.contains(subject, ignoreCase = true)) {
+                    "$subject\n\n$newBody"
+                } else {
+                    newBody
+                }
             }
 
         if (makeItShort && accountViewModel.isLoggedUser(note.author)) {

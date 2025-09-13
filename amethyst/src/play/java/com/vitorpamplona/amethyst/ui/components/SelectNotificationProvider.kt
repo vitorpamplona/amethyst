@@ -20,19 +20,36 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.Manifest
 import android.os.Build
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.checkifItNeedsToRequestNotificationPermission
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SelectNotificationProvider(sharedPreferencesViewModel: SharedPreferencesViewModel) {
+fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel)
+        val notificationPermissionState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+        if (!notificationPermissionState.status.isGranted) {
+            val dontAskForNotificationPermissions by sharedPrefs.dontAskForNotificationPermissions.collectAsStateWithLifecycle()
+
+            if (!dontAskForNotificationPermissions) {
+                sharedPrefs.dontAskForNotificationPermissions()
+
+                // This will pause the APP, including the connection with relays.
+                LaunchedEffect(notificationPermissionState) {
+                    notificationPermissionState.launchPermissionRequest()
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun PushNotificationSettingsRow(sharedPreferencesViewModel: SharedPreferencesViewModel) {}
+fun PushNotificationSettingsRow(sharedPrefs: UiSettingsFlow) {}

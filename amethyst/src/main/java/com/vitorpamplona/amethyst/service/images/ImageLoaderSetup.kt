@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.images
 
-import android.app.Application
+import android.content.Context
 import android.os.Build
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
@@ -57,7 +57,7 @@ class ImageLoaderSetup {
 
         @OptIn(DelicateCoilApi::class)
         fun setup(
-            app: Application,
+            app: Context,
             diskCache: DiskCache,
             memoryCache: MemoryCache,
             callFactory: (url: String) -> Call.Factory,

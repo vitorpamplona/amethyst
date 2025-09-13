@@ -43,7 +43,7 @@ abstract class Card {
 class BadgeCard(
     val note: Note,
 ) : Card() {
-    override fun createdAt(): Long = note.createdAt() ?: 0
+    override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
 }
@@ -52,7 +52,7 @@ class BadgeCard(
 class NoteCard(
     val note: Note,
 ) : Card() {
-    override fun createdAt(): Long = note.createdAt() ?: 0
+    override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
 }
@@ -62,7 +62,7 @@ class ZapUserSetCard(
     val user: User,
     val zapEvents: ImmutableList<CombinedZap>,
 ) : Card() {
-    val createdAt = zapEvents.maxOf { it.createdAt() ?: 0 }
+    val createdAt = zapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L
 
     override fun createdAt(): Long = createdAt
 
@@ -78,9 +78,9 @@ class MultiSetCard(
 ) : Card() {
     val maxCreatedAt =
         maxOf(
-            zapEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
-            likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
-            boostEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
+            zapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
+            likeEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
+            boostEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
         )
 
     val minCreatedAt =
@@ -109,7 +109,7 @@ class MultiSetCard(
 class MessageSetCard(
     val note: Note,
 ) : Card() {
-    override fun createdAt(): Long = note.createdAt() ?: 0
+    override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
 }

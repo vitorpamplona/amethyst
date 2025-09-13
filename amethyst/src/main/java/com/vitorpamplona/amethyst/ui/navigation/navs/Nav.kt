@@ -34,20 +34,20 @@ import kotlin.reflect.KClass
 @Stable
 class Nav(
     val controller: NavHostController,
-    override val scope: CoroutineScope,
+    override val navigationScope: CoroutineScope,
 ) : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
     override fun closeDrawer() {
-        scope.launch { drawerState.close() }
+        navigationScope.launch { drawerState.close() }
     }
 
     override fun openDrawer() {
-        scope.launch { drawerState.open() }
+        navigationScope.launch { drawerState.open() }
     }
 
     override fun nav(route: Route) {
-        scope.launch {
+        navigationScope.launch {
             if (getRouteWithArguments(controller) != route) {
                 controller.navigate(route)
             }
@@ -55,7 +55,7 @@ class Nav(
     }
 
     override fun nav(computeRoute: suspend () -> Route?) {
-        scope.launch {
+        navigationScope.launch {
             val route = computeRoute()
             if (route != null && getRouteWithArguments(controller) != route) {
                 controller.navigate(route)
@@ -64,7 +64,7 @@ class Nav(
     }
 
     override fun newStack(route: Route) {
-        scope.launch {
+        navigationScope.launch {
             controller.navigate(route) {
                 popUpTo(route) {
                     inclusive = true
@@ -75,7 +75,7 @@ class Nav(
     }
 
     override fun popBack() {
-        scope.launch {
+        navigationScope.launch {
             controller.navigateUp()
         }
     }
@@ -85,7 +85,7 @@ class Nav(
         route: Route,
         klass: KClass<T>,
     ) {
-        scope.launch {
+        navigationScope.launch {
             controller.navigate(route) {
                 popUpTo<T>(klass) { inclusive = true }
             }

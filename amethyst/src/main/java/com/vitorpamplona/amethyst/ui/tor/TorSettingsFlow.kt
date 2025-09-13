@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 
 class TorSettingsFlow(
     val torType: MutableStateFlow<TorType> = MutableStateFlow(TorType.INTERNAL),
@@ -37,6 +38,42 @@ class TorSettingsFlow(
     val nip05VerificationsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val nip96UploadsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
+    // emits at every change in any of the propertyes.
+    val propertyWatchFlow =
+        combine(
+            listOf(
+                torType,
+                externalSocksPort,
+                onionRelaysViaTor,
+                dmRelaysViaTor,
+                newRelaysViaTor,
+                trustedRelaysViaTor,
+                urlPreviewsViaTor,
+                profilePicsViaTor,
+                imagesViaTor,
+                videosViaTor,
+                moneyOperationsViaTor,
+                nip05VerificationsViaTor,
+                nip96UploadsViaTor,
+            ),
+        ) { flows ->
+            TorSettings(
+                flows[0] as TorType,
+                flows[1] as Int,
+                flows[2] as Boolean,
+                flows[3] as Boolean,
+                flows[4] as Boolean,
+                flows[5] as Boolean,
+                flows[6] as Boolean,
+                flows[7] as Boolean,
+                flows[8] as Boolean,
+                flows[9] as Boolean,
+                flows[10] as Boolean,
+                flows[11] as Boolean,
+                flows[12] as Boolean,
+            )
+        }
+
     fun toSettings(): TorSettings =
         TorSettings(
             torType.value,

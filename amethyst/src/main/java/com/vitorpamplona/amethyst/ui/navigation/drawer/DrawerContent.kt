@@ -91,7 +91,6 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowerCount
@@ -247,7 +246,7 @@ fun ProfileContentTemplate(
                         .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             )
 
             if (bestDisplayName != null) {

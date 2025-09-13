@@ -239,7 +239,7 @@ class CardFeedContentState(
                         (boostsInCard + zapsInCard.map { it.response } + reactionsInCard).groupBy {
                             sdf.format(
                                 Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0)
+                                    .ofEpochSecond(it.createdAt() ?: 0L)
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDateTime(),
                             )
@@ -273,7 +273,7 @@ class CardFeedContentState(
                         user.value.groupBy {
                             sdf.format(
                                 Instant
-                                    .ofEpochSecond(it.createdAt() ?: 0)
+                                    .ofEpochSecond(it.createdAt() ?: 0L)
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDateTime(),
                             )

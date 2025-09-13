@@ -89,7 +89,7 @@ private fun GalleryFeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     val ratio =
-        if (accountViewModel.settings.modernGalleryStyle.value) {
+        if (accountViewModel.settings.modernGalleryStyle()) {
             0.8f
         } else {
             1.0f

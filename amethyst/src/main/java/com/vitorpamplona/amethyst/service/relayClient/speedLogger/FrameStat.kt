@@ -35,7 +35,7 @@ class FrameStat {
         kind: Int,
         subId: String,
         relayUrl: NormalizedRelayUrl,
-        memory: Long,
+        memory: Int,
     ) {
         eventCount.incrementAndGet()
 

@@ -24,8 +24,6 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -100,6 +98,9 @@ val GLOBAL_FOLLOWS = " Global "
 val ALL_FOLLOWS = " All Follows "
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val ALL_USER_FOLLOWS = " All User Follows "
+
+// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val AROUND_ME = " Around Me "
 
 @Stable
@@ -132,7 +133,6 @@ class AccountSettings(
     var backupHashtagList: HashtagListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
-    val torSettings: TorSettingsFlow = TorSettingsFlow(),
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
@@ -248,17 +248,6 @@ class AccountSettings(
             saveAccountSettings()
         }
     }
-
-    // ---
-    // proxy settings
-    // ---
-    fun setTorSettings(newTorSettings: TorSettings): Boolean =
-        if (torSettings.update(newTorSettings)) {
-            saveAccountSettings()
-            true
-        } else {
-            false
-        }
 
     // ---
     // language services

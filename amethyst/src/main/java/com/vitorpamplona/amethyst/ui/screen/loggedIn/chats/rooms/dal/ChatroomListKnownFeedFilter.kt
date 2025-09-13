@@ -105,7 +105,7 @@ class ChatroomListKnownFeedFilter(
                 val channelId = (oldNote.event as? ChannelMessageEvent)?.channelId()
                 if (newNotePair.key == channelId) {
                     hasUpdated = true
-                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
                     }
                 }
@@ -121,7 +121,7 @@ class ChatroomListKnownFeedFilter(
                 val noteEvent = (oldNote.event as? EphemeralChatEvent)?.roomId()
                 if (newNotePair.key == noteEvent) {
                     hasUpdated = true
-                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
                     }
                 }
@@ -138,7 +138,7 @@ class ChatroomListKnownFeedFilter(
 
                 if (newNotePair.key == oldRoom) {
                     hasUpdated = true
-                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                    if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
                     }
                 }
@@ -179,7 +179,7 @@ class ChatroomListKnownFeedFilter(
                     if (channelId in followingChannels && account.isAcceptable(newNote)) {
                         val lastNote = newRelevantPublicMessages.get(channelId)
                         if (lastNote != null) {
-                            if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                            if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                                 newRelevantPublicMessages.put(channelId, newNote)
                             }
                         } else {
@@ -205,7 +205,7 @@ class ChatroomListKnownFeedFilter(
                     if (room != null && room in followingEphemeralChats && account.isAcceptable(newNote)) {
                         val lastNote = newRelevantEphemeralChats.get(room)
                         if (lastNote != null) {
-                            if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                            if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                                 newRelevantEphemeralChats.put(room, newNote)
                             }
                         } else {
@@ -241,7 +241,7 @@ class ChatroomListKnownFeedFilter(
                         ) {
                             val lastNote = newRelevantPrivateMessages.get(roomKey)
                             if (lastNote != null) {
-                                if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                                if ((newNote.createdAt() ?: 0L) > (lastNote.createdAt() ?: 0L)) {
                                     newRelevantPrivateMessages.put(roomKey, newNote)
                                 }
                             } else {

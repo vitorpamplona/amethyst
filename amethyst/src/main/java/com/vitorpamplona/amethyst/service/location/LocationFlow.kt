@@ -47,11 +47,9 @@ class LocationFlow(
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
             val locationCallback =
-                object : LocationListener {
-                    override fun onLocationChanged(location: Location) {
-                        Log.d("LocationFlow", "onLocationChanged $location")
-                        launch { send(location) }
-                    }
+                LocationListener { location ->
+                    Log.d("LocationFlow", "onLocationChanged $location")
+                    launch { send(location) }
                 }
 
             locationManager.allProviders.forEach {

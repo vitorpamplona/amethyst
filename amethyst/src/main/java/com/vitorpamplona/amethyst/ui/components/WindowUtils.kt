@@ -56,6 +56,6 @@ tailrec fun Context.getActivity(): ComponentActivity =
     }
 
 @Composable
-fun getAmethystApp(): Amethyst = LocalContext.current.getAmethystApp()
+fun amethystApp(): Amethyst = LocalContext.current.asAmethystApp()
 
-fun Context.getAmethystApp(): Amethyst = this.applicationContext as Amethyst
+fun Context.asAmethystApp(): Amethyst = this.applicationContext as Amethyst

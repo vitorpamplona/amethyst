@@ -31,7 +31,7 @@ data class ProxyTag(
     val id: String,
     val protocol: String,
 ) {
-    fun countMemory(): Long = 2 * pointerSizeInBytes + id.bytesUsedInMemory() + protocol.bytesUsedInMemory()
+    fun countMemory(): Int = 2 * pointerSizeInBytes + id.bytesUsedInMemory() + protocol.bytesUsedInMemory()
 
     fun toTagArray() = assemble(id, protocol)
 

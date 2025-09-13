@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -37,7 +36,7 @@ fun BasicRelaySetupInfoDialog(
     BasicRelaySetupInfoClickableRow(
         item = item,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         onDelete = onDelete,
         accountViewModel = accountViewModel,
         onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },

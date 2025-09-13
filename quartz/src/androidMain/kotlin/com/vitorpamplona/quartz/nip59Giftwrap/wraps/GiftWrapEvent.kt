@@ -48,7 +48,7 @@ class GiftWrapEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient var innerEventId: HexKey? = null
 
-    override fun countMemory(): Long =
+    override fun countMemory(): Int =
         super.countMemory() +
             pointerSizeInBytes + (innerEventId?.bytesUsedInMemory() ?: 0)
 

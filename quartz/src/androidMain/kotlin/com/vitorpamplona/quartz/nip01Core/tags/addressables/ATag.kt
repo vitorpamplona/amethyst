@@ -40,9 +40,9 @@ data class ATag(
 ) {
     constructor(address: Address, relayHint: NormalizedRelayUrl? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
-            8L + // kind
+            8 + // kind
             pubKeyHex.bytesUsedInMemory() +
             dTag.bytesUsedInMemory() +
             (relay?.url?.bytesUsedInMemory() ?: 0)

@@ -127,7 +127,7 @@ open class DiscoverCommunityFeedFilter(
 
         val createdNote =
             items.associateWith { note ->
-                note.createdAt() ?: 0
+                note.createdAt() ?: 0L
             }
 
         val comparator: Comparator<Note> =

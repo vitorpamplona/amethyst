@@ -53,7 +53,7 @@ object PushDistributorHandler : PushDistributorActions {
         endpointInternal = ""
     }
 
-    fun appContext(): Context = Amethyst.instance.applicationContext
+    fun appContext(): Context = Amethyst.instance.appContext
 
     override fun getSavedDistributor(): String = unifiedPush.getSavedDistributor(appContext()) ?: ""
 

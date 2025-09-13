@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.playback.playerPool
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import android.util.LruCache
 import androidx.annotation.OptIn
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -56,9 +59,10 @@ class SessionListener(
 class MediaSessionPool(
     val exoPlayerPool: ExoPlayerPool,
     val okHttpClient: OkHttpClient,
+    val appContext: Context,
     val reset: (MediaSession, Boolean) -> Unit,
 ) {
-    val globalCallback = MediaSessionCallback(this)
+    val globalCallback = MediaSessionCallback(this, appContext)
     var lastCleanup = TimeUtils.now()
 
     // protects from LruCache killing playing sessions
@@ -185,6 +189,7 @@ class MediaSessionPool(
 
     class MediaSessionCallback(
         val pool: MediaSessionPool,
+        val appContext: Context,
     ) : MediaSession.Callback {
         @OptIn(UnstableApi::class)
         override fun onAddMediaItems(
@@ -196,7 +201,14 @@ class MediaSessionPool(
 
             // set up return call when clicking on the Notification bar
             mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString("callbackUri")?.let {
-                mediaSession.setSessionActivity(MainActivity.createIntent(it))
+                mediaSession.setSessionActivity(
+                    PendingIntent.getActivity(
+                        appContext,
+                        0,
+                        Intent(Intent.ACTION_VIEW, it.toUri(), appContext, MainActivity::class.java),
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    ),
+                )
             }
 
             return Futures.immediateFuture(mediaItems)

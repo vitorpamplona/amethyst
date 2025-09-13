@@ -24,7 +24,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -69,11 +68,8 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     fun loadRelayDocuments() {
         viewModelScope.launch(Dispatchers.IO) {
             _relays.value.forEach { item ->
-                Nip11CachedRetriever.loadRelayInfo(
+                Amethyst.instance.nip11Cache.loadRelayInfo(
                     relay = item.relay,
-                    okHttpClient = {
-                        Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay))
-                    },
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -91,7 +87,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 relaySetupInfoBuilder(
                     normalized = it,
                     forcesTor =
-                        account.torRelayState.flow.value
+                        Amethyst.instance.torEvaluatorFlow.flow.value
                             .useTor(it),
                 )
             }.distinctBy { it.relay }

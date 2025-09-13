@@ -30,7 +30,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -49,7 +48,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.Account
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
@@ -62,7 +60,6 @@ fun LoggedInPage(
     account: Account,
     route: Route?,
     accountStateViewModel: AccountStateViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
     val accountViewModel: AccountViewModel =
         viewModel(
@@ -70,9 +67,10 @@ fun LoggedInPage(
             factory =
                 AccountViewModel.Factory(
                     account = account,
-                    settings = sharedPreferencesViewModel.sharedPrefs,
+                    settings = Amethyst.instance.uiState,
+                    torSettings = Amethyst.instance.torPrefs.value,
                     dataSources = Amethyst.instance.sources,
-                    okHttpClient = Amethyst.instance.okHttpClients,
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder,
                 ),
         )
 
@@ -80,12 +78,6 @@ fun LoggedInPage(
 
     // Adds this account to the authentication procedures for relays.
     RelayAuthSubscription(accountViewModel)
-
-    // Sets up Coil's Image Loader
-    ObserveImageLoadingTor(accountViewModel)
-
-    // Sets up the use of Proxy based on this Account's settings
-    SetProxyDeterminator(accountViewModel)
 
     // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)
@@ -99,9 +91,6 @@ fun LoggedInPage(
     // Updates local cache of the anti-spam filter choice of this user.
     ObserveAntiSpamFilterSettings(accountViewModel)
 
-    // Pauses relay services when the app pauses
-    ManageRelayServices(accountViewModel)
-
     // Listens to Amber
     ListenToExternalSignerIfNeeded(accountViewModel)
 
@@ -111,7 +100,6 @@ fun LoggedInPage(
     AppNavigation(
         accountViewModel = accountViewModel,
         accountStateViewModel = accountStateViewModel,
-        sharedPreferencesViewModel = sharedPreferencesViewModel,
     )
 }
 
@@ -121,27 +109,6 @@ fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle(true)
 
     Amethyst.instance.cache.antiSpam.active = isSpamActive
-}
-
-@Composable
-fun SetProxyDeterminator(accountViewModel: AccountViewModel) {
-    LaunchedEffect(accountViewModel) {
-        Amethyst.instance.torProxySettingsAnchor.flow
-            .tryEmit(accountViewModel.account.torRelayState.flow)
-    }
-}
-
-@Composable
-fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
-    LaunchedEffect(accountViewModel) {
-        Amethyst.instance.setImageLoader(accountViewModel.account.privacyState::shouldUseTorForImageDownload)
-    }
-}
-
-@Composable
-fun ManageRelayServices(accountViewModel: AccountViewModel) {
-    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
-        .collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -158,7 +125,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
                 scope.launch {
                     PushNotificationUtils.checkAndInit(
                         LocalPreferences.allSavedAccounts(),
-                        accountViewModel::okHttpClientForPushRegistration,
+                        accountViewModel.httpClientBuilder::okHttpClientForPushRegistration,
                     )
                 }
 
@@ -173,7 +140,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
             scope.launch {
                 PushNotificationUtils.checkAndInit(
                     LocalPreferences.allSavedAccounts(),
-                    accountViewModel::okHttpClientForPushRegistration,
+                    accountViewModel.httpClientBuilder::okHttpClientForPushRegistration,
                 )
             }
 

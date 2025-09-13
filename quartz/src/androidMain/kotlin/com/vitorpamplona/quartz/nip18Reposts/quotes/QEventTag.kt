@@ -42,7 +42,7 @@ data class QEventTag(
         this.author = authorPubKeyHex
     }
 
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             eventId.bytesUsedInMemory() +
             (relay?.url?.bytesUsedInMemory() ?: 0) +

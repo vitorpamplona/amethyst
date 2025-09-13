@@ -815,12 +815,8 @@ open class ShortNotePostViewModel :
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(
-                item.link.url,
-            ) {
-                Amethyst.instance.okHttpClients.getHttpClient(
-                    accountViewModel.account.privacyState.shouldUseTorForImageDownload(item.link.url),
-                )
+            iMetaAttachments.downloadAndPrepare(item.link.url) {
+                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link.url)
             }
         }
 

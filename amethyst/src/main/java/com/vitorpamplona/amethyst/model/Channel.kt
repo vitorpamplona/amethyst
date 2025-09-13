@@ -43,12 +43,20 @@ abstract class Channel : NotesGatherer {
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
         val current = changesFlow.get()
         if (current != null) return current
-        val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
+        val new = MutableSharedFlow<ListChange<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
         changesFlow = WeakReference(new)
         return new
     }
 
-    open fun participatingAuthors() = notes.mapNotNull { key, value -> value.author }
+    open fun participatingAuthors(maxTimeLimit: Long) =
+        notes.mapNotNull { key, value ->
+            val createdAt = value.createdAt()
+            if (createdAt != null && createdAt > maxTimeLimit) {
+                value.author
+            } else {
+                null
+            }
+        }
 
     abstract fun toBestDisplayName(): String
 
@@ -88,7 +96,7 @@ abstract class Channel : NotesGatherer {
             notes.put(note.idHex, note)
             note.addGatherer(this)
 
-            if ((note.createdAt() ?: 0) > (lastNote?.createdAt() ?: 0)) {
+            if ((note.createdAt() ?: 0L) > (lastNote?.createdAt() ?: 0L)) {
                 lastNote = note
             }
 

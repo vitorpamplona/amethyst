@@ -50,14 +50,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -126,7 +125,7 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relayInfo by loadRelayInfo(relay, accountViewModel)
+    val relayInfo by loadRelayInfo(relay)
 
     val clipboardManager = LocalClipboardManager.current
     val clickableModifier =
@@ -152,7 +151,7 @@ fun RenderRelay(
             iconUrl = relayInfo.icon,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
             pingInMs = 0,
-            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     }
 }
@@ -196,7 +195,7 @@ fun RenderRelayIcon(
     iconUrl: String?,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
-    pingInMs: Long,
+    pingInMs: Int,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
     val green = MaterialTheme.colorScheme.allGoodColor

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 
 abstract class BunkerMessage {
-    abstract fun countMemory(): Long
+    abstract fun countMemory(): Int
 
     class BunkerMessageDeserializer : StdDeserializer<BunkerMessage>(BunkerMessage::class.java) {
         override fun deserialize(

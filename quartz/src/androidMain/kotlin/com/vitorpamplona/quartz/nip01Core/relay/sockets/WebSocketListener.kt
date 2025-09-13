@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
 interface WebSocketListener {
     fun onOpen(
-        pingMillis: Long,
+        pingMillis: Int,
         compression: Boolean,
     )
 

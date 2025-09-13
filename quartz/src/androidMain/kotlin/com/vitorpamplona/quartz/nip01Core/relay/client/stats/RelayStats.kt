@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 object RelayStats {
     private val innerCache =
-        object : LruCache<NormalizedRelayUrl, RelayStat>(1000) {
+        object : LruCache<NormalizedRelayUrl, RelayStat>(100) {
             override fun create(key: NormalizedRelayUrl?) = RelayStat()
         }
 
@@ -33,14 +33,14 @@ object RelayStats {
 
     fun addBytesReceived(
         url: NormalizedRelayUrl,
-        bytesUsedInMemory: Long,
+        bytesUsedInMemory: Int,
     ) {
         get(url).addBytesReceived(bytesUsedInMemory)
     }
 
     fun addBytesSent(
         url: NormalizedRelayUrl,
-        bytesUsedInMemory: Long,
+        bytesUsedInMemory: Int,
     ) {
         get(url).addBytesSent(bytesUsedInMemory)
     }
@@ -61,7 +61,7 @@ object RelayStats {
 
     fun setPing(
         url: NormalizedRelayUrl,
-        pingInMs: Long,
+        pingInMs: Int,
     ) {
         get(url).pingInMs = pingInMs
     }

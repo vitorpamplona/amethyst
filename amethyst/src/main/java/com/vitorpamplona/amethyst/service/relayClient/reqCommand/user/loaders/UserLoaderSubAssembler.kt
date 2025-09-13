@@ -46,7 +46,7 @@ class UserLoaderSubAssembler(
         val defaultRelays = mutableSetOf<NormalizedRelayUrl>()
 
         keys.mapTo(mutableSetOf()) { it.account }.forEach {
-            defaultRelays.addAll(it.followPlusAllMine.flow.value)
+            defaultRelays.addAll(it.followPlusAllMineWithIndexAndSearch.flow.value)
 
             it.kind3FollowList.flow.value.authors.forEach {
                 val user = LocalCache.getOrCreateUser(it)

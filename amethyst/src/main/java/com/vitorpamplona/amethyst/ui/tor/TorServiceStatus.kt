@@ -26,7 +26,8 @@ sealed class TorServiceStatus {
     data class Active(
         val port: Int,
     ) : TorServiceStatus() {
-        lateinit var torControlConnection: TorControlConnection
+        // If internal, it has control.
+        var torControlConnection: TorControlConnection? = null
     }
 
     object Off : TorServiceStatus()

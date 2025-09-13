@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
 
 class ObservableNav(
     val sourceNav: INav,
-    override val scope: CoroutineScope,
+    override val navigationScope: CoroutineScope,
     val onBeforeNavigate: () -> Unit,
 ) : INav {
     override val drawerState: DrawerState = sourceNav.drawerState
@@ -42,28 +42,28 @@ class ObservableNav(
     }
 
     override fun nav(route: Route) {
-        scope.launch {
+        navigationScope.launch {
             onBeforeNavigate()
         }
         sourceNav.nav(route)
     }
 
     override fun nav(computeRoute: suspend () -> Route?) {
-        scope.launch {
+        navigationScope.launch {
             onBeforeNavigate()
         }
         sourceNav.nav(computeRoute)
     }
 
     override fun newStack(route: Route) {
-        scope.launch {
+        navigationScope.launch {
             onBeforeNavigate()
         }
         sourceNav.newStack(route)
     }
 
     override fun popBack() {
-        scope.launch {
+        navigationScope.launch {
             onBeforeNavigate()
         }
         sourceNav.popBack()
@@ -73,7 +73,7 @@ class ObservableNav(
         route: Route,
         upToClass: KClass<T>,
     ) {
-        scope.launch {
+        navigationScope.launch {
             onBeforeNavigate()
         }
         sourceNav.popUpTo(route, upToClass)

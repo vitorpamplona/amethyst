@@ -40,7 +40,7 @@ data class PTag(
     override val pubKey: HexKey,
     override val relayHint: NormalizedRelayUrl? = null,
 ) : PubKeyReferenceTag {
-    fun countMemory(): Long =
+    fun countMemory(): Int =
         2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
             pubKey.bytesUsedInMemory() +
             (relayHint?.url?.bytesUsedInMemory() ?: 0)

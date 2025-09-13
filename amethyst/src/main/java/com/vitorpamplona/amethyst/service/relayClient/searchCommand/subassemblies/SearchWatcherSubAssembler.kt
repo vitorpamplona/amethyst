@@ -55,27 +55,28 @@ class SearchWatcherSubAssembler(
 
         if (mySearchString.isBlank()) return null
 
-        val defaultRelays = key.account.followPlusAllMine.flow.value
+        val defaultRelaysWithIndexAndSearch = key.account.followPlusAllMineWithIndexAndSearch.flow.value
+        val defaultRelaysWithSearch = key.account.followPlusAllMineWithSearch.flow.value
 
         val directFilters =
             runCatching {
                 if (Hex.isHex(mySearchString)) {
                     val hexKey = Hex.decode(mySearchString).toHexKey()
-                    filterByAuthor(hexKey, defaultRelays) + filterByEvent(hexKey, defaultRelays)
+                    filterByAuthor(hexKey, defaultRelaysWithIndexAndSearch) + filterByEvent(hexKey, defaultRelaysWithSearch)
                 } else {
                     val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
                     if (parsed != null) {
                         cache.consume(parsed)
 
                         when (parsed) {
-                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), defaultRelays)
-                            is NPub -> filterByAuthor(parsed.hex, defaultRelays)
-                            is NProfile -> filterByAuthor(parsed.hex, defaultRelays)
-                            is NNote -> filterByEvent(parsed.hex, defaultRelays)
-                            is NEvent -> filterByEvent(parsed.hex, defaultRelays)
+                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), defaultRelaysWithIndexAndSearch)
+                            is NPub -> filterByAuthor(parsed.hex, defaultRelaysWithIndexAndSearch)
+                            is NProfile -> filterByAuthor(parsed.hex, defaultRelaysWithIndexAndSearch)
+                            is NNote -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
+                            is NEvent -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
                             is NEmbed -> emptyList()
                             is NRelay -> emptyList()
-                            is NAddress -> filterByAddress(parsed, defaultRelays)
+                            is NAddress -> filterByAddress(parsed, defaultRelaysWithSearch)
                             else -> emptyList()
                         }
                     } else {

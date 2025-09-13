@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.util.Log
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -29,7 +28,6 @@ import com.vitorpamplona.amethyst.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -46,8 +44,6 @@ class EventProcessor(
     private val cache: LocalCache,
 ) {
     private val chatHandler = ChatHandler(account.chatroomList)
-    private val otsHandler = OtsEventHandler(account)
-
     private val draftHandler = DraftEventHandler(account, cache)
 
     private val giftWrapHandler = GiftWrapEventHandler(account, cache, this)
@@ -73,7 +69,6 @@ class EventProcessor(
     ) {
         when (event) {
             is ChatroomKeyable -> chatHandler.add(event, eventNote, publicNote)
-            is OtsEvent -> otsHandler.add(event, eventNote, publicNote)
             is DraftWrapEvent -> draftHandler.add(event, eventNote, publicNote)
             is GiftWrapEvent -> giftWrapHandler.add(event, eventNote, publicNote)
             is SealedRumorEvent -> sealHandler.add(event, eventNote, publicNote)
@@ -97,7 +92,6 @@ class EventProcessor(
     ) {
         when (event) {
             is ChatroomKeyable -> chatHandler.delete(event, note)
-            is OtsEvent -> otsHandler.delete(event, note)
             is DraftWrapEvent -> draftHandler.delete(event, note)
             is GiftWrapEvent -> giftWrapHandler.delete(event, note)
             is SealedRumorEvent -> sealHandler.delete(event, note)
@@ -175,18 +169,6 @@ class ChatHandler(
         eventNote: Note,
     ) {
         chatroomList.delete(event, eventNote)
-    }
-}
-
-class OtsEventHandler(
-    private val account: Account,
-) : EventHandler<OtsEvent> {
-    override suspend fun add(
-        event: OtsEvent,
-        eventNote: Note,
-        publicNote: Note,
-    ) {
-        Amethyst.instance.otsVerifCache.cacheVerify(event, account.otsResolverBuilder)
     }
 }
 

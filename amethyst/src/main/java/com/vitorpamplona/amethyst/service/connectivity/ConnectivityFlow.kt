@@ -34,12 +34,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 
 class ConnectivityFlow(
-    val context: Context,
+    context: Context,
 ) {
     @OptIn(FlowPreview::class)
     val status =
         callbackFlow {
-            trySend(ConnectivityStatus.Connecting)
+            trySend(ConnectivityStatus.StartingService)
 
             val connectivityManager = context.getConnectivityManager()
 

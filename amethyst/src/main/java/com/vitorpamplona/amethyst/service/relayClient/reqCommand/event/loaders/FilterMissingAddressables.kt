@@ -71,13 +71,9 @@ fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBase
     val addressesPerRelay =
         mapOfSet {
             keys.forEach { key ->
-                val default = key.account.followPlusAllMine.flow.value
+                val default = key.account.followPlusAllMineWithSearch.flow.value
                 if (key.note is AddressableNote && key.note.event == null) {
                     potentialRelaysToFindAddress(key.note).ifEmpty { default }.forEach { relayUrl ->
-                        add(relayUrl, key.note.address)
-                    }
-
-                    key.account.searchRelayList.flow.value.forEach { relayUrl ->
                         add(relayUrl, key.note.address)
                     }
                 }

@@ -33,7 +33,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
@@ -49,6 +48,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
@@ -56,9 +56,10 @@ import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
+import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
@@ -66,8 +67,6 @@ import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.okhttp.EmptyHttpClientManager
-import com.vitorpamplona.amethyst.service.okhttp.IHttpClientManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
@@ -84,12 +83,12 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.screen.SharedSettingsState
+import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -106,7 +105,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip03Timestamp.DefaultOtsResolverBuilder
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -159,15 +158,15 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.util.Locale
 
 @Stable
 class AccountViewModel(
     val account: Account,
-    val settings: SharedSettingsState,
+    val settings: UiSettingsState,
+    val torSettings: TorSettingsFlow,
     val dataSources: RelaySubscriptionsCoordinator,
-    val okHttpClient: IHttpClientManager,
+    val httpClientBuilder: IRoleBasedHttpClientBuilder,
 ) : ViewModel(),
     Dao {
     var firstRoute: Route? = null
@@ -649,7 +648,7 @@ class AccountViewModel(
             message = message,
             context = context,
             showErrorIfNoLnAddress = showErrorIfNoLnAddress,
-            okHttpClient = ::okHttpClientForMoney,
+            okHttpClient = httpClientBuilder::okHttpClientForMoney,
             onError = onError,
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
@@ -885,7 +884,7 @@ class AccountViewModel(
         onResult: suspend (UrlPreviewState) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            UrlCachedPreviewer.previewInfo(url, ::okHttpClientForPreview, onResult)
+            UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
         }
     }
 
@@ -906,9 +905,7 @@ class AccountViewModel(
             Nip05NostrAddressVerifier()
                 .verifyNip05(
                     nip05,
-                    okHttpClient = {
-                        okHttpClient.getHttpClient(account.privacyState.shouldUseTorForNIP05(it))
-                    },
+                    okHttpClient = httpClientBuilder::okHttpClientForNip05,
                     onSuccess = {
                         // Marks user as verified
                         if (it == pubkeyHex) {
@@ -932,21 +929,6 @@ class AccountViewModel(
                         onResult(userMetadata.nip05Verified)
                     },
                 )
-        }
-    }
-
-    fun retrieveRelayDocument(
-        relay: NormalizedRelayUrl,
-        onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            Nip11CachedRetriever.loadRelayInfo(
-                relay,
-                okHttpClient = { okHttpClientForClean(relay) },
-                onInfo,
-                onError,
-            )
         }
     }
 
@@ -1008,16 +990,6 @@ class AccountViewModel(
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
-
-    suspend fun findStatusesForUser(myUser: User) =
-        withContext(Dispatchers.IO) {
-            LocalCache.findStatusesForUser(myUser)
-        }
-
-    suspend fun findOtsEventsForNote(note: Note) =
-        withContext(Dispatchers.Default) {
-            LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
-        }
 
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
@@ -1082,7 +1054,7 @@ class AccountViewModel(
 
     suspend fun checkVideoIsOnline(videoUrl: String): Boolean =
         withContext(Dispatchers.IO) {
-            OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo)
+            OnlineChecker.isOnline(videoUrl, httpClientBuilder::okHttpClientForVideo)
         }
 
     fun loadAndMarkAsRead(
@@ -1112,24 +1084,31 @@ class AccountViewModel(
                     account.markAsRead("Channel/${noteEvent.channelId()}", noteEvent.createdAt)
                 } else if (noteEvent is ChatroomKeyable) {
                     account.markAsRead("Room/${noteEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
+                } else if (noteEvent is DraftWrapEvent) {
+                    val innerEvent = account.draftsDecryptionCache.preCachedDraft(noteEvent)
+                    if (innerEvent is IsInPublicChatChannel) {
+                        account.markAsRead("Channel/${innerEvent.channelId()}", noteEvent.createdAt)
+                    } else if (innerEvent is ChatroomKeyable) {
+                        account.markAsRead("Room/${innerEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
+                    }
                 }
             }
         }
     }
 
-    fun setTorSettings(newTorSettings: TorSettings) = runIOCatching { account.settings.setTorSettings(newTorSettings) }
-
     class Factory(
         val account: Account,
-        val settings: SharedSettingsState,
+        val settings: UiSettingsState,
+        val torSettings: TorSettingsFlow,
         val dataSources: RelaySubscriptionsCoordinator,
-        val okHttpClient: IHttpClientManager,
+        val okHttpClient: RoleBasedHttpClientBuilder,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
             AccountViewModel(
                 account,
                 settings,
+                torSettings,
                 dataSources,
                 okHttpClient,
             ) as T
@@ -1287,7 +1266,7 @@ class AccountViewModel(
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val meltResult = MeltProcessor().melt(token, lud16, ::okHttpClientForMoney, context)
+                    val meltResult = MeltProcessor().melt(token, lud16, httpClientBuilder::okHttpClientForMoney, context)
                     onDone(
                         stringRes(context, R.string.cashu_successful_redemption),
                         stringRes(
@@ -1404,22 +1383,6 @@ class AccountViewModel(
         }
     }
 
-    fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(account.privacyState.shouldUseTorForVideoDownload(url))
-
-    fun okHttpClientForNip96(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForUploads(url))
-
-    fun okHttpClientForImage(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForImageDownload(url))
-
-    fun okHttpClientForVideo(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForVideoDownload(url))
-
-    fun okHttpClientForMoney(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForMoneyOperations(url))
-
-    fun okHttpClientForPreview(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForPreviewUrl(url))
-
-    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = okHttpClient.getHttpClient(account.torRelayState.shouldUseTorForClean(url))
-
-    fun okHttpClientForPushRegistration(url: String): OkHttpClient = okHttpClient.getHttpClient(account.privacyState.shouldUseTorForTrustedRelays())
-
     fun dataSources() = dataSources
 
     suspend fun createTempDraftNote(noteEvent: DraftWrapEvent): Note? = draftNoteCache.update(noteEvent)
@@ -1535,7 +1498,7 @@ class AccountViewModel(
                         milliSats = milliSats,
                         message = message,
                         nostrRequest = zapRequest,
-                        okHttpClient = ::okHttpClientForMoney,
+                        okHttpClient = httpClientBuilder::okHttpClientForMoney,
                         onProgress = onProgress,
                         context = context,
                     )
@@ -1558,7 +1521,7 @@ class AccountViewModel(
         viewModelScope.launch {
             MediaSaverToDisk.saveDownloadingIfNeeded(
                 videoUri = videoUri,
-                okHttpClient = ::okHttpClientForVideo,
+                okHttpClient = httpClientBuilder::okHttpClientForVideo,
                 mimeType = mimeType,
                 localContext = localContext,
                 onSuccess = {
@@ -1677,16 +1640,23 @@ var mockedCache: AccountViewModel? = null
 fun mockAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-    sharedPreferencesViewModel.init()
+    val otsResolver = DefaultOtsResolverBuilder()
+
+    val scope = rememberCoroutineScope()
+
+    val uiState =
+        UiSettingsState(
+            uiSettingsFlow = UiSettingsFlow(),
+            isMobileOrMeteredConnection = MutableStateFlow(false),
+            scope = scope,
+        )
+
     val keyPair =
         KeyPair(
             privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
             pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
             forceReplacePubkey = false,
         )
-
-    val scope = rememberCoroutineScope()
 
     val client = EmptyNostrClient
 
@@ -1698,6 +1668,7 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
             nwcFilterAssembler = nwcFilters,
+            otsResolverBuilder = otsResolver,
             cache = LocalCache,
             client = client,
             scope = scope,
@@ -1705,8 +1676,9 @@ fun mockAccountViewModel(): AccountViewModel {
 
     return AccountViewModel(
         account = account,
-        settings = sharedPreferencesViewModel.sharedPrefs,
-        okHttpClient = EmptyHttpClientManager,
+        settings = uiState,
+        torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
+        httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
     ).also {
         mockedCache = it
@@ -1720,8 +1692,17 @@ var vitorCache: AccountViewModel? = null
 fun mockVitorAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-    sharedPreferencesViewModel.init()
+    val scope = rememberCoroutineScope()
+
+    val otsResolver = DefaultOtsResolverBuilder()
+
+    val uiState =
+        UiSettingsState(
+            uiSettingsFlow = UiSettingsFlow(),
+            isMobileOrMeteredConnection = MutableStateFlow(false),
+            scope = scope,
+        )
+
     val keyPair =
         KeyPair(
             pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
@@ -1731,14 +1712,13 @@ fun mockVitorAccountViewModel(): AccountViewModel {
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
 
-    val scope = rememberCoroutineScope()
-
     val account =
         Account(
             settings = AccountSettings(keyPair),
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
             nwcFilterAssembler = nwcFilters,
+            otsResolverBuilder = otsResolver,
             cache = LocalCache,
             client = EmptyNostrClient,
             scope = scope,
@@ -1746,8 +1726,9 @@ fun mockVitorAccountViewModel(): AccountViewModel {
 
     return AccountViewModel(
         account = account,
-        settings = sharedPreferencesViewModel.sharedPrefs,
-        okHttpClient = EmptyHttpClientManager,
+        settings = uiState,
+        torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
+        httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
         dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
     ).also {
         vitorCache = it

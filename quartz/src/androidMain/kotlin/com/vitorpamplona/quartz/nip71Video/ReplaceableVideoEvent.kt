@@ -53,7 +53,18 @@ abstract class ReplaceableVideoEvent(
 
     override fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    override fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+    override fun publishedAt(): Long? {
+        val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
+
+        if (publishedAt == null) return null
+
+        // removes posts in the future.
+        return if (publishedAt <= createdAt) {
+            publishedAt
+        } else {
+            null
+        }
+    }
 
     override fun duration() = tags.firstNotNullOfOrNull(DurationTag::parse)
 

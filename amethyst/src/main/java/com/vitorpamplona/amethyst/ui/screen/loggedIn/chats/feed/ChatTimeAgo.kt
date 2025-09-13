@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 @Composable
 fun ChatTimeAgo(baseNote: Note) {
     val nowStr = stringRes(id = R.string.now)
-    val time = remember(baseNote) { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) }
+    val time = remember(baseNote) { timeAgoShort(baseNote.createdAt() ?: 0L, nowStr) }
 
     Text(
         text = time,

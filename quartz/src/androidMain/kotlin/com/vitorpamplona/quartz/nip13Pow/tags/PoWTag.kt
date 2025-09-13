@@ -30,7 +30,7 @@ class PoWTag(
     val nonce: String,
     val commitment: Int?,
 ) {
-    fun countMemory(): Long = 2 * pointerSizeInBytes + nonce.bytesUsedInMemory() + (commitment?.bytesUsedInMemory() ?: 0)
+    fun countMemory(): Int = 2 * pointerSizeInBytes + nonce.bytesUsedInMemory() + (commitment?.bytesUsedInMemory() ?: 0)
 
     fun toTagArray() = assemble(nonce, commitment)
 
