@@ -29,7 +29,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -41,9 +40,6 @@ import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.save
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -160,98 +156,6 @@ class UiSharedPreferences(
                 preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] = sharedSettings.dontAskForNotificationPermissions
                 preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
                 preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            // Log any errors that occur while reading the DataStore.
-            Log.e("SharedPreferences", "Error saving DataStore preferences: ${e.message}")
-        }
-    }
-}
-
-@Stable
-class TorSharedPreferences(
-    val context: Context,
-    val scope: CoroutineScope,
-) {
-    companion object {
-        // loads faster when individualized
-        val TOR_TYPE_KEY = stringPreferencesKey("tor.torType")
-        val EXTERNAL_SOCKS_PORT_KEY = intPreferencesKey("tor.externalSocksPort")
-        val ONION_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.onionRelaysViaTor")
-        val DM_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.dmRelaysViaTor")
-        val NEW_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.newRelaysViaTor")
-        val TRUSTED_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.trustedRelaysViaTor")
-        val URL_PREVIEWS_VIA_TOR_KEY = booleanPreferencesKey("tor.urlPreviewsViaTor")
-        val PROFILE_PICS_VIA_TOR_KEY = booleanPreferencesKey("tor.profilePicsViaTor")
-        val IMAGES_VIA_TOR_KEY = booleanPreferencesKey("tor.imagesViaTor")
-        val VIDEOS_VIA_TOR_KEY = booleanPreferencesKey("tor.videosViaTor")
-        val MONEY_OPERATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.moneyOperationsViaTor")
-        val NIP05_VERIFICATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.nip05VerificationsViaTor")
-        val MEDIA_UPLOADS_VIA_TOR_KEY = booleanPreferencesKey("tor.mediaUploadsViaTor")
-    }
-
-    // Tor Preferences. Makes sure to wait for it to avoid connecting with random IPs
-    val value =
-        runBlocking {
-            TorSettingsFlow.build(torPreferences() ?: TorSettings())
-        }
-
-    @OptIn(FlowPreview::class)
-    val saving =
-        value.propertyWatchFlow
-            .debounce(1000)
-            .distinctUntilChanged()
-            .onEach(::save)
-            .flowOn(Dispatchers.IO)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                value.toSettings(),
-            )
-
-    suspend fun torPreferences(): TorSettings? =
-        try {
-            // Get the preference flow and take the first value.
-            val preferences = context.sharedPreferencesDataStore.data.first()
-            TorSettings(
-                torType = preferences[TOR_TYPE_KEY]?.let { TorType.valueOf(it) } ?: TorType.INTERNAL,
-                externalSocksPort = preferences[EXTERNAL_SOCKS_PORT_KEY] ?: 9050,
-                onionRelaysViaTor = preferences[ONION_RELAYS_VIA_TOR_KEY] ?: true,
-                dmRelaysViaTor = preferences[DM_RELAYS_VIA_TOR_KEY] ?: true,
-                newRelaysViaTor = preferences[NEW_RELAYS_VIA_TOR_KEY] ?: true,
-                trustedRelaysViaTor = preferences[TRUSTED_RELAYS_VIA_TOR_KEY] ?: false,
-                urlPreviewsViaTor = preferences[URL_PREVIEWS_VIA_TOR_KEY] ?: false,
-                profilePicsViaTor = preferences[PROFILE_PICS_VIA_TOR_KEY] ?: false,
-                imagesViaTor = preferences[IMAGES_VIA_TOR_KEY] ?: false,
-                videosViaTor = preferences[VIDEOS_VIA_TOR_KEY] ?: false,
-                moneyOperationsViaTor = preferences[MONEY_OPERATIONS_VIA_TOR_KEY] ?: false,
-                nip05VerificationsViaTor = preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] ?: false,
-                nip96UploadsViaTor = preferences[MEDIA_UPLOADS_VIA_TOR_KEY] ?: false,
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            // Log any errors that occur while reading the DataStore.
-            Log.e("SharedPreferences", "Error reading DataStore preferences: ${e.message}")
-            null
-        }
-
-    suspend fun save(torSettings: TorSettings) {
-        try {
-            context.sharedPreferencesDataStore.edit { preferences ->
-                preferences[TOR_TYPE_KEY] = torSettings.torType.name
-                preferences[EXTERNAL_SOCKS_PORT_KEY] = torSettings.externalSocksPort
-                preferences[ONION_RELAYS_VIA_TOR_KEY] = torSettings.onionRelaysViaTor
-                preferences[DM_RELAYS_VIA_TOR_KEY] = torSettings.dmRelaysViaTor
-                preferences[NEW_RELAYS_VIA_TOR_KEY] = torSettings.newRelaysViaTor
-                preferences[TRUSTED_RELAYS_VIA_TOR_KEY] = torSettings.trustedRelaysViaTor
-                preferences[URL_PREVIEWS_VIA_TOR_KEY] = torSettings.urlPreviewsViaTor
-                preferences[PROFILE_PICS_VIA_TOR_KEY] = torSettings.profilePicsViaTor
-                preferences[IMAGES_VIA_TOR_KEY] = torSettings.imagesViaTor
-                preferences[VIDEOS_VIA_TOR_KEY] = torSettings.videosViaTor
-                preferences[MONEY_OPERATIONS_VIA_TOR_KEY] = torSettings.moneyOperationsViaTor
-                preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] = torSettings.nip05VerificationsViaTor
-                preferences[MEDIA_UPLOADS_VIA_TOR_KEY] = torSettings.nip96UploadsViaTor
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
