@@ -561,22 +561,27 @@ private fun RenderWordsWithImageGallery(
     context: RenderContext,
 ) {
     var i = 0
-    while (i < words.size) {
+    val n = words.size
+
+    while (i < n) {
         val word = words[i]
 
         if (word is ImageSegment || word is Base64Segment) {
-            // Collect consecutive images (skipping whitespace) using takeWhile
-            fun isImageOrWhitespace(segment: Segment): Boolean =
-                segment is ImageSegment ||
-                    segment is Base64Segment ||
-                    (segment is RegularTextSegment && segment.segmentText.isBlank())
+            // Collect consecutive image/whitespace segments without extra list allocations
+            val imageSegments = mutableListOf<Segment>()
+            var j = i
 
-            val consecutiveSegments = words.drop(i).takeWhile { isImageOrWhitespace(it) }
-            val imageSegments = consecutiveSegments.filter { it is ImageSegment || it is Base64Segment }
-            val j = i + consecutiveSegments.size
+            while (j < n) {
+                val seg = words[j]
+                when {
+                    seg is ImageSegment || seg is Base64Segment -> imageSegments.add(seg)
+                    seg is RegularTextSegment && seg.segmentText.isBlank() -> { /* skip whitespace */ }
+                    else -> break
+                }
+                j++
+            }
 
             if (imageSegments.size > 1) {
-                // Multiple images - render as gallery
                 val imageContents =
                     imageSegments
                         .mapNotNull { segment ->
@@ -592,13 +597,11 @@ private fun RenderWordsWithImageGallery(
                     )
                 }
             } else {
-                // Single image - render normally
-                RenderWordWithPreview(word, context)
+                RenderWordWithPreview(imageSegments.firstOrNull() ?: word, context)
             }
 
-            i = j // Skip processed images
+            i = j // jump past processed run
         } else {
-            // Non-image word - render normally
             RenderWordWithPreview(word, context)
             i++
         }
