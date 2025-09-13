@@ -796,53 +796,27 @@ fun CoreSecretMessage(
         )
 
     if (localSecretContent.paragraphs.size == 1) {
-        RenderSecretParagraphOptimized(
-            localSecretContent.paragraphs[0].words.toImmutableList(),
-            context,
-        )
+        localSecretContent.paragraphs[0].words.forEach { word ->
+            RenderWordWithPreview(
+                word,
+                context,
+            )
+        }
     } else if (localSecretContent.paragraphs.size > 1) {
         val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
 
         Column(CashuCardBorders) {
             localSecretContent.paragraphs.forEach { paragraph ->
-                RenderSecretParagraphOptimized(
-                    paragraph.words.toImmutableList(),
-                    context,
-                    spaceWidth,
-                    paragraph.isRTL,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RenderSecretParagraphOptimized(
-    words: ImmutableList<Segment>,
-    context: RenderContext,
-    spaceWidth: Dp? = null,
-    isRTL: Boolean = false,
-) {
-    // Check if we need single-image optimization
-    val imageSegments = words.filter { it is ImageSegment || it is Base64Segment }
-
-    if (imageSegments.size > 1) {
-        // Multiple images - use gallery logic
-        RenderWordsWithImageGallery(words, context)
-    } else {
-        // Single or no images - render directly with FlowRow for optimal performance
-        val actualSpaceWidth = spaceWidth ?: measureSpaceWidth(LocalTextStyle.current)
-
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr,
-            LocalTextStyle provides LocalTextStyle.current,
-        ) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(actualSpaceWidth),
-            ) {
-                words.forEach { word ->
-                    RenderWordWithPreview(word, context)
+                FlowRow(
+                    modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                    horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                ) {
+                    paragraph.words.forEach { word ->
+                        RenderWordWithPreview(
+                            word,
+                            context,
+                        )
+                    }
                 }
             }
         }
