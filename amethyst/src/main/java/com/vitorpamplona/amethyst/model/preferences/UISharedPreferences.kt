@@ -27,16 +27,23 @@ import androidx.compose.runtime.Stable
 import androidx.core.os.LocaleListCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.BooleanType
+import com.vitorpamplona.amethyst.model.ConnectivityType
+import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.ProfileGalleryType
+import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.save
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -48,6 +55,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
+import kotlin.coroutines.cancellation.CancellationException
 
 val Context.sharedPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "shared_settings")
 
@@ -57,7 +65,18 @@ class UiSharedPreferences(
     val scope: CoroutineScope,
 ) {
     companion object {
-        val UI_SETTINGS = stringPreferencesKey("ui_settings")
+        // loads faster when individualized
+        val UI_THEME = stringPreferencesKey("ui.theme")
+        val UI_LANGUAGE = stringPreferencesKey("ui.language")
+        val UI_SHOW_IMAGES = stringPreferencesKey("ui.show_images")
+        val UI_START_PLAYBACK = stringPreferencesKey("ui.start_playback")
+        val UI_SHOW_URL_PREVIEW = stringPreferencesKey("ui.show_url_preview")
+        val UI_HIDE_NAVIGATION_BARS = stringPreferencesKey("ui.hide_navigation_bars")
+        val UI_SHOW_PROFILE_PICTURES = stringPreferencesKey("ui.show_profile_pictures")
+        val UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR = booleanPreferencesKey("ui.dont_show_push_notification_selector")
+        val UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS = booleanPreferencesKey("ui.dont_ask_for_notification_permissions")
+        val UI_FEATURE_SET = stringPreferencesKey("ui.feature_set")
+        val UI_GALLERY_SET = stringPreferencesKey("ui.gallery_set")
     }
 
     // UI Preferences. Makes sure to wait for it to avoid blinking themes and language preferences
@@ -96,30 +115,54 @@ class UiSharedPreferences(
         try {
             // Get the preference flow and take the first value.
             val preferences = context.sharedPreferencesDataStore.data.first()
-            val newVersion = preferences[UI_SETTINGS]?.let { JsonMapper.mapper.readValue<UiSettings>(it) }
 
-            if (newVersion != null) {
-                newVersion
-            } else {
+            UiSettings(
+                theme = preferences[UI_THEME]?.let { ThemeType.valueOf(it) } ?: ThemeType.SYSTEM,
+                preferredLanguage = preferences[UI_LANGUAGE]?.ifBlank { null },
+                automaticallyShowImages = preferences[UI_SHOW_IMAGES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
+                automaticallyStartPlayback = preferences[UI_START_PLAYBACK]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
+                automaticallyShowUrlPreview = preferences[UI_SHOW_URL_PREVIEW]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
+                automaticallyHideNavigationBars = preferences[UI_HIDE_NAVIGATION_BARS]?.let { BooleanType.valueOf(it) } ?: BooleanType.ALWAYS,
+                automaticallyShowProfilePictures = preferences[UI_SHOW_PROFILE_PICTURES]?.let { ConnectivityType.valueOf(it) } ?: ConnectivityType.ALWAYS,
+                dontShowPushNotificationSelector = preferences[UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR] ?: false,
+                dontAskForNotificationPermissions = preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] ?: false,
+                featureSet = preferences[UI_FEATURE_SET]?.let { FeatureSetType.valueOf(it) } ?: FeatureSetType.SIMPLIFIED,
+                gallerySet = preferences[UI_GALLERY_SET]?.let { ProfileGalleryType.valueOf(it) } ?: ProfileGalleryType.CLASSIC,
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            // Log any errors that occur while reading the DataStore.
+            Log.e("SharedPreferences", "Error reading DataStore preferences: ${e.message}")
+
+            try {
                 val oldVersion = LocalPreferences.loadSharedSettings()
                 if (oldVersion != null) {
                     save(oldVersion)
                 }
                 oldVersion
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
             }
-        } catch (e: Exception) {
-            // Log any errors that occur while reading the DataStore.
-            Log.e("SharedPreferences", "Error reading DataStore preferences: ${e.message}")
-            null
         }
 
     suspend fun save(sharedSettings: UiSettings) {
         try {
-            val str = JsonMapper.mapper.writeValueAsString(sharedSettings)
             context.sharedPreferencesDataStore.edit { preferences ->
-                preferences[UI_SETTINGS] = str
+                preferences[UI_THEME] = sharedSettings.theme.name
+                preferences[UI_LANGUAGE] = sharedSettings.preferredLanguage ?: ""
+                preferences[UI_SHOW_IMAGES] = sharedSettings.automaticallyShowImages.name
+                preferences[UI_START_PLAYBACK] = sharedSettings.automaticallyStartPlayback.name
+                preferences[UI_SHOW_URL_PREVIEW] = sharedSettings.automaticallyShowUrlPreview.name
+                preferences[UI_HIDE_NAVIGATION_BARS] = sharedSettings.automaticallyHideNavigationBars.name
+                preferences[UI_SHOW_PROFILE_PICTURES] = sharedSettings.automaticallyShowProfilePictures.name
+                preferences[UI_DONT_SHOW_PUSH_NOTIFICATION_SELECTOR] = sharedSettings.dontShowPushNotificationSelector
+                preferences[UI_DONT_ASK_FOR_NOTIFICATION_PERMISSIONS] = sharedSettings.dontAskForNotificationPermissions
+                preferences[UI_FEATURE_SET] = sharedSettings.featureSet.name
+                preferences[UI_GALLERY_SET] = sharedSettings.gallerySet.name
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             // Log any errors that occur while reading the DataStore.
             Log.e("SharedPreferences", "Error saving DataStore preferences: ${e.message}")
         }
@@ -132,7 +175,20 @@ class TorSharedPreferences(
     val scope: CoroutineScope,
 ) {
     companion object {
-        val TOR_SETTINGS = stringPreferencesKey("tor_settings")
+        // loads faster when individualized
+        val TOR_TYPE_KEY = stringPreferencesKey("tor.torType")
+        val EXTERNAL_SOCKS_PORT_KEY = intPreferencesKey("tor.externalSocksPort")
+        val ONION_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.onionRelaysViaTor")
+        val DM_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.dmRelaysViaTor")
+        val NEW_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.newRelaysViaTor")
+        val TRUSTED_RELAYS_VIA_TOR_KEY = booleanPreferencesKey("tor.trustedRelaysViaTor")
+        val URL_PREVIEWS_VIA_TOR_KEY = booleanPreferencesKey("tor.urlPreviewsViaTor")
+        val PROFILE_PICS_VIA_TOR_KEY = booleanPreferencesKey("tor.profilePicsViaTor")
+        val IMAGES_VIA_TOR_KEY = booleanPreferencesKey("tor.imagesViaTor")
+        val VIDEOS_VIA_TOR_KEY = booleanPreferencesKey("tor.videosViaTor")
+        val MONEY_OPERATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.moneyOperationsViaTor")
+        val NIP05_VERIFICATIONS_VIA_TOR_KEY = booleanPreferencesKey("tor.nip05VerificationsViaTor")
+        val MEDIA_UPLOADS_VIA_TOR_KEY = booleanPreferencesKey("tor.mediaUploadsViaTor")
     }
 
     // Tor Preferences. Makes sure to wait for it to avoid connecting with random IPs
@@ -158,10 +214,23 @@ class TorSharedPreferences(
         try {
             // Get the preference flow and take the first value.
             val preferences = context.sharedPreferencesDataStore.data.first()
-            preferences[TOR_SETTINGS]?.let {
-                JsonMapper.mapper.readValue<TorSettings>(it)
-            }
+            TorSettings(
+                torType = preferences[TOR_TYPE_KEY]?.let { TorType.valueOf(it) } ?: TorType.INTERNAL,
+                externalSocksPort = preferences[EXTERNAL_SOCKS_PORT_KEY] ?: 9050,
+                onionRelaysViaTor = preferences[ONION_RELAYS_VIA_TOR_KEY] ?: true,
+                dmRelaysViaTor = preferences[DM_RELAYS_VIA_TOR_KEY] ?: true,
+                newRelaysViaTor = preferences[NEW_RELAYS_VIA_TOR_KEY] ?: true,
+                trustedRelaysViaTor = preferences[TRUSTED_RELAYS_VIA_TOR_KEY] ?: false,
+                urlPreviewsViaTor = preferences[URL_PREVIEWS_VIA_TOR_KEY] ?: false,
+                profilePicsViaTor = preferences[PROFILE_PICS_VIA_TOR_KEY] ?: false,
+                imagesViaTor = preferences[IMAGES_VIA_TOR_KEY] ?: false,
+                videosViaTor = preferences[VIDEOS_VIA_TOR_KEY] ?: false,
+                moneyOperationsViaTor = preferences[MONEY_OPERATIONS_VIA_TOR_KEY] ?: false,
+                nip05VerificationsViaTor = preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] ?: false,
+                nip96UploadsViaTor = preferences[MEDIA_UPLOADS_VIA_TOR_KEY] ?: false,
+            )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             // Log any errors that occur while reading the DataStore.
             Log.e("SharedPreferences", "Error reading DataStore preferences: ${e.message}")
             null
@@ -169,11 +238,23 @@ class TorSharedPreferences(
 
     suspend fun save(torSettings: TorSettings) {
         try {
-            val str = JsonMapper.mapper.writeValueAsString(torSettings)
             context.sharedPreferencesDataStore.edit { preferences ->
-                preferences[TOR_SETTINGS] = str
+                preferences[TOR_TYPE_KEY] = torSettings.torType.name
+                preferences[EXTERNAL_SOCKS_PORT_KEY] = torSettings.externalSocksPort
+                preferences[ONION_RELAYS_VIA_TOR_KEY] = torSettings.onionRelaysViaTor
+                preferences[DM_RELAYS_VIA_TOR_KEY] = torSettings.dmRelaysViaTor
+                preferences[NEW_RELAYS_VIA_TOR_KEY] = torSettings.newRelaysViaTor
+                preferences[TRUSTED_RELAYS_VIA_TOR_KEY] = torSettings.trustedRelaysViaTor
+                preferences[URL_PREVIEWS_VIA_TOR_KEY] = torSettings.urlPreviewsViaTor
+                preferences[PROFILE_PICS_VIA_TOR_KEY] = torSettings.profilePicsViaTor
+                preferences[IMAGES_VIA_TOR_KEY] = torSettings.imagesViaTor
+                preferences[VIDEOS_VIA_TOR_KEY] = torSettings.videosViaTor
+                preferences[MONEY_OPERATIONS_VIA_TOR_KEY] = torSettings.moneyOperationsViaTor
+                preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] = torSettings.nip05VerificationsViaTor
+                preferences[MEDIA_UPLOADS_VIA_TOR_KEY] = torSettings.nip96UploadsViaTor
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             // Log any errors that occur while reading the DataStore.
             Log.e("SharedPreferences", "Error saving DataStore preferences: ${e.message}")
         }
