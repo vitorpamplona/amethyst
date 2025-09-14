@@ -73,8 +73,6 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
@@ -113,15 +111,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-data class RenderContext(
-    val state: RichTextViewerState,
-    val backgroundColor: MutableState<Color>,
-    val quotesLeft: Int,
-    val callbackUri: String?,
-    val accountViewModel: AccountViewModel,
-    val nav: INav,
-)
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -333,159 +322,25 @@ fun RenderRegularWithGallery(
         )
 
     val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+    val paragraphParser = remember { ParagraphParser() }
 
     Column {
-        // Process each paragraph uniformly
-        var i = 0
-        while (i < state.paragraphs.size) {
-            i =
-                renderParagraphWithFlowRow(
-                    paragraphs = state.paragraphs,
-                    paragraphIndex = i,
-                    spaceWidth = spaceWidth,
-                    context = context,
+        paragraphParser.ProcessAllParagraphs(
+            paragraphs = state.paragraphs,
+            spaceWidth = spaceWidth,
+            context = context,
+            renderSingleParagraph = { paragraph, words, width, ctx ->
+                paragraphParser.RenderSingleParagraphWithFlowRow(
+                    paragraph = paragraph,
+                    words = words,
+                    spaceWidth = width,
+                    context = ctx,
+                    renderWord = { word, renderContext -> RenderWordWithPreview(word, renderContext) },
                 )
-        }
-    }
-}
-
-@Composable
-private fun renderParagraphWithFlowRow(
-    paragraphs: ImmutableList<ParagraphState>,
-    paragraphIndex: Int,
-    spaceWidth: Dp,
-    context: RenderContext,
-): Int {
-    val paragraph = paragraphs[paragraphIndex]
-
-    if (paragraph.words.isEmpty()) {
-        // Empty paragraph - render normally with FlowRow (will render nothing)
-        RenderSingleParagraphWithFlowRow(paragraph, paragraph.words.toImmutableList(), spaceWidth, context)
-        return paragraphIndex + 1
-    }
-
-    val analysis = analyzeParagraphImages(paragraph)
-
-    if (analysis.isImageOnly) {
-        // Collect consecutive image-only paragraphs for gallery
-        val (imageParagraphs, endIndex) = collectConsecutiveImageParagraphs(paragraphs, paragraphIndex)
-        val allImageWords = imageParagraphs.flatMap { it.words }.toImmutableList()
-
-        if (allImageWords.size > 1) {
-            // Multiple images - render as gallery (no FlowRow wrapper needed)
-            RenderWordsWithImageGallery(allImageWords, context)
-        } else {
-            // Single image - render with FlowRow wrapper
-            RenderSingleParagraphWithFlowRow(paragraph, paragraph.words.toImmutableList(), spaceWidth, context)
-        }
-
-        return endIndex // Return next index to process
-    } else if (analysis.hasMultipleImages) {
-        // Mixed paragraph with multiple images - use RenderWordsWithImageGallery for smart grouping
-        RenderWordsWithImageGallery(paragraph.words.toImmutableList(), context)
-        return paragraphIndex + 1
-    } else {
-        // Regular paragraph (no images or single image) - render normally with FlowRow
-        RenderSingleParagraphWithFlowRow(paragraph, paragraph.words.toImmutableList(), spaceWidth, context)
-        return paragraphIndex + 1
-    }
-}
-
-@Composable
-private fun RenderSingleParagraphWithFlowRow(
-    paragraph: ParagraphState,
-    words: ImmutableList<Segment>,
-    spaceWidth: Dp,
-    context: RenderContext,
-) {
-    CompositionLocalProvider(
-        LocalLayoutDirection provides
-            if (paragraph.isRTL) {
-                LayoutDirection.Rtl
-            } else {
-                LayoutDirection.Ltr
             },
-        LocalTextStyle provides LocalTextStyle.current,
-    ) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-        ) {
-            words.forEach { word ->
-                RenderWordWithPreview(word, context)
-            }
-        }
+            renderImageGallery = { words, ctx -> RenderWordsWithImageGallery(words, ctx) },
+        )
     }
-}
-
-data class ParagraphImageAnalysis(
-    val imageCount: Int,
-    val isImageOnly: Boolean,
-    val hasMultipleImages: Boolean,
-)
-
-private fun analyzeParagraphImages(paragraph: ParagraphState): ParagraphImageAnalysis {
-    var imageCount = 0
-    var hasNonWhitespaceNonImageContent = false
-
-    paragraph.words.forEach { word ->
-        when (word) {
-            is ImageSegment, is Base64Segment -> imageCount++
-            is RegularTextSegment -> {
-                if (word.segmentText.isNotBlank()) {
-                    hasNonWhitespaceNonImageContent = true
-                }
-            }
-            else -> hasNonWhitespaceNonImageContent = true // Links, emojis, etc.
-        }
-    }
-
-    val isImageOnly = imageCount > 0 && !hasNonWhitespaceNonImageContent
-    val hasMultipleImages = imageCount > 1
-
-    return ParagraphImageAnalysis(
-        imageCount = imageCount,
-        isImageOnly = isImageOnly,
-        hasMultipleImages = hasMultipleImages,
-    )
-}
-
-private fun collectConsecutiveImageParagraphs(
-    paragraphs: ImmutableList<ParagraphState>,
-    startIndex: Int,
-): Pair<List<ParagraphState>, Int> {
-    val imageParagraphs = mutableListOf<ParagraphState>()
-    var j = startIndex
-
-    while (j < paragraphs.size) {
-        val currentParagraph = paragraphs[j]
-        val words = currentParagraph.words
-
-        // Fast path for empty check
-        if (words.isEmpty()) {
-            j++
-            continue
-        }
-
-        // Check for single whitespace word
-        if (words.size == 1) {
-            val firstWord = words.first()
-            if (firstWord is RegularTextSegment && firstWord.segmentText.isBlank()) {
-                j++
-                continue
-            }
-        }
-
-        // Check if it's an image-only paragraph using unified analysis
-        val analysis = analyzeParagraphImages(currentParagraph)
-        if (analysis.isImageOnly) {
-            imageParagraphs.add(currentParagraph)
-            j++
-        } else {
-            break
-        }
-    }
-
-    return imageParagraphs to j
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -585,52 +440,20 @@ private fun RenderWordsWithImageGallery(
     words: ImmutableList<Segment>,
     context: RenderContext,
 ) {
-    var i = 0
-    val n = words.size
+    val paragraphParser = remember { ParagraphParser() }
 
-    while (i < n) {
-        val word = words[i]
-
-        if (word is ImageSegment || word is Base64Segment) {
-            // Collect consecutive image/whitespace segments without extra list allocations
-            val imageSegments = mutableListOf<Segment>()
-            var j = i
-
-            while (j < n) {
-                val seg = words[j]
-                when {
-                    seg is ImageSegment || seg is Base64Segment -> imageSegments.add(seg)
-                    seg is RegularTextSegment && seg.segmentText.isBlank() -> { /* skip whitespace */ }
-                    else -> break
-                }
-                j++
-            }
-
-            if (imageSegments.size > 1) {
-                val imageContents =
-                    imageSegments
-                        .mapNotNull { segment ->
-                            val imageUrl = segment.segmentText
-                            context.state.imagesForPager[imageUrl] as? MediaUrlImage
-                        }.toImmutableList()
-
-                if (imageContents.isNotEmpty()) {
-                    ImageGallery(
-                        images = imageContents,
-                        accountViewModel = context.accountViewModel,
-                        roundedCorner = true,
-                    )
-                }
-            } else {
-                RenderWordWithPreview(imageSegments.firstOrNull() ?: word, context)
-            }
-
-            i = j // jump past processed run
-        } else {
-            RenderWordWithPreview(word, context)
-            i++
-        }
-    }
+    paragraphParser.ProcessWordsWithImageGrouping(
+        words = words,
+        context = context,
+        renderSingleWord = { word, ctx -> RenderWordWithPreview(word, ctx) },
+        renderGallery = { imageContents, accountViewModel ->
+            ImageGallery(
+                images = imageContents,
+                accountViewModel = accountViewModel,
+                roundedCorner = true,
+            )
+        },
+    )
 }
 
 @Composable
@@ -832,20 +655,17 @@ fun CoreSecretMessage(
         }
     } else if (localSecretContent.paragraphs.size > 1) {
         val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+        val paragraphParser = remember { ParagraphParser() }
 
         Column(CashuCardBorders) {
             localSecretContent.paragraphs.forEach { paragraph ->
-                FlowRow(
-                    modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                    horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                ) {
-                    paragraph.words.forEach { word ->
-                        RenderWordWithPreview(
-                            word,
-                            context,
-                        )
-                    }
-                }
+                paragraphParser.RenderSingleParagraphWithFlowRow(
+                    paragraph = paragraph,
+                    words = paragraph.words.toImmutableList(),
+                    spaceWidth = spaceWidth,
+                    context = context,
+                    renderWord = { word, ctx -> RenderWordWithPreview(word, ctx) },
+                )
             }
         }
     }
