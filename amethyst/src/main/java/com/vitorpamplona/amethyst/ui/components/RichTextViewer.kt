@@ -360,6 +360,8 @@ private fun renderParagraphWithFlowRow(
 
     // Check if this paragraph contains only images (ignoring whitespace)
     val isImageOnlyParagraph = isImageOnlyParagraph(paragraph)
+    // Check if this paragraph contains multiple images (mixed with text is ok)
+    val hasMultipleImages = hasMultipleImages(paragraph)
 
     if (isImageOnlyParagraph && paragraph.words.isNotEmpty()) {
         // Collect consecutive image-only paragraphs for gallery
@@ -378,6 +380,13 @@ private fun renderParagraphWithFlowRow(
         }
 
         return endIndex // Return next index to process
+    } else if (hasMultipleImages && paragraph.words.isNotEmpty()) {
+        // Mixed paragraph with multiple images - use RenderWordsWithImageGallery for smart grouping
+        RenderWordsWithImageGallery(
+            paragraph.words.toImmutableList(),
+            context,
+        )
+        return paragraphIndex + 1 // Return next index to process
     } else {
         // Non-image paragraph - render normally with FlowRow
         RenderSingleParagraphWithFlowRow(paragraph, paragraph.words.toImmutableList(), spaceWidth, context)
@@ -425,6 +434,15 @@ private fun isImageOnlyParagraph(paragraph: ParagraphState): Boolean {
         nonWhitespaceWords.all { word ->
             word is ImageSegment || word is Base64Segment
         }
+}
+
+private fun hasMultipleImages(paragraph: ParagraphState): Boolean {
+    // Count the number of image segments in the paragraph
+    val imageCount =
+        paragraph.words.count { word ->
+            word is ImageSegment || word is Base64Segment
+        }
+    return imageCount > 1
 }
 
 private fun collectConsecutiveImageParagraphs(
