@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">Impossible d\'enregistrer la vidéo</string>
     <string name="upload_image">Charger une image</string>
     <string name="take_a_picture">Prendre une photo</string>
+    <string name="record_a_video">Enregistrer une vidéo</string>
     <string name="record_a_message">Enregistrer un message</string>
     <string name="record_a_message_title">Enregistrer un message</string>
     <string name="record_a_message_description">Cliquez et maintenez pour enregistrer un message</string>
@@ -163,6 +164,8 @@
     <string name="blocked_users">Utilisateurs bloqués</string>
     <string name="new_threads">Nouveaux sujets</string>
     <string name="conversations">Conversations</string>
+    <string name="feed">Flux</string>
+    <string name="mod_queue">File d\'attente des mods</string>
     <string name="notes">Notes</string>
     <string name="replies">Réponses</string>
     <string name="mutual">Les vôtres</string>
@@ -437,6 +440,7 @@
     <string name="no">Non</string>
     <string name="follow_list_selection">Liste des Abonnés</string>
     <string name="follow_list_kind3follows">Tous les abonnements</string>
+    <string name="follow_list_kind3follows_users_only">Tous les abonnements de l\'utilisateur</string>
     <string name="follow_list_kind3follows_proxy">Suivre via Proxy</string>
     <string name="follow_list_aroundme">Autour de moi</string>
     <string name="follow_list_global">Général</string>
@@ -655,6 +659,8 @@
     <string name="messages_new_subject_message">Explication aux membres</string>
     <string name="messages_new_subject_message_placeholder">Changement de nom pour les nouveaux objectifs.</string>
     <string name="paste_from_clipboard">Coller depuis le presse-papiers</string>
+    <string name="invalid_nip47_uri_title">URI NIP-47 invalide</string>
+    <string name="invalid_nip47_uri_description">L\'URI %1$s n\'est pas une URI de connexion NIP-47 valide.</string>
     <string name="language_description">Pour l\'interface de l\'App</string>
     <string name="theme_description">Sombre, Clair ou thème Système</string>
     <string name="automatically_load_images_gifs_description">Charger automatiquement les images et les GIFs</string>
@@ -672,6 +678,9 @@
     <string name="media_added_to_profile_gallery">Média ajouté à votre galerie de profil</string>
     <string name="created_at">Créé le</string>
     <string name="rules">Règles</string>
+    <string name="community_description">À propos de nous</string>
+    <string name="guidelines">Lignes directrices</string>
+    <string name="moderators">Modérateurs</string>
     <string name="login_with_external_signer">Se connecter avec Amber</string>
     <string name="status_update">Mettez à jour votre statut</string>
     <string name="lightning_wallets_not_found">Erreur d\'analyse du message d\'erreur</string>
@@ -884,10 +893,13 @@
     <string name="dm_upload">Téléversement de MP</string>
     <string name="relay_settings">Paramètres du relais</string>
     <string name="public_home_section">Relais publics d\'accueil</string>
+    <string name="public_home_section_explainer_profile">L\'utilisateur publie son contenu sur ces relais</string>
     <string name="public_home_section_explainer">Ce type de relais stocke tout votre contenu. Amethyst enverra vos messages ici et d\'autres utiliseront ces relais pour trouver votre contenu. Insérez entre 1 et 3 relais : il peut s\'agir de relais personnels, de relais payants ou de relais publics.</string>
     <string name="public_notif_section">Relais de messagerie publique</string>
+    <string name="public_notif_section_explainer_profile">L\'utilisateur reçoit les notifications sur ces relais</string>
     <string name="public_notif_section_explainer">Ce type de relais reçoit toutes les réponses, commentaires, likes et zaps de vos messages. Insérez de 1 à 3 relais et assurez-vous qu\'ils acceptent les messages de n\'importe qui.</string>
     <string name="private_inbox_section">Relais de la boîte de réception MP</string>
+    <string name="private_inbox_section_explainer_profile">L\'utilisateur reçoit les MPs sur ces relais</string>
     <string name="private_inbox_section_explainer">Insérez de 1 à 3 relais pour servir de boîte de réception privée. Les autres utilisateurs utiliseront ces relais pour vous envoyer des MPs. Les relais de la boîte de réception MP doivent accepter tout message de tout le monde, mais ne vous permet que de les télécharger. De bonnes options sont:\n - inbox.nostr.wine (payant)\n - auth.nostr1.com (gratuit)\n - you.nostr1.com (relais personnels - payant)</string>
     <string name="private_outbox_section">Relais privés</string>
     <string name="private_outbox_section_explainer">Insérez entre 1 et 3 relais pour stocker des événements que personne d\'autre ne peut voir, comme vos Brouillons et/ou paramètres d\'application. Idéalement, ces relais sont soit locaux soit nécessitent une authentification avant de télécharger le contenu de chaque utilisateur.</string>
@@ -1009,9 +1021,18 @@
     <string name="group_relay">Relais de chat</string>
     <string name="group_relay_explanation">Le relais auquel tous les utilisateurs de ce chat se connectent</string>
     <string name="share_image">Partager l\'image…</string>
+    <string name="unable_to_share_image">Impossible de partager l\'image, veuillez réessayer plus tard…</string>
     <string name="search_by_hashtag">Hashtag de recherche : #%1$s</string>
     <string name="dont_translate_from">Ne pas traduire depuis</string>
     <string name="dont_translate_from_description">Les langues affichées ici ne seront pas traduites. Sélectionnez une langue pour la supprimer et l\'avoir traduite à nouveau.</string>
     <string name="pause">Pause</string>
     <string name="play">Lecture</string>
+    <string name="open_dropdown_menu">Ouvrir le menu déroulant</string>
+    <string name="option_of">Option %1$s sur %2$s</string>
+    <string name="feed_filter_selected">Filtre du flux, %1$s sélectionné</string>
+    <string name="feed_filter_select_an_option">Filtre du flux, %1$s</string>
+    <string name="crashreport_found">Rapport d\'erreur trouvé</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Voulez-vous envoyer le rapport d\'erreur récent à Amethyst dans un MP ? Aucune information personnelle ne sera partagée</string>
+    <string name="crashreport_found_send">Envoyer</string>
+    <string name="this_message_will_disappear_in_days">Ce message disparaîtra dans %1$d jours</string>
 </resources>
