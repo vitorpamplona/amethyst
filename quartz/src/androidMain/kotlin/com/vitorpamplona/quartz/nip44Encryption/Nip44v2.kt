@@ -216,14 +216,7 @@ class Nip44v2 {
     fun getMessageKeys(
         conversationKey: ByteArray,
         nonce: ByteArray,
-    ): MessageKey {
-        val keys = hkdf.expand(conversationKey, nonce, 76)
-        return MessageKey(
-            chachaKey = keys.copyOfRange(0, 32),
-            chachaNonce = keys.copyOfRange(32, 44),
-            hmacKey = keys.copyOfRange(44, 76),
-        )
-    }
+    ): MessageKey = hkdf.fastExpand(conversationKey, nonce)
 
     class MessageKey(
         val chachaKey: ByteArray,
