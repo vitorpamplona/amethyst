@@ -438,6 +438,7 @@
     <string name="no">Não</string>
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
+    <string name="follow_list_kind3follows_users_only">Seguindo do Usuários</string>
     <string name="follow_list_kind3follows_proxy">Segue via proxy</string>
     <string name="follow_list_aroundme">Perto de mim</string>
     <string name="follow_list_global">Global</string>
@@ -1018,6 +1019,7 @@
     <string name="group_relay">Relé de chat</string>
     <string name="group_relay_explanation">O relé a qual todos os usuários deste chat se conectam</string>
     <string name="share_image">Compartilhar imagem…</string>
+    <string name="unable_to_share_image">Não é possível compartilhar a imagem, por favor tente novamente mais tarde…</string>
     <string name="search_by_hashtag">Pesquisar hashtag: #%1$s</string>
     <string name="dont_translate_from">Não Traduzir de</string>
     <string name="dont_translate_from_description">Os idiomas mostrados aqui não serão traduzidos. Selecione um idioma para removê-lo e traduzi-lo novamente.</string>

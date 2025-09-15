@@ -438,6 +438,7 @@
     <string name="no">Ne</string>
     <string name="follow_list_selection">Seznam sledovaných</string>
     <string name="follow_list_kind3follows">Všechna sledování</string>
+    <string name="follow_list_kind3follows_users_only">Všech Uživatelů Sledování</string>
     <string name="follow_list_kind3follows_proxy">Sleduje přes proxy</string>
     <string name="follow_list_aroundme">Kolem mě</string>
     <string name="follow_list_global">Globální</string>
@@ -1018,6 +1019,7 @@
     <string name="group_relay">Relé chatu</string>
     <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
     <string name="share_image">Sdílet obrázek…</string>
+    <string name="unable_to_share_image">Nelze sdílet obrázek, zkuste to prosím později…</string>
     <string name="search_by_hashtag">Vyhledávání hashtag: #%1$s</string>
     <string name="dont_translate_from">Nepřekládat z</string>
     <string name="dont_translate_from_description">Zde zobrazené jazyky nebudou přeloženy. Vyberte jazyk, který chcete odstranit a nechat je znovu přeložit.</string>
