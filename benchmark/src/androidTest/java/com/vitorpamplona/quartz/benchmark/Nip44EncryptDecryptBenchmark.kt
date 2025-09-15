@@ -25,13 +25,12 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class Hkdf {
+class Nip44EncryptDecryptBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     companion object {
@@ -46,27 +45,16 @@ class Hkdf {
     }
 
     @Test
-    fun hkdfExpand() {
-        val hkdf = Hkdf()
+    fun encrypt() {
         benchmarkRule.measureRepeated {
-            hkdf.fastExpand(sharedKey, encrypted.nonce)
+            nip44v2.encrypt(msg, privateKey, publicKey)
         }
     }
 
     @Test
-    fun hkdfExpandOld() {
-        val hkdf = Hkdf()
+    fun decrypt() {
         benchmarkRule.measureRepeated {
-            hkdf.expand(sharedKey, encrypted.nonce, 76)
-        }
-    }
-
-    @Test
-    fun hkdfExtract() {
-        val messageKey = nip44v2.getMessageKeys(sharedKey, encrypted.nonce)
-        val hkdf = Hkdf()
-        benchmarkRule.measureRepeated {
-            hkdf.extract(encrypted.nonce, encrypted.ciphertext, messageKey.hmacKey)
+            nip44v2.decrypt(encrypted, privateKey, publicKey)
         }
     }
 }
