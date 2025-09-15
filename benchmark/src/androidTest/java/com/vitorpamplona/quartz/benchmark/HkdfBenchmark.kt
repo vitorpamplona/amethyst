@@ -46,7 +46,15 @@ class HkdfBenchmark {
     }
 
     @Test
-    fun hkdfExpand() {
+    fun hkdfExpandWithCheck() {
+        val hkdf = Hkdf()
+        benchmarkRule.measureRepeated {
+            hkdf.fastExpand(sharedKey, encrypted.nonce, encrypted.ciphertext, encrypted.mac)
+        }
+    }
+
+    @Test
+    fun hkdfFastExpand() {
         val hkdf = Hkdf()
         benchmarkRule.measureRepeated {
             hkdf.fastExpand(sharedKey, encrypted.nonce)

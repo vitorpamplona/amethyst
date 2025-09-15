@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import java.nio.ByteBuffer
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -88,6 +89,8 @@ class Hkdf(
     fun fastExpand(
         key: ByteArray,
         nonce: ByteArray,
+        ciphertext: ByteArray? = null,
+        ciphertextMac: ByteArray? = null,
     ): MessageKey {
         check(key.size == hashLen)
         check(nonce.size == hashLen)
@@ -112,9 +115,21 @@ class Hkdf(
         mac.update(3)
         val round3 = mac.doFinal()
 
-        val hmacKey = ByteArray(32)
+        val hmacKey = ByteArray(hashLen)
         System.arraycopy(round2, 12, hmacKey, 0, 20)
         System.arraycopy(round3, 0, hmacKey, 20, 12)
+
+        // checks the mac here to avoid building a new Mac.getInstance(algorithm)
+        if (ciphertext != null && ciphertextMac != null) {
+            mac.init(FixedKey(hmacKey, algorithm))
+            mac.update(nonce)
+            mac.update(ciphertext)
+            val calculatedMac = mac.doFinal()
+
+            check(calculatedMac.contentEquals(ciphertextMac)) {
+                "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${ciphertextMac.toHexKey()}"
+            }
+        }
 
         return MessageKey(
             chachaKey = round1,

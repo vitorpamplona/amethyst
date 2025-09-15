@@ -113,12 +113,14 @@ class Nip44v2 {
         decoded: EncryptedInfo,
         conversationKey: ByteArray,
     ): String {
-        val messageKey = getMessageKeys(conversationKey, decoded.nonce)
-
-        checkHMacAad(messageKey, decoded)
+        val messageKey = checkMessageKeys(conversationKey, decoded)
 
         return unpad(
-            chaCha.decrypt(decoded.ciphertext, messageKey.chachaNonce, messageKey.chachaKey),
+            chaCha.decrypt(
+                decoded.ciphertext,
+                messageKey.chachaNonce,
+                messageKey.chachaKey,
+            ),
         )
     }
 
@@ -209,6 +211,11 @@ class Nip44v2 {
         conversationKey: ByteArray,
         nonce: ByteArray,
     ): Hkdf.MessageKey = hkdf.fastExpand(conversationKey, nonce)
+
+    fun checkMessageKeys(
+        conversationKey: ByteArray,
+        decoded: EncryptedInfo,
+    ): Hkdf.MessageKey = hkdf.fastExpand(conversationKey, decoded.nonce, decoded.ciphertext, decoded.mac)
 
     /** @return 32B shared secret */
     fun computeConversationKey(
