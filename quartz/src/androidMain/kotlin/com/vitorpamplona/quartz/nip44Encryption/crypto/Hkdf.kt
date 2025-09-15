@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
-import com.vitorpamplona.quartz.nip44Encryption.Nip44v2.MessageKey
 import java.nio.ByteBuffer
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -123,4 +122,10 @@ class Hkdf(
             hmacKey = hmacKey,
         )
     }
+
+    class MessageKey(
+        val chachaKey: ByteArray,
+        val chachaNonce: ByteArray,
+        val hmacKey: ByteArray,
+    )
 }
