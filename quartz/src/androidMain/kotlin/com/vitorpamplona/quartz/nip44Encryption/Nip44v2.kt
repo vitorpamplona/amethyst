@@ -210,7 +210,7 @@ class Nip44v2 {
             "AAD associated data must be 32 bytes, but it was ${aad.size} bytes"
         }
 
-        return hkdf.extract(aad + message, key)
+        return hkdf.extract(aad, message, key)
     }
 
     fun getMessageKeys(

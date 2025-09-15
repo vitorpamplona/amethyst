@@ -37,6 +37,18 @@ class Hkdf(
         return mac.doFinal(key)
     }
 
+    fun extract(
+        key1: ByteArray,
+        key2: ByteArray,
+        salt: ByteArray,
+    ): ByteArray {
+        val mac = Mac.getInstance(algorithm)
+        mac.init(SecretKeySpec(salt, algorithm))
+        mac.update(key1)
+        mac.update(key2)
+        return mac.doFinal()
+    }
+
     fun expand(
         key: ByteArray,
         nonce: ByteArray,
