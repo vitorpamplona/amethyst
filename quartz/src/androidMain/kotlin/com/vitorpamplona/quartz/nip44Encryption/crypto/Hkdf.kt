@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip44Encryption.crypto
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2.MessageKey
 import java.nio.ByteBuffer
 import javax.crypto.Mac
-import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 
 class Hkdf(
@@ -35,7 +34,7 @@ class Hkdf(
         salt: ByteArray,
     ): ByteArray {
         val mac = Mac.getInstance(algorithm)
-        mac.init(HMacKey(salt))
+        mac.init(FixedKey(salt, algorithm))
         return mac.doFinal(key)
     }
 
@@ -45,7 +44,7 @@ class Hkdf(
         salt: ByteArray,
     ): ByteArray {
         val mac = Mac.getInstance(algorithm)
-        mac.init(HMacKey(salt))
+        mac.init(FixedKey(salt, algorithm))
         mac.update(key1)
         mac.update(key2)
         return mac.doFinal()
@@ -95,7 +94,7 @@ class Hkdf(
         check(nonce.size == hashLen)
 
         val mac = Mac.getInstance(algorithm)
-        mac.init(HMacKey(key))
+        mac.init(FixedKey(key, algorithm))
 
         // First round: T(1) = HMAC-SHA256(key, nonce || 0x01)
         mac.update(nonce)
@@ -124,26 +123,4 @@ class Hkdf(
             hmacKey = hmacKey,
         )
     }
-}
-
-class HMacKey(
-    val key: ByteArray,
-) : SecretKey {
-    override fun getAlgorithm() = "HmacSHA256"
-
-    override fun getEncoded() = key
-
-    override fun getFormat() = "RAW"
-
-    override fun hashCode() = key.contentHashCode()
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is HMacKey) return false
-        return key.contentEquals(other.key)
-    }
-
-    override fun destroy() = key.fill(0)
-
-    override fun isDestroyed() = key.all { it.toInt() == 0 }
 }
