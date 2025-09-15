@@ -235,7 +235,7 @@ class Nip44v2 {
             const val V: Int = 2
 
             fun decodePayload(payload: String): EncryptedInfo {
-                check(payload.length >= 132 || payload.length <= 87472) {
+                check(payload.length >= 132) {
                     "Invalid payload length ${payload.length} for $payload"
                 }
                 check(payload[0] != '#') { "Unknown encryption version ${payload.get(0)}" }
