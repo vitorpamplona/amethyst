@@ -245,7 +245,7 @@ fun ProfileContentTemplate(
                         .clip(shape = CircleShape)
                         .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
                         .clickable(onClick = onClick),
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             )
 

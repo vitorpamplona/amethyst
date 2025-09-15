@@ -227,7 +227,7 @@ fun LocalImageView(
         val showImage =
             remember {
                 mutableStateOf(
-                    if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                    if (alwayShowImage) true else accountViewModel.settings.showImages(),
                 )
             }
 
@@ -340,7 +340,7 @@ fun UrlImageView(
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                if (alwayShowImage) true else accountViewModel.settings.showImages(),
             )
         }
 

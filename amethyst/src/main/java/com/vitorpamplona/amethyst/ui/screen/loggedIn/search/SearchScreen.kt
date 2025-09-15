@@ -292,7 +292,7 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = false,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 onClick = { nav.nav(routeFor(item)) },
             )
@@ -321,7 +321,7 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = stringRes(R.string.ephemeral_relay_chat),
                 hasNewMessages = false,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 onClick = { nav.nav(routeFor(item)) },
             )
@@ -348,7 +348,7 @@ private fun DisplaySearchResults(
                 channelLastTime = null,
                 channelLastContent = item.summary(),
                 hasNewMessages = false,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                 onClick = { nav.nav(routeFor(item)) },
             )

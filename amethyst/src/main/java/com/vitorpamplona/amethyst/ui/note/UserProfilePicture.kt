@@ -358,7 +358,7 @@ fun InnerUserPicture(
             },
         modifier = myImageModifier,
         contentScale = ContentScale.Crop,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }

@@ -101,7 +101,7 @@ private fun DrawRelayIcon(
         contentDescription = stringRes(R.string.profile_image),
         contentScale = ContentScale.Crop,
         modifier = HeaderPictureModifier,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }

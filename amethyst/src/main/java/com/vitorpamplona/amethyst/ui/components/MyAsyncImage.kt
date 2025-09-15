@@ -57,7 +57,7 @@ fun MyAsyncImage(
     onError: (@Composable () -> Unit)?,
 ) {
     val ratio = MediaAspectRatioCache.get(imageUrl)
-    val showImage = remember { mutableStateOf(accountViewModel.settings.showImages.value) }
+    val showImage = remember { mutableStateOf(accountViewModel.settings.showImages()) }
 
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
         if (it) {

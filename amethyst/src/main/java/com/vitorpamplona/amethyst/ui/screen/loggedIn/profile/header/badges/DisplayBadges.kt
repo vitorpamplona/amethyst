@@ -201,7 +201,7 @@ private fun RenderBadgeImage(
             model = image,
             contentDescription = description,
             modifier = BadgePictureModifier,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     }

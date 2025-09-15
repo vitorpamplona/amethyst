@@ -39,7 +39,7 @@ fun LoadUrlPreview(
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
 ) {
-    if (!accountViewModel.settings.showUrlPreview.value) {
+    if (!accountViewModel.settings.showUrlPreview()) {
         ClickableUrl(urlText, url)
     } else {
         LoadUrlPreviewDirect(url, urlText, callbackUri, accountViewModel)

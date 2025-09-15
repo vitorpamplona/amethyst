@@ -87,7 +87,7 @@ fun LongPublicChatChannelHeader(
                 model = it,
                 contentDescription = stringRes(R.string.channel_image),
                 modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                 loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             )
         }
