@@ -100,9 +100,17 @@ class Nip44v2 {
     fun decrypt(
         payload: String,
         conversationKey: ByteArray,
-    ): String {
-        val decoded = EncryptedInfo.decodePayload(payload)
-        return decrypt(decoded, conversationKey)
+    ): String = decrypt(EncryptedInfo.decodePayload(payload), conversationKey)
+
+    fun checkHMacAad(
+        messageKey: MessageKey,
+        decoded: EncryptedInfo,
+    ) {
+        val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
+
+        check(calculatedMac.contentEquals(decoded.mac)) {
+            "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${decoded.mac.toHexKey()}"
+        }
     }
 
     fun decrypt(
@@ -110,20 +118,16 @@ class Nip44v2 {
         conversationKey: ByteArray,
     ): String {
         val messageKey = getMessageKeys(conversationKey, decoded.nonce)
-        val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
 
-        check(calculatedMac.contentEquals(decoded.mac)) {
-            "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${decoded.mac.toHexKey()}"
-        }
+        checkHMacAad(messageKey, decoded)
 
-        val padded =
+        return unpad(
             LibSodiumInstance.cryptoStreamChaCha20IetfXor(
-                decoded.ciphertext,
-                messageKey.chachaNonce,
-                messageKey.chachaKey,
-            )
-
-        return unpad(padded)
+                message = decoded.ciphertext,
+                nonce = messageKey.chachaNonce,
+                key = messageKey.chachaKey,
+            ),
+        )
     }
 
     fun getConversationKey(
