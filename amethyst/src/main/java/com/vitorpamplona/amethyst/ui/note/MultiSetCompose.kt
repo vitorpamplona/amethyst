@@ -603,7 +603,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             contentDescription = stringRes(id = R.string.profile_image),
             modifier = MaterialTheme.colorScheme.profile35dpModifier,
             contentScale = ContentScale.Crop,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     }

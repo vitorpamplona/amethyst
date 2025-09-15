@@ -195,7 +195,7 @@ private fun ChannelRoomCompose(
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         onClick = { nav.nav(routeFor(channel)) },
     )
@@ -227,7 +227,7 @@ private fun ChannelRoomCompose(
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         onClick = { nav.nav(routeFor(channel)) },
     )

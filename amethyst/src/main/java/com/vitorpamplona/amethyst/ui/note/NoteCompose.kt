@@ -1307,7 +1307,7 @@ private fun ChannelNotePicture(
         model = model,
         contentDescription = stringRes(R.string.group_picture),
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }

@@ -444,6 +444,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="no">Nein</string>
     <string name="follow_list_selection">Folgen-Liste</string>
     <string name="follow_list_kind3follows">Alle Folgen</string>
+    <string name="follow_list_kind3follows_users_only">Alle Benutzer Folgen</string>
     <string name="follow_list_kind3follows_proxy">Folgt über Proxy</string>
     <string name="follow_list_aroundme">In der Nähe</string>
     <string name="follow_list_global">Weltweit</string>
@@ -1023,6 +1024,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="group_relay">Chat-Relais</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
     <string name="share_image">Bild teilen…</string>
+    <string name="unable_to_share_image">Bild kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
     <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
     <string name="dont_translate_from">Nicht übersetzen von</string>
     <string name="dont_translate_from_description">Die hier angezeigten Sprachen werden nicht übersetzt. Wählen Sie eine Sprache, um sie zu entfernen und lassen Sie sie erneut übersetzen.</string>

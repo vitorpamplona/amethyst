@@ -85,7 +85,7 @@ private fun LoggedInUserPictureDrawer(
             contentDescription = stringRes(id = R.string.your_profile_image),
             modifier = HeaderPictureModifier,
             contentScale = ContentScale.Crop,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )
     }

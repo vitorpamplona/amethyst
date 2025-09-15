@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
@@ -225,7 +227,7 @@ fun LocalImageView(
         val showImage =
             remember {
                 mutableStateOf(
-                    if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                    if (alwayShowImage) true else accountViewModel.settings.showImages(),
                 )
             }
 
@@ -338,7 +340,7 @@ fun UrlImageView(
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                if (alwayShowImage) true else accountViewModel.settings.showImages(),
             )
         }
 
@@ -786,21 +788,26 @@ private suspend fun shareImageFile(
     videoUri: String,
     mimeType: String?,
 ) {
-    // Get sharable URI and file extension
-    val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
+    try {
+        // Get sharable URI and file extension
+        val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
 
-    // Determine mime type, use provided or derive from extension
-    val determinedMimeType = mimeType ?: "image/$fileExtension"
+        // Determine mime type, use provided or derive from extension
+        val determinedMimeType = mimeType ?: "image/$fileExtension"
 
-    // Create share intent
-    val shareIntent =
-        Intent(Intent.ACTION_SEND).apply {
-            type = determinedMimeType
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
+        // Create share intent
+        val shareIntent =
+            Intent(Intent.ACTION_SEND).apply {
+                type = determinedMimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
 
-    context.startActivity(Intent.createChooser(shareIntent, null))
+        context.startActivity(Intent.createChooser(shareIntent, null))
+    } catch (e: Exception) {
+        Log.w("ZoomableContentView", "Failed to share image: $videoUri", e)
+        Toast.makeText(context, context.getString(R.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun verifyHash(content: MediaUrlContent): Boolean? {

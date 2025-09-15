@@ -197,7 +197,7 @@ fun UrlImageView(
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages.value,
+                if (alwayShowImage) true else accountViewModel.settings.showImages(),
             )
         }
 
@@ -267,7 +267,7 @@ fun UrlVideoView(
 
     val automaticallyStartPlayback =
         remember(content) {
-            mutableStateOf<Boolean>(accountViewModel.settings.startVideoPlayback.value)
+            mutableStateOf<Boolean>(accountViewModel.settings.startVideoPlayback())
         }
 
     Box(defaultModifier, contentAlignment = Alignment.Center) {

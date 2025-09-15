@@ -216,7 +216,7 @@ private fun AccountPicture(
         model = profilePicture,
         contentDescription = stringRes(R.string.profile_image),
         modifier = AccountPictureModifier,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
 }

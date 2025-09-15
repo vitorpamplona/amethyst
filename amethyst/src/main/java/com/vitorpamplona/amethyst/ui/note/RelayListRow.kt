@@ -149,7 +149,7 @@ fun RenderRelay(
         RenderRelayIcon(
             displayUrl = relayInfo.id ?: relay.url,
             iconUrl = relayInfo.icon,
-            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             pingInMs = 0,
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         )

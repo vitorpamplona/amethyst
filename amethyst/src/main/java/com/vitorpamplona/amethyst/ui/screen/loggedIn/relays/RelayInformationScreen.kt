@@ -156,7 +156,7 @@ fun RelayInformationScreen(
                         RenderRelayIcon(
                             displayUrl = relay.displayUrl(),
                             iconUrl = relayInfo.icon,
-                            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
                             RelayStats.get(relay).pingInMs,
                             iconModifier = LargeRelayIconModifier,

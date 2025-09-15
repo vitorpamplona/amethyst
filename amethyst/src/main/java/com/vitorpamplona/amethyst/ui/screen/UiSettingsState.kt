@@ -131,4 +131,12 @@ class UiSettingsState(
     fun isCompleteUIMode() = uiSettingsFlow.featureSet.value == FeatureSetType.COMPLETE
 
     fun isImmersiveScrollingActive() = uiSettingsFlow.automaticallyHideNavigationBars.value == BooleanType.ALWAYS
+
+    fun showProfilePictures() = showProfilePictures.value
+
+    fun showUrlPreview() = showUrlPreview.value
+
+    fun startVideoPlayback() = startVideoPlayback.value
+
+    fun showImages() = showImages.value
 }

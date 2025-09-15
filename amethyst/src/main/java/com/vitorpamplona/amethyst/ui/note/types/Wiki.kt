@@ -88,10 +88,7 @@ private fun WikiNoteHeader(
                 ),
     ) {
         Column {
-            val automaticallyShowUrlPreview =
-                remember { accountViewModel.settings.showUrlPreview.value }
-
-            if (automaticallyShowUrlPreview) {
+            if (accountViewModel.settings.showUrlPreview()) {
                 image?.let {
                     MyAsyncImage(
                         imageUrl = it,

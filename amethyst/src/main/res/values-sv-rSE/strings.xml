@@ -438,6 +438,7 @@
     <string name="no">Nej</string>
     <string name="follow_list_selection">Följ lista</string>
     <string name="follow_list_kind3follows">Alla följare</string>
+    <string name="follow_list_kind3follows_users_only">Alla Användare Följare</string>
     <string name="follow_list_kind3follows_proxy">Följer via proxy</string>
     <string name="follow_list_aroundme">Runt mig</string>
     <string name="follow_list_global">Global</string>
@@ -1017,6 +1018,7 @@
     <string name="group_relay">Chatt Relä</string>
     <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
     <string name="share_image">Dela bild…</string>
+    <string name="unable_to_share_image">Kunde inte dela bilden, försök igen senare…</string>
     <string name="search_by_hashtag">Sök hashtag: #%1$s</string>
     <string name="dont_translate_from">Översätt inte från</string>
     <string name="dont_translate_from_description">Språk som visas här kommer inte att översättas. Välj ett språk för att ta bort det och få det översatt igen.</string>

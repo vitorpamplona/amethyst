@@ -35,7 +35,7 @@ fun BasicRelaySetupInfoDialog(
 ) {
     BasicRelaySetupInfoClickableRow(
         item = item,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         onDelete = onDelete,
         accountViewModel = accountViewModel,

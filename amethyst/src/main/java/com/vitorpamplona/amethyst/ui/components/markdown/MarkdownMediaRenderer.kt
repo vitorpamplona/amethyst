@@ -128,7 +128,7 @@ class MarkdownMediaRenderer(
                     )
                 }
             } else {
-                if (!accountViewModel.settings.showUrlPreview.value) {
+                if (!accountViewModel.settings.showUrlPreview()) {
                     renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
                 } else {
                     renderInlineFullWidth(richTextStringBuilder) {
