@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -36,7 +37,9 @@ import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LiveStatusIndicator(
@@ -75,26 +78,34 @@ private suspend fun checkChannelIsOnline(
     channel: Channel,
     accountViewModel: AccountViewModel,
 ): Boolean =
-    when (channel) {
-        is LiveActivitiesChannel -> {
-            // Check if streaming URL is online, fall back to relay check
-            val streamingUrl = channel.info?.streaming()
-            if (!streamingUrl.isNullOrBlank()) {
-                accountViewModel.checkVideoIsOnline(streamingUrl)
-            } else {
-                // Check relay connection
-                val relayUrl = channel.relayHintUrl()
-                if (relayUrl != null) {
-                    OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
-                } else {
-                    false
+    withContext(Dispatchers.IO) {
+        try {
+            when (channel) {
+                is LiveActivitiesChannel -> {
+                    // Check if streaming URL is online, fall back to relay check
+                    val streamingUrl = channel.info?.streaming()
+                    if (!streamingUrl.isNullOrBlank()) {
+                        accountViewModel.checkVideoIsOnline(streamingUrl)
+                    } else {
+                        // Check relay connection
+                        val relayUrl = channel.relayHintUrl()
+                        if (relayUrl != null) {
+                            OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
+                        } else {
+                            false
+                        }
+                    }
                 }
+                is EphemeralChatChannel -> {
+                    // Check relay connection for ephemeral chat
+                    val relayUrl = channel.roomId.relayUrl
+                    OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
+                }
+                else -> false
             }
+        } catch (e: Exception) {
+            Log.d("LiveStatusIndicator", "Network error checking channel ${channel.toBestDisplayName()}: ${e.message}")
+            // Return false if any network error occurs
+            false
         }
-        is EphemeralChatChannel -> {
-            // Check relay connection for ephemeral chat
-            val relayUrl = channel.roomId.relayUrl
-            OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
-        }
-        else -> false
     }
