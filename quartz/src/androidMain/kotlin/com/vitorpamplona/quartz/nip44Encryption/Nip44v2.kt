@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.CancellationException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.Base64
 import kotlin.math.floor
 import kotlin.math.log2
@@ -41,6 +39,9 @@ class Nip44v2 {
 
     private val minPlaintextSize: Int = 0x0001 // 1b msg => padded to 32b
     private val maxPlaintextSize: Int = 0xffff // 65535 (64kb-1) => padded to 64kb
+
+    private val extMinPlaintextSize: Int = 0x00000001 // 1b msg => padded to 32b
+    private val extMaxPlaintextSize: Long = 0xffffffff // 4294967294 => padded
 
     fun clearCache() {
         sharedKeyCache.clearCache()
@@ -151,42 +152,49 @@ class Nip44v2 {
 
         check(unpaddedLen > 0) { "Message is empty ($unpaddedLen): $plaintext" }
 
-        check(unpaddedLen <= maxPlaintextSize) { "Message is too long ($unpaddedLen): $plaintext" }
-
         val prefix =
-            ByteBuffer
-                .allocate(2)
-                .order(ByteOrder.BIG_ENDIAN)
-                .putShort(unpaddedLen.toShort())
-                .array()
+            if (unpaddedLen <= maxPlaintextSize) {
+                // 2 bytes in big endian
+                intTo2BytesBigEndian(unpaddedLen)
+            } else if (unpaddedLen <= extMaxPlaintextSize) {
+                // Extension to allow > 65KB payloads
+                // 2+4 bytes in big endian
+                byteArrayOf(0, 0) + intTo4BytesBigEndian(unpaddedLen)
+            } else {
+                throw IllegalArgumentException("Message is too long ($unpaddedLen): $plaintext")
+            }
+
         val suffix = ByteArray(calcPaddedLen(unpaddedLen) - unpaddedLen)
-        return ByteBuffer.wrap(prefix + unpadded + suffix).array()
+        return prefix + unpadded + suffix
     }
 
-    private fun bytesToInt(
-        byte1: Byte,
-        byte2: Byte,
-        bigEndian: Boolean,
-    ): Int =
-        if (bigEndian) {
-            (byte1.toInt() and 0xFF shl 8 or (byte2.toInt() and 0xFF))
-        } else {
-            (byte2.toInt() and 0xFF shl 8 or (byte1.toInt() and 0xFF))
-        }
-
     fun unpad(padded: ByteArray): String {
-        val unpaddedLen: Int = bytesToInt(padded[0], padded[1], true)
-        val unpadded = padded.sliceArray(2 until 2 + unpaddedLen)
+        val unpaddedLenPreExt: Int = bytesToIntBigEndian(padded[0], padded[1])
 
-        check(
-            unpaddedLen in minPlaintextSize..maxPlaintextSize &&
-                unpadded.size == unpaddedLen &&
-                padded.size == 2 + calcPaddedLen(unpaddedLen),
-        ) {
-            "invalid padding ${unpadded.size} != $unpaddedLen"
+        return if (unpaddedLenPreExt == 0) {
+            // NIP-44 extension to handle bigger than 65K payloads
+            val unpaddedLenExt: Int = bytesToIntBigEndian(padded[2], padded[3], padded[4], padded[5])
+
+            check(unpaddedLenExt in extMinPlaintextSize..extMaxPlaintextSize) {
+                "Invalid size $unpaddedLenExt not between $extMinPlaintextSize and $extMaxPlaintextSize"
+            }
+
+            check(padded.size == 6 + calcPaddedLen(unpaddedLenExt)) {
+                "Invalid padding ${calcPaddedLen(unpaddedLenExt)} != $unpaddedLenExt"
+            }
+
+            String(padded, 6, unpaddedLenExt)
+        } else {
+            check(unpaddedLenPreExt in minPlaintextSize..maxPlaintextSize) {
+                "Invalid size $unpaddedLenPreExt not between $minPlaintextSize and $maxPlaintextSize"
+            }
+
+            check(padded.size == 2 + calcPaddedLen(unpaddedLenPreExt)) {
+                "Invalid padding ${calcPaddedLen(unpaddedLenPreExt)} != $unpaddedLenPreExt"
+            }
+
+            String(padded, 2, unpaddedLenPreExt)
         }
-
-        return unpadded.decodeToString()
     }
 
     fun hmacAad(
@@ -264,4 +272,41 @@ class Nip44v2 {
                     byteArrayOf(V.toByte()) + nonce + ciphertext + mac,
                 )
     }
+
+    // -----------------------------------
+    // FASTER METHODS THAN BUFFER WRAPPING
+    // -----------------------------------
+    private fun bytesToIntBigEndian(
+        byte1: Byte,
+        byte2: Byte,
+    ): Int = (byte1.toInt() and 0xFF shl 8 or (byte2.toInt() and 0xFF))
+
+    private fun bytesToIntBigEndian(
+        byte1: Byte,
+        byte2: Byte,
+        byte3: Byte,
+        byte4: Byte,
+    ): Int {
+        val result =
+            ((byte1.toLong() and 0xFF) shl 24) or
+                ((byte2.toLong() and 0xFF) shl 16) or
+                ((byte3.toLong() and 0xFF) shl 8) or
+                (byte4.toLong() and 0xFF)
+
+        check(result <= Int.MAX_VALUE) {
+            "JVM cannot handle more than 2GB payloads. Current length: $result"
+        }
+
+        return result.toInt()
+    }
+
+    private fun intTo2BytesBigEndian(value: Int): ByteArray = byteArrayOf((value shr 8).toByte(), (value and 0xFF).toByte())
+
+    private fun intTo4BytesBigEndian(value: Int): ByteArray =
+        byteArrayOf(
+            (value shr 24).toByte(),
+            (value shr 16).toByte(),
+            (value shr 8).toByte(),
+            (value and 0xFF).toByte(),
+        )
 }

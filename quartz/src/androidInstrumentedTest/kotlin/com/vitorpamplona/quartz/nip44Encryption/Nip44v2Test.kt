@@ -143,12 +143,14 @@ class Nip44v2Test {
     }
 
     @Test
-    fun invalidMessageLengths() {
+    fun extendedMessageLengths() {
         for (v in vectors.v2?.invalid?.encryptMsgLengths!!) {
             val key = RandomInstance.bytes(32)
             try {
-                nip44v2.encrypt("a".repeat(v), key)
-                fail("Should Throw for $v")
+                val input = "a".repeat(v)
+                val result = nip44v2.encrypt(input, key)
+                val decrypted = nip44v2.decrypt(result, key)
+                assertEquals(input, decrypted)
             } catch (e: Exception) {
                 assertNotNull(e)
             }
