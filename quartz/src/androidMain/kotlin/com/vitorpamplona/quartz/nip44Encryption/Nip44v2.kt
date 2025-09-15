@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
 import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.CancellationException
@@ -33,6 +33,7 @@ import kotlin.math.log2
 class Nip44v2 {
     private val sharedKeyCache = SharedKeyCache()
     private val hkdf = Hkdf()
+    private val chaCha = ChaCha20()
 
     private val saltPrefix = "nip44-v2".toByteArray(Charsets.UTF_8)
     private val hashLength = 32
@@ -69,12 +70,7 @@ class Nip44v2 {
         val messageKeys = getMessageKeys(conversationKey, nonce)
         val padded = pad(plaintext)
 
-        val ciphertext =
-            LibSodiumInstance.cryptoStreamChaCha20IetfXor(
-                padded,
-                messageKeys.chachaNonce,
-                messageKeys.chachaKey,
-            )
+        val ciphertext = chaCha.encrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
 
         val mac = hmacAad(messageKeys.hmacKey, ciphertext, nonce)
 
@@ -122,11 +118,7 @@ class Nip44v2 {
         checkHMacAad(messageKey, decoded)
 
         return unpad(
-            LibSodiumInstance.cryptoStreamChaCha20IetfXor(
-                message = decoded.ciphertext,
-                nonce = messageKey.chachaNonce,
-                key = messageKey.chachaKey,
-            ),
+            chaCha.decrypt(decoded.ciphertext, messageKey.chachaNonce, messageKey.chachaKey),
         )
     }
 
