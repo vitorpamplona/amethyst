@@ -74,4 +74,21 @@ object Hex {
         }
         return String(out)
     }
+
+    fun isEqual(
+        id: String,
+        ourId: ByteArray,
+    ): Boolean {
+        var charIndex = 0
+        for (i in 0 until ourId.size) {
+            val chars = byteToHex[ourId[i].toInt() and 0xFF]
+            if (
+                id[charIndex++] != (chars shr 8).toChar() ||
+                id[charIndex++] != (chars and 0xFF).toChar()
+            ) {
+                return false
+            }
+        }
+        return true
+    }
 }

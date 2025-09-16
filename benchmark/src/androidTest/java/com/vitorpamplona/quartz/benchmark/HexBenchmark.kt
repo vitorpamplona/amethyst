@@ -44,6 +44,13 @@ class HexBenchmark {
             .decode(hex)
 
     @Test
+    fun hexIsEqual() {
+        r.measureRepeated {
+            assert(Hex.isEqual(hex, bytes))
+        }
+    }
+
+    @Test
     fun hexDecodeOurs() {
         r.measureRepeated {
             Hex

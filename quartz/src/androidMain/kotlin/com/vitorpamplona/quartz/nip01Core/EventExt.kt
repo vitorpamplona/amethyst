@@ -30,7 +30,7 @@ fun Event.generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tag
 
 fun Event.verifyId(): Boolean {
     if (id.isEmpty()) return false
-    return id == generateId()
+    return EventHasher.hashIdEquals(id, pubKey, createdAt, kind, tags, content)
 }
 
 fun Event.verifySignature(): Boolean {
