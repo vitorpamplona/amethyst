@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import java.nio.ByteBuffer
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -33,15 +34,27 @@ class Hkdf(
         salt: ByteArray,
     ): ByteArray {
         val mac = Mac.getInstance(algorithm)
-        mac.init(SecretKeySpec(salt, algorithm))
+        mac.init(FixedKey(salt, algorithm))
         return mac.doFinal(key)
+    }
+
+    fun extract(
+        key1: ByteArray,
+        key2: ByteArray,
+        salt: ByteArray,
+    ): ByteArray {
+        val mac = Mac.getInstance(algorithm)
+        mac.init(FixedKey(salt, algorithm))
+        mac.update(key1)
+        mac.update(key2)
+        return mac.doFinal()
     }
 
     fun expand(
         key: ByteArray,
         nonce: ByteArray,
         outputLength: Int,
-    ): ByteArray {
+    ): MessageKey {
         check(key.size == hashLen)
         check(nonce.size == hashLen)
 
@@ -62,6 +75,72 @@ class Hkdf(
         val result = ByteArray(outputLength)
         generatedBytes.rewind()
         generatedBytes[result, 0, outputLength]
-        return result
+
+        return MessageKey(
+            chachaKey = result.copyOfRange(0, 32),
+            chachaNonce = result.copyOfRange(32, 44),
+            hmacKey = result.copyOfRange(44, 76),
+        )
     }
+
+    /**
+     * Expands with outputLength == 76 while using the least amount of memory allocation
+     */
+    fun fastExpand(
+        key: ByteArray,
+        nonce: ByteArray,
+        ciphertext: ByteArray? = null,
+        ciphertextMac: ByteArray? = null,
+    ): MessageKey {
+        check(key.size == hashLen)
+        check(nonce.size == hashLen)
+
+        val mac = Mac.getInstance(algorithm)
+        mac.init(FixedKey(key, algorithm))
+
+        // First round: T(1) = HMAC-SHA256(key, nonce || 0x01)
+        mac.update(nonce)
+        mac.update(1)
+        val round1 = mac.doFinal()
+
+        // Second round: T(2) = HMAC-SHA256(key, T(1) || nonce || 0x02)
+        mac.update(round1)
+        mac.update(nonce)
+        mac.update(2)
+        val round2 = mac.doFinal()
+
+        // Third round: T(3) = HMAC-SHA256(key, T(2) || nonce || 0x03)
+        mac.update(round2)
+        mac.update(nonce)
+        mac.update(3)
+        val round3 = mac.doFinal()
+
+        val hmacKey = ByteArray(hashLen)
+        System.arraycopy(round2, 12, hmacKey, 0, 20)
+        System.arraycopy(round3, 0, hmacKey, 20, 12)
+
+        // checks the mac here to avoid building a new Mac.getInstance(algorithm)
+        if (ciphertext != null && ciphertextMac != null) {
+            mac.init(FixedKey(hmacKey, algorithm))
+            mac.update(nonce)
+            mac.update(ciphertext)
+            val calculatedMac = mac.doFinal()
+
+            check(calculatedMac.contentEquals(ciphertextMac)) {
+                "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${ciphertextMac.toHexKey()}"
+            }
+        }
+
+        return MessageKey(
+            chachaKey = round1,
+            chachaNonce = round2.copyOfRange(0, 12),
+            hmacKey = hmacKey,
+        )
+    }
+
+    class MessageKey(
+        val chachaKey: ByteArray,
+        val chachaNonce: ByteArray,
+        val hmacKey: ByteArray,
+    )
 }

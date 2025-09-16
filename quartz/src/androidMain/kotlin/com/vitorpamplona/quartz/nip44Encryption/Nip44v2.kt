@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
 import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.CancellationException
@@ -33,6 +33,7 @@ import kotlin.math.log2
 class Nip44v2 {
     private val sharedKeyCache = SharedKeyCache()
     private val hkdf = Hkdf()
+    private val chaCha = ChaCha20()
 
     private val saltPrefix = "nip44-v2".toByteArray(Charsets.UTF_8)
     private val hashLength = 32
@@ -69,12 +70,7 @@ class Nip44v2 {
         val messageKeys = getMessageKeys(conversationKey, nonce)
         val padded = pad(plaintext)
 
-        val ciphertext =
-            LibSodiumInstance.cryptoStreamChaCha20IetfXor(
-                padded,
-                messageKeys.chachaNonce,
-                messageKeys.chachaKey,
-            )
+        val ciphertext = chaCha.encrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
 
         val mac = hmacAad(messageKeys.hmacKey, ciphertext, nonce)
 
@@ -100,30 +96,32 @@ class Nip44v2 {
     fun decrypt(
         payload: String,
         conversationKey: ByteArray,
-    ): String {
-        val decoded = EncryptedInfo.decodePayload(payload)
-        return decrypt(decoded, conversationKey)
+    ): String = decrypt(EncryptedInfo.decodePayload(payload), conversationKey)
+
+    fun checkHMacAad(
+        messageKey: Hkdf.MessageKey,
+        decoded: EncryptedInfo,
+    ) {
+        val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
+
+        check(calculatedMac.contentEquals(decoded.mac)) {
+            "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${decoded.mac.toHexKey()}"
+        }
     }
 
     fun decrypt(
         decoded: EncryptedInfo,
         conversationKey: ByteArray,
     ): String {
-        val messageKey = getMessageKeys(conversationKey, decoded.nonce)
-        val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
+        val messageKey = checkMessageKeys(conversationKey, decoded)
 
-        check(calculatedMac.contentEquals(decoded.mac)) {
-            "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${decoded.mac.toHexKey()}"
-        }
-
-        val padded =
-            LibSodiumInstance.cryptoStreamChaCha20IetfXor(
+        return unpad(
+            chaCha.decrypt(
                 decoded.ciphertext,
                 messageKey.chachaNonce,
                 messageKey.chachaKey,
-            )
-
-        return unpad(padded)
+            ),
+        )
     }
 
     fun getConversationKey(
@@ -206,26 +204,18 @@ class Nip44v2 {
             "AAD associated data must be 32 bytes, but it was ${aad.size} bytes"
         }
 
-        return hkdf.extract(aad + message, key)
+        return hkdf.extract(aad, message, key)
     }
 
     fun getMessageKeys(
         conversationKey: ByteArray,
         nonce: ByteArray,
-    ): MessageKey {
-        val keys = hkdf.expand(conversationKey, nonce, 76)
-        return MessageKey(
-            chachaKey = keys.copyOfRange(0, 32),
-            chachaNonce = keys.copyOfRange(32, 44),
-            hmacKey = keys.copyOfRange(44, 76),
-        )
-    }
+    ): Hkdf.MessageKey = hkdf.fastExpand(conversationKey, nonce)
 
-    class MessageKey(
-        val chachaKey: ByteArray,
-        val chachaNonce: ByteArray,
-        val hmacKey: ByteArray,
-    )
+    fun checkMessageKeys(
+        conversationKey: ByteArray,
+        decoded: EncryptedInfo,
+    ): Hkdf.MessageKey = hkdf.fastExpand(conversationKey, decoded.nonce, decoded.ciphertext, decoded.mac)
 
     /** @return 32B shared secret */
     fun computeConversationKey(
@@ -245,7 +235,7 @@ class Nip44v2 {
             const val V: Int = 2
 
             fun decodePayload(payload: String): EncryptedInfo {
-                check(payload.length >= 132 || payload.length <= 87472) {
+                check(payload.length >= 132) {
                     "Invalid payload length ${payload.length} for $payload"
                 }
                 check(payload[0] != '#') { "Unknown encryption version ${payload.get(0)}" }
