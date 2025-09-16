@@ -55,7 +55,7 @@ jobs:
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
       - name: Build APK (gradle)
-        run: ./gradlew assembleBenchmark --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx3g"
+        run: ./gradlew assembleBenchmark
 
       - name: Upload Play APK Benchmark
         uses: actions/upload-artifact@v4
