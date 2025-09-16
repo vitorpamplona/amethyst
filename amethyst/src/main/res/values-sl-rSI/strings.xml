@@ -59,6 +59,16 @@ Prijavi se s privatnim ključem, za odstranitev iz seznama sledljivih</string>
 Prijavi se s privatnim ključem, za cenzuro besed ali stavkov</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Uporabljaš javni ključ in javni ključi omogočajo le branje.
 Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Uporabljaš javni ključ in javni ključi omogočajo le branje.
+Za spreminjanje nastavitev, se prijavi s privatnim ključem</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Uporabljaš javni ključ in javni ključi omogočajo le branje.
+Za nalaganje se je potrebno prijaviti s privatnim ključem</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Uporabljaš javni ključ in javni ključi omogočajo le branje.
+Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
+    <string name="unauthorized_exception">Dešifriranje nima pooblastila</string>
+    <string name="unauthorized_exception_description">Podpisnik ni odobril dešifriranja, ki je potrebno za to operacijo. V aplikaciji za podpisovanje aktivirajte NIP-44 možnost dešifriranja in poskusite znova</string>
+    <string name="signer_not_found_exception">Ne najdem podpisnika</string>
+    <string name="signer_not_found_exception_description">Ali je bila aplikacija za podpisovanje odstranjena? Preverite, ali je aplikacija za podpisovanje nameščena in ima dostop do tega računa. Odjavite se in ponovno prijavite, če se je aplikacija morda spremenila.</string>
     <string name="zaps">Zapi</string>
     <string name="view_count">Števec vpogledov</string>
     <string name="boost">Posreduj</string>
@@ -106,6 +116,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="my_awesome_group">Moja vrhunska skupina</string>
     <string name="picture_url">Url slike</string>
     <string name="description">Opis</string>
+    <string name="no_description">Ne najdem opisa</string>
     <string name="about_us">"O nas.. "</string>
     <string name="what_s_on_your_mind">Kaj imaš v mislih?</string>
     <string name="write_a_message">Napiši sporočilo…</string>
@@ -147,6 +158,11 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="video_saved_to_the_gallery">Video shranjen v video galerijo telefona</string>
     <string name="failed_to_save_the_video">Neuspešno shranjevanje videa</string>
     <string name="upload_image">Naloži sliko</string>
+    <string name="take_a_picture">Zajemi sliko</string>
+    <string name="record_a_video">Posnemi video</string>
+    <string name="record_a_message">Posnemi sporočilo</string>
+    <string name="record_a_message_title">Posnemi sporočilo</string>
+    <string name="record_a_message_description">Klikni in drži za snemanje sporočila</string>
     <string name="uploading">Nalaganje …</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uporabnik nima nastavljenega \"lightning\" naslova za sprejem satoshi-jev</string>
     <string name="reply_here">"odgovori tukaj.. "</string>
@@ -159,6 +175,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="blocked_users">Blokirani uporabniki</string>
     <string name="new_threads">Nove objave</string>
     <string name="conversations">Pogovori</string>
+    <string name="feed">Vir</string>
+    <string name="mod_queue">Moderatorska vrsta</string>
     <string name="notes">Zapiski</string>
     <string name="replies">Pogovori</string>
     <string name="mutual">Tvoje</string>
@@ -239,6 +257,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="public_chat_relays_title">Releji</string>
     <string name="public_chat_relays_explainer">Vnesi 1–3 releje, ki gostijo to skupino.
         Nostr odjemalci uporabljajo to nastavitev, da vedo, od kod prenesti tvoja sporočila in kam jih poslati.</string>
+    <string name="paid_relay">Plačljiv rele</string>
+    <string name="tor_relay">Vsili Tor pri povezovanju</string>
     <string name="posts_received">sprejete objave</string>
     <string name="remove">Odstrani</string>
     <string name="translations_auto">Avtomatsko</string>
@@ -283,6 +303,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="biometric_error">Napaka</string>
     <string name="badge_created_by">"Ustvaril/a %1$s"</string>
     <string name="badge_award_image_for">"Slika nagradne značke za %1$s"</string>
+    <string name="badge_award_image">\"Slika nagradne značke</string>
     <string name="new_badge_award_notif">Prejel/a si novo nagradno značko</string>
     <string name="award_granted_to">Nagradna zančka podeljena</string>
     <string name="copied_note_text_to_clipboard">Tekst zapiska kopiran v odložišče</string>
@@ -308,6 +329,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="quick_action_unfollow">Prenehaj slediti</string>
     <string name="quick_action_follow">Sledi</string>
     <string name="quick_action_request_deletion_gallery_title">Izbris iz galerije</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Odstrani ta medij iz svoje galerije</string>
     <string name="quick_action_request_deletion_alert_title">Prošnja za izbris</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst bo poslal prošnjo za izbris zapiska vsem relejem na katere ste povezani. Nobenega jamstva ni, da bo vaš zapisek trajno izbrisan iz teh relejev ali iz drugih relejev, kjer je morda shranjen.</string>
     <string name="quick_action_block_dialog_btn">Blokiraj</string>
@@ -429,6 +451,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="no">Ne</string>
     <string name="follow_list_selection">Spisek komu sledimo</string>
     <string name="follow_list_kind3follows">Vse, čemur sledimo</string>
+    <string name="follow_list_kind3follows_users_only">Vsi sledeni sledenih</string>
+    <string name="follow_list_kind3follows_proxy">Sledi preko posrednika</string>
     <string name="follow_list_aroundme">V moji okolici</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
@@ -568,7 +592,10 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="relay_setup">Releji</string>
     <string name="discover_follows">Sledi tropu</string>
     <string name="discover_reads">Branje</string>
+    <string name="discover_content_v2">Algoritemski viri</string>
     <string name="discover_marketplace">Tržnica</string>
+    <string name="discover_live_v2">Prenos v živo</string>
+    <string name="discover_community_v2">Skupnosti</string>
     <string name="discover_chat">Pogovori</string>
     <string name="community_approved_posts">Odobrene objave</string>
     <string name="groups_no_descriptor">Ta skupina nima opisa ali pravil. Obrnite se na lastnika, da jih doda</string>
@@ -576,6 +603,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="add_sensitive_content_label">Občutljiva vsebina</string>
     <string name="add_sensitive_content_description">Doda opozorilo o občutljivi vsebini pred prikazom te vsebine</string>
     <string name="preferences">Nastavitve aplikacije</string>
+    <string name="user_preferences">Nastavitve uporabnika</string>
     <string name="settings">Nastavitve</string>
     <string name="connectivity_type_always">Vedno</string>
     <string name="connectivity_type_wifi_only">Samo Wifi</string>
@@ -620,6 +648,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="geohash_explainer">Doda Geohash vaše lokacije k objavi. Javnost bo vedela, da se nahajate v radiju 5 km (3 milj) od trenutne lokacije</string>
     <string name="geohash_exclusive">Lokacijsko-ekskluzivna objava</string>
     <string name="geohash_exclusive_explainer">To bodo videli samo sledilci lokacije. Vaši splošni sledilci tega ne bodo videli.</string>
+    <string name="hashtag_exclusive">Hashtag-ekskluzivna objava</string>
+    <string name="hashtag_exclusive_explainer">Vidno bo le sledilcem tega hashtaga. Tvoji splošni sledilci tega ne bojo videli.</string>
     <string name="loading_location">Nalaganje lokacije</string>
     <string name="lack_location_permissions">Brez dovoljenj za lokacijo</string>
     <string name="add_sensitive_content_explainer">Doda opozorilo o občutljivi vsebini pred prikazom vaše vsebine. To je primerno za vsebino NSFW ali vsebino, ki jo nekateri lahko smatrajo za žaljivo ali vznemirjajočo</string>
@@ -640,6 +670,8 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="messages_new_subject_message">Razlaga članom</string>
     <string name="messages_new_subject_message_placeholder">Spreminjanje imena za dosego novih ciljev.</string>
     <string name="paste_from_clipboard">Prilepi iz odložišča</string>
+    <string name="invalid_nip47_uri_title">Napačen NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">URI %1$s ni veljaven NIP-47 vpis URI.</string>
     <string name="language_description">Za vmesnik aplikacije</string>
     <string name="theme_description">Temna, svetla ali sistemska tema</string>
     <string name="automatically_load_images_gifs_description">Samodejno naloži slike in GIF-e</string>
@@ -657,6 +689,9 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="media_added_to_profile_gallery">Medij dodan v galerijo profila</string>
     <string name="created_at">Ustvarjeno ob</string>
     <string name="rules">Pravila</string>
+    <string name="community_description">O nas</string>
+    <string name="guidelines">Smernice</string>
+    <string name="moderators">Moderatorji</string>
     <string name="login_with_external_signer">Prijavi se z Amber</string>
     <string name="status_update">Posodobi svoj status</string>
     <string name="lightning_wallets_not_found">Napaka pri razčlembi sporočila o napaki</string>
@@ -694,6 +729,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="wallet_number">Denarnica %1$s</string>
     <string name="error_opening_external_signer">Napaka pri odpiranju aplikacije za podpisovanje</string>
     <string name="error_opening_external_signer_description">Aplikacije za podpisovanje ni bilo mogoče najti. Preverite, ali aplikacija morda, ni bila odstranjena</string>
+    <string name="sign_request_rejected2">Zahteva za vpis zavrnjena</string>
     <string name="sign_request_rejected">Podpisovanje je bilo zavrnjeno</string>
     <string name="sign_request_rejected_description">Prepričajte se, da je aplikacija za podpisovanje odobrila to transakcijo</string>
     <string name="no_wallet_found_with_error">Denarnica za plačilo z \"lightning\" ni najdena (Napaka: %1$s). Prosimo, namestite \"lightning\" denarnico da boste lahko Zap-ali ostale</string>
@@ -822,6 +858,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="new_short">Novi kratki mediji: slike ali posnetki</string>
     <string name="new_community_note">Novo zapisek skupnosti</string>
     <string name="new_product">Nov produkt</string>
+    <string name="new_exclusive_geo_note">Nova geo-ekskluzivna objava</string>
     <string name="open_all_reactions_to_this_post">Odpri vse odzive na to objavo</string>
     <string name="close_all_reactions_to_this_post">Zapri vse odzive na to objavo</string>
     <string name="reply_description">Odgovori</string>
@@ -868,21 +905,41 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="dm_upload">Naloži ZS</string>
     <string name="relay_settings">Nastavitve relejev</string>
     <string name="public_home_section">Javni za odhajajočo pošto/domači releji</string>
+    <string name="public_home_section_explainer_profile">Uporabnik pošilja objave na te releje</string>
     <string name="public_home_section_explainer">Ta tip releja shranjuje vse vaše vsebine. Amethyst bo sem pošiljal vaše objave, ostali uporabniki pa bodo te releje uporabljali za iskanje vaših vsebin. Vstavite 1–3 releje. To so lahko osebni releji, plačljivi releji ali javni releji.</string>
     <string name="public_notif_section">Javni releji za dospelo pošto</string>
+    <string name="public_notif_section_explainer_profile">Uporabnik prejema obvestila na teh relejih</string>
     <string name="public_notif_section_explainer">Ta tip releja sprejema vsa odgovore, komentarje, všečke in zap-e na vaše objave. Ti releji so lahko plačljivi ali brezplačni. Omejitve, ki jih nastavi upravljavec releja, lahko omejijo obvestila, ki jih prejemate, tako v dobrem kot v slabem. Na primer, če ste tarča napada s spam komentarji, ki so nezaželeni, lahko plačljivi releji te nezaželene komentarje odstranijo. Vnesite med 1–3 releje.</string>
     <string name="private_inbox_section">Releji predala zasebnih sporočil</string>
+    <string name="private_inbox_section_explainer_profile">Uporabnik prejema ZS prek teh relejev</string>
     <string name="private_inbox_section_explainer">Vnesite 1–3 releje, ki bodo služili kot vaš predal za zasebna sporočila. Drugi bodo te releje uporabljali za pošiljanje zasebnih sporočil vam. Releji za zasebna sporočila bi morali sprejeti katero koli sporočilo od kogar koli, vendar samo vam dovoliti njihov prenos. Dobre možnosti so:\n - inbox.nostr.wine (plačljiv)\n - auth.nostr1.com (brezplačen)\n - you.nostr1.com (osebni releji - plačljivi)</string>
     <string name="private_outbox_section">Zasebni domači releji</string>
     <string name="private_outbox_section_explainer">Vnesite 1–3 releje za shranjevanje dogodkov, ki jih nihče drug ne more videti, kot so vaši osnutki in/ali nastavitve aplikacije. Idealno je, da so ti releji bodisi lokalni ali zahtevajo preverjanje pristnosti pred prenosom vsebine posameznega uporabnika.</string>
     <string name="kind_3_section">Splošni releji</string>
     <string name="kind_3_section_description">Amethyst uporablja te releje za prenos objav za vas.</string>
+    <string name="connected_section">Povezani releji</string>
+    <string name="connected_section_description">Trenutni seznam relejev v uporabi</string>
     <string name="kind_3_recommended_section">Priporočljivi releji</string>
     <string name="kind_3_recommended_section_description">Dodajte naslednje releje na svoj seznam Splošnih relejev, da boste prejeli objave od navedenih uporabnikov.</string>
     <string name="search_section">Iskalni releji</string>
     <string name="search_section_explainer">Seznam relejev za uporabo pri iskanju vsebine ali uporabnikov. Označevanje in iskanje ne bosta delovala, če možnosti niso na voljo. Prepričajte se, da podpirajo NIP-50.</string>
     <string name="local_section">Lokalni releji</string>
     <string name="local_section_explainer">Seznam relejev, ki delujejo na tej napravi.</string>
+    <string name="trusted_relays_title">Zaupanja vredni releji</string>
+    <string name="trusted_section">Zaupanja vredni releji</string>
+    <string name="trusted_section_explainer">Releji katerim zaupaš in zanje ne rabiš Tor povezave</string>
+    <string name="proxy_relays_title">Proxy releji</string>
+    <string name="proxy_section">Proxy releji</string>
+    <string name="proxy_section_explainer">Agregatorji, ki jih mora aplikacija uporabljati za prenos vašega vira vsebin, na primer filter.nostr.wine. To nadomesti model odhodne pošte (outbox model) in bo prisililo aplikacijo k povezovanju prek relejev iz vašega seznama.</string>
+    <string name="broadcast_relays_title">Oddajni releji</string>
+    <string name="broadcast_section">Oddajni releji</string>
+    <string name="broadcast_section_explainer">Releji specializirani za posredovanje vaših zapiskov na vse ostale releje kot npr. sendit.nosflare.com. Amethyst bo dodal ta rele k vsem vašim novim dogodkom.</string>
+    <string name="indexer_relays_title">Indeksni releji</string>
+    <string name="indexer_section">Indeksni releji</string>
+    <string name="indexer_section_explainer">Releji, specializirani za gostovanje metapodatkov in seznamov relejev vseh uporabnikov, na primer purplepag.es. Amethyst bo te releje uporabil za iskanje uporabnikov, ki niso na vaših seznamih.</string>
+    <string name="blocked_relays_title">Blokirani releji</string>
+    <string name="blocked_section">Blokirani releji</string>
+    <string name="blocked_section_explainer">Amethyst se ne bo nikoli povezal na te releje</string>
     <string name="zap_the_devs_title">Zap-ni  ustvarjalce!</string>
     <string name="zap_the_devs_description">Vaša donacija nam pomaga narediti spremembo. Vsak satoši šteje!</string>
     <string name="donate_now">Doniraj sedaj</string>
@@ -972,7 +1029,22 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="select_list_to_filter">Izberite seznam za filtriranje vira</string>
     <string name="temporary_account">Odjava ob zaklepu naprave</string>
     <string name="private_message">Zasebno sporočilo</string>
+    <string name="public_message">Javno sporočilo</string>
     <string name="group_relay">Rele za klepet</string>
     <string name="group_relay_explanation">Rele, na katerega so povezani vsi uporabniki tega klepeta</string>
     <string name="share_image">Deli sliko…</string>
+    <string name="unable_to_share_image">Deljenje slike ni uspelo, prosimo poskusite znova…</string>
+    <string name="search_by_hashtag">Išči hashtag: #%1$s</string>
+    <string name="dont_translate_from">Ne prevajaj iz</string>
+    <string name="dont_translate_from_description">Jeziki, ki so prikazani tukaj, ne bodo prevedeni. Izberite jezik, da ga odstranite in ga znova prevedete. </string>
+    <string name="pause">Premor</string>
+    <string name="play">Predvajaj</string>
+    <string name="open_dropdown_menu">Odpri spustni meni</string>
+    <string name="option_of">Možnost %1$s od %2$s</string>
+    <string name="feed_filter_selected">Filter vira, %1$s izbran</string>
+    <string name="feed_filter_select_an_option">Filter vira,  %1$s</string>
+    <string name="crashreport_found">Najdeno je poročilo o napaki</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Želite poslati poročilo o napaki Amethyst-u preko zasebnega sporočila? Vaši osebni podatki NE bojo posredovani.</string>
+    <string name="crashreport_found_send">Pošlji</string>
+    <string name="this_message_will_disappear_in_days">To sporočilo bo izginilo čez %1$d dni</string>
 </resources>
