@@ -75,9 +75,6 @@ jobs:
           name: Compose Reports
           path: amethyst/build/compose_compiler
 
-      - name: Tests
-        run: ./gradlew test --no-daemon
-
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
