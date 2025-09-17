@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import android.os.Build
+import android.util.Log
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
@@ -35,6 +37,22 @@ class OkHttpClientFactory(
         const val DEFAULT_IS_MOBILE: Boolean = false
         const val DEFAULT_TIMEOUT_ON_WIFI_SECS: Int = 10
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
+
+        private fun isEmulator(): Boolean =
+            Build.FINGERPRINT.startsWith("generic") ||
+                Build.FINGERPRINT.lowercase().contains("emulator") ||
+                Build.MODEL.contains("google_sdk") ||
+                Build.MODEL.lowercase().contains("droid4x") ||
+                Build.MODEL.contains("Emulator") ||
+                Build.MODEL.contains("Android SDK built for x86") ||
+                Build.MANUFACTURER.contains("Genymotion") ||
+                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+                "google_sdk" == Build.PRODUCT ||
+                Build.HARDWARE.contains("goldfish") ||
+                Build.HARDWARE.contains("ranchu") ||
+                Build.HARDWARE.contains("vbox86") ||
+                Build.HARDWARE.contains("nox") ||
+                Build.HARDWARE.contains("cuttlefish")
     }
 
     val logging = LoggingInterceptor()
@@ -42,22 +60,12 @@ class OkHttpClientFactory(
 
     val myDispatcher =
         Dispatcher().apply {
-            maxRequests = 512
-        }
-
-    /*
-    DEBUG OK HTTP connections here.
-    init {
-        if (isDebug) {
-            GlobalScope.launch(Dispatchers.IO) {
-                while (true) {
-                    Log.d("OkHttpClientFactory", "Active threads ${myDispatcher.runningCallsCount()}")
-                    delay(5000)
-                }
+            if (!isEmulator()) {
+                maxRequests = 512
+            } else {
+                Log.i("OkHttpClientFactory", "Emulator detected, using default maxRequests: 64.")
             }
         }
-    }
-     */
 
     private val rootClient =
         OkHttpClient
