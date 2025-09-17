@@ -74,20 +74,6 @@ class OkHttpClientFactory(
             }
         }
 
-    /*
-    DEBUG OK HTTP connections here.
-    init {
-        if (isDebug) {
-            GlobalScope.launch(Dispatchers.IO) {
-                while (true) {
-                    Log.d("OkHttpClientFactory", "Active threads ${myDispatcher.runningCallsCount()}")
-                    delay(5000)
-                }
-            }
-        }
-    }
-     */
-
     private val rootClient =
         OkHttpClient
             .Builder()
