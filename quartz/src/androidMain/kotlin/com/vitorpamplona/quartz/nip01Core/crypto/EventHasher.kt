@@ -20,12 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip01Core.crypto
 
+import com.fasterxml.jackson.core.JsonEncoding
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.core.util.BufferRecycler
+import com.fasterxml.jackson.core.util.ByteArrayBuilder
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import java.io.IOException
 
 class EventHasher {
     companion object {
@@ -63,13 +71,58 @@ class EventHasher {
             content: String,
         ): String = JsonMapper.toJson(makeJsonObjectForId(pubKey, createdAt, kind, tags, content))
 
+        fun fastMakeJsonForId(
+            pubKey: HexKey,
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): ByteArray {
+            val br: BufferRecycler = JsonMapper.mapper.factory._getBufferRecycler()
+            try {
+                ByteArrayBuilder(br).use { bb ->
+                    val generator = JsonMapper.mapper.createGenerator(bb, JsonEncoding.UTF8)
+                    generator.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8)
+                    generator.use {
+                        it.writeStartArray()
+                        it.writeNumber(0)
+                        it.writeString(pubKey)
+                        it.writeNumber(createdAt)
+                        it.writeNumber(kind)
+                        it.writeStartArray()
+                        tags.forEach { tag ->
+                            it.writeStartArray()
+                            tag.forEach { value ->
+                                it.writeString(value)
+                            }
+                            it.writeEndArray()
+                        }
+                        it.writeEndArray()
+                        it.writeString(content)
+                        it.writeEndArray()
+                    }
+
+                    val result = bb.toByteArray()
+                    bb.release()
+                    return result
+                }
+            } catch (e: JsonProcessingException) {
+                throw e
+            } catch (e: IOException) {
+                // shouldn't really happen, but is declared as possibility so:
+                throw JsonMappingException.fromUnexpectedIOE(e)
+            } finally {
+                br.releaseToPool()
+            }
+        }
+
         fun hashIdBytes(
             pubKey: HexKey,
             createdAt: Long,
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): ByteArray = sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
+        ): ByteArray = sha256(fastMakeJsonForId(pubKey, createdAt, kind, tags, content))
 
         fun hashId(serializedJsonAsBytes: ByteArray): String = sha256(serializedJsonAsBytes).toHexKey()
 
@@ -80,5 +133,17 @@ class EventHasher {
             tags: Array<Array<String>>,
             content: String,
         ): String = hashIdBytes(pubKey, createdAt, kind, tags, content).toHexKey()
+
+        fun hashIdEquals(
+            id: HexKey,
+            pubKey: HexKey,
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): Boolean {
+            val outId = hashIdBytes(pubKey, createdAt, kind, tags, content)
+            return Hex.isEqual(id, outId)
+        }
     }
 }

@@ -79,13 +79,13 @@ class PoWMiner(
 
                 val bytes =
                     EventHasher
-                        .makeJsonForId(
-                            pubKey,
-                            template.createdAt,
-                            template.kind,
-                            template.tags + PoWTag.assemble(initialNonce, desiredPoW),
-                            template.content,
-                        ).toByteArray()
+                        .fastMakeJsonForId(
+                            pubKey = pubKey,
+                            createdAt = template.createdAt,
+                            kind = template.kind,
+                            tags = template.tags + PoWTag.assemble(initialNonce, desiredPoW),
+                            content = template.content,
+                        )
 
                 val startIndex = bytes.indexOf(initialNonce.toByteArray())
 
