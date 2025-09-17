@@ -39,8 +39,6 @@ class OkHttpClientFactory(
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
         const val MAX_REQUESTS_EMULATOR: Int = 32
         const val MAX_REQUESTS_DEVICE: Int = 512
-        const val MAX_REQUESTS_PER_HOST_EMULATOR: Int = 5
-        const val MAX_REQUESTS_PER_HOST_DEVICE: Int = 20
 
         private fun isEmulator(): Boolean =
             Build.FINGERPRINT.startsWith("generic") ||
@@ -66,11 +64,9 @@ class OkHttpClientFactory(
         Dispatcher().apply {
             if (isEmulator()) {
                 maxRequests = MAX_REQUESTS_EMULATOR
-                maxRequestsPerHost = MAX_REQUESTS_PER_HOST_EMULATOR
-                Log.i("OkHttpClientFactory", "Emulator detected, using reduced maxRequests: $MAX_REQUESTS_EMULATOR, maxRequestsPerHost: $MAX_REQUESTS_PER_HOST_EMULATOR")
+                Log.i("OkHttpClientFactory", "Emulator detected, using reduced maxRequests: $MAX_REQUESTS_EMULATOR.")
             } else {
                 maxRequests = MAX_REQUESTS_DEVICE
-                maxRequestsPerHost = MAX_REQUESTS_PER_HOST_DEVICE
             }
         }
 
