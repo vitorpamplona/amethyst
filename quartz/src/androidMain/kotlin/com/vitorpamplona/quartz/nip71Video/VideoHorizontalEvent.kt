@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip71Video.videoIMetas
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.UUID
 
