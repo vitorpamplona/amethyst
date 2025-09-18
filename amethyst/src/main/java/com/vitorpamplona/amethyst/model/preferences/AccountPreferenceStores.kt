@@ -75,8 +75,9 @@ class AccountPreferenceStores(
             )
         }
 
-    fun removeAccount(npub: String) {
-        file(npub).delete()
+    fun removeAccount(npub: String): Boolean {
+        val deleted = file(npub).delete()
         storeCache.remove(npub)
+        return deleted
     }
 }

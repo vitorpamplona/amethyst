@@ -72,8 +72,10 @@ import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
+private const val DAMUS_RELAY_URL = "wss://relay.damus.io"
+
 @Composable
-public fun RelayBadgesHorizontal(
+fun RelayBadgesHorizontal(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -162,24 +164,24 @@ fun RenderRelayIconPreview() {
     ThemeComparisonColumn {
         Row {
             RenderRelayIcon(
-                displayUrl = "wss://relay.damus.io",
-                iconUrl = "wss://relay.damus.io",
+                displayUrl = DAMUS_RELAY_URL,
+                iconUrl = DAMUS_RELAY_URL,
                 loadProfilePicture = true,
                 pingInMs = 100,
                 loadRobohash = true,
                 iconModifier = LargeRelayIconModifier,
             )
             RenderRelayIcon(
-                displayUrl = "wss://relay.damus.io",
-                iconUrl = "wss://relay.damus.io",
+                displayUrl = DAMUS_RELAY_URL,
+                iconUrl = DAMUS_RELAY_URL,
                 loadProfilePicture = true,
                 pingInMs = 300,
                 loadRobohash = true,
                 iconModifier = LargeRelayIconModifier,
             )
             RenderRelayIcon(
-                displayUrl = "wss://relay.damus.io",
-                iconUrl = "wss://relay.damus.io",
+                displayUrl = DAMUS_RELAY_URL,
+                iconUrl = DAMUS_RELAY_URL,
                 loadProfilePicture = true,
                 pingInMs = 500,
                 loadRobohash = true,

@@ -20,27 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.navs
 
-import androidx.compose.material3.DrawerState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
 class ObservableNav(
-    val sourceNav: INav,
+    private val sourceNav: INav,
     override val navigationScope: CoroutineScope,
     val onBeforeNavigate: () -> Unit,
-) : INav {
-    override val drawerState: DrawerState = sourceNav.drawerState
-
-    override fun closeDrawer() {
-        sourceNav.closeDrawer()
-    }
-
-    override fun openDrawer() {
-        sourceNav.openDrawer()
-    }
-
+) : INav by sourceNav {
     override fun nav(route: Route) {
         navigationScope.launch {
             onBeforeNavigate()
@@ -71,11 +60,11 @@ class ObservableNav(
 
     override fun <T : Route> popUpTo(
         route: Route,
-        upToClass: KClass<T>,
+        klass: KClass<T>,
     ) {
         navigationScope.launch {
             onBeforeNavigate()
         }
-        sourceNav.popUpTo(route, upToClass)
+        sourceNav.popUpTo(route, klass)
     }
 }

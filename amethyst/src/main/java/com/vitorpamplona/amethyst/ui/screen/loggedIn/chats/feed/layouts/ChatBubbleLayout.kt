@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.ui.theme.chatDraftBackground
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 
+private const val RELAYS_AND_ACTIONS_TEXT = "Relays and Actions"
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatBubbleLayout(
@@ -205,7 +207,7 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text("Relays and Actions") },
+            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { bgColor ->
             Text("This is my note")
         }
@@ -239,7 +241,7 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text("Relays and Actions") },
+            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { bgColor ->
             Text("This is a very long long loong note")
         }
@@ -273,7 +275,7 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text("Relays and Actions") },
+            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { bgColor ->
             Text("This is a draft note")
         }
@@ -307,7 +309,7 @@ private fun BubblePreview() {
                     },
                 )
             },
-            detailRow = { Text("Relays and Actions") },
+            detailRow = { Text(RELAYS_AND_ACTIONS_TEXT) },
         ) { bgColor ->
             Text("Short note")
         }
