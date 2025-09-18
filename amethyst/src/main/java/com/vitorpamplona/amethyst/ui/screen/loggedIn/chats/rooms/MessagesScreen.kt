@@ -43,7 +43,7 @@ fun MessagesScreen(
     val act = LocalContext.current.getActivity()
     val windowSizeClass = calculateWindowSizeClass(act)
 
-    val twoPane by remember {
+    val twoPane by remember(windowSizeClass.widthSizeClass) {
         derivedStateOf {
             when (windowSizeClass.widthSizeClass) {
                 WindowWidthSizeClass.Compact -> false
