@@ -28,9 +28,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
+private const val MONTH_DATE_FORMAT = "MMM dd"
+
 var locale = Locale.getDefault()
-var yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-var monthFormatter = SimpleDateFormat("MMM dd", locale)
+var yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
 
 fun timeAgo(
     time: Long?,
@@ -46,8 +49,8 @@ fun timeAgo(
 
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat("MMM dd", locale)
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         }
 
         " • " + yearFormatter.format(time * 1000)
@@ -55,8 +58,8 @@ fun timeAgo(
         // Dec 12
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat("MMM dd", locale)
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         }
 
         " • " + monthFormatter.format(time * 1000)
@@ -86,8 +89,8 @@ fun timeAgoNoDot(
 
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat("MMM dd", locale)
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         }
 
         yearFormatter.format(time * 1000)
@@ -95,8 +98,8 @@ fun timeAgoNoDot(
         // Dec 12
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat("MMM dd", locale)
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         }
 
         monthFormatter.format(time * 1000)
@@ -127,8 +130,8 @@ fun dateFormatter(
 
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat("MMM dd", locale)
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         }
 
         yearFormatter.format(time * 1000)
@@ -136,8 +139,8 @@ fun dateFormatter(
         // Dec 12
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat("MMM dd", locale)
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         }
 
         monthFormatter.format(time * 1000)

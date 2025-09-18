@@ -27,16 +27,18 @@ import okio.FileNotFoundException
 import java.io.FileInputStream
 import java.io.InputStreamReader
 
+private const val STACK_TRACE_FILENAME = "stack.trace"
+
 class CrashReportCache(
     val appContext: Context,
 ) {
-    private fun outputStream() = appContext.openFileOutput("stack.trace", Context.MODE_PRIVATE)
+    private fun outputStream() = appContext.openFileOutput(STACK_TRACE_FILENAME, Context.MODE_PRIVATE)
 
-    private fun deleteReport() = appContext.deleteFile("stack.trace")
+    private fun deleteReport() = appContext.deleteFile(STACK_TRACE_FILENAME)
 
     private fun inputStreamOrNull(): FileInputStream? =
         try {
-            appContext.openFileInput("stack.trace")
+            appContext.openFileInput(STACK_TRACE_FILENAME)
         } catch (_: FileNotFoundException) {
             null
         }
