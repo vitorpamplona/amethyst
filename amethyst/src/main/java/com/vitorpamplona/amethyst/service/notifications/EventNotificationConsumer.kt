@@ -52,13 +52,12 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
 
+private const val TAG = "EventNotificationConsumer"
+private const val ACCOUNT_QUERY_PARAM = "?account="
+
 class EventNotificationConsumer(
     private val applicationContext: Context,
 ) {
-    companion object {
-        const val TAG = "EventNotificationConsumer"
-    }
-
     suspend fun consume(event: GiftWrapEvent) {
         Log.d(TAG, "New Notification Arrived")
 
@@ -210,7 +209,7 @@ class EventNotificationConsumer(
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
                 val noteUri =
-                    chatNote.toNEvent() + "?account=" +
+                    chatNote.toNEvent() + ACCOUNT_QUERY_PARAM +
                         account.signer.pubKey
                             .hexToByteArray()
                             .toNpub()
@@ -255,7 +254,7 @@ class EventNotificationConsumer(
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
                 val noteUri =
-                    chatNote.toNEvent() + "?account=" +
+                    chatNote.toNEvent() + ACCOUNT_QUERY_PARAM +
                         account.signer.pubKey
                             .hexToByteArray()
                             .toNpub()
@@ -297,7 +296,7 @@ class EventNotificationConsumer(
                         val user = note.author?.toBestDisplayName() ?: ""
                         val userPicture = note.author?.profilePicture()
                         val noteUri =
-                            note.toNEvent() + "?account=" +
+                            note.toNEvent() + ACCOUNT_QUERY_PARAM +
                                 account.signer.pubKey
                                     .hexToByteArray()
                                     .toNpub()
@@ -324,17 +323,17 @@ class EventNotificationConsumer(
         signer: NostrSigner,
     ): String? {
         val event = note.event
-        when (event) {
+        return when (event) {
             is PrivateDmEvent -> {
-                return event.decryptContent(signer)
+                event.decryptContent(signer)
             }
 
             is LnZapRequestEvent -> {
-                return decryptZapContentAuthor(event, signer)?.content
+                decryptZapContentAuthor(event, signer)?.content
             }
 
             else -> {
-                return event?.content
+                event?.content
             }
         }
     }
@@ -402,7 +401,7 @@ class EventNotificationConsumer(
                             }
                             val userPicture = senderInfo.first.profilePicture()
                             val noteUri =
-                                "notifications?account=" +
+                                "notifications$ACCOUNT_QUERY_PARAM" +
                                     account.signer.pubKey
                                         .hexToByteArray()
                                         .toNpub()
@@ -437,7 +436,7 @@ class EventNotificationConsumer(
 
                         val userPicture = senderInfo.first.profilePicture()
                         val noteUri =
-                            "notifications?account=" +
+                            "notifications$ACCOUNT_QUERY_PARAM" +
                                 account.signer.pubKey
                                     .hexToByteArray()
                                     .toNpub()
