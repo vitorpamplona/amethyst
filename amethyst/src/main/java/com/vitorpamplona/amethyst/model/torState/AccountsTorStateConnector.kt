@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
-import kotlin.collections.ifEmpty
 
 class AccountsTorStateConnector(
     accountsCache: AccountCacheState,

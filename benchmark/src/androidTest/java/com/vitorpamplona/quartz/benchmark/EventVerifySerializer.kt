@@ -18,40 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core
+package com.vitorpamplona.quartz.benchmark
 
-import android.util.Log
+import androidx.benchmark.junit4.BenchmarkRule
+import androidx.benchmark.junit4.measureRepeated
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
-import com.vitorpamplona.quartz.utils.Hex
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
 
-fun Event.generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
+/**
+ * Benchmark, which will execute on an Android device.
+ *
+ * The body of [BenchmarkRule.measureRepeated] is measured in a loop, and Studio will output the
+ * result. Modify your code to see how it affects performance.
+ */
+@RunWith(AndroidJUnit4::class)
+class EventVerifySerializer {
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
-fun Event.verifyId(): Boolean {
-    if (id.isEmpty()) return false
-    return EventHasher.hashIdEquals(id, pubKey, createdAt, kind, tags, content)
-}
-
-fun Event.verifySignature(): Boolean {
-    if (id.isEmpty() || sig.isEmpty()) return false
-    return Nip01.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
-}
-
-/** Checks if the ID is correct and then if the pubKey's secret key signed the event. */
-fun Event.checkSignature() {
-    if (!verifyId()) {
-        throw Exception("ID mismatch: our ID is ${generateId()} for event ${toJson()}")
+    @Test
+    fun serializeToCheckId() {
+        val event = Event.fromJson(largeKind1Event)
+        benchmarkRule.measureRepeated {
+            EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        }
     }
-    if (!verifySignature()) {
-        throw Exception("Bad signature!")
+
+    @Test
+    fun fastSerializeToCheckId() {
+        val event = Event.fromJson(largeKind1Event)
+        benchmarkRule.measureRepeated {
+            EventHasher.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        }
     }
 }
-
-fun Event.verify(): Boolean =
-    try {
-        verifyId() && verifySignature()
-    } catch (e: Exception) {
-        Log.w("Event", "Event $id does not have a valid signature: ${toJson()}", e)
-        false
-    }

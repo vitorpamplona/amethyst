@@ -27,13 +27,17 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.verify
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OtsBlockHeightCache
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CoroutineScope
@@ -66,6 +70,25 @@ class ThreadDualAxisChartAssemblerTest {
                                 .build()
                         },
                         CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                    ),
+                nwcFilterAssembler =
+                    NWCPaymentFilterAssembler(
+                        NostrClient(
+                            OkHttpWebSocket.Builder {
+                                OkHttpClient
+                                    .Builder()
+                                    .followRedirects(true)
+                                    .followSslRedirects(true)
+                                    .build()
+                            },
+                            CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                        ),
+                    ),
+                otsResolverBuilder =
+                    OkHttpOtsResolverBuilder(
+                        okHttpClient = { OkHttpClient.Builder().build() },
+                        isTorActive = { false },
+                        cache = OtsBlockHeightCache(),
                     ),
             )
 

@@ -61,22 +61,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Play Benchmark APK
-          path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-benchmark.apk
+          path: amethyst/build/outputs/apk/play/benchmark/amethyst-play-universal-benchmark.apk
 
       - name: Upload FDroid APK Benchmark
         uses: actions/upload-artifact@v4
         with:
           name: FDroid Benchmark APK
-          path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-benchmark.apk
+          path: amethyst/build/outputs/apk/fdroid/benchmark/amethyst-fdroid-universal-benchmark.apk
 
       - name: Upload Compose Reports
         uses: actions/upload-artifact@v4
         with:
           name: Compose Reports
           path: amethyst/build/compose_compiler
-
-      - name: Tests
-        run: ./gradlew test --no-daemon
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4

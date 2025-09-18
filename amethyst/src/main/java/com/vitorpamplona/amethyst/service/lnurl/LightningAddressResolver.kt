@@ -172,7 +172,7 @@ class LightningAddressResolver {
                 val messageNode = tree.get("message")
                 val statusNode = tree.get("status")
 
-                if (tree.get("error").isBoolean && messageNode != null) {
+                if (tree.get("error") != null && tree.get("error").isBoolean && messageNode != null) {
                     if (errorNode.asBoolean()) {
                         return messageNode.asText()
                     }

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip28PublicChat.admin
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -66,6 +67,9 @@ class ChannelCreateEvent(
                     ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
                 }
             } catch (e: JsonParseException) {
+                Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
+                ChannelDataNorm()
+            } catch (e: MismatchedInputException) {
                 Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
                 ChannelDataNorm()
             }
