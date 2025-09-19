@@ -18,18 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.amethyst.ui.dal
 
-import androidx.compose.runtime.Immutable
+import android.util.Log
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
+import kotlinx.coroutines.runBlocking
 
-@Immutable
-class StringToastMsg(
-    val title: String,
-    val msg: String,
-) : ToastMsg()
+class FollowSetFeedFilter(
+    val account: Account,
+) : FeedFilter<FollowSet>() {
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-followsets"
 
-class ActionableStringToastMsg(
-    val title: String,
-    val msg: String,
-    val action: () -> Unit,
-) : ToastMsg()
+    override fun feed(): List<FollowSet> =
+        runBlocking(account.scope.coroutineContext) {
+            try {
+                val fetchedSets = account.getFollowSetNotes()
+                val followSets = fetchedSets.map { account.mapNoteToFollowSet(it) }
+                println("Updated follow set size for feed filter: ${followSets.size}")
+                followSets
+            } catch (e: Exception) {
+                // if (e is CancellationException) throw e
+                Log.e(this@FollowSetFeedFilter.javaClass.simpleName, "Failed to load follow lists: ${e.message}")
+                throw e
+            }
+        }
+}

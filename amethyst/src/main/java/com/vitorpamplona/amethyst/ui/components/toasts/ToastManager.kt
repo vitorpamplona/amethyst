@@ -40,6 +40,14 @@ class ToastManager {
     }
 
     fun toast(
+        title: String,
+        message: String,
+        action: () -> Unit,
+    ) {
+        toasts.tryEmit(ActionableStringToastMsg(title, message, action))
+    }
+
+    fun toast(
         titleResId: Int,
         resourceId: Int,
     ) {
