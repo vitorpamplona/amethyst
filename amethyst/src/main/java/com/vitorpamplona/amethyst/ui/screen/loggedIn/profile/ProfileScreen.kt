@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observe
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.BookmarkTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.TabBookmarks
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
@@ -104,7 +103,6 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     userId: String?,
     accountViewModel: AccountViewModel,
-    nostrListsViewModel: NostrUserListFeedViewModel,
     nav: INav,
 ) {
     if (userId == null) return
@@ -124,7 +122,6 @@ fun ProfileScreen(
         PrepareViewModels(
             baseUser = it,
             accountViewModel = accountViewModel,
-            nostrListsViewModel = nostrListsViewModel,
             nav = nav,
         )
     }
@@ -134,7 +131,6 @@ fun ProfileScreen(
 fun PrepareViewModels(
     baseUser: User,
     accountViewModel: AccountViewModel,
-    nostrListsViewModel: NostrUserListFeedViewModel,
     nav: INav,
 ) {
     val followsFeedViewModel: UserProfileFollowsUserFeedViewModel =
@@ -243,7 +239,6 @@ fun PrepareViewModels(
         bookmarksFeedViewModel,
         galleryFeedViewModel,
         reportsFeedViewModel,
-        nostrListsViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -262,7 +257,6 @@ fun ProfileScreen(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    followSetsViewModel: NostrUserListFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -275,7 +269,6 @@ fun ProfileScreen(
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
     WatchLifecycleAndUpdateModel(reportsFeedViewModel)
-    WatchLifecycleAndUpdateModel(followSetsViewModel)
 
     UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
 
@@ -294,7 +287,6 @@ fun ProfileScreen(
             bookmarksFeedViewModel,
             galleryFeedViewModel,
             reportsFeedViewModel,
-            followSetsViewModel,
             accountViewModel,
             nav,
         )
@@ -388,14 +380,13 @@ private fun RenderScreen(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
-    followSetsViewModel: NostrUserListFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val pagerState = rememberPagerState { 11 }
 
     Column {
-        ProfileHeader(baseUser, appRecommendations, followSetsViewModel, nav, accountViewModel)
+        ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
         ScrollableTabRow(
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,

@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.FollowSetsManagementDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
@@ -130,6 +131,9 @@ fun AppNavigation(
             composableArgs<Route.FollowSetRoute> {
                 FollowSetScreen(it.setIdentifier, accountViewModel, listsViewModel, nav)
             }
+            composableArgs<Route.FollowSetManagement> {
+                FollowSetsManagementDialog(it.userHexKey, accountViewModel.account, listsViewModel, nav)
+            }
 
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
@@ -145,7 +149,7 @@ fun AppNavigation(
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, listsViewModel, nav) }
+            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
