@@ -81,11 +81,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetsManagementDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.FollowSetsManagementDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen

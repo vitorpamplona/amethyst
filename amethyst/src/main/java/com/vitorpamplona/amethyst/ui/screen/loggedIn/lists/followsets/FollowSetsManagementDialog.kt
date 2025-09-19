@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets
 
 import android.util.Log
 import androidx.compose.foundation.background
@@ -98,7 +98,10 @@ fun FollowSetsManagementDialog(
                     TopAppBar(
                         title = {
                             Column {
-                                Text(text = "Your Lists", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    text = "Your Lists",
+                                    fontWeight = FontWeight.SemiBold,
+                                )
 //                                HorizontalDivider()
                             }
                         },
