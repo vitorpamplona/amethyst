@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g"
 
     steps:
       - name: Checkout code
@@ -24,8 +26,11 @@ jobs:
       - name: Cache gradle
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.gradle/build-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -33,14 +38,14 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Test (gradle)
-        run: ./gradlew test --no-daemon
+        run: ./gradlew test --no-daemon -Pci
 
       - name: Android Test Report
         uses: asadmansr/android-test-report-action@v1.2.0
         if: ${{ always() }} # IMPORTANT: run Android Test Report regardless
 
-      - name: Build APK (gradle)
-        run: ./gradlew assembleDebug
+      - name: Build debug APK (gradle)
+        run: ./gradlew assembleDebug -Pci
 
       - name: Upload Play APK
         uses: actions/upload-artifact@v4
@@ -54,8 +59,8 @@ jobs:
           name: FDroid Debug APK
           path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
 
-      - name: Build APK (gradle)
-        run: ./gradlew assembleBenchmark
+      - name: Build assemble APK (gradle)
+        run: ./gradlew assembleBenchmark -Pci
 
       - name: Upload Play APK Benchmark
         uses: actions/upload-artifact@v4
