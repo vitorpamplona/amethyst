@@ -24,11 +24,8 @@ import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -62,16 +59,17 @@ fun LiveStatusIndicatorForChannel(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
 ) {
-    var isOnline by remember { mutableStateOf(false) }
-
-    LaunchedEffect(channel) {
+    val isOnline by produceState(initialValue = false, key1 = channel) {
         while (true) {
-            isOnline = checkChannelIsOnline(channel, accountViewModel)
-            delay(30_000) // Check every 30 seconds
+            value = checkChannelIsOnline(channel, accountViewModel)
+            delay(30_000) // Poll every 30 seconds
         }
     }
 
-    LiveStatusIndicator(isOnline = isOnline, modifier = modifier)
+    LiveStatusIndicator(
+        isOnline = isOnline,
+        modifier = modifier,
+    )
 }
 
 private suspend fun checkChannelIsOnline(
