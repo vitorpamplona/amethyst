@@ -57,7 +57,7 @@ class NostrUserListFeedViewModel(
     private val _feedContent = MutableStateFlow<FollowSetState>(FollowSetState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
-    private fun refresh() {
+    fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             refreshSuspended()
         }
@@ -105,7 +105,7 @@ class NostrUserListFeedViewModel(
             }
         } catch (e: Exception) {
             Log.e(
-                "NostrUserListFeedViewModel",
+                this.javaClass.simpleName,
                 "refreshSuspended: Error loading or refreshing feed -> ${e.message}",
             )
             _feedContent.update { FollowSetState.FeedError(e.message.toString()) }

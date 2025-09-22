@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -80,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewListCreationDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -95,66 +98,66 @@ fun FollowSetsManagementDialog(
     val followSetsState by followSetsViewModel.feedContent.collectAsState()
     val userInfo by remember { derivedStateOf { LocalCache.getOrCreateUser(userHex) } }
 
-    when (followSetsState) {
-        is FollowSetState.Loaded -> {
-            val lists = (followSetsState as FollowSetState.Loaded).feed
-
-            Scaffold(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .recalculateWindowInsets(),
-                containerColor = AlertDialogDefaults.containerColor,
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Column {
-                                Text(
-                                    text = "Your Lists",
-                                    fontWeight = FontWeight.SemiBold,
-                                )
+    Scaffold(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .recalculateWindowInsets(),
+        containerColor = AlertDialogDefaults.containerColor,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Your Lists",
+                            fontWeight = FontWeight.SemiBold,
+                        )
 //                                HorizontalDivider()
-                            }
-                        },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { navigator.popBack() },
-                            ) {
-                                ArrowBackIcon()
-                            }
-                        },
-                        colors =
-                            TopAppBarDefaults
-                                .topAppBarColors(
-                                    containerColor = AlertDialogDefaults.containerColor,
-                                ),
-                    )
-                },
-                floatingActionButton = {
-                    OutlinedButton(
-                        onClick = {
-                            navigator.popBack()
-                        },
-                        shape = ButtonBorder,
-                        colors = ButtonDefaults.filledTonalButtonColors(),
-                        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
-                    ) {
-                        Text(text = "Cancel", fontWeight = FontWeight.SemiBold)
                     }
                 },
-            ) { contentPadding ->
-                Column(
-                    modifier =
-                        Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(
-                                start = 10.dp,
-                                end = 10.dp,
-                                top = contentPadding.calculateTopPadding(),
-                                bottom = contentPadding.calculateBottomPadding(),
-                            ).consumeWindowInsets(contentPadding)
-                            .imePadding(),
-                ) {
+                navigationIcon = {
+                    IconButton(
+                        onClick = { navigator.popBack() },
+                    ) {
+                        ArrowBackIcon()
+                    }
+                },
+                colors =
+                    TopAppBarDefaults
+                        .topAppBarColors(
+                            containerColor = AlertDialogDefaults.containerColor,
+                        ),
+            )
+        },
+        floatingActionButton = {
+            OutlinedButton(
+                onClick = {
+                    navigator.popBack()
+                },
+                shape = ButtonBorder,
+                colors = ButtonDefaults.filledTonalButtonColors(),
+                elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
+            ) {
+                Text(text = "Cancel", fontWeight = FontWeight.SemiBold)
+            }
+        },
+    ) { contentPadding ->
+        Column(
+            modifier =
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        start = 10.dp,
+                        end = 10.dp,
+                        top = contentPadding.calculateTopPadding(),
+                        bottom = contentPadding.calculateBottomPadding(),
+                    ).consumeWindowInsets(contentPadding)
+                    .imePadding(),
+        ) {
+            when (followSetsState) {
+                is FollowSetState.Loaded -> {
+                    val lists = (followSetsState as FollowSetState.Loaded).feed
+
                     lists.forEachIndexed { index, list ->
                         Spacer(StdVertSpacer)
                         FollowSetItem(
@@ -191,22 +194,78 @@ fun FollowSetsManagementDialog(
                             },
                         )
                     }
-                    FollowSetsCreationMenu(
-                        userName = userInfo.toBestDisplayName(),
-                        onSetCreate = { setName, setIsPrivate, description ->
-                            followSetsViewModel.addFollowSet(
-                                setName = setName,
-                                setDescription = description,
-                                isListPrivate = setIsPrivate,
-                                optionalFirstMemberHex = userHex,
-                                account = account,
-                            )
-                        },
-                    )
+                }
+
+                FollowSetState.Empty -> {
+                    EmptyOrNoneFound { followSetsViewModel.refresh() }
+                }
+
+                is FollowSetState.FeedError -> {
+                    val errorMsg = (followSetsState as FollowSetState.FeedError).errorMessage
+                    ErrorMessage(errorMsg) { followSetsViewModel.refresh() }
+                }
+
+                FollowSetState.Loading -> {
+                    Loading()
                 }
             }
+
+            if (followSetsState != FollowSetState.Loading) {
+                FollowSetsCreationMenu(
+                    userName = userInfo.toBestDisplayName(),
+                    onSetCreate = { setName, setIsPrivate, description ->
+                        followSetsViewModel.addFollowSet(
+                            setName = setName,
+                            setDescription = description,
+                            isListPrivate = setIsPrivate,
+                            optionalFirstMemberHex = userHex,
+                            account = account,
+                        )
+                    },
+                )
+            }
         }
-        else -> {}
+    }
+}
+
+@Composable
+private fun Loading() {
+    Column(
+        Modifier.fillMaxWidth().fillMaxHeight(0.5f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CircularProgressIndicator()
+        Text(stringRes(R.string.loading_feed))
+    }
+}
+
+@Composable
+private fun EmptyOrNoneFound(onRefresh: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().fillMaxHeight(0.5f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text("No follow sets were found, or you don't have any follow sets. Tap below to refresh, or use the menu to create one.")
+        Spacer(modifier = StdVertSpacer)
+        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
+    }
+}
+
+@Composable
+private fun ErrorMessage(
+    errorMsg: String,
+    onRefresh: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().fillMaxHeight(0.5f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text("There was a problem while fetching: $errorMsg")
+        Spacer(modifier = StdVertSpacer)
+        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
 }
 
