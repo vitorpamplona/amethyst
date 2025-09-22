@@ -65,7 +65,15 @@ data class FollowSet(
                     profileList = publicFollows.toSet(),
                 )
             } else {
-                throw Exception("Mixed follow sets are not supported.")
+                // Follow set is empty, so assume public. Why? Nostr limitation.
+                // TODO: Could this be fixed at protocol level?
+                FollowSet(
+                    identifierTag = dTag,
+                    title = listTitle,
+                    description = listDescription,
+                    visibility = ListVisibility.Public,
+                    profileList = publicFollows.toSet(),
+                )
             }
         }
     }
