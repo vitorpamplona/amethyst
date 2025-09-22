@@ -290,6 +290,13 @@ class MediaCompressor {
                                     path: String?,
                                 ) {
                                     if (path != null) {
+                                        // Sanity check: if compressed file is larger than original, return original
+                                        if (originalSize > 0 && size >= originalSize) {
+                                            Log.d("MediaCompressor", "Compressed file ($size bytes) is larger than original ($originalSize bytes). Using original file.")
+                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
+                                            return
+                                        }
+
                                         val reductionPercent =
                                             if (originalSize > 0) {
                                                 ((originalSize - size) * 100.0 / originalSize).toInt()
