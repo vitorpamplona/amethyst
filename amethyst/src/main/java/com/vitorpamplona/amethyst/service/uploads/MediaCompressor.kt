@@ -49,6 +49,19 @@ class MediaCompressorResult(
     val size: Long?,
 )
 
+/** The plan
+ * 1. Check input resolution and input fps
+ * 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
+ * 3. Create Configuration with no quality setting, a bitrate setting, resizer, streamable = true, isMinBitrateCheckEnabled=false
+ *
+ *
+ * Don't use Configuration.quality which only determines bitrate. Instead let's create aggressive bitrates based on input and selected quality
+ * H265 is not supported, use bitrates that suit h264
+ * Detect fps in source, multiple bitrate by 1.5 if 60fps or higher
+ * Bitrate floor has to be 1Mbps for now
+ * Future extension: Modify library to use bps for bitrate instead of Mbps which allows only 1Mbps as lowest and increments of 1 (Int)
+ *
+ */
 class MediaCompressor {
     // ALL ERRORS ARE IGNORED. The original file is returned.
     suspend fun compress(
