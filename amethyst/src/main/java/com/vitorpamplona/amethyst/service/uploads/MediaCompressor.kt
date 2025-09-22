@@ -24,6 +24,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.text.format.Formatter.formatFileSize
+import android.util.Log
+import android.widget.Toast
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
@@ -235,6 +238,17 @@ class MediaCompressor {
                 null
             }
 
+        // Get original file size for compression reporting
+        val originalSize =
+            try {
+                applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    inputStream.available().toLong()
+                } ?: 0L
+            } catch (e: Exception) {
+                Log.w("MediaCompressor", "Failed to get original file size: ${e.message}")
+                0L
+            }
+
         val result =
             withTimeoutOrNull(30000) {
                 suspendCancellableCoroutine { continuation ->
@@ -274,7 +288,25 @@ class MediaCompressor {
                                     path: String?,
                                 ) {
                                     if (path != null) {
-                                        Log.d("MediaCompressor", "Video compression success. Compressed size [$size]")
+                                        val reductionPercent =
+                                            if (originalSize > 0) {
+                                                ((originalSize - size) * 100.0 / originalSize).toInt()
+                                            } else {
+                                                0
+                                            }
+
+                                        // Show compression result toast
+                                        if (originalSize > 0 && size > 0) {
+                                            val message =
+                                                "Video compressed: ${formatFileSize(applicationContext, size)} " +
+                                                    "(${if (reductionPercent > 0) "-$reductionPercent%" else "+${-reductionPercent}%"})"
+
+                                            // Post on main thread for Toast
+                                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                        Log.d("MediaCompressor", "Video compression success. Original size [$originalSize] -> Compressed size [$size] ($reductionPercent% reduction)")
                                         continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
                                     } else {
                                         Log.d("MediaCompressor", "Video compression successful, but returned null path")
