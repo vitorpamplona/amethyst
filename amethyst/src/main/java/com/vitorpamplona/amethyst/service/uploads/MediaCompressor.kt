@@ -49,6 +49,50 @@ class MediaCompressorResult(
     val size: Long?,
 )
 
+data class CompressionRule(
+    val width: Int,
+    val height: Int,
+    val bitrateMbps: Float,
+    val description: String,
+)
+
+private val compressionRules =
+    mapOf(
+        CompressorQuality.LOW to
+            mapOf(
+                "4K" to CompressionRule(1280, 720, 2f, "4K→720p, 2Mbps"),
+                "1440p" to CompressionRule(1280, 720, 2f, "1440p→720p, 2Mbps"),
+                "1080p" to CompressionRule(854, 480, 1f, "1080p→480p, 1Mbps"),
+                "720p" to CompressionRule(640, 360, 1f, "720p→360p, 1Mbps"),
+                "480p" to CompressionRule(426, 240, 1f, "480p→240p, 1Mbps"),
+                "360p" to CompressionRule(426, 240, 0.3f, "360p→240p, 0.3Mbps"),
+                "240p" to CompressionRule(320, 180, 0.2f, "240p→180p, 0.2Mbps"),
+                "default" to CompressionRule(854, 480, 1f, "Low quality fallback, 1Mbps"),
+            ),
+        CompressorQuality.MEDIUM to
+            mapOf(
+                "4K" to CompressionRule(1920, 1080, 6f, "4K→1080p, 6Mbps"),
+                "1440p" to CompressionRule(1920, 1080, 6f, "1440p→1080p, 6Mbps"),
+                "1080p" to CompressionRule(1280, 720, 3f, "1080p→720p, 3Mbps"),
+                "720p" to CompressionRule(854, 480, 2f, "720p→480p, 2Mbps"),
+                "480p" to CompressionRule(640, 360, 1f, "480p→360p, 1Mbps"),
+                "360p" to CompressionRule(426, 240, 0.5f, "360p→240p, 0.5Mbps"),
+                "240p" to CompressionRule(320, 180, 0.3f, "240p→180p, 0.3Mbps"),
+                "default" to CompressionRule(1280, 720, 2f, "Medium quality fallback, 2Mbps"),
+            ),
+        CompressorQuality.HIGH to
+            mapOf(
+                "4K" to CompressionRule(3840, 2160, 16f, "4K→4K, 16Mbps"),
+                "1440p" to CompressionRule(1920, 1080, 8f, "1440p→1080p, 8Mbps"),
+                "1080p" to CompressionRule(1920, 1080, 6f, "1080p→1080p, 6Mbps"),
+                "720p" to CompressionRule(1280, 720, 3f, "720p→720p, 3Mbps"),
+                "480p" to CompressionRule(854, 480, 2f, "480p→480p, 2Mbps"),
+                "360p" to CompressionRule(640, 360, 1f, "360p→360p, 1Mbps"),
+                "240p" to CompressionRule(426, 240, 0.5f, "240p→240p, 0.5Mbps"),
+                "default" to CompressionRule(1920, 1080, 3f, "High quality fallback, 3Mbps"),
+            ),
+    )
+
 /** The plan
  * 1. Check input resolution and input fps
  * 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
