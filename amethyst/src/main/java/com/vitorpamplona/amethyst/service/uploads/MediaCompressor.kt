@@ -28,9 +28,9 @@ import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
-import com.abedelazizshe.lightcompressorlibrary.VideoQuality
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
+import com.abedelazizshe.lightcompressorlibrary.config.VideoResizer
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
@@ -41,6 +41,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import kotlin.coroutines.resume
+import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -55,7 +56,16 @@ data class CompressionRule(
     val height: Int,
     val bitrateMbps: Float,
     val description: String,
-)
+) {
+    fun getBitrateMbpsInt(): Int {
+        // Library doesn't support float so we have to convert it to int and use 1 as minimum
+        return if (bitrateMbps < 1) {
+            1
+        } else {
+            bitrateMbps.roundToInt()
+        }
+    }
+}
 
 private data class VideoInfo(
     val resolution: VideoResolution,
@@ -157,6 +167,7 @@ private fun getVideoInfo(
  * xxx 1. Check input resolution and input fps
  * xxx 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
  * 3. Create Configuration with no quality setting, a bitrate setting, resizer, streamable = true, isMinBitrateCheckEnabled=false
+ * 4. Don't upload converted file if compression results in larger file
  *
  *
  * Don't use Configuration.quality which only determines bitrate. Instead let's create aggressive bitrates based on input and selected quality
@@ -200,18 +211,24 @@ class MediaCompressor {
         applicationContext: Context,
         mediaQuality: CompressorQuality,
     ): MediaCompressorResult {
-        val videoQuality =
-            when (mediaQuality) {
-                CompressorQuality.VERY_LOW -> VideoQuality.VERY_LOW
-                // Override user selection LOW to use VERY_LOW for better video streaming experience
-                CompressorQuality.LOW -> VideoQuality.VERY_LOW
-                CompressorQuality.MEDIUM -> VideoQuality.MEDIUM
-                CompressorQuality.HIGH -> VideoQuality.HIGH
-                CompressorQuality.VERY_HIGH -> VideoQuality.VERY_HIGH
-                else -> VideoQuality.MEDIUM
+        val videoInfo = getVideoInfo(uri, applicationContext)
+
+        val videoBitrateInMbps =
+            if (videoInfo != null) {
+                compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
+            } else {
+                // Default/fallback logic when videoInfo is null
+                2
             }
 
-        Log.d("MediaCompressor", "Using video compression $videoQuality")
+        val resizer =
+            if (videoInfo != null) {
+                val rules = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName())
+                VideoResizer.limitSize(rules.width.toDouble(), rules.height.toDouble())
+            } else {
+                // null VideoResizer should result in unchanged resolution
+                null
+            }
 
         val result =
             withTimeoutOrNull(30000) {
@@ -221,7 +238,7 @@ class MediaCompressor {
                         context = applicationContext,
                         // => Source can be provided as content uris
                         uris = listOf(uri),
-                        isStreamable = false,
+                        isStreamable = true,
                         // THIS STORAGE
                         // sharedStorageConfiguration = SharedStorageConfiguration(
                         //    saveAt = SaveLocation.movies, // => default is movies
@@ -231,9 +248,11 @@ class MediaCompressor {
                         storageConfiguration = AppSpecificStorageConfiguration(),
                         configureWith =
                             Configuration(
-                                quality = videoQuality,
+                                videoBitrateInMbps = videoBitrateInMbps,
+                                resizer = resizer,
                                 // => required name
                                 videoNames = listOf(Uuid.random().toString()),
+                                isMinBitrateCheckEnabled = false,
                             ),
                         listener =
                             object : CompressionListener {
