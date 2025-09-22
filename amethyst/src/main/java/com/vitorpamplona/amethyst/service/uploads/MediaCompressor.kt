@@ -53,7 +53,8 @@ class MediaCompressorResult(
  * xxx 4. Don't upload converted file if compression results in larger file (return MediaCompressorResult(uri, contentType, null))
  * xxx 5. Add toast message about file size saving
  * xxx 6. refactor (helper class for video compression)
- * 7. Fix toast for case when compressed file is larger than original
+ * xxx 7. Fix toast for case when compressed file is larger than original
+ * xxx 8. fix ratio multiplier for framerate ->60
  *
  *
  * Don't use Configuration.quality which only determines bitrate. Instead let's create aggressive bitrates based on input and selected quality

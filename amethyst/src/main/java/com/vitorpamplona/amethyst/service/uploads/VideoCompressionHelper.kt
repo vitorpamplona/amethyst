@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.text.format.Formatter.formatFileSize
 import android.util.Log
 import android.widget.Toast
@@ -128,9 +130,16 @@ class VideoCompressionHelper {
 
         val videoBitrateInMbps =
             if (videoInfo != null) {
-                val bitrate = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
-                Log.d("VideoCompressionHelper", "Video bitrate calculated: ${bitrate}Mbps for ${videoInfo.resolution.getStandardName()} quality=$mediaQuality")
-                bitrate
+                val baseBitrate = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
+                // Apply 1.5x multiplier for 60fps or higher videos
+                val adjustedBitrate =
+                    if (videoInfo.framerate >= 60f) {
+                        (baseBitrate * 1.5f).roundToInt()
+                    } else {
+                        baseBitrate
+                    }
+                Log.d("VideoCompressionHelper", "Video bitrate calculated: ${adjustedBitrate}Mbps for ${videoInfo.resolution.getStandardName()} quality=$mediaQuality framerate=${videoInfo.framerate}fps")
+                adjustedBitrate
             } else {
                 // Default/fallback logic when videoInfo is null
                 Log.d("VideoCompressionHelper", "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
@@ -188,7 +197,8 @@ class VideoCompressionHelper {
                                 override fun onProgress(
                                     index: Int,
                                     percent: Float,
-                                ) {}
+                                ) {
+                                }
 
                                 override fun onStart(index: Int) {}
 
@@ -198,13 +208,6 @@ class VideoCompressionHelper {
                                     path: String?,
                                 ) {
                                     if (path != null) {
-                                        // Sanity check: if compressed file is larger than original, return original
-                                        if (originalSize > 0 && size >= originalSize) {
-                                            Log.d("VideoCompressionHelper", "Compressed file ($size bytes) is larger than original ($originalSize bytes). Using original file.")
-                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
-                                            return
-                                        }
-
                                         val reductionPercent =
                                             if (originalSize > 0) {
                                                 ((originalSize - size) * 100.0 / originalSize).toInt()
@@ -212,16 +215,19 @@ class VideoCompressionHelper {
                                                 0
                                             }
 
-                                        // Show compression result toast
-                                        if (originalSize > 0 && size > 0) {
-                                            val message =
-                                                "Video compressed: ${formatFileSize(applicationContext, size)} " +
-                                                    "(${if (reductionPercent > 0) "-$reductionPercent%" else "+${-reductionPercent}%"})"
+                                        // Sanity check: if compressed file is larger than original, return original
+                                        if (originalSize > 0 && size >= originalSize) {
+                                            Log.d("VideoCompressionHelper", "Compressed file ($size bytes) is larger than original ($originalSize bytes). Using original file.")
+                                            applicationContext.showToast("Video compression didn't reduce size. Using original file.")
+                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
+                                            return
+                                        }
 
-                                            // Post on main thread for Toast
-                                            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
-                                            }
+                                        if (originalSize > 0 && size > 0) {
+                                            val sizeLabel = formatFileSize(applicationContext, size)
+                                            val percentLabel = if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
+
+                                            applicationContext.showToast("Video compressed: $sizeLabel ($percentLabel)")
                                         }
                                         Log.d("VideoCompressionHelper", "Video compression success. Original size [$originalSize] -> Compressed size [$size] ($reductionPercent% reduction)")
                                         continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
@@ -249,6 +255,15 @@ class VideoCompressionHelper {
             }
 
         return result ?: MediaCompressorResult(uri, contentType, null)
+    }
+
+    private fun Context.showToast(
+        message: String,
+        duration: Int = Toast.LENGTH_LONG,
+    ) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(this, message, duration).show()
+        }
     }
 
     private fun getVideoInfo(
