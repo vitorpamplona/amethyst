@@ -209,7 +209,7 @@ fun CustomListsScreen(
 }
 
 @Composable
-fun FollowSetFabsAndMenu(
+private fun FollowSetFabsAndMenu(
     modifier: Modifier = Modifier,
     onAddPrivateList: (name: String, description: String?) -> Unit,
     onAddPublicList: (name: String, description: String?) -> Unit,
@@ -227,7 +227,7 @@ fun FollowSetFabsAndMenu(
                 isListAdditionDialogOpen.value = true
             },
             shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
         ) {
             Icon(
                 painter = painterResource(R.drawable.lock_plus),
@@ -241,7 +241,7 @@ fun FollowSetFabsAndMenu(
                 isListAdditionDialogOpen.value = true
             },
             shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
         ) {
             Icon(
                 painter = painterResource(R.drawable.earth_plus),
