@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 object RelayStats {
     private val innerCache =
-        object : LruCache<NormalizedRelayUrl, RelayStat>(100) {
+        object : LruCache<NormalizedRelayUrl, RelayStat>(1000) {
             override fun create(key: NormalizedRelayUrl): RelayStat = RelayStat()
         }
 

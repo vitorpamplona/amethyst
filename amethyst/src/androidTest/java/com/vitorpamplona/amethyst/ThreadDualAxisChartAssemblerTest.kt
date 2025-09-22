@@ -52,6 +52,8 @@ import org.junit.runner.RunWith
 class ThreadDualAxisChartAssemblerTest {
     companion object {
         val keyPair = KeyPair()
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
         val client =
             NostrClient(
                 OkHttpWebSocket.Builder {
@@ -61,7 +63,7 @@ class ThreadDualAxisChartAssemblerTest {
                         .followSslRedirects(true)
                         .build()
                 },
-                CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                scope,
             )
 
         val account =
@@ -73,7 +75,7 @@ class ThreadDualAxisChartAssemblerTest {
                 otsResolverBuilder = EmptyOtsResolverBuilder,
                 cache = LocalCache,
                 client = client,
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                scope = scope,
             )
 
         val db =

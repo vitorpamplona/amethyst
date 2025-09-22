@@ -45,7 +45,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
-import kotlin.collections.map
 
 @Stable
 class RelayFeedViewModel :

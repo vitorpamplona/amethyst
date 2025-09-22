@@ -33,16 +33,16 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable
-abstract class Card {
-    abstract fun createdAt(): Long
+interface Card {
+    fun createdAt(): Long
 
-    abstract fun id(): String
+    fun id(): String
 }
 
 @Immutable
 class BadgeCard(
     val note: Note,
-) : Card() {
+) : Card {
     override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
@@ -51,7 +51,7 @@ class BadgeCard(
 @Immutable
 class NoteCard(
     val note: Note,
-) : Card() {
+) : Card {
     override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
@@ -61,7 +61,7 @@ class NoteCard(
 class ZapUserSetCard(
     val user: User,
     val zapEvents: ImmutableList<CombinedZap>,
-) : Card() {
+) : Card {
     val createdAt = zapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L
 
     override fun createdAt(): Long = createdAt
@@ -75,7 +75,7 @@ class MultiSetCard(
     val boostEvents: ImmutableList<Note>,
     val likeEvents: ImmutableList<Note>,
     val zapEvents: ImmutableList<CombinedZap>,
-) : Card() {
+) : Card {
     val maxCreatedAt =
         maxOf(
             zapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
@@ -108,7 +108,7 @@ class MultiSetCard(
 @Immutable
 class MessageSetCard(
     val note: Note,
-) : Card() {
+) : Card {
     override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
