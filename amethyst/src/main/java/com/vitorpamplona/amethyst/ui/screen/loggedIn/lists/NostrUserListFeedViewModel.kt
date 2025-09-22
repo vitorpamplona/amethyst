@@ -118,6 +118,7 @@ class NostrUserListFeedViewModel(
         setName: String,
         setDescription: String?,
         isListPrivate: Boolean,
+        optionalFirstMemberHex: String? = null,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
@@ -129,6 +130,7 @@ class NostrUserListFeedViewModel(
                     title = setName,
                     description = setDescription,
                     isPrivate = isListPrivate,
+                    firstMemberHex = optionalFirstMemberHex,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)

@@ -219,6 +219,7 @@ class PeopleListEvent(
             title: String,
             description: String? = null,
             isPrivate: Boolean,
+            firstMemberHex: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
@@ -227,7 +228,7 @@ class PeopleListEvent(
                 val newList =
                     create(
                         name = title,
-                        person = UserTag(pubKey = signer.pubKey),
+                        person = UserTag(pubKey = firstMemberHex ?: signer.pubKey),
                         isPrivate = isPrivate,
                         signer = signer,
                         dTag = dTag,
@@ -239,7 +240,7 @@ class PeopleListEvent(
                     val event =
                         build(
                             name = title,
-                            privatePeople = listOf(UserTag(pubKey = signer.pubKey)),
+                            privatePeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
                             signer = signer,
                             dTag = dTag,
                             createdAt = createdAt,
@@ -252,7 +253,7 @@ class PeopleListEvent(
                     val event =
                         build(
                             name = title,
-                            publicPeople = listOf(UserTag(pubKey = signer.pubKey)),
+                            publicPeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
                             signer = signer,
                             dTag = dTag,
                             createdAt = createdAt,
