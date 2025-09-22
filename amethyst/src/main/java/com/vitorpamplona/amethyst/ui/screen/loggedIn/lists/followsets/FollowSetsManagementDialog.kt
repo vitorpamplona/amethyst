@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +34,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.Add
@@ -42,9 +45,11 @@ import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -53,14 +58,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -68,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewListCreationDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -119,10 +130,23 @@ fun FollowSetsManagementDialog(
                                 ),
                     )
                 },
+                floatingActionButton = {
+                    OutlinedButton(
+                        onClick = {
+                            navigator.popBack()
+                        },
+                        shape = ButtonBorder,
+                        colors = ButtonDefaults.filledTonalButtonColors(),
+                        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
+                    ) {
+                        Text(text = "Cancel", fontWeight = FontWeight.SemiBold)
+                    }
+                },
             ) { contentPadding ->
                 Column(
                     modifier =
                         Modifier
+                            .verticalScroll(rememberScrollState())
                             .padding(
                                 start = 10.dp,
                                 end = 10.dp,
@@ -137,7 +161,7 @@ fun FollowSetsManagementDialog(
                             modifier = Modifier.fillMaxWidth(),
                             listHeader = list.title,
                             listVisibility = list.visibility,
-                            userName = userInfo.info?.bestName() ?: userInfo.pubkeyDisplayHex(),
+                            userName = userInfo.toBestDisplayName(),
                             isUserInList = list.profileList.contains(userHex),
                             onRemoveUser = {
                                 Log.d(
@@ -167,6 +191,18 @@ fun FollowSetsManagementDialog(
                             },
                         )
                     }
+                    FollowSetsCreationMenu(
+                        userName = userInfo.toBestDisplayName(),
+                        onSetCreate = { setName, setIsPrivate, description ->
+                            followSetsViewModel.addFollowSet(
+                                setName = setName,
+                                setDescription = description,
+                                isListPrivate = setIsPrivate,
+                                optionalFirstMemberHex = userHex,
+                                account = account,
+                            )
+                        },
+                    )
                 }
             }
         }
@@ -187,7 +223,6 @@ fun FollowSetItem(
     Row(
         modifier =
             modifier
-//                .clickable(onClick = onAddUser)
                 .border(
                     width = Dp.Hairline,
                     color = Color.Gray,
@@ -289,4 +324,108 @@ fun FollowSetItem(
             Text(text = if (isUserInList) "Remove" else "Add", color = Color.Gray)
         }
     }
+}
+
+@Composable
+fun FollowSetsCreationMenu(
+    modifier: Modifier = Modifier,
+    userName: String,
+    onSetCreate: (setName: String, setIsPrivate: Boolean, description: String?) -> Unit,
+) {
+    val isListAdditionDialogOpen = remember { mutableStateOf(false) }
+    val isPrivateOptionTapped = remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier.padding(vertical = 30.dp),
+    ) {
+        Text(
+            "Make New List",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Start,
+        )
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(0.5f),
+            thickness = 3.dp,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(modifier = StdVertSpacer)
+        FollowSetCreationItem(
+            setIsPrivate = false,
+            userName = userName,
+            onClick = {
+                isListAdditionDialogOpen.value = true
+            },
+        )
+        FollowSetCreationItem(
+            setIsPrivate = true,
+            userName = userName,
+            onClick = {
+                isPrivateOptionTapped.value = true
+                isListAdditionDialogOpen.value = true
+            },
+        )
+    }
+
+    if (isListAdditionDialogOpen.value) {
+        NewListCreationDialog(
+            onDismiss = {
+                isListAdditionDialogOpen.value = false
+                isPrivateOptionTapped.value = false
+            },
+            shouldBePrivate = isPrivateOptionTapped.value,
+            onCreateList = { name, description ->
+                onSetCreate(name, isPrivateOptionTapped.value, description)
+            },
+        )
+    }
+}
+
+@Composable
+fun FollowSetCreationItem(
+    modifier: Modifier = Modifier,
+    setIsPrivate: Boolean,
+    userName: String,
+    onClick: () -> Unit,
+) {
+    HorizontalDivider()
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(
+                    color =
+                        ButtonDefaults
+                            .filledTonalButtonColors()
+                            .containerColor
+                            .copy(alpha = 0.2f),
+                ).padding(vertical = 15.dp)
+                .clickable(role = Role.Button, onClick = onClick),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Create new ${if (setIsPrivate) "Private" else "Public"} list with user",
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = StdHorzSpacer)
+            Icon(
+                painter =
+                    painterResource(
+                        if (setIsPrivate) R.drawable.lock_plus else R.drawable.earth_plus,
+                    ),
+                contentDescription = null,
+            )
+        }
+        Spacer(modifier = StdVertSpacer)
+        Text(
+            "Creates a ${if (setIsPrivate) "private" else "public"} follow set, and adds $userName to it.",
+            fontWeight = FontWeight.Light,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 2,
+            color = Color.Gray,
+        )
+    }
+    HorizontalDivider()
 }
