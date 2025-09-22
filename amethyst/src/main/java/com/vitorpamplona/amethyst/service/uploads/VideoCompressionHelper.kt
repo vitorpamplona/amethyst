@@ -125,115 +125,139 @@ class VideoCompressionHelper {
         contentType: String?,
         applicationContext: Context,
         mediaQuality: CompressorQuality,
+        timeoutMs: Long = 60_000L, // configurable, default 60s
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
 
         val videoBitrateInMbps =
             if (videoInfo != null) {
-                val baseBitrate = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
-                // Apply 1.5x multiplier for 60fps or higher videos
-                val adjustedBitrate =
+                val baseBitrate =
+                    compressionRules
+                        .getValue(mediaQuality)
+                        .getValue(videoInfo.resolution.getStandardName())
+                        .getBitrateMbpsInt()
+
+                // Apply 1.5x multiplier for 60fps+
+                val adjusted =
                     if (videoInfo.framerate >= 60f) {
                         (baseBitrate * 1.5f).roundToInt()
                     } else {
                         baseBitrate
                     }
-                Log.d("VideoCompressionHelper", "Video bitrate calculated: ${adjustedBitrate}Mbps for ${videoInfo.resolution.getStandardName()} quality=$mediaQuality framerate=${videoInfo.framerate}fps")
-                adjustedBitrate
+
+                Log.d(
+                    "VideoCompressionHelper",
+                    "Bitrate: ${adjusted}Mbps for ${videoInfo.resolution.getStandardName()} " +
+                        "quality=$mediaQuality framerate=${videoInfo.framerate}fps",
+                )
+                adjusted
             } else {
-                // Default/fallback logic when videoInfo is null
-                Log.d("VideoCompressionHelper", "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
+                Log.w("VideoCompressionHelper", "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 2
             }
 
         val resizer =
             if (videoInfo != null) {
-                val rules = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName())
-                Log.d("VideoCompressionHelper", "Video resizer: ${videoInfo.resolution.width}x${videoInfo.resolution.height} -> ${rules.width}x${rules.height} (${rules.description})")
+                val rules =
+                    compressionRules
+                        .getValue(mediaQuality)
+                        .getValue(videoInfo.resolution.getStandardName())
+                Log.d(
+                    "VideoCompressionHelper",
+                    "Resizer: ${videoInfo.resolution.width}x${videoInfo.resolution.height} -> " +
+                        "${rules.width}x${rules.height} (${rules.description})",
+                )
                 VideoResizer.limitSize(rules.width.toDouble(), rules.height.toDouble())
             } else {
-                // null VideoResizer should result in unchanged resolution
-                Log.d("VideoCompressionHelper", "Video resizer: null (original resolution preserved)")
+                Log.d("VideoCompressionHelper", "Resizer: null (original resolution preserved)")
                 null
             }
 
-        // Get original file size for compression reporting
-        val originalSize =
-            try {
-                applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.available().toLong()
-                } ?: 0L
-            } catch (e: Exception) {
-                Log.w("VideoCompressionHelper", "Failed to get original file size: ${e.message}")
-                0L
-            }
+        // Get original file size safely
+        val originalSize = applicationContext.getFileSize(uri)
 
         val result =
-            withTimeoutOrNull(30000) {
+            withTimeoutOrNull(timeoutMs) {
                 suspendCancellableCoroutine { continuation ->
                     VideoCompressor.start(
-                        // => This is required
                         context = applicationContext,
-                        // => Source can be provided as content uris
                         uris = listOf(uri),
                         isStreamable = true,
-                        // THIS STORAGE
-                        // sharedStorageConfiguration = SharedStorageConfiguration(
-                        //    saveAt = SaveLocation.movies, // => default is movies
-                        //    videoName = "compressed_video" // => required name
-                        // ),
-                        // OR AND NOT BOTH
                         storageConfiguration = AppSpecificStorageConfiguration(),
                         configureWith =
                             Configuration(
                                 videoBitrateInMbps = videoBitrateInMbps,
                                 resizer = resizer,
-                                // => required name
                                 videoNames = listOf(UUID.randomUUID().toString()),
                                 isMinBitrateCheckEnabled = false,
                             ),
                         listener =
                             object : CompressionListener {
+                                override fun onStart(index: Int) {}
+
                                 override fun onProgress(
                                     index: Int,
                                     percent: Float,
-                                ) {
-                                }
-
-                                override fun onStart(index: Int) {}
+                                ) {}
 
                                 override fun onSuccess(
                                     index: Int,
                                     size: Long,
                                     path: String?,
                                 ) {
-                                    if (path != null) {
-                                        val reductionPercent =
-                                            if (originalSize > 0) {
-                                                ((originalSize - size) * 100.0 / originalSize).toInt()
-                                            } else {
-                                                0
-                                            }
+                                    if (path == null) {
+                                        applicationContext.notifyUser(
+                                            "Video compression succeeded, but path was null",
+                                            "VideoCompressionHelper",
+                                            Log.WARN,
+                                        )
+                                        if (continuation.isActive) continuation.resume(null)
+                                        return
+                                    }
 
-                                        // Sanity check: if compressed file is larger than original, return original
-                                        if (originalSize > 0 && size >= originalSize) {
-                                            Log.d("VideoCompressionHelper", "Compressed file ($size bytes) is larger than original ($originalSize bytes). Using original file.")
-                                            applicationContext.showToast("Video compression didn't reduce size. Using original file.")
-                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
-                                            return
+                                    val reductionPercent =
+                                        if (originalSize > 0) {
+                                            ((originalSize - size) * 100.0 / originalSize).toInt()
+                                        } else {
+                                            0
                                         }
 
-                                        if (originalSize > 0 && size > 0) {
-                                            val sizeLabel = formatFileSize(applicationContext, size)
-                                            val percentLabel = if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
-
-                                            applicationContext.showToast("Video compressed: $sizeLabel ($percentLabel)")
+                                    // Sanity check: compression not smaller than original
+                                    if (originalSize > 0 && size >= originalSize) {
+                                        applicationContext.notifyUser(
+                                            "Compressed file larger than original. Using original.",
+                                            "VideoCompressionHelper",
+                                            Log.WARN,
+                                        )
+                                        if (continuation.isActive) {
+                                            continuation.resume(
+                                                MediaCompressorResult(uri, contentType, null),
+                                            )
                                         }
-                                        Log.d("VideoCompressionHelper", "Video compression success. Original size [$originalSize] -> Compressed size [$size] ($reductionPercent% reduction)")
-                                        continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
-                                    } else {
-                                        Log.d("VideoCompressionHelper", "Video compression successful, but returned null path")
-                                        continuation.resume(null)
+                                        return
+                                    }
+
+                                    // Show compression result
+                                    if (originalSize > 0 && size > 0) {
+                                        val sizeLabel = formatFileSize(applicationContext, size)
+                                        val percentLabel =
+                                            if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
+                                        applicationContext.notifyUser(
+                                            "Video compressed: $sizeLabel ($percentLabel)",
+                                            "VideoCompressionHelper",
+                                        )
+                                    }
+
+                                    Log.d(
+                                        "VideoCompressionHelper",
+                                        "Compression success: Original [$originalSize] -> " +
+                                            "Compressed [$size] ($reductionPercent% reduction)",
+                                    )
+
+                                    if (continuation.isActive) {
+                                        continuation.resume(
+                                            MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
+                                        )
                                     }
                                 }
 
@@ -241,13 +265,17 @@ class VideoCompressionHelper {
                                     index: Int,
                                     failureMessage: String,
                                 ) {
-                                    Log.d("VideoCompressionHelper", "Video compression failed: $failureMessage")
-                                    // keeps going with original video
-                                    continuation.resume(null)
+                                    applicationContext.notifyUser(
+                                        "Video compression failed: $failureMessage",
+                                        "VideoCompressionHelper",
+                                        Log.ERROR,
+                                    )
+                                    if (continuation.isActive) continuation.resume(null)
                                 }
 
                                 override fun onCancelled(index: Int) {
-                                    continuation.resume(null)
+                                    Log.w("VideoCompressionHelper", "Video compression cancelled")
+                                    if (continuation.isActive) continuation.resume(null)
                                 }
                             },
                     )
@@ -257,12 +285,30 @@ class VideoCompressionHelper {
         return result ?: MediaCompressorResult(uri, contentType, null)
     }
 
-    private fun Context.showToast(
+    private fun Context.getFileSize(uri: Uri): Long =
+        try {
+            contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                if (cursor.moveToFirst()) cursor.getLong(sizeIndex) else 0L
+            } ?: 0L
+        } catch (e: Exception) {
+            Log.w("VideoCompressionHelper", "Failed to get file size: ${e.message}")
+            0L
+        }
+
+    private fun Context.notifyUser(
         message: String,
+        logTag: String,
+        logLevel: Int = Log.DEBUG,
         duration: Int = Toast.LENGTH_LONG,
     ) {
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(this, message, duration).show()
+        }
+        when (logLevel) {
+            Log.ERROR -> Log.e(logTag, message)
+            Log.WARN -> Log.w(logTag, message)
+            else -> Log.d(logTag, message)
         }
     }
 
