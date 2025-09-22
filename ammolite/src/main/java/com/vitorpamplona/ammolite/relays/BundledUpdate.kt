@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope

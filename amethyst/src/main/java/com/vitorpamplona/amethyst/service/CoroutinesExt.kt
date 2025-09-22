@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.util.Log
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 

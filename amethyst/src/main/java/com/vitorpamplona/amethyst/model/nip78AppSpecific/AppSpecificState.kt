@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model.nip78AppSpecific
 
-import android.util.Log
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +57,7 @@ class AppSpecificState(
         val toInternal = settings.syncedSettings.toInternal()
         return AppSpecificDataEvent.create(
             dTag = APP_SPECIFIC_DATA_D_TAG,
-            description = signer.nip44Encrypt(JsonMapper.mapper.writeValueAsString(toInternal), signer.pubKey),
+            description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
             otherTags = emptyArray(),
             signer = signer,
         )
@@ -73,7 +72,7 @@ class AppSpecificState(
                     LocalCache.justConsumeMyOwnEvent(event)
                     try {
                         val decrypted = signer.decrypt(event.content, event.pubKey)
-                        val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                        val syncedSettings = JsonMapper.fromJson<AccountSyncedSettingsInternal>(decrypted)
                         settings.syncedSettings.updateFrom(syncedSettings)
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e
@@ -90,7 +89,7 @@ class AppSpecificState(
                         (it.note.event as? AppSpecificDataEvent)?.let {
                             val decrypted = signer.decrypt(it.content, it.pubKey)
                             try {
-                                val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                                val syncedSettings = JsonMapper.fromJson<AccountSyncedSettingsInternal>(decrypted)
                                 settings.updateAppSpecificData(it, syncedSettings)
                             } catch (e: Throwable) {
                                 if (e is CancellationException) throw e

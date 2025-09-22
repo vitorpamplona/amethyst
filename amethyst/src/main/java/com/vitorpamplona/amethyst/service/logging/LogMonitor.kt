@@ -24,8 +24,8 @@ import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
-import android.util.Log
 import android.util.Printer
+import com.vitorpamplona.quartz.utils.Log
 import java.text.SimpleDateFormat
 import java.util.concurrent.atomic.AtomicBoolean
 

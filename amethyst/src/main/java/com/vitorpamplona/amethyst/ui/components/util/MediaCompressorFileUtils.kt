@@ -27,16 +27,18 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 object MediaCompressorFileUtils {
+    @OptIn(ExperimentalUuidApi::class)
     fun from(
         uri: Uri,
         context: Context,
     ): File {
         val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(context.contentResolver.getType(uri)) ?: ""
         val suffix = if (extension.isNotEmpty()) ".$extension" else ""
-        val tempFile = File.createTempFile(UUID.randomUUID().toString(), suffix)
+        val tempFile = File.createTempFile(Uuid.random().toString(), suffix)
 
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
             FileOutputStream(tempFile).use { outputStream ->

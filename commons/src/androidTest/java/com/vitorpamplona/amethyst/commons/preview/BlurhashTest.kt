@@ -26,9 +26,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
 import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoderOld
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertTrue
 import org.junit.Assert
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.math.roundToInt

@@ -22,13 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
-import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.utils.Log
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -43,7 +43,7 @@ class LargeDBTests {
             // This file includes duplicates
             val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json")
 
-            return JsonMapper.mapper.readValue<ArrayList<Event>>(
+            return JacksonMapper.mapper.readValue<ArrayList<Event>>(
                 GZIPInputStream(fullDBInputStream),
             )
         }

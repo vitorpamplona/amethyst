@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -60,11 +60,11 @@ public class NIP49Test {
                 TEST_CASE,
             )!!
 
-        assertEquals(2, data.version)
-        assertEquals(16, data.logn)
+        assertEquals(2.toByte(), data.version)
+        assertEquals(16.toByte(), data.logn)
         assertEquals("52d7c3f8580e7b41953381e5bc49646b", data.salt.toHexKey())
         assertEquals("c33f02a7dcaac8bdd8da23cd449783240b6ebc12edeea7bf", data.nonce.toHexKey())
-        assertEquals(0, data.keySecurity)
+        assertEquals(0.toByte(), data.keySecurity)
         assertEquals("b8e8803440de7b3e9519c3e734cb2ac9a211ea2dc52312e5117a11a3022d813ab438719ca0b504a1193be510c3aee776", data.encryptedKey.toHexKey())
     }
 

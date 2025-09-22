@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.reque
 
 import android.content.Intent
 import androidx.core.net.toUri
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.JsonMapperNip55
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 
@@ -42,7 +42,7 @@ class LoginRequest {
         fun assemble(permissions: List<Permission> = DefaultPermissions): Intent {
             val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:".toUri())
             intent.putExtra("type", CommandType.GET_PUBLIC_KEY.code)
-            intent.putExtra("permissions", JsonMapper.mapper.writeValueAsString(permissions))
+            intent.putExtra("permissions", JsonMapperNip55.toJson(permissions))
             return intent
         }
     }

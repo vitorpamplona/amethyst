@@ -25,8 +25,8 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
+import com.vitorpamplona.quartz.utils.Log
 import java.io.IOException
 
 class ReverseGeolocation {

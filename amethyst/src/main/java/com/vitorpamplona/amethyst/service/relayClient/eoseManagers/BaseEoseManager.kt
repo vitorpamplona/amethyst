@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 
 abstract class BaseEoseManager<T>(

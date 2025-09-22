@@ -25,7 +25,6 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -53,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.Discove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
 
 @Composable

@@ -27,12 +27,12 @@ import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.PICTURES_SUBDIRECTORY
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,7 +44,8 @@ import okio.buffer
 import okio.sink
 import okio.source
 import java.io.File
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 object MediaSaverToDisk {
     suspend fun saveDownloadingIfNeeded(
@@ -142,6 +143,7 @@ object MediaSaverToDisk {
             MimeTypeMap.getSingleton().getMimeTypeFromExtension(it).orEmpty()
         }
 
+    @OptIn(ExperimentalUuidApi::class)
     fun save(
         localFile: File,
         mimeType: String?,
@@ -156,14 +158,14 @@ object MediaSaverToDisk {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 saveContentQ(
-                    displayName = UUID.randomUUID().toString(),
+                    displayName = Uuid.random().toString(),
                     contentType = mimeType ?: "",
                     contentSource = buffer,
                     contentResolver = context.contentResolver,
                 )
             } else {
                 saveContentDefault(
-                    fileName = "${UUID.randomUUID()}.$extension",
+                    fileName = "${Uuid.random()}.$extension",
                     contentSource = buffer,
                     context = context,
                 )

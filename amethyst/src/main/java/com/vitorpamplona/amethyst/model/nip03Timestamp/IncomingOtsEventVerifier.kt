@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
@@ -37,14 +39,17 @@ class IncomingOtsEventVerifier(
     val verifying =
         cache.live.newEventBundles
             .onEach { newNotes ->
-                newNotes.forEach(::consume)
-            }.stateIn(
+                newNotes.forEach {
+                    consume(it)
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 null,
             )
 
-    fun consume(note: Note) {
+    suspend fun consume(note: Note) {
         note.event?.let { event ->
             if (event is OtsEvent) {
                 otsVerifCache.cacheVerify(event)

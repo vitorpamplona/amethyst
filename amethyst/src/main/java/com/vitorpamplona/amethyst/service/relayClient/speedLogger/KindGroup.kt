@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.speedLogger
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 

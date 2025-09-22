@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
@@ -33,14 +32,16 @@ import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfigu
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
+import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
-import java.util.UUID
 import kotlin.coroutines.resume
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class MediaCompressorResult(
     val uri: Uri,
@@ -75,6 +76,7 @@ class MediaCompressor {
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     private suspend fun compressVideo(
         uri: Uri,
         contentType: String?,
@@ -114,7 +116,7 @@ class MediaCompressor {
                             Configuration(
                                 quality = videoQuality,
                                 // => required name
-                                videoNames = listOf(UUID.randomUUID().toString()),
+                                videoNames = listOf(Uuid.random().toString()),
                             ),
                         listener =
                             object : CompressionListener {

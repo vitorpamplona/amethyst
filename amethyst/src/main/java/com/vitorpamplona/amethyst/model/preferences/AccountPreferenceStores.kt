@@ -24,7 +24,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import java.io.File
 
 class AccountPreferenceStores(

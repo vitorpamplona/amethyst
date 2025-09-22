@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.nip59GiftWraps
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -619,16 +619,16 @@ class GiftWrapEventTest {
         json: String,
         privateKey: HexKey,
     ): Event {
-        val pkBytes = NostrSignerInternal(KeyPair(privateKey.hexToByteArray()))
+        val signer = NostrSignerInternal(KeyPair(privateKey.hexToByteArray()))
 
         val wrap = Event.fromJson(json) as GiftWrapEvent
         wrap.checkSignature()
 
-        assertEquals(pkBytes.pubKey, wrap.recipientPubKey())
+        assertEquals(signer.pubKey, wrap.recipientPubKey())
 
-        val event = wrap.unwrapThrowing(pkBytes)
+        val event = wrap.unwrapThrowing(signer)
         return if (event is SealedRumorEvent) {
-            event.unsealThrowing(pkBytes)
+            event.unsealThrowing(signer)
         } else {
             println(event.toJson())
             fail("Event is not a Sealed Rumor")

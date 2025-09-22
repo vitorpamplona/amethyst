@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ServerName(
     val name: String,
     val baseUrl: String,
@@ -37,7 +40,7 @@ val DEFAULT_MEDIA_SERVERS: List<ServerName> =
         ServerName("Nostr.Build", "https://nostr.build", ServerType.NIP96),
         ServerName("NostrCheck.me (NIP-96)", "https://nostrcheck.me", ServerType.NIP96),
         ServerName("Sovbit", "https://files.sovbit.host", ServerType.NIP96),
-        ServerName("Void.cat", "https://void.cat", ServerType.NIP96),
+        // ServerName("Void.cat", "https://void.cat", ServerType.NIP96),
         ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
         ServerName("NostrCheck.me (Blossom)", "https://cdn.nostrcheck.me", ServerType.Blossom),
         ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),

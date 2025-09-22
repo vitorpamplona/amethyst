@@ -21,28 +21,27 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
-import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.fail
+import kotlinx.serialization.json.decodeFromStream
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class Nip44v2Test {
     private val vectors: VectorFile =
-        jacksonObjectMapper()
-            .readValue(
-                javaClass.classLoader?.getResourceAsStream("nip44.vectors.json"),
-                VectorFile::class.java,
-            )
+        JsonMapper.jsonInstance.decodeFromStream<VectorFile>(
+            javaClass.classLoader.getResourceAsStream("nip44.vectors.json"),
+        )
 
     private val nip44v2 = Nip44v2()
 

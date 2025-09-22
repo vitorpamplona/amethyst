@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.benchmark
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
-import android.util.Log
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.core.app.ApplicationProvider
@@ -32,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.Log
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule

@@ -24,7 +24,7 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    sourceSets.androidTest.resources.srcDirs += ["../quartz/src/androidDeviceTest/resources"]
+    sourceSets.androidTest.resources.srcDirs += ["../quartz/src/androidInstrumentedTest/resources"]
 
     testBuildType = "benchmark"
     buildTypes {

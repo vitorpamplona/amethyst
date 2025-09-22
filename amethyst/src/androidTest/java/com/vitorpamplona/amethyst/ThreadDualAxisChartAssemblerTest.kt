@@ -27,21 +27,24 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.EmptyOtsResolverBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.verify
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import junit.framework.TestCase
-import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -49,24 +52,28 @@ import org.junit.runner.RunWith
 class ThreadDualAxisChartAssemblerTest {
     companion object {
         val keyPair = KeyPair()
+        val client =
+            NostrClient(
+                OkHttpWebSocket.Builder {
+                    OkHttpClient
+                        .Builder()
+                        .followRedirects(true)
+                        .followSslRedirects(true)
+                        .build()
+                },
+                CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            )
+
         val account =
             Account(
                 settings = AccountSettings(keyPair = keyPair),
                 signer = NostrSignerInternal(keyPair),
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
                 geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
+                nwcFilterAssembler = NWCPaymentFilterAssembler(client),
+                otsResolverBuilder = EmptyOtsResolverBuilder,
                 cache = LocalCache,
-                client =
-                    NostrClient(
-                        OkHttpWebSocket.Builder {
-                            OkHttpClient
-                                .Builder()
-                                .followRedirects(true)
-                                .followSslRedirects(true)
-                                .build()
-                        },
-                        CoroutineScope(Dispatchers.IO + SupervisorJob()),
-                    ),
+                client = client,
+                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             )
 
         val db =
@@ -148,7 +155,7 @@ class ThreadDualAxisChartAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                JsonMapper.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
+                JacksonMapper.mapper.readValue<List<Event>>(db) + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {
@@ -168,7 +175,7 @@ class ThreadDualAxisChartAssemblerTest {
             val filter = ThreadFeedFilter(account, naddr.toTag())
             val calculatedFeed = filter.feed()
 
-            val expecteedOrder =
+            val expectedOrder =
                 listOf(
                     "30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:1680612926599",
                     "e15b386824fbfdcbf1b50b8860f03062cef534a3ea5339cc837536fb2a58465e",
@@ -210,8 +217,8 @@ class ThreadDualAxisChartAssemblerTest {
                     "7a18dda355525d468b31bba4fa947cba98cc19048d4a3099d5e9ba045d878c26",
                 )
 
-            for (i in expecteedOrder.indices) {
-                assertEquals(expecteedOrder[i], calculatedFeed[i].idHex)
+            for (i in expectedOrder.indices) {
+                assertEquals(expectedOrder[i], calculatedFeed[i].idHex)
             }
         }
 }

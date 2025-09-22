@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
 
 import android.app.Activity
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -38,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.ExternalSignerLogin
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 

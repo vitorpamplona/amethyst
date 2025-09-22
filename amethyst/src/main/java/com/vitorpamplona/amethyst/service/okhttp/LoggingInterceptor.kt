@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.util.Log
+import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response

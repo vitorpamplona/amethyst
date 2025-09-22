@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.benchmark
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
-import android.util.Log
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.core.app.ApplicationProvider
@@ -31,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.utils.Log
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,7 +49,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         benchmarkRule.measureRepeated {
             val db =
-                this.runWithTimingDisabled {
+                this.runWithMeasurementDisabled {
                     val db = EventStore(context, "test1.db")
                     db.store.clearDB()
                     db
@@ -61,7 +61,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                     Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: $event")
                 }
             }
-            this.runWithTimingDisabled {
+            this.runWithMeasurementDisabled {
                 db.store.clearDB()
                 db.close()
             }
@@ -82,7 +82,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
 
         benchmarkRule.measureRepeated {
             val db =
-                this.runWithTimingDisabled {
+                this.runWithMeasurementDisabled {
                     val db = EventStore(context, "test1.db")
                     db.store.clearDB()
                     toBeDeletedEvents.forEach { event ->
@@ -104,7 +104,7 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                 }
             }
 
-            runWithTimingDisabled {
+            runWithMeasurementDisabled {
                 db.store.clearDB()
                 db.close()
             }

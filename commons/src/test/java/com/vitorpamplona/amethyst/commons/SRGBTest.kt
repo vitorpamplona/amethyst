@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons
 
 import com.vitorpamplona.amethyst.commons.blurhash.SRGB
-import junit.framework.TestCase.assertEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.math.round
 

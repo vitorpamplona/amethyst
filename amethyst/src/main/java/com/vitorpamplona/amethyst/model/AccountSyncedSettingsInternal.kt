@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import kotlinx.serialization.Serializable
 import java.util.Locale
 
 val DefaultReactions =
@@ -47,6 +48,7 @@ fun getLanguagesSpokenByUser(): Set<String> {
     return codedList
 }
 
+@Serializable
 class AccountSyncedSettingsInternal(
     val reactions: AccountReactionPreferencesInternal = AccountReactionPreferencesInternal(),
     val zaps: AccountZapPreferencesInternal = AccountZapPreferencesInternal(),
@@ -54,21 +56,25 @@ class AccountSyncedSettingsInternal(
     val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
 )
 
+@Serializable
 class AccountReactionPreferencesInternal(
     var reactionChoices: List<String> = DefaultReactions,
 )
 
+@Serializable
 class AccountZapPreferencesInternal(
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
     val defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
 )
 
+@Serializable
 class AccountLanguagePreferencesInternal(
     var dontTranslateFrom: Set<String> = getLanguagesSpokenByUser(),
     var languagePreferences: Map<String, String> = mapOf(),
     var translateTo: String = Locale.getDefault().language,
 )
 
+@Serializable
 class AccountSecurityPreferencesInternal(
     val showSensitiveContent: Boolean? = null,
     var warnAboutPostsWithReports: Boolean = true,

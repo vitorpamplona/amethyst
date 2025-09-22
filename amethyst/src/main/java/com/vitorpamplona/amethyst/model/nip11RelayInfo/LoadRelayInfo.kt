@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.utils.Log
 
 @Composable
 fun loadRelayInfo(relay: NormalizedRelayUrl): State<Nip11RelayInformation> = loadRelayInfo(relay, Amethyst.instance.nip11Cache)

@@ -21,17 +21,15 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpBitcoinExplorer
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpCalendarBuilder
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OtsBlockHeightCache
-import junit.framework.TestCase.assertEquals
+import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpOtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -45,51 +43,50 @@ class OkHttpOtsTest {
     val otsCache = OtsBlockHeightCache()
 
     val resolver =
-        OtsResolver(
-            OkHttpBitcoinExplorer(
-                baseAPI = OkHttpBitcoinExplorer.MEMPOOL_API_URL,
-                client = OkHttpClient.Builder().build(),
-                cache = otsCache,
-            ),
-            OkHttpCalendarBuilder { OkHttpClient.Builder().build() },
-        )
+        OkHttpOtsResolverBuilder(
+            otsCache,
+        ) { OkHttpClient.Builder().build() }.build()
 
     @Test
-    fun verifyNostrEvent() {
-        val ots = JsonMapper.fromJson(otsEvent) as OtsEvent
-        println(resolver.info(ots.otsByteArray()))
-        assertEquals(1707688818L, ots.verify(resolver))
-    }
+    fun verifyNostrEvent() =
+        runBlocking {
+            val ots = OptimizedJsonMapper.fromJson(otsEvent) as OtsEvent
+            println(resolver.info(ots.otsByteArray()))
+            assertEquals(1707688818L, ots.verify(resolver))
+        }
 
     @Test
-    fun verifyNostrEvent2() {
-        val ots = JsonMapper.fromJson(otsEvent2) as OtsEvent
-        println(resolver.info(ots.otsByteArray()))
-        assertEquals(1706322179L, ots.verify(resolver))
-    }
+    fun verifyNostrEvent2() =
+        runBlocking {
+            val ots = OptimizedJsonMapper.fromJson(otsEvent2) as OtsEvent
+            println(resolver.info(ots.otsByteArray()))
+            assertEquals(1706322179L, ots.verify(resolver))
+        }
 
     @Test
-    fun verifyNostrPendingEvent() {
-        val ots = JsonMapper.fromJson(otsPendingEvent) as OtsEvent
-        println(resolver.info(ots.otsByteArray()))
-        assertEquals(null, ots.verify(resolver))
-    }
+    fun verifyNostrPendingEvent() =
+        runBlocking {
+            val ots = OptimizedJsonMapper.fromJson(otsPendingEvent) as OtsEvent
+            println(resolver.info(ots.otsByteArray()))
+            assertEquals(null, ots.verify(resolver))
+        }
 
     @Test
-    fun createOTSEventAndVerify() {
-        val signer = NostrSignerInternal(KeyPair())
+    fun createOTSEventAndVerify() =
+        runBlocking {
+            val signer = NostrSignerInternal(KeyPair())
 
-        val otsFile = OtsEvent.stamp(otsEvent2Digest, resolver)
+            val otsFile = OtsEvent.stamp(otsEvent2Digest, resolver)
 
-        val ots =
-            runBlocking {
-                signer.sign(OtsEvent.build(otsEvent2Digest, otsFile))
-            }
+            val ots =
+                runBlocking {
+                    signer.sign(OtsEvent.build(otsEvent2Digest, otsFile))
+                }
 
-        println(ots.toJson())
-        println(resolver.info(ots.otsByteArray()))
+            println(ots.toJson())
+            println(resolver.info(ots.otsByteArray()))
 
-        // Should not be valid because we need to wait for confirmations
-        assertEquals(null, ots.verify(resolver))
-    }
+            // Should not be valid because we need to wait for confirmations
+            assertEquals(null, ots.verify(resolver))
+        }
 }

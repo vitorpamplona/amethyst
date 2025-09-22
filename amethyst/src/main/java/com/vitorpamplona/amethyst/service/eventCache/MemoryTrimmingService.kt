@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.eventCache
 
-import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.Log
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MemoryTrimmingService(

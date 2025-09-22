@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.czeal.rfc3986.URIReference
 
 class NIP96ServersViewModel : ViewModel() {
     lateinit var account: Account
@@ -50,7 +50,7 @@ class NIP96ServersViewModel : ViewModel() {
             obtainedFileServers.mapNotNull { serverUrl ->
                 try {
                     ServerName(
-                        URIReference.parse(serverUrl).host.value,
+                        Rfc3986.host(serverUrl),
                         serverUrl,
                         ServerType.NIP96,
                     )
@@ -71,13 +71,13 @@ class NIP96ServersViewModel : ViewModel() {
     fun addServer(serverUrl: String) {
         val normalizedUrl =
             try {
-                URIReference.parse(serverUrl.trim()).normalize().toString()
+                Rfc3986.normalize(serverUrl.trim())
             } catch (e: Exception) {
                 serverUrl
             }
         val serverNameReference =
             try {
-                URIReference.parse(normalizedUrl).host.value
+                Rfc3986.host(normalizedUrl)
             } catch (e: Exception) {
                 normalizedUrl
             }
@@ -97,7 +97,7 @@ class NIP96ServersViewModel : ViewModel() {
         serverUrl: String,
     ) {
         viewModelScope.launch {
-            val serverName = if (name.isNotBlank()) name else URIReference.parse(serverUrl).host.value
+            val serverName = if (name.isNotBlank()) name else Rfc3986.host(serverUrl)
             _fileServers.update {
                 it.minus(
                     ServerName(serverName, serverUrl, ServerType.NIP96),

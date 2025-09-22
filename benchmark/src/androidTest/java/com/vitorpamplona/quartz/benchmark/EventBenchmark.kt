@@ -23,14 +23,17 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
-import com.vitorpamplona.quartz.nip01Core.verify
-import com.vitorpamplona.quartz.nip01Core.verifyId
-import com.vitorpamplona.quartz.nip01Core.verifySignature
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
+import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.TimeUtils
-import junit.framework.TestCase.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,28 +51,26 @@ class EventBenchmark {
     @Test
     fun parseComplete() {
         benchmarkRule.measureRepeated {
-            val tree = JsonMapper.mapper.readTree(reqResponseEvent)
-            val event = JsonMapper.fromJson(tree[2])
+            val event = (OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent) as EventMessage).event
             assertTrue(event.verify())
         }
     }
 
     @Test
     fun parseREQString() {
-        benchmarkRule.measureRepeated { JsonMapper.mapper.readTree(reqResponseEvent) }
+        benchmarkRule.measureRepeated { JacksonMapper.mapper.readTree(reqResponseEvent) }
     }
 
     @Test
     fun parseEvent() {
-        val msg = JsonMapper.mapper.readTree(reqResponseEvent)
+        val msg = JacksonMapper.mapper.readTree(reqResponseEvent)
 
-        benchmarkRule.measureRepeated { JsonMapper.fromJson(msg[2]) }
+        benchmarkRule.measureRepeated { JacksonMapper.fromJson(msg[2]) }
     }
 
     @Test
     fun checkId() {
-        val msg = JsonMapper.mapper.readTree(reqResponseEvent)
-        val event = JsonMapper.fromJson(msg[2])
+        val event = (OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent) as EventMessage).event
         benchmarkRule.measureRepeated {
             // Should pass
             assertTrue(event.verifyId())
@@ -78,8 +79,7 @@ class EventBenchmark {
 
     @Test
     fun checkSignature() {
-        val msg = JsonMapper.mapper.readTree(reqResponseEvent)
-        val event = JsonMapper.fromJson(msg[2])
+        val event = (OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent) as EventMessage).event
         benchmarkRule.measureRepeated {
             // Should pass
             assertTrue(event.verifySignature())

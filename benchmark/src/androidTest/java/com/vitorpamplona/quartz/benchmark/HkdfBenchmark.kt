@@ -61,6 +61,7 @@ class HkdfBenchmark {
         }
     }
 
+    /*
     @Test
     fun hkdfExpandOld() {
         val hkdf = Hkdf()
@@ -68,6 +69,7 @@ class HkdfBenchmark {
             hkdf.expand(sharedKey, encrypted.nonce, 76)
         }
     }
+     */
 
     @Test
     fun hkdfExtract() {

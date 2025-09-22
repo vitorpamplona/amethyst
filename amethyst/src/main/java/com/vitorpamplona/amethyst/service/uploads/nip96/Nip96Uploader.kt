@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip96FileStorage.actions.DeleteResult
@@ -181,7 +182,7 @@ class Nip96Uploader {
             withContext(Dispatchers.IO) {
                 if (response.isSuccessful) {
                     response.body.use { body ->
-                        val result = UploadResult.parse(body.string())
+                        val result = JsonMapper.fromJson<UploadResult>(body.string())
                         if (!result.processingUrl.isNullOrBlank()) {
                             waitProcessing(result, server, okHttpClient, onProgress)
                         } else if (result.status == "success") {
@@ -287,7 +288,7 @@ class Nip96Uploader {
         return client.newCall(request).executeAsync().use { response ->
             withContext(Dispatchers.IO) {
                 if (response.isSuccessful) {
-                    val result = DeleteResult.parse(response.body.string())
+                    val result = JsonMapper.fromJson<DeleteResult>(response.body.string())
                     result.status == "success"
                 } else {
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
@@ -324,7 +325,7 @@ class Nip96Uploader {
             client.newCall(request).executeAsync().use { response ->
                 withContext(Dispatchers.IO) {
                     if (response.isSuccessful) {
-                        currentResult = UploadResult.parse(response.body.string())
+                        currentResult = JsonMapper.fromJson<UploadResult>(response.body.string())
                     }
                 }
             }
