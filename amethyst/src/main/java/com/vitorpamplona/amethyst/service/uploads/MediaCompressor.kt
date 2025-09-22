@@ -167,7 +167,7 @@ private fun getVideoInfo(
  * xxx 1. Check input resolution and input fps
  * xxx 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
  * 3. Create Configuration with no quality setting, a bitrate setting, resizer, streamable = true, isMinBitrateCheckEnabled=false
- * 4. Don't upload converted file if compression results in larger file
+ * 4. Don't upload converted file if compression results in larger file (return MediaCompressorResult(uri, contentType, null))
  *
  *
  * Don't use Configuration.quality which only determines bitrate. Instead let's create aggressive bitrates based on input and selected quality
@@ -215,18 +215,23 @@ class MediaCompressor {
 
         val videoBitrateInMbps =
             if (videoInfo != null) {
-                compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
+                val bitrate = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
+                Log.d("MediaCompressor", "Video bitrate calculated: ${bitrate}Mbps for ${videoInfo.resolution.getStandardName()} quality=$mediaQuality")
+                bitrate
             } else {
                 // Default/fallback logic when videoInfo is null
+                Log.d("MediaCompressor", "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 2
             }
 
         val resizer =
             if (videoInfo != null) {
                 val rules = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName())
+                Log.d("MediaCompressor", "Video resizer: ${videoInfo.resolution.width}x${videoInfo.resolution.height} -> ${rules.width}x${rules.height} (${rules.description})")
                 VideoResizer.limitSize(rules.width.toDouble(), rules.height.toDouble())
             } else {
                 // null VideoResizer should result in unchanged resolution
+                Log.d("MediaCompressor", "Video resizer: null (original resolution preserved)")
                 null
             }
 
