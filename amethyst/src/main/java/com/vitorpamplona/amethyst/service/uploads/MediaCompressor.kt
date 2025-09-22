@@ -169,8 +169,10 @@ private fun getVideoInfo(
 /** The plan
  * xxx 1. Check input resolution and input fps
  * xxx 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
- * 3. Create Configuration with no quality setting, a bitrate setting, resizer, streamable = true, isMinBitrateCheckEnabled=false
+ * xxx 3. Create Configuration with no quality setting, a bitrate setting, resizer, streamable = true, isMinBitrateCheckEnabled=false
  * 4. Don't upload converted file if compression results in larger file (return MediaCompressorResult(uri, contentType, null))
+ * xxx 5. Add toast message about file size saving
+ * 7. refactor (helper class for video compression)
  *
  *
  * Don't use Configuration.quality which only determines bitrate. Instead let's create aggressive bitrates based on input and selected quality
