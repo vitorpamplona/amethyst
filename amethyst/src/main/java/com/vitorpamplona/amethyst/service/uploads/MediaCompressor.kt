@@ -270,15 +270,6 @@ class MediaCompressor {
                 3 -> CompressorQuality.UNCOMPRESSED
                 else -> CompressorQuality.MEDIUM
             }
-
-        fun compressorQualityToInt(compressorQuality: CompressorQuality): Int =
-            when (compressorQuality) {
-                CompressorQuality.LOW -> 0
-                CompressorQuality.MEDIUM -> 1
-                CompressorQuality.HIGH -> 2
-                CompressorQuality.UNCOMPRESSED -> 3
-                else -> 1
-            }
     }
 }
 
