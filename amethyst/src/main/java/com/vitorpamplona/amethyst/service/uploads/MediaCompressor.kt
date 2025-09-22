@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
@@ -55,6 +56,31 @@ data class CompressionRule(
     val bitrateMbps: Float,
     val description: String,
 )
+
+private data class VideoInfo(
+    val resolution: VideoResolution,
+    val framerate: Float,
+)
+
+data class VideoResolution(
+    val width: Int,
+    val height: Int,
+) {
+    val pixels: Int get() = width * height
+    val isPortrait: Boolean get() = height > width
+
+    fun getStandardName(): String =
+        when {
+            pixels >= 3840 * 2160 -> "4K"
+            pixels >= 2560 * 1440 -> "1440p"
+            pixels >= 1920 * 1080 -> "1080p"
+            pixels >= 1280 * 720 -> "720p"
+            pixels >= 854 * 480 -> "480p"
+            pixels >= 640 * 360 -> "360p"
+            pixels >= 426 * 240 -> "240p"
+            else -> "${width}x$height"
+        }
+}
 
 private val compressionRules =
     mapOf(
@@ -93,9 +119,43 @@ private val compressionRules =
             ),
     )
 
+private fun getVideoInfo(
+    uri: Uri,
+    context: Context,
+): VideoInfo? =
+    try {
+        val retriever = MediaMetadataRetriever()
+        retriever.setDataSource(context, uri)
+        val width = retriever.prepareVideoWidth()
+        val height = retriever.prepareVideoHeight()
+        val rotation = retriever.prepareRotation() ?: 0
+
+        // Get framerate
+        val framerateString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
+        val framerate = framerateString?.toFloatOrNull() ?: 30.0f
+
+        retriever.release()
+
+        if (width != null && height != null && width > 0 && height > 0) {
+            // Account for rotation
+            val resolution =
+                if (rotation == 90 || rotation == 270) {
+                    VideoResolution(height, width)
+                } else {
+                    VideoResolution(width, height)
+                }
+            VideoInfo(resolution, framerate)
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        Log.w("MediaCompressor", "Failed to get video resolution: ${e.message}")
+        null
+    }
+
 /** The plan
- * 1. Check input resolution and input fps
- * 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
+ * xxx 1. Check input resolution and input fps
+ * xxx 2. Create configuration matrix: for each quality level, set bitrate based on input resolution
  * 3. Create Configuration with no quality setting, a bitrate setting, resizer, streamable = true, isMinBitrateCheckEnabled=false
  *
  *
