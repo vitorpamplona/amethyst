@@ -130,16 +130,7 @@ fun FollowSetsManagementDialog(
             )
         },
         floatingActionButton = {
-            OutlinedButton(
-                onClick = {
-                    navigator.popBack()
-                },
-                shape = ButtonBorder,
-                colors = ButtonDefaults.filledTonalButtonColors(),
-                elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
-            ) {
-                Text(text = "Cancel", fontWeight = FontWeight.SemiBold)
-            }
+            BackActionButton { navigator.popBack() }
         },
     ) { contentPadding ->
         Column(
@@ -229,9 +220,26 @@ fun FollowSetsManagementDialog(
 }
 
 @Composable
+fun BackActionButton(
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onBack,
+        shape = ButtonBorder,
+        colors = ButtonDefaults.filledTonalButtonColors(),
+        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
+    ) {
+        Text(text = "Back", fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
 private fun Loading() {
     Column(
-        Modifier.fillMaxWidth().fillMaxHeight(0.5f),
+        Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.5f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -243,7 +251,9 @@ private fun Loading() {
 @Composable
 private fun EmptyOrNoneFound(onRefresh: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().fillMaxHeight(0.5f),
+        Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.5f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -259,7 +269,9 @@ private fun ErrorMessage(
     onRefresh: () -> Unit,
 ) {
     Column(
-        Modifier.fillMaxWidth().fillMaxHeight(0.5f),
+        Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.5f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
