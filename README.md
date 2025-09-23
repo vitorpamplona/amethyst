@@ -237,25 +237,24 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 
 ## Using the Quartz library
 
-Setup [JitPack.io](https://jitpack.io/#vitorpamplona/amethyst/v0.84.3) to your build file
+### Installing
 
-Add `maven { url 'https://jitpack.io' }` to settings.gradle at the end of repositories:
-
-```gradle
-dependencyResolutionManagement {
-  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-  repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-  }
-}
-```
-
-Add the dependency by using one of the versions [here](https://jitpack.io/#vitorpamplona/amethyst/)
+Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:<tag, commit, -SNAPSHOT>')
+implementation('com.github.vitorpamplona.amethyst:quartz:<Amethyst Version>')
 ```
+
+Variations to each platform are also available:
+
+```gradle
+implementation('com.github.vitorpamplona.amethyst:quartz-android:<Amethyst Version>')
+implementation('com.github.vitorpamplona.amethyst:quartz-jvm:<Amethyst Version>')
+implementation('com.github.vitorpamplona.amethyst:quartz-iosarm64:<Amethyst Version>')
+implementation('com.github.vitorpamplona.amethyst:quartz-iossimulatorarm64:<Amethyst Version>')
+```
+
+### How to use
 
 Manage logged in users with the `KeyPair` class
 

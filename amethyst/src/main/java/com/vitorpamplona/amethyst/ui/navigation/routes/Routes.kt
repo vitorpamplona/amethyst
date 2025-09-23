@@ -52,6 +52,16 @@ sealed class Route {
 
     @Serializable object UserSettings : Route()
 
+    @Serializable object Lists : Route()
+
+    @Serializable data class FollowSetRoute(
+        val setIdentifier: String,
+    ) : Route()
+
+    @Serializable data class FollowSetManagement(
+        val userHexKey: String,
+    ) : Route()
+
     @Serializable object EditProfile : Route()
 
     @Serializable object EditRelays : Route()

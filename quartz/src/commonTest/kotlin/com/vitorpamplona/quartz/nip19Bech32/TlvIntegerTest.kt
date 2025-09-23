@@ -22,17 +22,17 @@ package com.vitorpamplona.quartz.nip19Bech32
 
 import com.vitorpamplona.quartz.nip19Bech32.tlv.to32BitByteArray
 import com.vitorpamplona.quartz.nip19Bech32.tlv.toInt32
-import org.junit.Assert
-import org.junit.Assert.assertEquals
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class TlvIntegerTest {
     fun to_int_32_length_smaller_than_4() {
-        Assert.assertNull(byteArrayOfInts(1, 2, 3).toInt32())
+        assertNull(byteArrayOfInts(1, 2, 3).toInt32())
     }
 
     fun to_int_32_length_bigger_than_4() {
-        Assert.assertNull(byteArrayOfInts(1, 2, 3, 4, 5).toInt32())
+        assertNull(byteArrayOfInts(1, 2, 3, 4, 5).toInt32())
     }
 
     @Test()

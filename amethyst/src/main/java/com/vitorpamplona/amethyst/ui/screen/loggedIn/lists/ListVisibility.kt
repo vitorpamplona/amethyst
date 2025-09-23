@@ -18,18 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components.toasts
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
-import androidx.compose.runtime.Immutable
-
-@Immutable
-class StringToastMsg(
-    val title: String,
-    val msg: String,
-) : ToastMsg()
-
-class ActionableStringToastMsg(
-    val title: String,
-    val msg: String,
-    val action: () -> Unit,
-) : ToastMsg()
+enum class ListVisibility {
+    Public,
+    Private,
+    Mixed,
+}

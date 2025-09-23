@@ -31,16 +31,19 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
 
 @Composable
 fun FollowButton(
     text: Int = R.string.follow,
+    // Needed for when browsing a user's profile, for list functionality.
+    isInProfileActions: Boolean = false,
     onClick: () -> Unit,
 ) {
     FilledTonalButton(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = if (isInProfileActions) LeftHalfCircleButtonBorder else ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(text), textAlign = TextAlign.Center)
@@ -48,11 +51,14 @@ fun FollowButton(
 }
 
 @Composable
-fun UnfollowButton(onClick: () -> Unit) {
+fun UnfollowButton(
+    isInProfileActions: Boolean = false,
+    onClick: () -> Unit,
+) {
     FilledTonalButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = if (isInProfileActions) LeftHalfCircleButtonBorder else ButtonBorder,
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(R.string.unfollow))

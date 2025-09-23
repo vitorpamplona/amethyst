@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.junit.Assert.assertEquals
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class InliningTagArrayPrettyPrinterTest {
     val mapper =

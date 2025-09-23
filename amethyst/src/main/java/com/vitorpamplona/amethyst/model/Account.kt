@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -214,6 +215,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
@@ -828,6 +830,20 @@ class Account(
     }
 
     fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
+
+    suspend fun getFollowSetNotes() =
+        withContext(Dispatchers.Default) {
+            val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
+            Log.d(this@Account.javaClass.simpleName, "Number of follow sets: ${followSetNotes.size}")
+            return@withContext followSetNotes
+        }
+
+    fun mapNoteToFollowSet(note: Note): FollowSet =
+        FollowSet
+            .mapEventToSet(
+                event = note.event as PeopleListEvent,
+                signer,
+            )
 
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 

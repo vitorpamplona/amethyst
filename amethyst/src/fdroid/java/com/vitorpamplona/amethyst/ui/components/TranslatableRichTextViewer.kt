@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 
 @Composable
@@ -59,6 +60,7 @@ fun TranslatableRichTextViewer(
 fun TranslatableRichTextViewer(
     content: String,
     id: String,
+    translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) = displayText(content)

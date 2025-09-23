@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
@@ -182,6 +183,14 @@ fun NoteDropDownMenu(
             )
             HorizontalDivider(thickness = DividerThickness)
         }
+        DropdownMenuItem(
+            text = { Text(text = stringRes(R.string.follow_set_add_author_from_note_action)) },
+            onClick = {
+                val authorHexKey = note.author?.pubkeyHex ?: return@DropdownMenuItem
+                nav.nav(Route.FollowSetManagement(authorHexKey))
+                onDismiss()
+            },
+        )
         DropdownMenuItem(
             text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
