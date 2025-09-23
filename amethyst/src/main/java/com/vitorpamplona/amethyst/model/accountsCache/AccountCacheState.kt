@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.accountsCache
 
 import android.content.ContentResolver
-import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -34,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

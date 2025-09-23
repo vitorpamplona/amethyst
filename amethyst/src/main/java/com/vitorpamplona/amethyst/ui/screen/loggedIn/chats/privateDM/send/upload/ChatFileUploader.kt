@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 class ChatFileUploader(
     val account: Account,

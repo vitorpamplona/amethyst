@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

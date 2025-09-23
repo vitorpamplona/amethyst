@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNotes
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNotes
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent

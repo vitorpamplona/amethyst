@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dataso
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
 @Composable
 fun LiveActivityChannelView(

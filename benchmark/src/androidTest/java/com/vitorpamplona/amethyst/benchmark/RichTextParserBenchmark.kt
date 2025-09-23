@@ -29,10 +29,10 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
-import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
+import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import junit.framework.TestCase.assertNull
-import junit.framework.TestCase.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

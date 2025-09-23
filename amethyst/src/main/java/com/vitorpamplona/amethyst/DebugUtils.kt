@@ -24,9 +24,9 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Debug
-import android.util.Log
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.quartz.utils.Log
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 

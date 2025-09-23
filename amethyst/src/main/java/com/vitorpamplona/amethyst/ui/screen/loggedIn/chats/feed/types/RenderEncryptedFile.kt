@@ -40,10 +40,10 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Response

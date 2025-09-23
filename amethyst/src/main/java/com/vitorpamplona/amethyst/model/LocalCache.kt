@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
@@ -52,12 +51,14 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.checkSignature
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
+import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
@@ -66,16 +67,14 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.forEachTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
-import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
@@ -184,9 +183,9 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.LargeCache
-import com.vitorpamplona.quartz.utils.LargeSoftCache
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
@@ -2164,7 +2163,7 @@ object LocalCache : ILocalCache {
             .toImmutableList()
     }
 
-    fun findEarliestOtsForNote(
+    suspend fun findEarliestOtsForNote(
         note: Note,
         otsVerifCache: VerificationStateCache,
     ): Long? {
@@ -2173,13 +2172,29 @@ object LocalCache : ILocalCache {
         var minTime: Long? = null
         val time = TimeUtils.now()
 
-        notes.forEach { _, item ->
-            val noteEvent = item.event
-            if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
-                    if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
-                        minTime = stampedTime
+        val candidates =
+            notes.mapNotNull { _, item ->
+                val noteEvent = item.event
+                if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
+                    val cachedTime = (otsVerifCache.justCache(noteEvent) as? VerificationState.Verified)?.verifiedTime
+                    if (cachedTime != null) {
+                        if (minTime == null || cachedTime < (minTime ?: Long.MAX_VALUE)) {
+                            minTime = cachedTime
+                        }
+                        null
+                    } else {
+                        // tries to verify again
+                        noteEvent
                     }
+                } else {
+                    null
+                }
+            }
+
+        candidates.forEach { noteEvent ->
+            (otsVerifCache.cacheVerify(noteEvent) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+                if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
+                    minTime = stampedTime
                 }
             }
         }

@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

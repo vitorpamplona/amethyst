@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
+import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll

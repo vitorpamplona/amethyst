@@ -339,6 +339,9 @@ dependencies {
     // Cbor for cashuB format
     implementation libs.kotlinx.serialization.cbor
 
+    // Kotlin serialization for the times where we need the Json tree and performance is not that important.
+    implementation(libs.kotlinx.serialization.json)
+
     implementation libs.tor.android
     implementation libs.jtorctl
 

@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip57Zaps
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEncryption.Companion.createEncryptionPrivateKey
@@ -40,7 +40,7 @@ class PrivateZapTests {
     @Test
     fun testPollZap() {
         val poll =
-            JsonMapper.fromJson(
+            OptimizedJsonMapper.fromJson(
                 """{
   "content": "New poll \n\n #zappoll",
   "created_at": 1682440713,

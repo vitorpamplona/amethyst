@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service.location
 import android.content.Context
 import android.location.Geocoder
 import android.location.Location
-import android.util.Log
 import android.util.LruCache
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Maintains a cache of geohashes and city,country pairs.

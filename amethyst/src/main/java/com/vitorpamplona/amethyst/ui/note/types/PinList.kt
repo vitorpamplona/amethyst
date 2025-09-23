@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.note.PinIcon
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 
 @OptIn(ExperimentalLayoutApi::class)

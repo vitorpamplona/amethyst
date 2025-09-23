@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.collections.immutable.persistentSetOf
 
 class ChatroomList(

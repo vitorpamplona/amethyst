@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip17Dm
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
-import junit.framework.TestCase.assertEquals
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -32,7 +32,11 @@ class AESGCMTest {
     val decryptionNonce = "01e77c94bd5aba3e3cbb69594e7ba07c"
     val decryptionKey = "c128ecffab90ee7810e3df08e7fb2cc39a8d40f24201f48b2b36e23b34ac50ee"
 
-    val cipher = AESGCM(decryptionKey.hexToByteArray(), decryptionNonce.toByteArray(Charsets.UTF_8))
+    val cipher =
+        AESGCM(
+            decryptionKey.hexToByteArray(),
+            decryptionNonce.toByteArray(Charsets.UTF_8),
+        )
 
     @Test
     fun encryptDecrypt() {

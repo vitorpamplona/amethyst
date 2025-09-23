@@ -25,8 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Encryption
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EncryptionTest {

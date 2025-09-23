@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip03Timestamp
 
-import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -28,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
@@ -85,7 +85,7 @@ class OtsState(
         return settings.pendingAttestations.value[id] != null
     }
 
-    fun timestamp(note: Note) {
+    suspend fun timestamp(note: Note) {
         if (note.isDraft()) return
 
         val id = note.event?.id ?: note.idHex

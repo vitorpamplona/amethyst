@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.service.playback.service
 import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

@@ -24,12 +24,13 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.generateId
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.crypto.generateId
+import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
-import com.vitorpamplona.quartz.nip01Core.verifyId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +47,7 @@ class EventCmdHasherBenchmark {
 
     @Test
     fun checkIDHashKind1WithoutTags() {
-        val event = EventMessage.parse(JsonMapper.mapper.readTree(reqResponseEvent)).event
+        val event = (OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent) as EventMessage).event
 
         benchmarkRule.measureRepeated {
             // Should pass

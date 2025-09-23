@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import kotlin.math.round
+
 fun Runtime.usedMemoryMb(): Long {
-    val totalMemoryMb = totalMemory() / (1024 * 1024)
-    val freeMemoryMb = freeMemory() / (1024 * 1024)
+    val totalMemoryMb = round(totalMemory() / (1024 * 1024.0)).toLong()
+    val freeMemoryMb = round(freeMemory() / (1024 * 1024.0)).toLong()
     return totalMemoryMb - freeMemoryMb
 }

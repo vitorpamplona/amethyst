@@ -25,12 +25,14 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.media3.session.MediaController
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Stable
 class MediaControllerState(
     // each composable has an ID.
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = Uuid.random().toString(),
     // This is filled after the controller returns from this class
     var controller: MediaController? = null,
     // this set's the stage to keep playing on the background or not when the user leaves the screen

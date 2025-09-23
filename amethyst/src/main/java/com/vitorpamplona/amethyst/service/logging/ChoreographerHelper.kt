@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.logging
 
-import android.util.Log
 import android.view.Choreographer
+import com.vitorpamplona.quartz.utils.Log
 
 object ChoreographerHelper {
     var lastFrameTimeNanos: Long = 0

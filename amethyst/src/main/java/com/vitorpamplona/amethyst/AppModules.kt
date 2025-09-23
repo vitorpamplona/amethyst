@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst
 
 import android.content.ContentResolver
 import android.content.Context
-import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
+import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
@@ -60,8 +60,8 @@ import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OkHttpOtsResolverBuilder
-import com.vitorpamplona.quartz.nip03Timestamp.ots.okhttp.OtsBlockHeightCache
+import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -146,8 +146,8 @@ class AppModules(
     // Application-wide block height request cache
     val otsBlockHeightCache by lazy { OtsBlockHeightCache() }
 
-    val otsResolverBuilder: OkHttpOtsResolverBuilder =
-        OkHttpOtsResolverBuilder(
+    val otsResolverBuilder: TorAwareOkHttpOtsResolverBuilder =
+        TorAwareOkHttpOtsResolverBuilder(
             roleBasedHttpClientBuilder::okHttpClientForMoney,
             roleBasedHttpClientBuilder::shouldUseTorForMoneyOperations,
             otsBlockHeightCache,

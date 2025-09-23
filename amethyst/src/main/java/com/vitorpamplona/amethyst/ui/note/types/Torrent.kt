@@ -179,7 +179,7 @@ fun DisplayFileList(
     files: ImmutableList<FileTag>,
     name: String,
     description: String?,
-    link: () -> String,
+    link: () -> String?,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -215,10 +215,14 @@ fun DisplayFileList(
             IconButton(
                 onClick = {
                     try {
-                        val intent = Intent(Intent.ACTION_VIEW, link().toUri())
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                        context.startActivity(intent)
+                        val linkStr = link()
+                        if (linkStr != null) {
+                            val intent = Intent(Intent.ACTION_VIEW, linkStr.toUri())
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            context.startActivity(intent)
+                        } else {
+                            accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_info)
+                        }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)

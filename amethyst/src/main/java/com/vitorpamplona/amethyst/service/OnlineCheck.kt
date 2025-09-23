@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import okhttp3.EventListener

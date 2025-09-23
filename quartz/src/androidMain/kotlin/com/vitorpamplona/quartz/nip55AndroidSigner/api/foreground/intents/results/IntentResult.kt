@@ -21,17 +21,19 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results
 
 import android.content.Intent
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
+import com.vitorpamplona.quartz.nip55AndroidSigner.JsonMapperNip55
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class IntentResult(
     val `package`: String? = null,
     val result: String? = null,
     val event: String? = null,
     val id: String? = null,
     val rejected: Boolean = false,
-) {
-    fun toJson(): String = JsonMapper.mapper.writeValueAsString(this)
+) : OptimizedSerializable {
+    fun toJson(): String = JsonMapperNip55.toJson(this)
 
     fun toIntent(): Intent {
         val intent = Intent()
@@ -52,8 +54,8 @@ data class IntentResult(
                 rejected = data.extras?.containsKey("rejected") == true,
             )
 
-        fun fromJson(json: String): IntentResult = JsonMapper.mapper.readValue<IntentResult>(json)
+        fun fromJson(json: String): IntentResult = JsonMapperNip55.fromJsonTo<IntentResult>(json)
 
-        fun fromJsonArray(json: String): List<IntentResult> = JsonMapper.mapper.readValue<List<IntentResult>>(json)
+        fun fromJsonArray(json: String): List<IntentResult> = JsonMapperNip55.fromJsonTo<List<IntentResult>>(json)
     }
 }

@@ -38,7 +38,7 @@ class TorSettingsFlow(
     val nip05VerificationsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val nip96UploadsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
-    // emits at every change in any of the propertyes.
+    // emits at every change in any of the properties.
     val propertyWatchFlow =
         combine(
             listOf(

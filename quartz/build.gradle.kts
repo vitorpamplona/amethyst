@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.serialization)
 }
 
 android {
@@ -44,6 +45,7 @@ android {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xstring-concat=inline")
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     jvm {
         compilerOptions {
@@ -69,12 +71,6 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
-
-    iosX64 {
-        binaries.framework {
-            baseName = xcfName
-        }
-    }
 
     iosArm64 {
         binaries.framework {
@@ -102,7 +98,17 @@ kotlin {
                 // @Immutable and @Stable
                 implementation(libs.androidx.compose.runtime)
 
+                // Bitcoin secp256k1 bindings
                 api(libs.secp256k1.kmp.common)
+
+                // Kotlin serialization for the times where we need the Json tree and performance is not that important.
+                implementation(libs.kotlinx.serialization.json)
+
+                // in your shared module's dependencies block
+                implementation( libs.kotlinx.datetime)
+
+                // immutable collections to avoid recomposition
+                implementation(libs.kotlinx.collections.immutable)
             }
         }
 
@@ -112,25 +118,38 @@ kotlin {
             }
         }
 
-        jvmMain {
+        // Must be defined before androidMain and jvmMain
+        val jvmAndroid = create("jvmAndroid") {
+            dependsOn(commonMain.get())
+
             dependencies {
-                // Bitcoin secp256k1 bindings
-                api(libs.secp256k1.kmp.jni.jvm)
-
-                // Performant Parser of JSONs into Events
-                api(libs.jackson.module.kotlin)
-
-                // immutable collections to avoid recomposition
-                api(libs.kotlinx.collections.immutable)
-
-                // Parses URLs from Text:
-                api(libs.url.detector)
+                // For LruCache
+                implementation(libs.androidx.collection.jvm)
 
                 // Normalizes URLs
                 api(libs.rfc3986.normalizer)
 
+                // Performant Parser of JSONs into Events
+                api(libs.jackson.module.kotlin)
+
+                // Parses URLs from Text:
+                api(libs.url.detector)
+
                 // Websockets API
                 implementation(libs.okhttp)
+                implementation(libs.okhttpCoroutines)
+            }
+        }
+
+        jvmMain {
+            dependsOn(jvmAndroid)
+            dependencies {
+                // Bitcoin secp256k1 bindings
+                api(libs.secp256k1.kmp.jni.jvm)
+
+                // LibSodium for ChaCha encryption (NIP-44)
+                implementation (libs.lazysodium.java)
+                implementation (libs.jna)
             }
         }
 
@@ -142,6 +161,7 @@ kotlin {
         }
 
         androidMain {
+            dependsOn(jvmAndroid)
             dependencies {
                 implementation(libs.androidx.core.ktx)
 
@@ -154,21 +174,6 @@ kotlin {
                 // LibSodium for ChaCha encryption (NIP-44)
                 implementation ("com.goterl:lazysodium-android:5.2.0@aar")
                 implementation ("net.java.dev.jna:jna:5.17.0@aar")
-
-                // Performant Parser of JSONs into Events
-                api(libs.jackson.module.kotlin)
-
-                // immutable collections to avoid recomposition
-                api(libs.kotlinx.collections.immutable)
-
-                // Parses URLs from Text:
-                api(libs.url.detector)
-
-                // Normalizes URLs
-                api(libs.rfc3986.normalizer)
-
-                // Websockets API
-                implementation(libs.okhttp)
             }
         }
 
@@ -189,13 +194,33 @@ kotlin {
         }
 
         iosMain {
+            dependsOn(commonMain.get())
             dependencies {
-                // Add iOS-specific dependencies here. This a source set created by Kotlin Gradle
-                // Plugin (KGP) that each specific iOS target (e.g., iosX64) depends on as
-                // part of KMP’s default source set hierarchy. Note that this source set depends
-                // on common by default and will correctly pull the iOS artifacts of any
-                // KMP dependencies declared in commonMain.
+
             }
+        }
+
+        val iosArm64Main by getting {
+            dependsOn(iosMain.get()) // iosArm64Main depends on iosMain
+        }
+
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosMain.get()) // iosSimulatorArm64Main depends on iosMain
+        }
+
+        iosTest {
+            dependsOn(commonTest.get())
+            dependencies {
+
+            }
+        }
+
+        val iosArm64Test by getting {
+            dependsOn(iosTest.get()) // iosArm64Main depends on iosMain
+        }
+
+        val iosSimulatorArm64Test by getting {
+            dependsOn(iosTest.get()) // iosSimulatorArm64Main depends on iosMain
         }
     }
 }

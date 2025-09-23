@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,7 +44,8 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
+import com.vitorpamplona.quartz.utils.Log
 
 @Composable
 fun NoteUsernameDisplay(

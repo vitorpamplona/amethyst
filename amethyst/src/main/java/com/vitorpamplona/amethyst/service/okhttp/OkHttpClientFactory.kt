@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.os.Build
-import android.util.Log
+import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress

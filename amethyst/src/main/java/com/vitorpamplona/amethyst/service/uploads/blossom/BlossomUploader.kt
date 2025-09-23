@@ -25,16 +25,16 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
@@ -170,7 +170,7 @@ class BlossomUploader {
             withContext(Dispatchers.IO) {
                 if (response.isSuccessful) {
                     response.body.use { body ->
-                        parseResults(body.string())
+                        convertToMediaResult(parseResults(body.string()))
                     }
                 } else {
                     val errorMessage = response.headers.get("X-Reason")
@@ -187,6 +187,18 @@ class BlossomUploader {
             }
         }
     }
+
+    fun convertToMediaResult(result: BlossomUploadResult): MediaUploadResult =
+        MediaUploadResult(
+            url = result.url,
+            type = result.type,
+            sha256 = result.sha256,
+            size = result.size,
+            uploaded = result.uploaded,
+            magnet = result.magnet,
+            infohash = result.infohash,
+            ipfs = result.ipfs,
+        )
 
     fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
 
@@ -231,8 +243,5 @@ class BlossomUploader {
         }
     }
 
-    private fun parseResults(body: String): MediaUploadResult {
-        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        return mapper.readValue(body, MediaUploadResult::class.java)
-    }
+    private fun parseResults(body: String): BlossomUploadResult = JsonMapper.fromJson<BlossomUploadResult>(body)
 }

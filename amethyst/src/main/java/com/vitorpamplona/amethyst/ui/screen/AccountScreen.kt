@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.utils.Log
 
 @Composable
 fun AccountScreen(accountStateViewModel: AccountStateViewModel) {

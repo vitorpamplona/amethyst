@@ -24,7 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,7 +44,7 @@ class EventVerifySerializer {
     fun serializeToCheckId() {
         val event = Event.fromJson(largeKind1Event)
         benchmarkRule.measureRepeated {
-            EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+            EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         }
     }
 
@@ -52,7 +52,7 @@ class EventVerifySerializer {
     fun fastSerializeToCheckId() {
         val event = Event.fromJson(largeKind1Event)
         benchmarkRule.measureRepeated {
-            EventHasher.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+            EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         }
     }
 }

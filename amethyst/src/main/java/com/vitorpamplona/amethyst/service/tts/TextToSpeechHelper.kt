@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.service.tts
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import com.vitorpamplona.quartz.utils.Log
 import java.lang.ref.WeakReference
 import java.util.Locale
 

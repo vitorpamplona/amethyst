@@ -22,14 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
+import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventIndexesModule(
     val fts: FullTextSearchModule,
@@ -116,7 +115,7 @@ class EventIndexesModule(
         stmt.bindString(2, event.pubKey)
         stmt.bindLong(3, event.createdAt)
         stmt.bindLong(4, event.kind.toLong())
-        stmt.bindString(5, JsonMapper.mapper.writeValueAsString(event.tags))
+        stmt.bindString(5, OptimizedJsonMapper.toJson(event.tags))
         stmt.bindString(6, event.content)
         stmt.bindString(7, event.sig)
         if (event is AddressableEvent) {
@@ -250,7 +249,7 @@ class EventIndexesModule(
                     cursor.getString(1).intern(),
                     cursor.getLong(2),
                     cursor.getInt(3),
-                    JsonMapper.mapper.readValue<Array<Array<String>>>(cursor.getString(4)),
+                    OptimizedJsonMapper.fromJsonToTagArray(cursor.getString(4)),
                     cursor.getString(5).intern(),
                     cursor.getString(6).intern(),
                 ),
@@ -279,7 +278,7 @@ class EventIndexesModule(
                     cursor.getString(1).intern(),
                     cursor.getLong(2),
                     cursor.getInt(3),
-                    JsonMapper.mapper.readValue<Array<Array<String>>>(cursor.getString(4)),
+                    OptimizedJsonMapper.fromJsonToTagArray(cursor.getString(4)),
                     cursor.getString(5).intern(),
                     cursor.getString(6).intern(),
                 ),

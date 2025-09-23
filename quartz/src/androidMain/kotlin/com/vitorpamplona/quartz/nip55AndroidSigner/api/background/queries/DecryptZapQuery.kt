@@ -24,7 +24,7 @@ import android.content.ContentResolver
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.verify
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult

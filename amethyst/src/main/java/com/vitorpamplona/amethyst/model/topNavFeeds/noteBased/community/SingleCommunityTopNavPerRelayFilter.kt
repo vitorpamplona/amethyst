@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
 @Immutable
 class SingleCommunityTopNavPerRelayFilter(

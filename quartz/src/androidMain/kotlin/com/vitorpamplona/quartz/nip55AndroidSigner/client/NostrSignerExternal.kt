@@ -173,6 +173,9 @@ class NostrSignerExternal(
         throw convertExceptions("Could not decrypt private zap", result)
     }
 
+    // always ready
+    override fun hasForegroundSupport() = hasForegroundActivity()
+
     fun convertExceptions(
         title: String,
         result: SignerResult.RequestAddressed<*>,
