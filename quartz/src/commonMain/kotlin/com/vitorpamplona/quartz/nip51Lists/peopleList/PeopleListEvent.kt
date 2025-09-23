@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.replaceAll
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -215,6 +216,140 @@ class PeopleListEvent(
             peoples(publicPeople)
 
             initializer()
+        }
+
+        suspend fun createListWithDescription(
+            dTag: String,
+            title: String,
+            description: String? = null,
+            isPrivate: Boolean,
+            firstMemberHex: String? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            if (description == null) {
+                val newList =
+                    create(
+                        name = title,
+                        person = UserTag(pubKey = firstMemberHex ?: signer.pubKey),
+                        isPrivate = isPrivate,
+                        signer = signer,
+                        dTag = dTag,
+                        createdAt = createdAt,
+                    )
+                onReady(newList)
+            } else {
+                if (isPrivate) {
+                    val event =
+                        build(
+                            name = title,
+                            privatePeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
+                            signer = signer,
+                            dTag = dTag,
+                            createdAt = createdAt,
+                        ) {
+                            addUnique(arrayOf("description", description))
+                        }
+                    val list = signer.sign(event)
+                    onReady(list)
+                } else {
+                    val event =
+                        build(
+                            name = title,
+                            publicPeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
+                            signer = signer,
+                            dTag = dTag,
+                            createdAt = createdAt,
+                        ) {
+                            addUnique(arrayOf("description", description))
+                        }
+                    val list = signer.sign(event)
+                    onReady(list)
+                }
+            }
+        }
+
+        suspend fun createListWithUser(
+            name: String,
+            pubKeyHex: String,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            val newList =
+                create(
+                    name = name,
+                    person = UserTag(pubKey = pubKeyHex),
+                    isPrivate = isPrivate,
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            onReady(newList)
+        }
+
+        suspend fun addUser(
+            earlierVersion: PeopleListEvent,
+            pubKeyHex: String,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            val newList =
+                add(
+                    earlierVersion = earlierVersion,
+                    person = UserTag(pubKey = pubKeyHex),
+                    isPrivate = isPrivate,
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            onReady(newList)
+        }
+
+        suspend fun removeUser(
+            earlierVersion: PeopleListEvent,
+            pubKeyHex: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            val updatedList =
+                remove(
+                    earlierVersion = earlierVersion,
+                    person = UserTag(pubKey = pubKeyHex),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            onReady(updatedList)
+        }
+
+        suspend fun modifyListName(
+            earlierVersion: PeopleListEvent,
+            newName: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit = {},
+        ) {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val currentTitle = earlierVersion.tags.first { it[0] == NameTag.TAG_NAME || it[0] == TitleTag.TAG_NAME }
+            val newTitleTag =
+                if (currentTitle[0] == NameTag.TAG_NAME) {
+                    NameTag.assemble(newName)
+                } else {
+                    com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
+                        .assemble(newName)
+                }
+
+            val modified =
+                resign(
+                    publicTags = earlierVersion.tags.replaceAll(currentTitle, newTitleTag),
+                    privateTags = privateTags.replaceAll(currentTitle, newTitleTag),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            onReady(modified)
         }
     }
 }
