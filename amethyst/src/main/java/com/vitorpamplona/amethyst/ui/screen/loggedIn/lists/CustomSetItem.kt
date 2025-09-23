@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -59,19 +60,22 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import kotlin.let
 
 @Composable
-fun CustomListItem(
+fun CustomSetItem(
     modifier: Modifier = Modifier,
     followSet: FollowSet,
     onFollowSetClick: () -> Unit,
     onFollowSetRename: (String) -> Unit,
     onFollowSetDelete: () -> Unit,
 ) {
+    val context = LocalContext.current
     Row(
         modifier =
             modifier
@@ -125,9 +129,9 @@ fun CustomListItem(
             followSet.visibility.let {
                 val text by derivedStateOf {
                     when (it) {
-                        ListVisibility.Public -> "Public"
-                        ListVisibility.Private -> "Private"
-                        ListVisibility.Mixed -> "Mixed"
+                        ListVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
+                        ListVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
+                        ListVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
                     }
                 }
                 Column(
@@ -144,7 +148,7 @@ fun CustomListItem(
                                     ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
                                 },
                             ),
-                        contentDescription = "Icon for $text List",
+                        contentDescription = stringRes(R.string.follow_set_type_description, text),
                     )
                     Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
                 }
@@ -159,7 +163,7 @@ fun CustomListItem(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.End,
         ) {
-            ListOptionsButton(
+            SetOptionsButton(
                 followSetName = followSet.title,
                 onListRename = onFollowSetRename,
                 onListDelete = onFollowSetDelete,
@@ -169,7 +173,7 @@ fun CustomListItem(
 }
 
 @Composable
-fun ListOptionsButton(
+fun SetOptionsButton(
     modifier: Modifier = Modifier,
     followSetName: String,
     onListRename: (String) -> Unit,
@@ -182,7 +186,7 @@ fun ListOptionsButton(
     ) {
         VerticalDotsIcon()
 
-        ListOptionsMenu(
+        SetOptionsMenu(
             listName = followSetName,
             isExpanded = isMenuOpen.value,
             onDismiss = { isMenuOpen.value = false },
@@ -193,7 +197,7 @@ fun ListOptionsButton(
 }
 
 @Composable
-fun ListOptionsMenu(
+private fun SetOptionsMenu(
     modifier: Modifier = Modifier,
     isExpanded: Boolean,
     listName: String,
@@ -210,19 +214,17 @@ fun ListOptionsMenu(
     ) {
         DropdownMenuItem(
             text = {
-                Text(text = "Delete")
+                Text(text = stringRes(R.string.quick_action_delete))
             },
             onClick = {
-                println("The list named $listName has been selected for deletion.")
                 onDelete()
             },
         )
         DropdownMenuItem(
             text = {
-                Text(text = "Rename list")
+                Text(text = stringRes(R.string.follow_set_rename_btn_label))
             },
             onClick = {
-                println("The list $listName should be renamed...")
                 isRenameDialogOpen.value = true
                 onDismiss()
             },
@@ -245,7 +247,7 @@ fun ListOptionsMenu(
 }
 
 @Composable
-fun RenameDialog(
+private fun RenameDialog(
     modifier: Modifier = Modifier,
     currentName: String,
     newName: String,
@@ -255,7 +257,7 @@ fun RenameDialog(
 ) {
     val renameIndicator =
         buildAnnotatedString {
-            append("You are renaming from ")
+            append(stringRes(R.string.follow_set_rename_dialog_indicator_first_part) + " ")
             withStyle(
                 SpanStyle(
                     fontWeight = FontWeight.Bold,
@@ -265,13 +267,13 @@ fun RenameDialog(
             ) {
                 append("\"" + currentName + "\"")
             }
-            append(" to..")
+            append(" " + stringRes(R.string.follow_set_rename_dialog_indicator_second_part))
         }
 
     AlertDialog(
         onDismissRequest = onDismissDialog,
         title = {
-            Text(text = "Rename List")
+            Text(text = stringRes(R.string.follow_set_rename_btn_label))
         },
         text = {
             Column(
@@ -296,10 +298,10 @@ fun RenameDialog(
                     onListRename(newName)
                     onDismissDialog()
                 },
-            ) { Text(text = "Rename") }
+            ) { Text(text = stringRes(R.string.rename)) }
         },
         dismissButton = {
-            Button(onClick = onDismissDialog) { Text(text = "Cancel") }
+            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
         },
     )
 }

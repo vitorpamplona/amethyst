@@ -124,6 +124,7 @@
     <string name="post">Post</string>
     <string name="save">Save</string>
     <string name="create">Create</string>
+    <string name="rename">Rename</string>
     <string name="cancel">Cancel</string>
     <string name="failed_to_upload_the_image">Failed to upload the image</string>
     <string name="relay_address">Relay Address</string>
@@ -507,6 +508,36 @@
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Mute List</string>
+
+    <string name="follow_sets">Follow Sets</string>
+    <string name="labeled_bookmarks">Labeled Bookmarks</string>
+    <string name="general_bookmarks">General Bookmarks</string>
+    <string name="follow_set_type_public">Public</string>
+    <string name="follow_set_type_private">Private</string>
+    <string name="follow_set_type_mixed">Mixed</string>
+    <string name="follow_set_empty_feed_msg">
+        It seems you do not have any follow sets yet.
+        \nTap below to refresh, or tap the add buttons to create a new one.
+    </string>
+    <string name="follow_set_add_author_from_note_action">Add author to follow set</string>
+    <string name="follow_set_profile_actions_menu_description">Add or remove user from lists, or create a new list with this user.</string>
+    <string name="follow_set_type_description">Icon for %1$s List</string>
+    <string name="follow_set_presence_indicator">"%1$s is present in this list"</string>
+    <string name="follow_set_absence_indicator">"%1$s is not in this list"</string>
+    <string name="follow_set_man_dialog_title">Your Follow Sets</string>
+    <string name="follow_set_empty_dialog_msg">No follow sets were found, or you don\'t have any follow sets. Tap below to refresh, or use the menu to create one.</string>
+    <string name="follow_set_error_dialog_msg">There was a problem while fetching: %1$s</string>
+    <string name="follow_set_creation_menu_title">Make New List</string>
+    <string name="follow_set_creation_item_label">"Create new %1$s list with user</string>
+    <string name="follow_set_creation_item_description">Creates a %1$s follow set, and adds %2$s to it.</string>
+    <string name="follow_set_creation_dialog_title">New %1$s List</string>
+    <string name="follow_set_creation_name_label">Set name</string>
+    <string name="follow_set_creation_desc_label">Set description(optional)</string>
+    <string name="follow_set_creation_action_btn_label">Create set</string>
+    <string name="follow_set_rename_btn_label">Rename set</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">You are renaming from </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> to..</string>
+
 
     <string name="connect_through_your_orbot_setup_short">Default port is 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">
@@ -1231,7 +1262,7 @@
     <string name="torrent_no_apps">No torrent apps installed to open and download the file.</string>
     <string name="torrent_no_info">Event doesn\'t have enough information to build a magnet link</string>
 
-    <string name="my_lists">My Lists</string>
+    <string name="my_lists_and_sets">My Lists/Sets</string>
     <string name="select_list_to_filter">Select a list to filter the feed</string>
 
     <string name="temporary_account">Log off on device lock</string>

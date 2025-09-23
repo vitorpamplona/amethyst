@@ -65,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -80,7 +81,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewListCreationDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewSetCreationDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -109,10 +110,9 @@ fun FollowSetsManagementDialog(
                 title = {
                     Column {
                         Text(
-                            text = "Your Lists",
+                            text = stringRes(R.string.follow_set_man_dialog_title),
                             fontWeight = FontWeight.SemiBold,
                         )
-//                                HorizontalDivider()
                     }
                 },
                 navigationIcon = {
@@ -230,7 +230,7 @@ fun BackActionButton(
         colors = ButtonDefaults.filledTonalButtonColors(),
         elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
     ) {
-        Text(text = "Back", fontWeight = FontWeight.SemiBold)
+        Text(text = stringRes(R.string.back), fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -257,7 +257,7 @@ private fun EmptyOrNoneFound(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("No follow sets were found, or you don't have any follow sets. Tap below to refresh, or use the menu to create one.")
+        Text(text = stringRes(R.string.follow_set_empty_dialog_msg))
         Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
@@ -275,7 +275,7 @@ private fun ErrorMessage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("There was a problem while fetching: $errorMsg")
+        Text(text = stringRes(R.string.follow_set_error_dialog_msg, errorMsg))
         Spacer(modifier = StdVertSpacer)
         OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
@@ -291,6 +291,7 @@ fun FollowSetItem(
     onAddUser: () -> Unit,
     onRemoveUser: () -> Unit,
 ) {
+    val context = LocalContext.current
     Row(
         modifier =
             modifier
@@ -313,9 +314,9 @@ fun FollowSetItem(
                 listVisibility.let {
                     val text by derivedStateOf {
                         when (it) {
-                            ListVisibility.Public -> "Public"
-                            ListVisibility.Private -> "Private"
-                            ListVisibility.Mixed -> "Mixed"
+                            ListVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
+                            ListVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
+                            ListVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
                         }
                     }
                     Icon(
@@ -327,7 +328,7 @@ fun FollowSetItem(
                                     ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
                                 },
                             ),
-                        contentDescription = "Icon for $text List",
+                        contentDescription = stringRes(R.string.follow_set_type_description, text),
                     )
                 }
             }
@@ -339,7 +340,14 @@ fun FollowSetItem(
                     enabled = isUserInList,
                     onClick = {},
                     label = {
-                        Text(text = if (isUserInList) "$userName is present in this list" else "$userName is not in this list")
+                        Text(
+                            text =
+                                if (isUserInList) {
+                                    stringRes(R.string.follow_set_presence_indicator, userName)
+                                } else {
+                                    stringRes(R.string.follow_set_absence_indicator, userName)
+                                },
+                        )
                     },
                     leadingIcon =
                         if (isUserInList) {
@@ -392,7 +400,7 @@ fun FollowSetItem(
                     )
                 }
             }
-            Text(text = if (isUserInList) "Remove" else "Add", color = Color.Gray)
+            Text(text = stringRes(if (isUserInList) R.string.remove else R.string.add), color = Color.Gray)
         }
     }
 }
@@ -410,7 +418,7 @@ fun FollowSetsCreationMenu(
         modifier = modifier.padding(vertical = 30.dp),
     ) {
         Text(
-            "Make New List",
+            stringRes(R.string.follow_set_creation_menu_title),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Start,
@@ -439,7 +447,7 @@ fun FollowSetsCreationMenu(
     }
 
     if (isListAdditionDialogOpen.value) {
-        NewListCreationDialog(
+        NewSetCreationDialog(
             onDismiss = {
                 isListAdditionDialogOpen.value = false
                 isPrivateOptionTapped.value = false
@@ -459,6 +467,9 @@ fun FollowSetCreationItem(
     userName: String,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val setTypeLabel = stringRes(context, if (setIsPrivate) R.string.follow_set_type_private else R.string.follow_set_type_public)
+
     HorizontalDivider()
     Column(
         modifier =
@@ -477,7 +488,11 @@ fun FollowSetCreationItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Create new ${if (setIsPrivate) "Private" else "Public"} list with user",
+                text =
+                    stringRes(
+                        R.string.follow_set_creation_item_label,
+                        setTypeLabel,
+                    ),
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(modifier = StdHorzSpacer)
@@ -491,7 +506,7 @@ fun FollowSetCreationItem(
         }
         Spacer(modifier = StdVertSpacer)
         Text(
-            "Creates a ${if (setIsPrivate) "private" else "public"} follow set, and adds $userName to it.",
+            stringRes(R.string.follow_set_creation_item_description, setTypeLabel, userName),
             fontWeight = FontWeight.Light,
             overflow = TextOverflow.Ellipsis,
             maxLines = 2,

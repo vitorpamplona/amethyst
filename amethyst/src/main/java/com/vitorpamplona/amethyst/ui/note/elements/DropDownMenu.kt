@@ -184,7 +184,7 @@ fun NoteDropDownMenu(
             HorizontalDivider(thickness = DividerThickness)
         }
         DropdownMenuItem(
-            text = { Text(text = "Add author to follow set") },
+            text = { Text(text = stringRes(R.string.follow_set_add_author_from_note_action)) },
             onClick = {
                 val authorHexKey = note.author?.pubkeyHex ?: return@DropdownMenuItem
                 nav.nav(Route.FollowSetManagement(authorHexKey))

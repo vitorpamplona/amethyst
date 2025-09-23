@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsAndSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetsManagementDialog
@@ -127,7 +127,7 @@ fun AppNavigation(
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
 
-            composableFromEnd<Route.Lists> { ListsScreen(accountViewModel, listsViewModel, nav) }
+            composableFromEnd<Route.Lists> { ListsAndSetsScreen(accountViewModel, listsViewModel, nav) }
             composableArgs<Route.FollowSetRoute> {
                 FollowSetScreen(it.setIdentifier, accountViewModel, listsViewModel, nav)
             }

@@ -436,7 +436,7 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = R.string.my_lists,
+            title = R.string.my_lists_and_sets,
             icon = ImageVector.vectorResource(R.drawable.format_list_bulleted_type),
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,

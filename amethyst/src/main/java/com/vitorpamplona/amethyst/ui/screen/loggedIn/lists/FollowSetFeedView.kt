@@ -55,7 +55,7 @@ fun FollowSetFeedView(
 
         is FollowSetState.Loaded -> {
             val followSetFeed = followSetState.feed
-            FollowListLoaded(
+            FollowSetLoaded(
                 loadedFeedState = followSetFeed,
                 onRefresh = onRefresh,
                 onItemClick = onOpenItem,
@@ -65,10 +65,8 @@ fun FollowSetFeedView(
         }
 
         is FollowSetState.Empty -> {
-            FollowListFeedEmpty(
-                message =
-                    "It seems you do not have any follow lists yet.\n " +
-                        "Tap below to refresh, or tap the add buttons to create a new one.",
+            FollowSetFeedEmpty(
+                message = stringRes(R.string.follow_set_empty_feed_msg),
             ) {
                 onRefresh()
             }
@@ -84,7 +82,7 @@ fun FollowSetFeedView(
 }
 
 @Composable
-fun FollowListLoaded(
+fun FollowSetLoaded(
     modifier: Modifier = Modifier,
     loadedFeedState: List<FollowSet>,
     onRefresh: () -> Unit = {},
@@ -92,7 +90,7 @@ fun FollowListLoaded(
     onItemRename: (followSet: FollowSet, newName: String) -> Unit,
     onItemDelete: (followSet: FollowSet) -> Unit,
 ) {
-    Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")
+    Log.d("FollowSetComposable", "FollowSetLoaded: Follow Set size: ${loadedFeedState.size}")
 
     val listState = rememberLazyListState()
     RefresheableBox(
@@ -103,7 +101,7 @@ fun FollowListLoaded(
             contentPadding = FeedPadding,
         ) {
             itemsIndexed(loadedFeedState, key = { _, item -> item.identifierTag }) { _, set ->
-                CustomListItem(
+                CustomSetItem(
                     modifier = Modifier.animateItem(),
                     followSet = set,
                     onFollowSetClick = {
@@ -123,7 +121,7 @@ fun FollowListLoaded(
 }
 
 @Composable
-fun FollowListFeedEmpty(
+fun FollowSetFeedEmpty(
     message: String = stringRes(R.string.feed_is_empty),
     onRefresh: () -> Unit,
 ) {

@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,7 +72,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.launch
 
 @Composable
-fun ListsScreen(
+fun ListsAndSetsScreen(
     accountViewModel: AccountViewModel,
     followSetsViewModel: NostrUserListFeedViewModel,
     nav: INav,
@@ -139,7 +140,6 @@ fun CustomListsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-//    val setsState by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState { 3 }
     val coroutineScope = rememberCoroutineScope()
 
@@ -148,7 +148,7 @@ fun CustomListsScreen(
         accountViewModel = accountViewModel,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
+                TopBarWithBackButton(stringRes(R.string.my_lists_and_sets), nav::popBack)
                 TabRow(
                     selectedTabIndex = pagerState.currentPage,
                     modifier = TabRowHeight,
@@ -158,17 +158,17 @@ fun CustomListsScreen(
                     Tab(
                         selected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = "Follow Sets", overflow = TextOverflow.Visible) },
+                        text = { Text(text = stringRes(R.string.follow_sets), overflow = TextOverflow.Visible) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = "Labeled Bookmarks", overflow = TextOverflow.Visible) },
+                        text = { Text(text = stringRes(R.string.labeled_bookmarks), overflow = TextOverflow.Visible) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 2,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                        text = { Text(text = "General Bookmarks", overflow = TextOverflow.Visible) },
+                        text = { Text(text = stringRes(R.string.general_bookmarks), overflow = TextOverflow.Visible) },
                     )
                 }
             }
@@ -176,10 +176,10 @@ fun CustomListsScreen(
         floatingButton = {
             // TODO: Show components based on current tab
             FollowSetFabsAndMenu(
-                onAddPrivateList = { name: String, description: String? ->
+                onAddPrivateSet = { name: String, description: String? ->
                     addItem(name, description, ListVisibility.Private)
                 },
-                onAddPublicList = { name: String, description: String? ->
+                onAddPublicSet = { name: String, description: String? ->
                     addItem(name, description, ListVisibility.Public)
                 },
             )
@@ -212,10 +212,10 @@ fun CustomListsScreen(
 @Composable
 private fun FollowSetFabsAndMenu(
     modifier: Modifier = Modifier,
-    onAddPrivateList: (name: String, description: String?) -> Unit,
-    onAddPublicList: (name: String, description: String?) -> Unit,
+    onAddPrivateSet: (name: String, description: String?) -> Unit,
+    onAddPublicSet: (name: String, description: String?) -> Unit,
 ) {
-    val isListAdditionDialogOpen = remember { mutableStateOf(false) }
+    val isSetAdditionDialogOpen = remember { mutableStateOf(false) }
     val isPrivateOptionTapped = remember { mutableStateOf(false) }
 
     Row(
@@ -223,9 +223,8 @@ private fun FollowSetFabsAndMenu(
     ) {
         FloatingActionButton(
             onClick = {
-                println("The private list addition...")
                 isPrivateOptionTapped.value = true
-                isListAdditionDialogOpen.value = true
+                isSetAdditionDialogOpen.value = true
             },
             shape = CircleShape,
             containerColor = ButtonDefaults.filledTonalButtonColors().containerColor,
@@ -238,8 +237,7 @@ private fun FollowSetFabsAndMenu(
         }
         FloatingActionButton(
             onClick = {
-                println("The public list creation...")
-                isListAdditionDialogOpen.value = true
+                isSetAdditionDialogOpen.value = true
             },
             shape = CircleShape,
             containerColor = ButtonDefaults.filledTonalButtonColors().containerColor,
@@ -252,18 +250,18 @@ private fun FollowSetFabsAndMenu(
         }
     }
 
-    if (isListAdditionDialogOpen.value) {
-        NewListCreationDialog(
+    if (isSetAdditionDialogOpen.value) {
+        NewSetCreationDialog(
             onDismiss = {
-                isListAdditionDialogOpen.value = false
+                isSetAdditionDialogOpen.value = false
                 isPrivateOptionTapped.value = false
             },
             shouldBePrivate = isPrivateOptionTapped.value,
             onCreateList = { name, description ->
                 if (isPrivateOptionTapped.value) {
-                    onAddPrivateList(name, description)
+                    onAddPrivateSet(name, description)
                 } else {
-                    onAddPublicList(name, description)
+                    onAddPublicSet(name, description)
                 }
             },
         )
@@ -271,7 +269,7 @@ private fun FollowSetFabsAndMenu(
 }
 
 @Composable
-fun NewListCreationDialog(
+fun NewSetCreationDialog(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     shouldBePrivate: Boolean,
@@ -279,12 +277,16 @@ fun NewListCreationDialog(
 ) {
     val newListName = remember { mutableStateOf("") }
     val newListDescription = remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     val listTypeText =
-        when (shouldBePrivate) {
-            true -> "Private"
-            false -> "Public"
-        }
+        stringRes(
+            context,
+            when (shouldBePrivate) {
+                true -> R.string.follow_set_type_private
+                false -> R.string.follow_set_type_public
+            },
+        )
 
     val listTypeIcon =
         when (shouldBePrivate) {
@@ -304,7 +306,7 @@ fun NewListCreationDialog(
                     contentDescription = null,
                 )
                 Text(
-                    text = "New $listTypeText List",
+                    text = stringRes(R.string.follow_set_creation_dialog_title, listTypeText),
                 )
             }
         },
@@ -317,7 +319,7 @@ fun NewListCreationDialog(
                     value = newListName.value,
                     onValueChange = { newListName.value = it },
                     label = {
-                        Text("List name")
+                        Text(text = stringRes(R.string.follow_set_creation_name_label))
                     },
                 )
                 Spacer(modifier = DoubleVertSpacer)
@@ -329,7 +331,7 @@ fun NewListCreationDialog(
                         ).toString(),
                     onValueChange = { newListDescription.value = it },
                     label = {
-                        Text("List description(optional)")
+                        Text(text = stringRes(R.string.follow_set_creation_desc_label))
                     },
                 )
             }
@@ -341,14 +343,14 @@ fun NewListCreationDialog(
                     onDismiss()
                 },
             ) {
-                Text("Create list")
+                Text(stringRes(R.string.follow_set_creation_action_btn_label))
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
             ) {
-                Text("Cancel")
+                Text(stringRes(R.string.cancel))
             }
         },
     )
@@ -380,7 +382,7 @@ fun GeneralBookmarksFeedView() {
 
 @Preview(showSystemUi = true)
 @Composable
-private fun ListItemPreview() {
+private fun SetItemPreview() {
     val sampleFollowSet =
         FollowSet(
             identifierTag = "00001-2222",
@@ -390,7 +392,7 @@ private fun ListItemPreview() {
             emptySet(),
         )
     ThemeComparisonColumn {
-        CustomListItem(
+        CustomSetItem(
             modifier = Modifier,
             sampleFollowSet,
             onFollowSetClick = {
