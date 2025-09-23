@@ -74,11 +74,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewSetCreationDialog
@@ -92,8 +94,24 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 @Composable
 fun FollowSetsManagementDialog(
     userHex: String,
-    account: Account,
+    accountViewModel: AccountViewModel,
+    navigator: INav,
+) {
+    val followSetViewModel: NostrUserListFeedViewModel =
+        viewModel(
+            key = "NostrUserListFeedViewModel",
+            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
+        )
+
+    FollowSetsManagementDialog(userHex, followSetViewModel, accountViewModel.account, navigator)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FollowSetsManagementDialog(
+    userHex: String,
     followSetsViewModel: NostrUserListFeedViewModel,
+    account: Account,
     navigator: INav,
 ) {
     val followSetsState by followSetsViewModel.feedContent.collectAsState()

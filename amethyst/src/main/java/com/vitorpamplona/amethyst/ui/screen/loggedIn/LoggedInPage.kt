@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import com.vitorpamplona.quartz.utils.Log
@@ -73,12 +72,6 @@ fun LoggedInPage(
                     dataSources = Amethyst.instance.sources,
                     okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder,
                 ),
-        )
-
-    val listsViewModel: NostrUserListFeedViewModel =
-        viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
         )
 
     accountViewModel.firstRoute = route
@@ -107,7 +100,6 @@ fun LoggedInPage(
     AppNavigation(
         accountViewModel = accountViewModel,
         accountStateViewModel = accountStateViewModel,
-        listsViewModel = listsViewModel,
     )
 }
 
