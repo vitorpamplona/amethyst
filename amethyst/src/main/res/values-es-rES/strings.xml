@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">Error al guardar el video</string>
     <string name="upload_image">Cargar imagen</string>
     <string name="take_a_picture">Hacer una foto</string>
+    <string name="record_a_video">Grabar un video</string>
     <string name="record_a_message">Grabar un mensaje</string>
     <string name="record_a_message_title">Grabar un mensaje</string>
     <string name="record_a_message_description">Haz clic y mantén pulsado para grabar un mensaje</string>
@@ -163,6 +164,8 @@
     <string name="blocked_users">Usuarios bloqueados</string>
     <string name="new_threads">Temas nuevos</string>
     <string name="conversations">Conversaciones</string>
+    <string name="feed">Tablón</string>
+    <string name="mod_queue">Cola de mods</string>
     <string name="notes">Notas</string>
     <string name="replies">Respuestas</string>
     <string name="mutual">Tuyo</string>
@@ -437,6 +440,7 @@
     <string name="no">No</string>
     <string name="follow_list_selection">Lista de seguidos</string>
     <string name="follow_list_kind3follows">Todos los seguidos</string>
+    <string name="follow_list_kind3follows_users_only">Todas las cuentas a las que sigue el usuario</string>
     <string name="follow_list_kind3follows_proxy">Siguiendo a través de proxy</string>
     <string name="follow_list_aroundme">A mi alrededor</string>
     <string name="follow_list_global">Global</string>
@@ -577,7 +581,7 @@
     <string name="relay_setup">Relés</string>
     <string name="discover_follows">Paquetes de seguimiento</string>
     <string name="discover_reads">Lecturas</string>
-    <string name="discover_content_v2">Algoritmos del feed</string>
+    <string name="discover_content_v2">Algoritmos de fuentes</string>
     <string name="discover_marketplace">Mercado</string>
     <string name="discover_live_v2">Transmisiones en vivo</string>
     <string name="discover_community_v2">Comunidades</string>
@@ -655,6 +659,8 @@
     <string name="messages_new_subject_message">Explicación para los miembros</string>
     <string name="messages_new_subject_message_placeholder">Cambio de nombre para los nuevos objetivos.</string>
     <string name="paste_from_clipboard">Pegar desde el portapapeles</string>
+    <string name="invalid_nip47_uri_title">URI de NIP-47 no válido</string>
+    <string name="invalid_nip47_uri_description">El URI %1$s no es un URI de inicio de sesión NIP-47 válido.</string>
     <string name="language_description">Para la interfaz de la aplicación</string>
     <string name="theme_description">Tema oscuro, claro o del sistema</string>
     <string name="automatically_load_images_gifs_description">Cargar automáticamente imágenes y GIF</string>
@@ -672,6 +678,9 @@
     <string name="media_added_to_profile_gallery">Contenido multimedia añadido a la galería del perfil</string>
     <string name="created_at">Creado</string>
     <string name="rules">Reglas</string>
+    <string name="community_description">Sobre nosotros</string>
+    <string name="guidelines">Directrices</string>
+    <string name="moderators">Moderadores</string>
     <string name="login_with_external_signer">Iniciar sesión con Amber</string>
     <string name="status_update">Actualiza tu estado</string>
     <string name="lightning_wallets_not_found">Error al analizar el mensaje de error</string>
@@ -884,10 +893,13 @@
     <string name="dm_upload">Carga de mensaje directo</string>
     <string name="relay_settings">Configuración de relés</string>
     <string name="public_home_section">Relés de inicio públicos</string>
+    <string name="public_home_section_explainer_profile">El usuario está publicando su contenido a estos relés</string>
     <string name="public_home_section_explainer">Este tipo de relé almacena todo tu contenido. Amethyst enviará tus publicaciones aquí y otros usarán estos relés para encontrar tu contenido. Inserta entre 1 y 3 relés. Pueden ser personales, de pago o públicos.</string>
     <string name="public_notif_section">Relés de buzón de entrada públicos</string>
+    <string name="public_notif_section_explainer_profile">El usuario está recibiendo notificaciones en estos relés</string>
     <string name="public_notif_section_explainer">Este tipo de relé recibe todas las respuestas, comentarios, me gusta y zaps de tus publicaciones. Inserta entre 1 y 3 relés y asegúrate de que acepten publicaciones de cualquier persona.</string>
     <string name="private_inbox_section">Relés de buzón de entrada para mensajes directos</string>
+    <string name="private_inbox_section_explainer_profile">El usuario recibe mensajes directos en estos relés</string>
     <string name="private_inbox_section_explainer">Inserta entre 1 y 3 relés para que te sirvan de buzón de entrada privado. Otros usarán estos relés para enviarte mensajes directos. Los relés del buzón de entrada para mensajes directos deberían aceptar cualquier mensaje de cualquier persona, pero solo te permiten descargarlos. Algunas buenas opciones son:\n - inbox.nostr.wine (de pago)\n - you.nostr1.com (relés personales; de pago)</string>
     <string name="private_outbox_section">Relés privados</string>
     <string name="private_outbox_section_explainer">Inserta entre 1 y 3 relés para almacenar eventos que nadie más pueda ver, como los borradores o la configuración de la app. Lo ideal es que estos relés sean locales o requieran autenticación antes de descargar el contenido de cada usuario.</string>
@@ -906,7 +918,7 @@
     <string name="trusted_section_explainer">Relés en que confías para no necesitar una conexión Tor para</string>
     <string name="proxy_relays_title">Relés de proxy</string>
     <string name="proxy_section">Relés de proxy</string>
-    <string name="proxy_section_explainer">Relés recopiladores que la app debe usar para descargar tus feeds, como filter.nostr.wine. Esto reemplaza el modelo de bandeja de salida y hará que la app se conecte solo a los relés de tus listas.</string>
+    <string name="proxy_section_explainer">Relés recopiladores que la app debe usar para descargar tus fuentes, como filter.nostr.wine. Esto reemplaza el modelo de bandeja de salida y hará que la app se conecte solo a los relés de tus listas.</string>
     <string name="broadcast_relays_title">Relés de transmisión</string>
     <string name="broadcast_section">Relés de transmisión</string>
     <string name="broadcast_section_explainer">Relés que se especializan en enviar tus notas a todos los demás relés, como sendit.nosflare.com. Amethyst agregará este relé a todos los eventos nuevos que crees.</string>
@@ -1009,7 +1021,18 @@
     <string name="group_relay">Relé de chat</string>
     <string name="group_relay_explanation">Relé al que todos los usuarios de este chat se conectan</string>
     <string name="share_image">Compartir imagen…</string>
+    <string name="unable_to_share_image">No se puede compartir la imagen, inténtalo de nuevo más tarde…</string>
     <string name="search_by_hashtag">Buscar hashtag: #%1$s</string>
     <string name="dont_translate_from">No traducir del</string>
     <string name="dont_translate_from_description">Los idiomas que se muestran aquí no se traducirán. Selecciona un idioma para eliminarlo y traducirlo de nuevo.</string>
+    <string name="pause">Pausar</string>
+    <string name="play">Reproducir</string>
+    <string name="open_dropdown_menu">Abrir menú desplegable</string>
+    <string name="option_of">Opción %1$s de %2$s</string>
+    <string name="feed_filter_selected">Filtro del tablón, %1$s seleccionado</string>
+    <string name="feed_filter_select_an_option">Filtro del tablón, %1$s</string>
+    <string name="crashreport_found">Informe de error encontrado</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">¿Te gustaría enviar el informe de error reciente a Amethyst en un mensaje directo? No se compartirá información personal</string>
+    <string name="crashreport_found_send">Enviarlo</string>
+    <string name="this_message_will_disappear_in_days">Este mensaje desaparecerá en %1$d días</string>
 </resources>
