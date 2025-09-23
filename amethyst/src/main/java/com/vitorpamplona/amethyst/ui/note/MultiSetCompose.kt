@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
+import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -491,7 +492,9 @@ private fun DisplayAuthorCommentAndAmount(
     }
 
     authorComment.comment?.let {
-        CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+        Box(textBoxModifier) {
+            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+        }
     }
 }
 
@@ -526,15 +529,23 @@ fun CrossfadeToDisplayComment(
 ) {
     TranslatableRichTextViewer(
         content = comment,
-        canPreview = true,
-        quotesLeft = 1,
-        tags = EmptyTagList,
-        modifier = textBoxModifier,
-        backgroundColor = backgroundColor,
         id = comment,
+        translationMessageModifier = Modifier.padding(top = 2.dp),
         accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    ) {
+        ExpandableRichTextViewer(
+            it,
+            true,
+            1,
+            Modifier,
+            EmptyTagList,
+            backgroundColor,
+            comment,
+            null,
+            accountViewModel,
+            nav,
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

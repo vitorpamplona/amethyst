@@ -24,8 +24,6 @@ import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -61,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +104,7 @@ fun TranslatableRichTextViewer(
 fun TranslatableRichTextViewer(
     content: String,
     id: String,
+    translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) {
@@ -114,6 +114,7 @@ fun TranslatableRichTextViewer(
         RenderTextWithTranslateOptions(
             translatedTextState = it,
             content = content,
+            translationMessageModifier = translationMessageModifier,
             accountViewModel = accountViewModel,
             displayText = displayText,
         )
@@ -124,6 +125,7 @@ fun TranslatableRichTextViewer(
 private fun RenderTextWithTranslateOptions(
     translatedTextState: TranslationConfig,
     content: String,
+    translationMessageModifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) {
@@ -146,6 +148,7 @@ private fun RenderTextWithTranslateOptions(
             TranslationMessage(
                 translatedTextState.sourceLang,
                 translatedTextState.targetLang,
+                translationMessageModifier,
                 accountViewModel,
             ) {
                 showOriginal = it
@@ -158,6 +161,7 @@ private fun RenderTextWithTranslateOptions(
 private fun TranslationMessage(
     source: String,
     target: String,
+    modifier: Modifier = MaxWidthPaddingTop5dp,
     accountViewModel: AccountViewModel,
     onChangeWhatToShow: (Boolean) -> Unit,
 ) {
@@ -165,7 +169,7 @@ private fun TranslationMessage(
     val scope = rememberCoroutineScope()
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+        modifier = modifier,
     ) {
         val textColor = MaterialTheme.colorScheme.lessImportantLink
 
