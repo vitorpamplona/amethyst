@@ -2,8 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="point_to_the_qr_code">Usmeri v QR kodo</string>
     <string name="show_qr">Pokaži QR kodo</string>
-    <string name="profile_image">Profilna slika</string>
-    <string name="your_profile_image">Tvoja profilna slika</string>
+    <string name="profile_image">Slika profila</string>
+    <string name="your_profile_image">Tvoja slika profila</string>
     <string name="scan_qr">Skeniraj QR kodo</string>
     <string name="show_anyway">Vseeno prikaži</string>
     <string name="post_was_hidden">To sporočilo je skrito, ker je omenjena nekatera od skritih uporabnikov ali besed</string>
@@ -84,7 +84,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="replying_to">"odgovoriti "</string>
     <string name="and">" in "</string>
     <string name="in_channel">"v kanalu "</string>
-    <string name="profile_banner">Profilna pasica</string>
+    <string name="profile_banner">Pasica profila</string>
     <string name="payment_successful">Plačilo uspešno</string>
     <string name="error_parsing_error_message">Napaka pri razčlembi sporočila o napaki</string>
     <string name="following">" Sledi"</string>
@@ -179,7 +179,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="mod_queue">Moderatorska vrsta</string>
     <string name="notes">Zapiski</string>
     <string name="replies">Pogovori</string>
-    <string name="mutual">Tvoje</string>
+    <string name="mutual">Vaše</string>
     <string name="gallery">Galerija</string>
     <string name="follows">"Sledi"</string>
     <string name="reports">"Reportaže"</string>
@@ -736,7 +736,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="no_wallet_found">Denarnica za plačilo z \"lightning\" ni najdena. Prosimo, namestite \"lightning\" denarnico da boste lahko Zap-ali ostale</string>
     <string name="hidden_words">Skrite besede</string>
     <string name="hide_new_word_label">Skrij novo besedo ali stavek</string>
-    <string name="automatically_show_profile_picture">Profilna slika</string>
+    <string name="automatically_show_profile_picture">Slika profila</string>
     <string name="automatically_show_profile_picture_description">Prikaži profilne slike</string>
     <string name="select_an_option">Uporabi možnost</string>
     <string name="error_dialog_pay_invoice_error">Fakture ni bilo mogoče plačati</string>
@@ -866,7 +866,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="like_description">Všečkaj</string>
     <string name="zap_description">Zap</string>
     <string name="change_reaction">Spremeni hitre odzivne ikone</string>
-    <string name="profile_image_of_user">Profilna slika %1$s</string>
+    <string name="profile_image_of_user">Slika profila %1$s</string>
     <string name="relay_info">Rele %1$s</string>
     <string name="expand_relay_list">Razširi seznam relejev</string>
     <string name="note_options">Možnosti zapiska</string>
