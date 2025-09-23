@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +87,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ProductImageMeta
 import com.vitorpamplona.quartz.nip99Classifieds.image
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers

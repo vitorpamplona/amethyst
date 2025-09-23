@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.ui.navigation.findParameterValue
-import junit.framework.TestCase.assertEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URI
 

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.Drawable
-import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -92,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -102,10 +102,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip03Timestamp.DefaultOtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
+import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
+import com.vitorpamplona.quartz.nip03Timestamp.ots.RemoteCalendar
+import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -136,6 +140,7 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.collections.immutable.ImmutableList
@@ -1640,8 +1645,6 @@ var mockedCache: AccountViewModel? = null
 fun mockAccountViewModel(): AccountViewModel {
     mockedCache?.let { return it }
 
-    val otsResolver = DefaultOtsResolverBuilder()
-
     val scope = rememberCoroutineScope()
 
     val uiState =
@@ -1668,7 +1671,7 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
             nwcFilterAssembler = nwcFilters,
-            otsResolverBuilder = otsResolver,
+            otsResolverBuilder = EmptyOtsResolverBuilder,
             cache = LocalCache,
             client = client,
             scope = scope,
@@ -1694,8 +1697,6 @@ fun mockVitorAccountViewModel(): AccountViewModel {
 
     val scope = rememberCoroutineScope()
 
-    val otsResolver = DefaultOtsResolverBuilder()
-
     val uiState =
         UiSettingsState(
             uiSettingsFlow = UiSettingsFlow(),
@@ -1718,7 +1719,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading),
             nwcFilterAssembler = nwcFilters,
-            otsResolverBuilder = otsResolver,
+            otsResolverBuilder = EmptyOtsResolverBuilder,
             cache = LocalCache,
             client = EmptyNostrClient,
             scope = scope,
@@ -1734,3 +1735,36 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         vitorCache = it
     }
 }
+
+val EmptyOtsResolverBuilder =
+    object : OtsResolverBuilder {
+        override fun build(): OtsResolver =
+            OtsResolver(
+                explorer =
+                    object : BitcoinExplorer {
+                        override suspend fun block(hash: String): BlockHeader {
+                            TODO("Not yet implemented")
+                        }
+
+                        override suspend fun blockHash(height: Int): String {
+                            TODO("Not yet implemented")
+                        }
+                    },
+                calendar =
+                    object : RemoteCalendar {
+                        override suspend fun submit(
+                            url: String,
+                            digest: ByteArray,
+                        ): Timestamp {
+                            TODO("Not yet implemented")
+                        }
+
+                        override suspend fun getTimestamp(
+                            url: String,
+                            commitment: ByteArray,
+                        ): Timestamp {
+                            TODO("Not yet implemented")
+                        }
+                    },
+            )
+    }

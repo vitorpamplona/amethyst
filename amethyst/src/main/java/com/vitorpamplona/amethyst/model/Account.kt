@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
@@ -205,6 +204,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -804,27 +804,27 @@ class Account(
         }
     }
 
-    fun broadcast(note: Note) {
-        note.event?.let {
-            if (it is WrappedEvent && it.host != null) {
+    suspend fun broadcast(note: Note) {
+        note.event?.let { noteEvent ->
+            if (noteEvent is WrappedEvent && noteEvent.host != null) {
                 // download the event and send it.
-                it.host?.let { host ->
-                    client.downloadFirstEvent(
-                        filters =
-                            note.relays.associateWith { relay ->
-                                listOf(
-                                    Filter(
-                                        ids = listOf(host.id),
-                                    ),
-                                )
-                            },
-                        onResponse = {
-                            client.send(it, computeRelayListToBroadcast(it))
-                        },
-                    )
+                noteEvent.host?.let { host ->
+                    client
+                        .downloadFirstEvent(
+                            filters =
+                                note.relays.associateWith { relay ->
+                                    listOf(
+                                        Filter(
+                                            ids = listOf(host.id),
+                                        ),
+                                    )
+                                },
+                        )?.let { downloadedEvent ->
+                            client.send(downloadedEvent, computeRelayListToBroadcast(downloadedEvent))
+                        }
                 }
             } else {
-                client.send(it, computeRelayListToBroadcast(note))
+                client.send(noteEvent, computeRelayListToBroadcast(note))
             }
         }
     }

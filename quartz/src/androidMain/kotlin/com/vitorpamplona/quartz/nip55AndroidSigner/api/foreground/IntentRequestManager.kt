@@ -22,11 +22,11 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.util.Log
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.IResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlin.coroutines.Continuation

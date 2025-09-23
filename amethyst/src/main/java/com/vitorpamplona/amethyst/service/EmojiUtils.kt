@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 
 fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
 

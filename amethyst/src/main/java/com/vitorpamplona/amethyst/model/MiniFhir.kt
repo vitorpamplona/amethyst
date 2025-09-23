@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.Log
 import androidx.compose.runtime.Stable
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableMap
@@ -160,7 +161,7 @@ fun parseResourceBundleOrNull(json: String): FhirElementDatabase? {
         jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
     return try {
-        val resource = mapper.readValue(json, Resource::class.java)
+        val resource = mapper.readValue<Resource>(json)
 
         val db =
             when (resource) {

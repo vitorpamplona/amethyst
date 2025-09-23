@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ServerName(
     val name: String,
     val baseUrl: String,

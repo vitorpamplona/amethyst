@@ -20,18 +20,18 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.amethyst.ui.note.njumpLink
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 
 data class Spammer(
@@ -65,7 +65,7 @@ class AntiSpamFilter {
         // really long, make it ok.
         // The idea here is to avoid considering repeated "@Bot, command" messages spam, while still
         // blocking repeated "lnbc..." invoices or fishing urls
-        if (event.content.length < 180 && event.content.startsWith("nostr:") && Nip19Parser.nip19regex.matcher(event.content).find()) return false
+        if (event.content.length < 180 && event.content.startsWith("nostr:") && Nip19Parser.hasAny(event.content)) return false
 
         // double list strategy:
         // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.

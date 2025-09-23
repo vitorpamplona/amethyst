@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
-import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayAuthenticator
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 
 class ScreenAuthAccount(
@@ -55,7 +55,7 @@ class AuthCoordinator(
         if (account == null) return
 
         if (isDebug) {
-            Log.d(this::class.simpleName, "Watch $account")
+            Log.d("AuthCoordinator", "Watch $account")
         }
 
         authWithAccounts.add(account)
@@ -66,7 +66,7 @@ class AuthCoordinator(
         if (account == null) return
 
         if (isDebug) {
-            Log.d(this::class.simpleName, "Unwatch $account")
+            Log.d("AuthCoordinator", "Unwatch $account")
         }
 
         authWithAccounts.remove(account)

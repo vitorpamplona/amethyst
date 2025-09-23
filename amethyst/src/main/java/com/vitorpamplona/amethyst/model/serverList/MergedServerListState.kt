@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,7 +34,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import org.czeal.rfc3986.URIReference
 
 class MergedServerListState(
     val fileServers: FileStorageServerListState,
@@ -42,7 +42,7 @@ class MergedServerListState(
 ) {
     fun host(url: String): String =
         try {
-            URIReference.parse(url).host.value
+            Rfc3986.host(url)
         } catch (e: Exception) {
             url
         }

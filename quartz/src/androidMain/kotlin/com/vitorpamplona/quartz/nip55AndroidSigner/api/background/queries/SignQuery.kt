@@ -22,15 +22,15 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
 import android.content.ContentResolver
 import androidx.core.net.toUri
-import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.verify
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
+import com.vitorpamplona.quartz.utils.EventFactory
 
 class SignQuery(
     val loggedInUser: HexKey,

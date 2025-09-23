@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.speedLogger
 
-import android.util.Log
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger.Companion.TAG
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.timer
 

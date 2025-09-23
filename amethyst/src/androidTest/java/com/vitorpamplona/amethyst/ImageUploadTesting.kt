@@ -41,7 +41,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.utils.sha256.sha256
-import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +48,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.Assert
+import org.junit.Assert.assertEquals
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -245,13 +245,6 @@ class ImageUploadTesting {
     fun testSovbit() =
         runBlocking {
             testBase(ServerName("sovbit", "https://files.sovbit.host", ServerType.NIP96))
-        }
-
-    @Test()
-    @Ignore("Not Working anymore")
-    fun testVoidCat() =
-        runBlocking {
-            testBase(ServerName("void.cat", "https://void.cat", ServerType.NIP96))
         }
 
     @Test()

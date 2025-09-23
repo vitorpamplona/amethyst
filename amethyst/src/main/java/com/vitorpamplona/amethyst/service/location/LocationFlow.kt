@@ -26,9 +26,9 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Looper
-import android.util.Log
 import com.vitorpamplona.amethyst.service.location.LocationState.Companion.MIN_DISTANCE
 import com.vitorpamplona.amethyst.service.location.LocationState.Companion.MIN_TIME
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

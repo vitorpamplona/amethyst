@@ -21,14 +21,19 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
-import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
+import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
+import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
+import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertTrue
+import com.vitorpamplona.quartz.utils.EventFactory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -59,11 +64,10 @@ class EventSigCheck {
 
     @Test
     fun testUnicode2028and2029ShouldNotBeEscaped() {
-        val msg = JsonMapper.mapper.readTree(payload1)
-        val event = JsonMapper.fromJson(msg[2])
+        val msg = OptimizedJsonMapper.fromJsonTo<Message>(payload1) as EventMessage
 
         // Should pass
-        event.checkSignature()
+        msg.event.checkSignature()
     }
 
     @Test
@@ -83,8 +87,8 @@ class EventSigCheck {
                 sig = "6df6aeef98c21a0508a788cbe6a2a6825e5cc69e57dd843dc6e6d4ce2c28dd042947723fda3d8b24489305d86b1e81f9f66b390d6f7dabf9742cd3775e17e53f",
             )
 
-        val old = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
-        val new = EventHasher.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
         assertEquals(old.toByteArray().joinToString(), new.joinToString())
         assertTrue(event.verifySignature())
@@ -117,8 +121,8 @@ class EventSigCheck {
                 sig = "e03c81ec2543e777583bfcf93c0d82d3055a47a541b1a961db010ed2390e56ddc59e4f891505672757b7ac0d52e891854fdd61f1a4e13b4e6aa563e94cb9368e",
             )
 
-        val old = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
-        val new = EventHasher.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
         println(old)
         println(String(new))
@@ -149,8 +153,8 @@ class EventSigCheck {
                 sig = "81d08765524bd8b774585a57c76d25b1d2c09eaa23efcb075226ba8b64f42e3d9d9403e5edf888e0e58702a24abc084259e21b97e24a275021c5e36186c65f0c",
             )
 
-        val old = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
-        val new = EventHasher.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
         println(old)
         println(String(new))

@@ -27,9 +27,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 class ChatFileSender(
     val chatroom: ChatroomKey,

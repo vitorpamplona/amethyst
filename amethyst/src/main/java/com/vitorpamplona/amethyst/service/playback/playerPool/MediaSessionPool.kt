@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import android.util.LruCache
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
@@ -37,6 +36,7 @@ import androidx.media3.session.MediaSession
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

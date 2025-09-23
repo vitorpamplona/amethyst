@@ -29,16 +29,16 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import java.io.IOException
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 class EncryptedDataStore(
     private val store: DataStore<Preferences>,
     private val encryption: KeyStoreEncryption = KeyStoreEncryption(),
     private val scope: CoroutineScope,
 ) {
-    private fun decode(str: String): ByteArray = Base64.getDecoder().decode(str)
+    private fun decode(str: String): ByteArray = Base64.decode(str)
 
-    private fun encode(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
+    private fun encode(bytes: ByteArray): String = Base64.encode(bytes)
 
     private fun encrypt(value: String): String = encode(encryption.encrypt(value.toByteArray()))
 

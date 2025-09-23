@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.utils.RandomInstance
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.nio.charset.Charset
 
 @RunWith(AndroidJUnit4::class)
 class HintIndexerBenchmark {
@@ -46,10 +45,10 @@ class HintIndexerBenchmark {
             }
 
         val relays =
-            javaClass.classLoader
-                ?.getResourceAsStream("relayDB.txt")!!
-                .readBytes()
-                .toString(Charset.forName("utf-8"))
+            javaClass.classLoader!!
+                .getResourceAsStream("relayDB.txt")
+                .bufferedReader()
+                .use { it.readText() }
                 .split("\n")
                 .mapNotNull(RelayUrlNormalizer::normalizeOrNull)
     }

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons
 
 import com.vitorpamplona.amethyst.commons.blurhash.Base83
-import junit.framework.TestCase.assertEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class Base83Test {

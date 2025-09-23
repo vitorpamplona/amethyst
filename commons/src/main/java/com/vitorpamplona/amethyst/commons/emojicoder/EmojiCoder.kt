@@ -52,7 +52,6 @@ object EmojiCoder {
         charCode in VARIATION_SELECTOR_START..VARIATION_SELECTOR_END ||
             charCode in VARIATION_SELECTOR_SUPPLEMENT_START..VARIATION_SELECTOR_SUPPLEMENT_END
 
-    @JvmStatic
     fun isCoded(text: String): Boolean {
         if (text.length <= 3) return false
 
@@ -67,7 +66,6 @@ object EmojiCoder {
         return true
     }
 
-    @JvmStatic
     fun encode(
         emoji: String,
         text: String,
@@ -83,7 +81,6 @@ object EmojiCoder {
         return emoji + String(out)
     }
 
-    @JvmStatic
     fun decode(text: String): String {
         val decoded = mutableListOf<Int>()
 
@@ -107,7 +104,6 @@ object EmojiCoder {
         return String(decodedArray, Charsets.UTF_8)
     }
 
-    @JvmStatic
     fun cropToFirstMessage(text: String): String {
         val decoded = mutableListOf<Int>()
 

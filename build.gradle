@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
+    alias(libs.plugins.serialization)
 }
 
 allprojects {

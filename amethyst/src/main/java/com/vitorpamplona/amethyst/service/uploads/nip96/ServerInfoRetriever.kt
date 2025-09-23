@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.nip96
 
-import android.util.Log
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfoParser
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

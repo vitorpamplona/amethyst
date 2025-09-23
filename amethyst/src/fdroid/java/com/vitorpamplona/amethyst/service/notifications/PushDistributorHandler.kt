@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.quartz.utils.Log
 import org.unifiedpush.android.connector.UnifiedPush
 
 interface PushDistributorActions {

@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
+import kotlinx.serialization.Serializable
 
 @Stable
+@Serializable
 data class UiSettings(
     val theme: ThemeType = ThemeType.SYSTEM,
     val preferredLanguage: String? = null,

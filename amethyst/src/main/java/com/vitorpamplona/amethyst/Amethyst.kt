@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
-import android.util.Log
 import com.vitorpamplona.amethyst.service.logging.Logging
+import com.vitorpamplona.quartz.utils.Log
 
 class Amethyst : Application() {
     companion object {

@@ -24,7 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.utils.ensure
-import junit.framework.TestCase.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,7 +45,6 @@ class EnsureTest {
                 "0123456789abcdefABCDEF".forEach { this[it.code] = true }
             }
 
-        @JvmStatic
         fun String.isHex() = all { isHexChar[it.code] }
     }
 

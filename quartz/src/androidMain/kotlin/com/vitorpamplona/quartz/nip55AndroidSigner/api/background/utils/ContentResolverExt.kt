@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils
 import android.content.ContentResolver
 import android.database.Cursor
 import android.net.Uri
-import android.util.Log
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.IResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.utils.Log
 
 fun <T : IResult> ContentResolver.query(
     uri: Uri,

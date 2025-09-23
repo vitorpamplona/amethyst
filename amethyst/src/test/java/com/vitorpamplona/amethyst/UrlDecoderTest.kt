@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
-import junit.framework.TestCase.assertEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URLDecoder
 import java.net.URLEncoder

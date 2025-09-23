@@ -24,10 +24,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.service.okhttp.EncryptedBlobInterceptor
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
-import junit.framework.TestCase.assertEquals
+import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 

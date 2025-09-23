@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.robohash
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -86,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.robohash.parts.mouth7Happy
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth8Buttons
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth9Closed
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 val Black = SolidColor(Color.Black)
