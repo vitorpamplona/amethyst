@@ -1,9 +1,11 @@
+import com.vanniktech.maven.publish.KotlinMultiplatform
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.serialization)
+    alias(libs.plugins.vanniktech.mavenPublish)
 }
 
 android {
@@ -230,6 +232,58 @@ kotlin {
 
         val iosSimulatorArm64Test by getting {
             dependsOn(iosTest.get()) // iosSimulatorArm64Main depends on iosMain
+        }
+    }
+}
+
+
+mavenPublishing {
+    // sources publishing is always enabled by the Kotlin Multiplatform plugin
+    configure(
+        KotlinMultiplatform(
+            // whether to publish a sources jar
+            sourcesJar = true,
+            // configure which Android library variants to publish if this project has an Android target
+            // defaults to "release" when using the main plugin and nothing for the base plugin
+            androidVariantsToPublish = listOf("release"),
+        )
+    )
+
+    coordinates(
+        groupId = "com.vitorpamplona.quartz",
+        artifactId = "quartz",
+        version = "1.03.0"
+    )
+
+    // Configure publishing to Maven Central
+    //publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
+    publishToMavenCentral(automaticRelease = true)
+
+    // Enable GPG signing for all publications
+    signAllPublications()
+
+    pom {
+        name = "Quartz: Nostr Library for Kotlin Multiplatform"
+        description = "Nostr library ported to Kotlin/Multiplatform for JVM, Android, iOS & Linux"
+        inceptionYear = "2025"
+        url = "https://github.com/vitorpamplona/amethyst/"
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://github.com/vitorpamplona/amethyst/blob/main/LICENSE"
+            }
+        }
+        developers {
+            developer {
+                id = "vitorpamplona"
+                name = "Vitor Pamplona"
+                url = "http://vitorpamplona.com"
+                email = "vitor@vitorpamplona.com"
+            }
+        }
+        scm {
+            url = "https://github.com/vitorpamplona/amethyst/"
+            connection = "https://github.com/vitorpamplona/amethyst/.git"
         }
     }
 }

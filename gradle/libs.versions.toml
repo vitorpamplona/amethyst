@@ -60,6 +60,7 @@ androidxCollection = "1.5.0"
 kotlinStdlib = "2.2.20"
 kotlinTest = "2.2.10"
 core = "1.7.0"
+mavenPublish = "0.34.0"
 
 [libraries]
 abedElazizShe-image-compressor = { group = "com.github.AbedElazizShe", name = "LightCompressor", version.ref = "lightcompressor" }
@@ -165,3 +166,4 @@ jetbrainsComposeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version
 serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref = 'kotlinxSerializationPlugin' }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
