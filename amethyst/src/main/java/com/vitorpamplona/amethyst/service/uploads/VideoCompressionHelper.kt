@@ -95,47 +95,45 @@ data class CompressionRule(
     }
 }
 
-class VideoCompressionHelper {
-    companion object {
-        private const val LOG_TAG = "VideoCompressionHelper"
+object VideoCompressionHelper {
+    private const val LOG_TAG = "VideoCompressionHelper"
 
-        private val compressionRules =
-            mapOf(
-                CompressorQuality.LOW to
-                    mapOf(
-                        VideoStandard.UHD_4K to CompressionRule(1280, 720, 2f, "4K→720p, 2Mbps"),
-                        VideoStandard.QHD_1440P to CompressionRule(1280, 720, 2f, "1440p→720p, 2Mbps"),
-                        VideoStandard.FHD_1080P to CompressionRule(854, 480, 1f, "1080p→480p, 1Mbps"),
-                        VideoStandard.HD_720P to CompressionRule(640, 360, 1f, "720p→360p, 1Mbps"),
-                        VideoStandard.SD_480P to CompressionRule(426, 240, 1f, "480p→240p, 1Mbps"),
-                        VideoStandard.NHD_360P to CompressionRule(426, 240, 0.3f, "360p→240p, 0.3Mbps"),
-                        VideoStandard.QVGA_240P to CompressionRule(320, 180, 0.2f, "240p→180p, 0.2Mbps"),
-                        VideoStandard.UNKNOWN to CompressionRule(854, 480, 1f, "Low quality fallback, 1Mbps"),
-                    ),
-                CompressorQuality.MEDIUM to
-                    mapOf(
-                        VideoStandard.UHD_4K to CompressionRule(1920, 1080, 6f, "4K→1080p, 6Mbps"),
-                        VideoStandard.QHD_1440P to CompressionRule(1920, 1080, 6f, "1440p→1080p, 6Mbps"),
-                        VideoStandard.FHD_1080P to CompressionRule(1280, 720, 3f, "1080p→720p, 3Mbps"),
-                        VideoStandard.HD_720P to CompressionRule(854, 480, 2f, "720p→480p, 2Mbps"),
-                        VideoStandard.SD_480P to CompressionRule(640, 360, 1f, "480p→360p, 1Mbps"),
-                        VideoStandard.NHD_360P to CompressionRule(426, 240, 0.5f, "360p→240p, 0.5Mbps"),
-                        VideoStandard.QVGA_240P to CompressionRule(320, 180, 0.3f, "240p→180p, 0.3Mbps"),
-                        VideoStandard.UNKNOWN to CompressionRule(1280, 720, 2f, "Medium quality fallback, 2Mbps"),
-                    ),
-                CompressorQuality.HIGH to
-                    mapOf(
-                        VideoStandard.UHD_4K to CompressionRule(3840, 2160, 16f, "4K→4K, 16Mbps"),
-                        VideoStandard.QHD_1440P to CompressionRule(1920, 1080, 8f, "1440p→1080p, 8Mbps"),
-                        VideoStandard.FHD_1080P to CompressionRule(1920, 1080, 6f, "1080p→1080p, 6Mbps"),
-                        VideoStandard.HD_720P to CompressionRule(1280, 720, 3f, "720p→720p, 3Mbps"),
-                        VideoStandard.SD_480P to CompressionRule(854, 480, 2f, "480p→480p, 2Mbps"),
-                        VideoStandard.NHD_360P to CompressionRule(640, 360, 1f, "360p→360p, 1Mbps"),
-                        VideoStandard.QVGA_240P to CompressionRule(426, 240, 0.5f, "240p→240p, 0.5Mbps"),
-                        VideoStandard.UNKNOWN to CompressionRule(1920, 1080, 3f, "High quality fallback, 3Mbps"),
-                    ),
-            )
-    }
+    private val compressionRules =
+        mapOf(
+            CompressorQuality.LOW to
+                mapOf(
+                    VideoStandard.UHD_4K to CompressionRule(1280, 720, 2f, "4K→720p, 2Mbps"),
+                    VideoStandard.QHD_1440P to CompressionRule(1280, 720, 2f, "1440p→720p, 2Mbps"),
+                    VideoStandard.FHD_1080P to CompressionRule(854, 480, 1f, "1080p→480p, 1Mbps"),
+                    VideoStandard.HD_720P to CompressionRule(640, 360, 1f, "720p→360p, 1Mbps"),
+                    VideoStandard.SD_480P to CompressionRule(426, 240, 1f, "480p→240p, 1Mbps"),
+                    VideoStandard.NHD_360P to CompressionRule(426, 240, 0.3f, "360p→240p, 0.3Mbps"),
+                    VideoStandard.QVGA_240P to CompressionRule(320, 180, 0.2f, "240p→180p, 0.2Mbps"),
+                    VideoStandard.UNKNOWN to CompressionRule(854, 480, 1f, "Low quality fallback, 1Mbps"),
+                ),
+            CompressorQuality.MEDIUM to
+                mapOf(
+                    VideoStandard.UHD_4K to CompressionRule(1920, 1080, 6f, "4K→1080p, 6Mbps"),
+                    VideoStandard.QHD_1440P to CompressionRule(1920, 1080, 6f, "1440p→1080p, 6Mbps"),
+                    VideoStandard.FHD_1080P to CompressionRule(1280, 720, 3f, "1080p→720p, 3Mbps"),
+                    VideoStandard.HD_720P to CompressionRule(854, 480, 2f, "720p→480p, 2Mbps"),
+                    VideoStandard.SD_480P to CompressionRule(640, 360, 1f, "480p→360p, 1Mbps"),
+                    VideoStandard.NHD_360P to CompressionRule(426, 240, 0.5f, "360p→240p, 0.5Mbps"),
+                    VideoStandard.QVGA_240P to CompressionRule(320, 180, 0.3f, "240p→180p, 0.3Mbps"),
+                    VideoStandard.UNKNOWN to CompressionRule(1280, 720, 2f, "Medium quality fallback, 2Mbps"),
+                ),
+            CompressorQuality.HIGH to
+                mapOf(
+                    VideoStandard.UHD_4K to CompressionRule(3840, 2160, 16f, "4K→4K, 16Mbps"),
+                    VideoStandard.QHD_1440P to CompressionRule(1920, 1080, 8f, "1440p→1080p, 8Mbps"),
+                    VideoStandard.FHD_1080P to CompressionRule(1920, 1080, 6f, "1080p→1080p, 6Mbps"),
+                    VideoStandard.HD_720P to CompressionRule(1280, 720, 3f, "720p→720p, 3Mbps"),
+                    VideoStandard.SD_480P to CompressionRule(854, 480, 2f, "480p→480p, 2Mbps"),
+                    VideoStandard.NHD_360P to CompressionRule(640, 360, 1f, "360p→360p, 1Mbps"),
+                    VideoStandard.QVGA_240P to CompressionRule(426, 240, 0.5f, "240p→240p, 0.5Mbps"),
+                    VideoStandard.UNKNOWN to CompressionRule(1920, 1080, 3f, "High quality fallback, 3Mbps"),
+                ),
+        )
 
     suspend fun compressVideo(
         uri: Uri,

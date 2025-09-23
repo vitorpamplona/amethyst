@@ -57,8 +57,7 @@ class MediaCompressor {
         // branch into compression based on content type
         return when {
             contentType?.startsWith("video", ignoreCase = true) == true -> {
-                val helper = VideoCompressionHelper()
-                helper.compressVideo(uri, contentType, applicationContext, mediaQuality)
+                VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality)
             }
             contentType?.startsWith("image", ignoreCase = true) == true &&
                 !contentType.contains("gif") &&
