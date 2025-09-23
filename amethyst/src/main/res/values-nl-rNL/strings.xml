@@ -148,6 +148,7 @@
     <string name="failed_to_save_the_video">De video is niet opgeslagen</string>
     <string name="upload_image">Afbeelding uploaden</string>
     <string name="take_a_picture">Neem een foto</string>
+    <string name="record_a_video">Video opnemen</string>
     <string name="record_a_message">Neem een bericht op</string>
     <string name="record_a_message_title">Neem een bericht op</string>
     <string name="record_a_message_description">Klik en houd vast om een bericht te opnemen</string>
@@ -163,6 +164,8 @@
     <string name="blocked_users">Geblokkeerde gebruikers</string>
     <string name="new_threads">Nieuwe onderwerpen</string>
     <string name="conversations">Discussies</string>
+    <string name="feed">Feed</string>
+    <string name="mod_queue">Modwachtrij</string>
     <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
     <string name="mutual">Jouw</string>
@@ -437,6 +440,7 @@
     <string name="no">Nee</string>
     <string name="follow_list_selection">Volgerslijst</string>
     <string name="follow_list_kind3follows">Iedereen</string>
+    <string name="follow_list_kind3follows_users_only">Volg alle gebruikers</string>
     <string name="follow_list_kind3follows_proxy">Volgt via proxy</string>
     <string name="follow_list_aroundme">In de buurt</string>
     <string name="follow_list_global">Globaal</string>
@@ -655,6 +659,8 @@
     <string name="messages_new_subject_message">Uitleg aan leden</string>
     <string name="messages_new_subject_message_placeholder">De naam veranderen voor de nieuwe doelen.</string>
     <string name="paste_from_clipboard">Plakken vanaf klembord</string>
+    <string name="invalid_nip47_uri_title">Invalide NIP-47 URI</string>
+    <string name="invalid_nip47_uri_description">De URI %1$s is geen geldige NIP-47 login-URI.</string>
     <string name="language_description">Voor de interface van de app</string>
     <string name="theme_description">Donker-, Licht- of Systeemthema</string>
     <string name="automatically_load_images_gifs_description">Automatisch afbeeldingen en GIF\'s laden</string>
@@ -672,6 +678,9 @@
     <string name="media_added_to_profile_gallery">Media toegevoegd aan je profielgalerij</string>
     <string name="created_at">Gemaakt op</string>
     <string name="rules">Regels</string>
+    <string name="community_description">Over ons</string>
+    <string name="guidelines">Richtlijnen</string>
+    <string name="moderators">Moderators</string>
     <string name="login_with_external_signer">Login met Amber</string>
     <string name="status_update">Status bijwerken</string>
     <string name="lightning_wallets_not_found">Fout bij het parsen van foutberichten</string>
@@ -884,10 +893,13 @@
     <string name="dm_upload">DM uploaden</string>
     <string name="relay_settings">Relay-instellingen</string>
     <string name="public_home_section">Openbare thuis relays</string>
+    <string name="public_home_section_explainer_profile">Gebruiker plaatst zijn content op deze relays</string>
     <string name="public_home_section_explainer">Dit relay type slaat al je inhoud op. Amethyst stuurt je berichten hierheen en anderen gebruiken deze relays om je inhoud te vinden. Voeg tussen de 1 en 3 relays toe. Het gaat om persoonlijke relays, betaalde relays of openbare relays.</string>
     <string name="public_notif_section">Openbare inbox relays</string>
+    <string name="public_notif_section_explainer_profile">Gebruiker ontvangt meldingen voor deze relays</string>
     <string name="public_notif_section_explainer">Dit type relay ontvangt alle relays, reacties, likes en zaps op je berichten. Ze kunnen betaalde of gratis relays zijn. Limieten ingesteld door de relay beheerder kunnen de meldingen die u ontvangt beperken voor het goede en het slechte. Als u bijvoorbeeld wordt aangevallen door spam, kunnen betaalde relays de spam filteren. Invoegen tussen de 1 en 3 relays.</string>
     <string name="private_inbox_section">DM inbox relays</string>
+    <string name="private_inbox_section_explainer_profile">Gebruiker ontvangt DM\'s bij deze relays</string>
     <string name="private_inbox_section_explainer">Voeg tussen de 1 en 3 relays toe om als uw privéinbox te dienen. Anderen gebruiken deze relays om DM\'s naar u te sturen. DM Inbox relays moeten een bericht van iedereen accepteren, maar alleen om berichten te downloaden. Goede opties zijn:\n - inbox.nostr.wine (betaald)\n - you.nostr1.com (persoonlijke relays - betaald)</string>
     <string name="private_outbox_section">Privé relays</string>
     <string name="private_outbox_section_explainer">Plaats tussen de 1 tot 3 relays om gebeurtenissen op te slaan die niemand anders kan zien, zoals uw Concepten en/of app instellingen. Idealiter zijn deze relays lokaal of vereist authenticatie voordat de inhoud van elke gebruiker wordt gedownload.</string>
@@ -1002,6 +1014,7 @@
     <string name="torrent_download">Downloaden</string>
     <string name="torrent_failure">Kon bestand niet openen</string>
     <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
+    <string name="torrent_no_info">Evenement heeft niet genoeg informatie om een magnet-link te maken</string>
     <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
     <string name="temporary_account">Afmelden bij apparaatvergrendeling</string>
     <string name="private_message">Privébericht</string>
@@ -1009,9 +1022,18 @@
     <string name="group_relay">Chat relay</string>
     <string name="group_relay_explanation">De relay die alle gebruikers van deze chat gebruiken om verbinding te maken</string>
     <string name="share_image">Afbeelding delen…</string>
+    <string name="unable_to_share_image">Kan afbeelding niet delen, probeer het later opnieuw…</string>
     <string name="search_by_hashtag">Zoek hashtag: #%1$s</string>
     <string name="dont_translate_from">Niet vertalen van</string>
     <string name="dont_translate_from_description">Talen die hier getoond worden worden worden niet vertaald. Selecteer een taal om te verwijderen en het opnieuw te laten vertalen.</string>
     <string name="pause">Pauze</string>
     <string name="play">Afspelen</string>
+    <string name="open_dropdown_menu">Open dropdown-menu</string>
+    <string name="option_of">Optie %1$s van %2$s</string>
+    <string name="feed_filter_selected">Feed-filter, %1$s geselecteerd</string>
+    <string name="feed_filter_select_an_option">Feed-filter, %1$s</string>
+    <string name="crashreport_found">Crashrapport gevonden</string>
+    <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Wilt u het recente crashrapport verzenden naar Amethyst in een DM? Er zal geen persoonlijke informatie gedeeld worden</string>
+    <string name="crashreport_found_send">Verzenden</string>
+    <string name="this_message_will_disappear_in_days">Dit bericht zal verdwijnen in %1$d dagen</string>
 </resources>
