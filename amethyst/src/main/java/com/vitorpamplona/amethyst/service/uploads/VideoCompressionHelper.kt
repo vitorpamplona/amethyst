@@ -86,18 +86,19 @@ data class CompressionRule(
     val bitrateMbps: Float,
     val description: String,
 ) {
-    fun getBitrateMbpsInt(): Int {
+    fun getBitrateMbpsInt(framerate: Float): Int {
+        // Apply 1.5x multiplier for 60fps+ videos
+        val multiplier = if (framerate >= 60f) 1.5f else 1.0f
+
         // Library doesn't support float so we have to convert it to int and use 1 as minimum
-        return if (bitrateMbps < 1) {
-            1
-        } else {
-            bitrateMbps.roundToInt()
-        }
+        return (bitrateMbps * multiplier).roundToInt().coerceAtLeast(1)
     }
 }
 
 class VideoCompressionHelper {
     companion object {
+        private const val LOG_TAG = "VideoCompressionHelper"
+
         private val compressionRules =
             mapOf(
                 CompressorQuality.LOW to
@@ -147,28 +148,19 @@ class VideoCompressionHelper {
 
         val videoBitrateInMbps =
             if (videoInfo != null) {
-                val baseBitrate =
+                val bitrateMbpsInt =
                     compressionRules
                         .getValue(mediaQuality)
                         .getValue(videoInfo.resolution.getStandard())
-                        .getBitrateMbpsInt()
-
-                // Apply 1.5x multiplier for 60fps+
-                val adjusted =
-                    if (videoInfo.framerate >= 60f) {
-                        (baseBitrate * 1.5f).roundToInt()
-                    } else {
-                        baseBitrate
-                    }
+                        .getBitrateMbpsInt(videoInfo.framerate)
 
                 Log.d(
-                    "VideoCompressionHelper",
-                    "Bitrate: ${adjusted}Mbps for ${videoInfo.resolution.getStandard()} " +
-                        "quality=$mediaQuality framerate=${videoInfo.framerate}fps",
+                    LOG_TAG,
+                    "Bitrate: ${bitrateMbpsInt}Mbps for ${videoInfo.resolution.getStandard()} " +
+                        "quality=$mediaQuality framerate=${videoInfo.framerate}fps.",
                 )
-                adjusted
             } else {
-                Log.w("VideoCompressionHelper", "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
+                Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 2
             }
 
@@ -179,13 +171,13 @@ class VideoCompressionHelper {
                         .getValue(mediaQuality)
                         .getValue(videoInfo.resolution.getStandard())
                 Log.d(
-                    "VideoCompressionHelper",
+                    LOG_TAG,
                     "Resizer: ${videoInfo.resolution.width}x${videoInfo.resolution.height} -> " +
                         "${rules.width}x${rules.height} (${rules.description})",
                 )
                 VideoResizer.limitSize(rules.width.toDouble(), rules.height.toDouble())
             } else {
-                Log.d("VideoCompressionHelper", "Resizer: null (original resolution preserved)")
+                Log.d(LOG_TAG, "Resizer: null (original resolution preserved)")
                 null
             }
 
@@ -224,7 +216,6 @@ class VideoCompressionHelper {
                                     if (path == null) {
                                         applicationContext.notifyUser(
                                             "Video compression succeeded, but path was null",
-                                            "VideoCompressionHelper",
                                             Log.WARN,
                                         )
                                         if (continuation.isActive) continuation.resume(null)
@@ -242,7 +233,6 @@ class VideoCompressionHelper {
                                     if (originalSize > 0 && size >= originalSize) {
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
-                                            "VideoCompressionHelper",
                                             Log.WARN,
                                         )
                                         if (continuation.isActive) {
@@ -260,12 +250,11 @@ class VideoCompressionHelper {
                                             if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
                                         applicationContext.notifyUser(
                                             "Video compressed: $sizeLabel ($percentLabel)",
-                                            "VideoCompressionHelper",
                                         )
                                     }
 
                                     Log.d(
-                                        "VideoCompressionHelper",
+                                        LOG_TAG,
                                         "Compression success: Original [$originalSize] -> " +
                                             "Compressed [$size] ($reductionPercent% reduction)",
                                     )
@@ -290,14 +279,13 @@ class VideoCompressionHelper {
                                 ) {
                                     applicationContext.notifyUser(
                                         "Video compression failed: $failureMessage",
-                                        "VideoCompressionHelper",
                                         Log.ERROR,
                                     )
                                     if (continuation.isActive) continuation.resume(null)
                                 }
 
                                 override fun onCancelled(index: Int) {
-                                    Log.w("VideoCompressionHelper", "Video compression cancelled")
+                                    Log.w(LOG_TAG, "Video compression cancelled")
                                     if (continuation.isActive) continuation.resume(null)
                                 }
                             },
@@ -315,13 +303,12 @@ class VideoCompressionHelper {
                 if (cursor.moveToFirst()) cursor.getLong(sizeIndex) else 0L
             } ?: 0L
         } catch (e: Exception) {
-            Log.w("VideoCompressionHelper", "Failed to get file size: ${e.message}")
+            Log.w(LOG_TAG, "Failed to get file size: ${e.message}")
             0L
         }
 
     private fun Context.notifyUser(
         message: String,
-        logTag: String,
         logLevel: Int = Log.DEBUG,
         duration: Int = Toast.LENGTH_LONG,
     ) {
@@ -329,9 +316,9 @@ class VideoCompressionHelper {
             Toast.makeText(this, message, duration).show()
         }
         when (logLevel) {
-            Log.ERROR -> Log.e(logTag, message)
-            Log.WARN -> Log.w(logTag, message)
-            else -> Log.d(logTag, message)
+            Log.ERROR -> Log.e(LOG_TAG, message)
+            Log.WARN -> Log.w(LOG_TAG, message)
+            else -> Log.d(LOG_TAG, message)
         }
     }
 
@@ -364,13 +351,13 @@ class VideoCompressionHelper {
                 null
             }
         } catch (e: Exception) {
-            Log.w("VideoCompressionHelper", "Failed to get video resolution: ${e.message}")
+            Log.w(LOG_TAG, "Failed to get video resolution: ${e.message}")
             null
         } finally {
             try {
                 retriever?.release()
             } catch (e: Exception) {
-                Log.w("VideoCompressionHelper", "Failed to release MediaMetadataRetriever: ${e.message}")
+                Log.w(LOG_TAG, "Failed to release MediaMetadataRetriever: ${e.message}")
             }
         }
     }
