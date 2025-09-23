@@ -57,7 +57,7 @@ zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.4.0"
 androidxCamera = "1.5.0"
 androidxCollection = "1.5.0"
-kotlinStdlib = "2.2.10"
+kotlinStdlib = "2.2.20"
 kotlinTest = "2.2.10"
 core = "1.7.0"
 
