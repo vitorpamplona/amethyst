@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -32,13 +31,6 @@ import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
-import java.io.File
-import kotlin.coroutines.resume
-import kotlin.math.roundToInt
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 class MediaCompressorResult(
     val uri: Uri,
@@ -74,140 +66,6 @@ class MediaCompressor {
                 compressImage(uri, contentType, applicationContext, mediaQuality)
             else -> MediaCompressorResult(uri, contentType, null)
         }
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
-    private suspend fun compressVideo(
-        uri: Uri,
-        contentType: String?,
-        applicationContext: Context,
-        mediaQuality: CompressorQuality,
-    ): MediaCompressorResult {
-        val videoInfo = getVideoInfo(uri, applicationContext)
-
-        val videoBitrateInMbps =
-            if (videoInfo != null) {
-                val bitrate = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName()).getBitrateMbpsInt()
-                Log.d("MediaCompressor", "Video bitrate calculated: ${bitrate}Mbps for ${videoInfo.resolution.getStandardName()} quality=$mediaQuality")
-                bitrate
-            } else {
-                // Default/fallback logic when videoInfo is null
-                Log.d("MediaCompressor", "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
-                2
-            }
-
-        val resizer =
-            if (videoInfo != null) {
-                val rules = compressionRules.getValue(mediaQuality).getValue(videoInfo.resolution.getStandardName())
-                Log.d("MediaCompressor", "Video resizer: ${videoInfo.resolution.width}x${videoInfo.resolution.height} -> ${rules.width}x${rules.height} (${rules.description})")
-                VideoResizer.limitSize(rules.width.toDouble(), rules.height.toDouble())
-            } else {
-                // null VideoResizer should result in unchanged resolution
-                Log.d("MediaCompressor", "Video resizer: null (original resolution preserved)")
-                null
-            }
-
-        // Get original file size for compression reporting
-        val originalSize =
-            try {
-                applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.available().toLong()
-                } ?: 0L
-            } catch (e: Exception) {
-                Log.w("MediaCompressor", "Failed to get original file size: ${e.message}")
-                0L
-            }
-
-        val result =
-            withTimeoutOrNull(30000) {
-                suspendCancellableCoroutine { continuation ->
-                    VideoCompressor.start(
-                        // => This is required
-                        context = applicationContext,
-                        // => Source can be provided as content uris
-                        uris = listOf(uri),
-                        isStreamable = true,
-                        // THIS STORAGE
-                        // sharedStorageConfiguration = SharedStorageConfiguration(
-                        //    saveAt = SaveLocation.movies, // => default is movies
-                        //    videoName = "compressed_video" // => required name
-                        // ),
-                        // OR AND NOT BOTH
-                        storageConfiguration = AppSpecificStorageConfiguration(),
-                        configureWith =
-                            Configuration(
-                                videoBitrateInMbps = videoBitrateInMbps,
-                                resizer = resizer,
-                                // => required name
-                                videoNames = listOf(Uuid.random().toString()),
-                                isMinBitrateCheckEnabled = false,
-                            ),
-                        listener =
-                            object : CompressionListener {
-                                override fun onProgress(
-                                    index: Int,
-                                    percent: Float,
-                                ) {}
-
-                                override fun onStart(index: Int) {}
-
-                                override fun onSuccess(
-                                    index: Int,
-                                    size: Long,
-                                    path: String?,
-                                ) {
-                                    if (path != null) {
-                                        // Sanity check: if compressed file is larger than original, return original
-                                        if (originalSize > 0 && size >= originalSize) {
-                                            Log.d("MediaCompressor", "Compressed file ($size bytes) is larger than original ($originalSize bytes). Using original file.")
-                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
-                                            return
-                                        }
-
-                                        val reductionPercent =
-                                            if (originalSize > 0) {
-                                                ((originalSize - size) * 100.0 / originalSize).toInt()
-                                            } else {
-                                                0
-                                            }
-
-                                        // Show compression result toast
-                                        if (originalSize > 0 && size > 0) {
-                                            val message =
-                                                "Video compressed: ${formatFileSize(applicationContext, size)} " +
-                                                    "(${if (reductionPercent > 0) "-$reductionPercent%" else "+${-reductionPercent}%"})"
-
-                                            // Post on main thread for Toast
-                                            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                        Log.d("MediaCompressor", "Video compression success. Original size [$originalSize] -> Compressed size [$size] ($reductionPercent% reduction)")
-                                        continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
-                                    } else {
-                                        Log.d("MediaCompressor", "Video compression successful, but returned null path")
-                                        continuation.resume(null)
-                                    }
-                                }
-
-                                override fun onFailure(
-                                    index: Int,
-                                    failureMessage: String,
-                                ) {
-                                    Log.d("MediaCompressor", "Video compression failed: $failureMessage")
-                                    // keeps going with original video
-                                    continuation.resume(null)
-                                }
-
-                                override fun onCancelled(index: Int) {
-                                    continuation.resume(null)
-                                }
-                            },
-                    )
-                }
-            }
-
-        return result ?: MediaCompressorResult(uri, contentType, null)
     }
 
     private suspend fun compressImage(
