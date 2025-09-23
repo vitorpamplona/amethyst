@@ -141,6 +141,14 @@ kotlin {
             }
         }
 
+        // Must be defined before androidMain and jvmMain
+        val jvmAndroidTest = create("jvmAndroidTest") {
+            dependsOn(commonTest.get())
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
+        }
+
         jvmMain {
             dependsOn(jvmAndroid)
             dependencies {
@@ -154,6 +162,7 @@ kotlin {
         }
 
         jvmTest {
+            dependsOn(jvmAndroidTest)
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
