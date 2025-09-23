@@ -338,9 +338,10 @@ class VideoCompressionHelper {
     private fun getVideoInfo(
         uri: Uri,
         context: Context,
-    ): VideoInfo? =
-        try {
-            val retriever = MediaMetadataRetriever()
+    ): VideoInfo? {
+        var retriever: MediaMetadataRetriever? = null
+        return try {
+            retriever = MediaMetadataRetriever()
             retriever.setDataSource(context, uri)
             val width = retriever.prepareVideoWidth()
             val height = retriever.prepareVideoHeight()
@@ -349,8 +350,6 @@ class VideoCompressionHelper {
             // Get framerate
             val framerateString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
             val framerate = framerateString?.toFloatOrNull() ?: 30.0f
-
-            retriever.release()
 
             if (width != null && height != null && width > 0 && height > 0) {
                 // Account for rotation
@@ -367,5 +366,12 @@ class VideoCompressionHelper {
         } catch (e: Exception) {
             Log.w("VideoCompressionHelper", "Failed to get video resolution: ${e.message}")
             null
+        } finally {
+            try {
+                retriever?.release()
+            } catch (e: Exception) {
+                Log.w("VideoCompressionHelper", "Failed to release MediaMetadataRetriever: ${e.message}")
+            }
         }
+    }
 }
