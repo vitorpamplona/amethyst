@@ -42,7 +42,7 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
-import kotlin.math.max
+import kotlin.math.min
 
 val HomePostsNewThreadKinds =
     listOf(
@@ -81,7 +81,7 @@ fun filterNewHomePostsByAuthors(
                 Filter(
                     kinds = HomePostsNewThreadKinds,
                     authors = authorList,
-                    limit = max(authorList.size * 10, 300),
+                    limit = min(authorList.size * 10, 500),
                     since = since,
                 ),
         ),
@@ -102,7 +102,7 @@ fun filterReplyHomePostsByAuthors(
                 Filter(
                     kinds = HomePostsConversationKinds,
                     authors = authorList,
-                    limit = max(authorList.size * 10, 300),
+                    limit = min(authorList.size * 10, 500),
                     since = since,
                 ),
         ),
