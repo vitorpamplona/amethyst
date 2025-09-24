@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.client
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ResolveInfo
 import androidx.core.net.toUri
 
 @SuppressLint("QueryPermissionsNeeded")
@@ -35,3 +36,14 @@ fun isExternalSignerInstalled(context: Context): Boolean =
             },
             0,
         ).isNotEmpty()
+
+@SuppressLint("QueryPermissionsNeeded")
+fun getExternalSignersInstalled(context: Context): List<ResolveInfo> =
+    context.packageManager
+        .queryIntentActivities(
+            Intent().apply {
+                action = Intent.ACTION_VIEW
+                data = "nostrsigner:".toUri()
+            },
+            0,
+        )
