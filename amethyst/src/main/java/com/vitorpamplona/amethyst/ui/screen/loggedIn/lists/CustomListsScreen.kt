@@ -32,7 +32,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -246,7 +245,7 @@ private fun FollowSetFabsAndMenu(
                 isSetAdditionDialogOpen.value = true
             },
             shape = CircleShape,
-            containerColor = ButtonDefaults.filledTonalButtonColors().containerColor,
+            containerColor = MaterialTheme.colorScheme.primary,
         ) {
             Icon(
                 painter = painterResource(R.drawable.lock_plus),
@@ -259,7 +258,7 @@ private fun FollowSetFabsAndMenu(
                 isSetAdditionDialogOpen.value = true
             },
             shape = CircleShape,
-            containerColor = ButtonDefaults.filledTonalButtonColors().containerColor,
+            containerColor = MaterialTheme.colorScheme.primary,
         ) {
             Icon(
                 painter = painterResource(R.drawable.earth_plus),
