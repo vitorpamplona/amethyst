@@ -245,10 +245,11 @@ fun BackActionButton(
     OutlinedButton(
         onClick = onBack,
         shape = ButtonBorder,
-        colors = ButtonDefaults.filledTonalButtonColors(),
+        colors = ButtonDefaults.buttonColors(),
+        border = ButtonDefaults.outlinedButtonBorder(false),
         elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
     ) {
-        Text(text = stringRes(R.string.back), fontWeight = FontWeight.SemiBold)
+        Text(text = stringRes(R.string.back), fontWeight = FontWeight.Bold, color = Color.White)
     }
 }
 
@@ -399,7 +400,7 @@ fun FollowSetItem(
                                 if (isUserInList) {
                                     MaterialTheme.colorScheme.errorContainer
                                 } else {
-                                    ButtonDefaults.filledTonalButtonColors().containerColor
+                                    MaterialTheme.colorScheme.primary
                                 },
                             shape = RoundedCornerShape(percent = 80),
                         ),
@@ -414,11 +415,14 @@ fun FollowSetItem(
                     Icon(
                         imageVector = Icons.Filled.Add,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = Color.White,
                     )
                 }
             }
-            Text(text = stringRes(if (isUserInList) R.string.remove else R.string.add), color = Color.Gray)
+            Text(
+                text = stringRes(if (isUserInList) R.string.remove else R.string.add),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }

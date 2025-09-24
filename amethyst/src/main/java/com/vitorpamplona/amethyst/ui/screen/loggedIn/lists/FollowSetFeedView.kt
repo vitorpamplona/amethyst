@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -102,7 +104,7 @@ fun FollowSetLoaded(
         ) {
             itemsIndexed(loadedFeedState, key = { _, item -> item.identifierTag }) { _, set ->
                 CustomSetItem(
-                    modifier = Modifier.animateItem(),
+                    modifier = Modifier.fillMaxSize().animateItem(),
                     followSet = set,
                     onFollowSetClick = {
                         onItemClick(set.identifierTag)
@@ -114,7 +116,7 @@ fun FollowSetLoaded(
                         onItemDelete(set)
                     },
                 )
-                Spacer(modifier = StdVertSpacer)
+                HorizontalDivider(thickness = DividerThickness)
             }
         }
     }
