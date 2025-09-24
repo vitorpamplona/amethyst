@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
@@ -33,6 +34,7 @@ class UserLoaderSubAssembler(
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<UserFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(keys: List<UserFinderQueryState>): List<RelayBasedFilter>? {
+        println("01f6901bc401e87962fa8da15acfe16ef72b17ed965114384d69aa857a21fbfc updating user assembly filter 2")
         val firstTimers = mutableSetOf<User>()
 
         keys.forEach {
@@ -43,10 +45,15 @@ class UserLoaderSubAssembler(
             }
         }
 
+        val indexRelays = mutableSetOf<NormalizedRelayUrl>()
         val defaultRelays = mutableSetOf<NormalizedRelayUrl>()
 
         keys.mapTo(mutableSetOf()) { it.account }.forEach {
-            defaultRelays.addAll(it.followPlusAllMineWithIndexAndSearch.flow.value)
+            indexRelays.addAll(
+                it.indexerRelayList.flow.value
+                    .ifEmpty { DefaultIndexerRelayList },
+            )
+            defaultRelays.addAll(it.followPlusAllMineWithSearch.flow.value)
 
             it.kind3FollowList.flow.value.authors.forEach {
                 val user = LocalCache.getOrCreateUser(it)
@@ -60,7 +67,7 @@ class UserLoaderSubAssembler(
 
         if (firstTimers.isEmpty()) return null
 
-        return filterFindUserMetadataForKey(firstTimers, defaultRelays)
+        return filterFindUserMetadataForKey(firstTimers, indexRelays, defaultRelays)
     }
 
     override fun distinct(key: UserFinderQueryState) = key.user
