@@ -29,7 +29,7 @@ object RelayStats {
             override fun create(key: NormalizedRelayUrl): RelayStat = RelayStat()
         }
 
-    fun get(url: NormalizedRelayUrl): RelayStat = innerCache.get(url) ?: RelayStat()
+    fun get(url: NormalizedRelayUrl): RelayStat = innerCache.get(url) ?: throw IllegalArgumentException("Should never happen")
 
     fun addBytesReceived(
         url: NormalizedRelayUrl,
