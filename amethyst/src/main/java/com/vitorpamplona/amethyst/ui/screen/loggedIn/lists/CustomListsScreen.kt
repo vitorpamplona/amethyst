@@ -202,11 +202,15 @@ fun CustomListsScreen(
                 },
             )
         },
-    ) {
+    ) { paddingValues ->
         Column(
             Modifier
-                .padding(it)
-                .fillMaxHeight(),
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = 10.dp,
+                    end = 10.dp,
+                ).fillMaxHeight(),
         ) {
             HorizontalPager(state = pagerState) { page ->
                 when (page) {

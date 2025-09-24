@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,12 +30,14 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,7 +76,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
@@ -180,8 +186,6 @@ fun FollowSetScreen(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                start = 10.dp,
-                                end = 10.dp,
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding(),
                             ).consumeWindowInsets(padding)
@@ -294,7 +298,7 @@ fun FollowSetListItem(
         Row {
             UserCompose(
                 user,
-                overallModifier = StdPadding.weight(1f, fill = false),
+                overallModifier = HalfPadding.weight(1f, fill = false),
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -303,7 +307,7 @@ fun FollowSetListItem(
                     onDeleteUser(user.pubkeyHex)
                 },
                 modifier =
-                    StdPadding
+                    HalfPadding
                         .align(Alignment.CenterVertically)
                         .background(
                             color = MaterialTheme.colorScheme.errorContainer,
@@ -329,6 +333,17 @@ fun ListActionsMenuButton(
     val isActionListOpen = remember { mutableStateOf(false) }
 
     ClickableBox(
+        modifier =
+            StdPadding
+                .size(30.dp)
+                .border(
+                    width = Dp.Hairline,
+                    color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                    shape = ButtonBorder,
+                ).background(
+                    color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                    shape = ButtonBorder,
+                ),
         onClick = { isActionListOpen.value = true },
     ) {
         VerticalDotsIcon()
@@ -362,6 +377,7 @@ fun ListActionsMenu(
                 onCloseMenu()
             },
         )
+        HorizontalDivider()
         DropdownMenuItem(
             text = {
                 Text("Delete List")
