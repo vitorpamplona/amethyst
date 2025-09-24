@@ -311,12 +311,13 @@ fun FollowSetListItem(
                         .align(Alignment.CenterVertically)
                         .background(
                             color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(size = 15.dp),
+                            shape = RoundedCornerShape(percent = 80),
                         ),
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = null,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }

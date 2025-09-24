@@ -415,11 +415,14 @@ fun FollowSetItem(
                     Icon(
                         imageVector = Icons.Filled.Add,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = Color.White,
                     )
                 }
             }
-            Text(text = stringRes(if (isUserInList) R.string.remove else R.string.add), color = Color.Gray)
+            Text(
+                text = stringRes(if (isUserInList) R.string.remove else R.string.add),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }
