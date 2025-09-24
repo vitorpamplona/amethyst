@@ -34,7 +34,6 @@ class UserLoaderSubAssembler(
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<UserFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun updateFilter(keys: List<UserFinderQueryState>): List<RelayBasedFilter>? {
-        println("01f6901bc401e87962fa8da15acfe16ef72b17ed965114384d69aa857a21fbfc updating user assembly filter 2")
         val firstTimers = mutableSetOf<User>()
 
         keys.forEach {
