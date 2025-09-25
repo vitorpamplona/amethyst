@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.util.fastAny
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -119,6 +120,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -215,6 +217,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.util.Locale
@@ -836,6 +839,23 @@ class Account(
             val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
             Log.d(this@Account.javaClass.simpleName, "Number of follow sets: ${followSetNotes.size}")
             return@withContext followSetNotes
+        }
+
+    fun isUserInFollowSets(user: User): Boolean =
+        runBlocking(scope.coroutineContext) {
+            LocalCache.getFollowSetNotesFor(userProfile()).fastAny { it ->
+                val listEvent = it.event as PeopleListEvent
+                val isInPublicSets =
+                    listEvent
+                        .publicPeople()
+                        .fastAny { it.toTagArray().value() == user.pubkeyHex }
+                val isInPrivateSets =
+                    listEvent
+                        .privatePeople(signer)
+                        ?.fastAny { it.toTagArray().value() == user.pubkeyHex } ?: false
+
+                isInPublicSets || isInPrivateSets
+            }
         }
 
     fun mapNoteToFollowSet(note: Note): FollowSet =

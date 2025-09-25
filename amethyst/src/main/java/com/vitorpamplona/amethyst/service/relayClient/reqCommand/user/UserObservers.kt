@@ -420,12 +420,15 @@ fun observeUserIsFollowing(
                 .follows.stateFlow
                 .sample(1000)
                 .mapLatest { userState ->
-                    userState.user.isFollowing(user2)
+                    userState.user.isFollowing(user2) ||
+                        accountViewModel.account.isUserInFollowSets(user2)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
-    return flow.collectAsStateWithLifecycle(user1.isFollowing(user2))
+    return flow.collectAsStateWithLifecycle(
+        user1.isFollowing(user2) || accountViewModel.account.isUserInFollowSets(user2),
+    )
 }
 
 @SuppressLint("StateFlowValueCalledInComposition")
