@@ -55,6 +55,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -98,7 +100,7 @@ fun CustomSetItem(
                         selected = true,
                         onClick = {},
                         label = {
-                            Text(text = "${followSet.profileList.size}")
+                            Text(text = "${followSet.profiles.size}")
                         },
                         leadingIcon = {
                             Icon(
@@ -121,9 +123,9 @@ fun CustomSetItem(
             followSet.visibility.let {
                 val text by derivedStateOf {
                     when (it) {
-                        ListVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
-                        ListVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
-                        ListVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
+                        SetVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
+                        SetVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
+                        SetVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
                     }
                 }
                 Column(
@@ -135,9 +137,9 @@ fun CustomSetItem(
                         painter =
                             painterResource(
                                 when (it) {
-                                    ListVisibility.Public -> R.drawable.ic_public
-                                    ListVisibility.Private -> R.drawable.lock
-                                    ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
+                                    SetVisibility.Public -> R.drawable.ic_public
+                                    SetVisibility.Private -> R.drawable.lock
+                                    SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
                                 },
                             ),
                         contentDescription = stringRes(R.string.follow_set_type_description, text),

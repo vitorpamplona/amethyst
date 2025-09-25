@@ -78,13 +78,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewSetCreationDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -97,10 +97,10 @@ fun FollowSetsManagementDialog(
     accountViewModel: AccountViewModel,
     navigator: INav,
 ) {
-    val followSetViewModel: NostrUserListFeedViewModel =
+    val followSetViewModel: FollowSetFeedViewModel =
         viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
+            key = "FollowSetFeedViewModel",
+            factory = FollowSetFeedViewModel.Factory(accountViewModel.account),
         )
 
     FollowSetsManagementDialog(userHex, followSetViewModel, accountViewModel.account, navigator)
@@ -110,7 +110,7 @@ fun FollowSetsManagementDialog(
 @Composable
 fun FollowSetsManagementDialog(
     userHex: String,
-    followSetsViewModel: NostrUserListFeedViewModel,
+    followSetsViewModel: FollowSetFeedViewModel,
     account: Account,
     navigator: INav,
 ) {
@@ -164,17 +164,17 @@ fun FollowSetsManagementDialog(
                     .imePadding(),
         ) {
             when (followSetsState) {
-                is FollowSetState.Loaded -> {
-                    val lists = (followSetsState as FollowSetState.Loaded).feed
+                is FollowSetFeedState.Loaded -> {
+                    val lists = (followSetsState as FollowSetFeedState.Loaded).feed
 
                     lists.forEachIndexed { index, list ->
                         Spacer(StdVertSpacer)
                         FollowSetItem(
                             modifier = Modifier.fillMaxWidth(),
                             listHeader = list.title,
-                            listVisibility = list.visibility,
+                            setVisibility = list.visibility,
                             userName = userInfo.toBestDisplayName(),
-                            isUserInList = list.profileList.contains(userHex),
+                            isUserInList = list.profiles.contains(userHex),
                             onRemoveUser = {
                                 Log.d(
                                     "Amethyst",
@@ -187,7 +187,7 @@ fun FollowSetsManagementDialog(
                                 )
                                 Log.d(
                                     "Amethyst",
-                                    "Updated List. New size: ${list.profileList.size}",
+                                    "Updated List. New size: ${list.profiles.size}",
                                 )
                             },
                             onAddUser = {
@@ -198,28 +198,28 @@ fun FollowSetsManagementDialog(
                                 followSetsViewModel.addUserToSet(userHex, list, account)
                                 Log.d(
                                     "Amethyst",
-                                    "Updated List. New size: ${list.profileList.size}",
+                                    "Updated List. New size: ${list.profiles.size}",
                                 )
                             },
                         )
                     }
                 }
 
-                FollowSetState.Empty -> {
+                FollowSetFeedState.Empty -> {
                     EmptyOrNoneFound { followSetsViewModel.refresh() }
                 }
 
-                is FollowSetState.FeedError -> {
-                    val errorMsg = (followSetsState as FollowSetState.FeedError).errorMessage
+                is FollowSetFeedState.FeedError -> {
+                    val errorMsg = (followSetsState as FollowSetFeedState.FeedError).errorMessage
                     ErrorMessage(errorMsg) { followSetsViewModel.refresh() }
                 }
 
-                FollowSetState.Loading -> {
+                FollowSetFeedState.Loading -> {
                     Loading()
                 }
             }
 
-            if (followSetsState != FollowSetState.Loading) {
+            if (followSetsState != FollowSetFeedState.Loading) {
                 FollowSetsCreationMenu(
                     userName = userInfo.toBestDisplayName(),
                     onSetCreate = { setName, setIsPrivate, description ->
@@ -304,7 +304,7 @@ private fun ErrorMessage(
 fun FollowSetItem(
     modifier: Modifier = Modifier,
     listHeader: String,
-    listVisibility: ListVisibility,
+    setVisibility: SetVisibility,
     userName: String,
     isUserInList: Boolean,
     onAddUser: () -> Unit,
@@ -330,21 +330,21 @@ fun FollowSetItem(
             ) {
                 Text(listHeader, fontWeight = FontWeight.Bold)
                 Spacer(modifier = StdHorzSpacer)
-                listVisibility.let {
+                setVisibility.let {
                     val text by derivedStateOf {
                         when (it) {
-                            ListVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
-                            ListVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
-                            ListVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
+                            SetVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
+                            SetVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
+                            SetVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
                         }
                     }
                     Icon(
                         painter =
                             painterResource(
-                                when (listVisibility) {
-                                    ListVisibility.Public -> R.drawable.ic_public
-                                    ListVisibility.Private -> R.drawable.lock
-                                    ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
+                                when (setVisibility) {
+                                    SetVisibility.Public -> R.drawable.ic_public
+                                    SetVisibility.Private -> R.drawable.lock
+                                    SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
                                 },
                             ),
                         contentDescription = stringRes(R.string.follow_set_type_description, text),

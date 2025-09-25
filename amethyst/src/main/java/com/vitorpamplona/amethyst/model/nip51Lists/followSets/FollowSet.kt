@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
+package com.vitorpamplona.amethyst.model.nip51Lists.followSets
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.value
@@ -31,9 +31,9 @@ data class FollowSet(
     val identifierTag: String,
     val title: String,
     val description: String?,
-    val visibility: ListVisibility,
-    val profileList: Set<String>,
-) : NostrList(listVisibility = visibility, content = profileList) {
+    val visibility: SetVisibility,
+    val profiles: Set<String>,
+) : NostrSet(setVisibility = visibility, content = profiles) {
     companion object {
         fun mapEventToSet(
             event: PeopleListEvent,
@@ -53,16 +53,16 @@ data class FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = ListVisibility.Private,
-                    profileList = privateFollows.toSet(),
+                    visibility = SetVisibility.Private,
+                    profiles = privateFollows.toSet(),
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
                 FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = ListVisibility.Public,
-                    profileList = publicFollows.toSet(),
+                    visibility = SetVisibility.Public,
+                    profiles = publicFollows.toSet(),
                 )
             } else {
                 // Follow set is empty, so assume public. Why? Nostr limitation.
@@ -71,8 +71,8 @@ data class FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = ListVisibility.Public,
-                    profileList = publicFollows.toSet(),
+                    visibility = SetVisibility.Public,
+                    profiles = publicFollows.toSet(),
                 )
             }
         }

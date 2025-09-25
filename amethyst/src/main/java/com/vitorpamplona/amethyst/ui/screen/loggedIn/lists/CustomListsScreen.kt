@@ -59,6 +59,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -76,10 +78,10 @@ fun ListsAndSetsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsViewModel: NostrUserListFeedViewModel =
+    val followSetsViewModel: FollowSetFeedViewModel =
         viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
+            key = "FollowSetFeedViewModel",
+            factory = FollowSetFeedViewModel.Factory(accountViewModel.account),
         )
 
     ListsAndSetsScreen(
@@ -91,7 +93,7 @@ fun ListsAndSetsScreen(
 
 @Composable
 fun ListsAndSetsScreen(
-    followSetsViewModel: NostrUserListFeedViewModel,
+    followSetsViewModel: FollowSetFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -117,8 +119,8 @@ fun ListsAndSetsScreen(
         refresh = {
             followSetsViewModel.invalidateData()
         },
-        addItem = { title: String, description: String?, listType: ListVisibility ->
-            val isSetPrivate = listType == ListVisibility.Private
+        addItem = { title: String, description: String?, listType: SetVisibility ->
+            val isSetPrivate = listType == SetVisibility.Private
             followSetsViewModel.addFollowSet(
                 setName = title,
                 setDescription = description,
@@ -149,9 +151,9 @@ fun ListsAndSetsScreen(
 
 @Composable
 fun CustomListsScreen(
-    followSetState: FollowSetState,
+    followSetFeedState: FollowSetFeedState,
     refresh: () -> Unit,
-    addItem: (title: String, description: String?, listType: ListVisibility) -> Unit,
+    addItem: (title: String, description: String?, listType: SetVisibility) -> Unit,
     openItem: (identifier: String) -> Unit,
     renameItem: (followSet: FollowSet, newName: String) -> Unit,
     deleteItem: (followSet: FollowSet) -> Unit,
@@ -195,10 +197,10 @@ fun CustomListsScreen(
             // TODO: Show components based on current tab
             FollowSetFabsAndMenu(
                 onAddPrivateSet = { name: String, description: String? ->
-                    addItem(name, description, ListVisibility.Private)
+                    addItem(name, description, SetVisibility.Private)
                 },
                 onAddPublicSet = { name: String, description: String? ->
-                    addItem(name, description, ListVisibility.Public)
+                    addItem(name, description, SetVisibility.Public)
                 },
             )
         },
@@ -216,7 +218,7 @@ fun CustomListsScreen(
                 when (page) {
                     0 ->
                         FollowSetFeedView(
-                            followSetState = followSetState,
+                            followSetFeedState = followSetFeedState,
                             onRefresh = refresh,
                             onOpenItem = openItem,
                             onRenameItem = renameItem,
@@ -410,7 +412,7 @@ private fun SetItemPreview() {
             identifierTag = "00001-2222",
             title = "Sample List Title",
             description = "Sample List Description",
-            visibility = ListVisibility.Mixed,
+            visibility = SetVisibility.Mixed,
             emptySet(),
         )
     ThemeComparisonColumn {
