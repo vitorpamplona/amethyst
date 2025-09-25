@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -46,17 +47,17 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 @Composable
 fun FollowSetFeedView(
     modifier: Modifier = Modifier,
-    followSetState: FollowSetState,
+    followSetFeedState: FollowSetFeedState,
     onRefresh: () -> Unit = {},
     onOpenItem: (String) -> Unit = {},
     onRenameItem: (targetSet: FollowSet, newName: String) -> Unit,
     onDeleteItem: (followSet: FollowSet) -> Unit,
 ) {
-    when (followSetState) {
-        FollowSetState.Loading -> LoadingFeed()
+    when (followSetFeedState) {
+        FollowSetFeedState.Loading -> LoadingFeed()
 
-        is FollowSetState.Loaded -> {
-            val followSetFeed = followSetState.feed
+        is FollowSetFeedState.Loaded -> {
+            val followSetFeed = followSetFeedState.feed
             FollowSetLoaded(
                 loadedFeedState = followSetFeed,
                 onRefresh = onRefresh,
@@ -66,7 +67,7 @@ fun FollowSetFeedView(
             )
         }
 
-        is FollowSetState.Empty -> {
+        is FollowSetFeedState.Empty -> {
             FollowSetFeedEmpty(
                 message = stringRes(R.string.follow_set_empty_feed_msg),
             ) {
@@ -74,9 +75,9 @@ fun FollowSetFeedView(
             }
         }
 
-        is FollowSetState.FeedError ->
+        is FollowSetFeedState.FeedError ->
             FeedError(
-                followSetState.errorMessage,
+                followSetFeedState.errorMessage,
             ) {
                 onRefresh()
             }
