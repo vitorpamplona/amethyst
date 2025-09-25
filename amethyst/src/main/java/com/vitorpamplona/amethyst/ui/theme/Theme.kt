@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
+import android.R.attr.fontFamily
+import android.R.id.primary
 import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context
@@ -49,6 +51,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -292,8 +295,11 @@ val MarkDownStyleOnDark =
         stringStyle =
             RichTextDefaults.stringStyle?.copy(
                 linkStyle =
-                    SpanStyle(
-                        color = DarkColorPalette.primary,
+                    TextLinkStyles(
+                        style =
+                            SpanStyle(
+                                color = DarkColorPalette.primary,
+                            ),
                     ),
                 codeStyle =
                     SpanStyle(
@@ -330,8 +336,11 @@ val MarkDownStyleOnLight =
         stringStyle =
             RichTextDefaults.stringStyle?.copy(
                 linkStyle =
-                    SpanStyle(
-                        color = LightColorPalette.primary,
+                    TextLinkStyles(
+                        style =
+                            SpanStyle(
+                                color = LightColorPalette.primary,
+                            ),
                     ),
                 codeStyle =
                     SpanStyle(

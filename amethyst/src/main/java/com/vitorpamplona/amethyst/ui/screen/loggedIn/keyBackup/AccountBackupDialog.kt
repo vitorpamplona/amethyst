@@ -83,8 +83,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
+import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
-import com.halilibo.richtext.commonmark.MarkdownParseOptions
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
@@ -177,7 +177,7 @@ private fun DialogContents(
 
                 val astNode1 =
                     remember {
-                        CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content1)
+                        CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content1)
                     }
 
                 RichText(
@@ -205,7 +205,7 @@ private fun DialogContents(
 
                 val astNode =
                     remember {
-                        CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content)
+                        CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
                     }
 
                 RichText(
