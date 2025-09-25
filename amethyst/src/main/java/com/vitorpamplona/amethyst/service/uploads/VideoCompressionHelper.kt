@@ -38,10 +38,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.UUID
 import kotlin.coroutines.resume
-import kotlin.math.roundToInt
 
 // TODO: add Auto setting. Focus on small fast streams. 4->1080p, 1080p->720p, 720p and below stay the same resolution. Use existing matrix to determine bitrate.
-// TODO: use bps api and don't floor at 1Mbps
 data class VideoInfo(
     val resolution: VideoResolution,
     val framerate: Float,
@@ -82,18 +80,19 @@ enum class VideoStandard(
     override fun toString(): String = label
 }
 
+private const val MBPS_TO_BPS_MULTIPLIER = 1_000_000
+
 data class CompressionRule(
     val width: Int,
     val height: Int,
     val bitrateMbps: Float,
     val description: String,
 ) {
-    fun getBitrateMbpsInt(framerate: Float): Int {
+    fun getBitrateBps(framerate: Float): Int {
         // Apply 1.5x multiplier for 60fps+ videos
         val multiplier = if (framerate >= 60f) 1.5f else 1.0f
 
-        // Library doesn't support float so we have to convert it to int and use 1 as minimum
-        return (bitrateMbps * multiplier).roundToInt().coerceAtLeast(1)
+        return (bitrateMbps * multiplier).toInt() * MBPS_TO_BPS_MULTIPLIER
     }
 }
 
@@ -146,22 +145,19 @@ object VideoCompressionHelper {
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
 
-        val videoBitrateInMbps =
-            if (videoInfo != null) {
-                val bitrateMbpsInt =
+        val videoBitrateInBps =
+            videoInfo?.let { info ->
+                val bitrateBps =
                     compressionRules
                         .getValue(mediaQuality)
-                        .getValue(videoInfo.resolution.getStandard())
-                        .getBitrateMbpsInt(videoInfo.framerate)
+                        .getValue(info.resolution.getStandard())
+                        .getBitrateBps(info.framerate)
 
-                Log.d(
-                    LOG_TAG,
-                    "Bitrate: ${bitrateMbpsInt}Mbps for ${videoInfo.resolution.getStandard()} " +
-                        "quality=$mediaQuality framerate=${videoInfo.framerate}fps.",
-                )
-            } else {
+                Log.d(LOG_TAG, "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps.")
+                bitrateBps
+            } ?: run {
                 Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
-                2
+                2 * MBPS_TO_BPS_MULTIPLIER
             }
 
         val resizer =
@@ -194,7 +190,7 @@ object VideoCompressionHelper {
                         storageConfiguration = AppSpecificStorageConfiguration(),
                         configureWith =
                             Configuration(
-                                videoBitrateInMbps = videoBitrateInMbps,
+                                videoBitrateInBps = videoBitrateInBps.toLong(),
                                 resizer = resizer,
                                 videoNames = listOf(UUID.randomUUID().toString()),
                                 isMinBitrateCheckEnabled = false,
