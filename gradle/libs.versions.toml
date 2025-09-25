@@ -33,7 +33,7 @@ languageId = "17.0.6"
 lazysodiumAndroid = "5.2.0"
 lazysodiumJava = "5.2.0"
 lifecycleRuntimeKtx = "2.9.4"
-lightcompressor = "1.3.3"
+lightcompressor = "1.4.0"
 markdown = "e1151c8"
 media3 = "1.8.0"
 mockk = "1.14.5"
@@ -63,7 +63,7 @@ core = "1.7.0"
 mavenPublish = "0.34.0"
 
 [libraries]
-abedElazizShe-image-compressor = { group = "com.github.AbedElazizShe", name = "LightCompressor", version.ref = "lightcompressor" }
+abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -145,7 +145,7 @@ vico-charts-compose = { group = "com.patrykandpatrick.vico", name = "compose", v
 vico-charts-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico-charts" }
 vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico-charts" }
 vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts" }
-zelory-video-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
+zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 zxing-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }

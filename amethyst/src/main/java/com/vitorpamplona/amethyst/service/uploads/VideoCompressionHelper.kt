@@ -40,6 +40,8 @@ import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 
+// TODO: add Auto setting. Focus on small fast streams. 4->1080p, 1080p->720p, 720p and below stay the same resolution. Use existing matrix to determine bitrate.
+// TODO: use bps api and don't floor at 1Mbps
 data class VideoInfo(
     val resolution: VideoResolution,
     val framerate: Float,

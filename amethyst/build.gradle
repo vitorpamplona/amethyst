@@ -332,9 +332,9 @@ dependencies {
     implementation libs.audiowaveform
 
     // Video compression lib
-    implementation libs.abedElazizShe.image.compressor
+    implementation libs.abedElazizShe.video.compressor.fork
     // Image compression lib
-    implementation libs.zelory.video.compressor
+    implementation libs.zelory.image.compressor
 
     // Cbor for cashuB format
     implementation libs.kotlinx.serialization.cbor
