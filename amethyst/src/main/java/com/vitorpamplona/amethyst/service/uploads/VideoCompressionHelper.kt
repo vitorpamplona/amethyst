@@ -92,7 +92,7 @@ data class CompressionRule(
         // Apply 1.5x multiplier for 60fps+ videos
         val multiplier = if (framerate >= 60f) 1.5f else 1.0f
 
-        return (bitrateMbps * multiplier).toInt() * MBPS_TO_BPS_MULTIPLIER
+        return (bitrateMbps * multiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
     }
 }
 
@@ -145,36 +145,28 @@ object VideoCompressionHelper {
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
 
-        val videoBitrateInBps =
+        val (videoBitrateInBps, resizer) =
             videoInfo?.let { info ->
-                val bitrateBps =
+                val rule =
                     compressionRules
                         .getValue(mediaQuality)
                         .getValue(info.resolution.getStandard())
-                        .getBitrateBps(info.framerate)
 
+                val bitrateBps = rule.getBitrateBps(info.framerate)
                 Log.d(LOG_TAG, "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps.")
-                bitrateBps
-            } ?: run {
-                Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
-                2 * MBPS_TO_BPS_MULTIPLIER
-            }
 
-        val resizer =
-            if (videoInfo != null) {
-                val rules =
-                    compressionRules
-                        .getValue(mediaQuality)
-                        .getValue(videoInfo.resolution.getStandard())
                 Log.d(
                     LOG_TAG,
-                    "Resizer: ${videoInfo.resolution.width}x${videoInfo.resolution.height} -> " +
-                        "${rules.width}x${rules.height} (${rules.description})",
+                    "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
+                        "${rule.width}x${rule.height} (${rule.description})",
                 )
-                VideoResizer.limitSize(rules.width.toDouble(), rules.height.toDouble())
-            } else {
+                val resizer = VideoResizer.limitSize(rule.width.toDouble(), rule.height.toDouble())
+
+                Pair(bitrateBps, resizer)
+            } ?: run {
+                Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 Log.d(LOG_TAG, "Resizer: null (original resolution preserved)")
-                null
+                Pair(2 * MBPS_TO_BPS_MULTIPLIER, null)
             }
 
         // Get original file size safely
