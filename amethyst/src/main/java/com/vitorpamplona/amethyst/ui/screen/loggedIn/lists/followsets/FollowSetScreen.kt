@@ -67,14 +67,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrUserListFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -92,10 +92,10 @@ fun FollowSetScreen(
     accountViewModel: AccountViewModel,
     navigator: INav,
 ) {
-    val followSetViewModel: NostrUserListFeedViewModel =
+    val followSetViewModel: FollowSetFeedViewModel =
         viewModel(
-            key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
+            key = "FollowSetFeedViewModel",
+            factory = FollowSetFeedViewModel.Factory(accountViewModel.account),
         )
 
     FollowSetScreen(selectedSetIdentifier, followSetViewModel, accountViewModel, navigator)
@@ -105,7 +105,7 @@ fun FollowSetScreen(
 @Composable
 fun FollowSetScreen(
     selectedSetIdentifier: String,
-    followSetViewModel: NostrUserListFeedViewModel,
+    followSetViewModel: FollowSetFeedViewModel,
     accountViewModel: AccountViewModel,
     navigator: INav,
 ) {
@@ -144,7 +144,7 @@ fun FollowSetScreen(
     when {
         selectedSetState.value != null -> {
             val selectedSet = selectedSetState.value
-            val users = selectedSet!!.profileList.mapToUsers(accountViewModel).filterNotNull()
+            val users = selectedSet!!.profiles.mapToUsers(accountViewModel).filterNotNull()
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -235,10 +235,10 @@ fun TitleAndDescription(
             Icon(
                 painter =
                     painterResource(
-                        when (followSet.listVisibility) {
-                            ListVisibility.Public -> R.drawable.ic_public
-                            ListVisibility.Private -> R.drawable.lock
-                            ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
+                        when (followSet.setVisibility) {
+                            SetVisibility.Public -> R.drawable.ic_public
+                            SetVisibility.Private -> R.drawable.lock
+                            SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
                         },
                     ),
                 contentDescription = null,

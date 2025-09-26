@@ -18,15 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
+package com.vitorpamplona.amethyst.model.nip51Lists.followSets
 
-sealed class NostrList(
-    val listVisibility: ListVisibility,
-    val content: Collection<String>,
-)
-
-class CuratedBookmarkList(
-    val name: String,
-    val visibility: ListVisibility,
-    val listItems: List<String>,
-) : NostrList(visibility, listItems)
+enum class SetVisibility {
+    Public,
+    Private,
+    Mixed,
+}

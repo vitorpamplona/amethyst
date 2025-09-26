@@ -30,6 +30,8 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
@@ -49,12 +51,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
-// TODO Update: Rename this to be used only for follow sets, and create separate VMs for bookmark sets, etc.
-class NostrUserListFeedViewModel(
+class FollowSetFeedViewModel(
     val dataSource: FeedFilter<FollowSet>,
 ) : ViewModel(),
     InvalidatableContent {
-    private val _feedContent = MutableStateFlow<FollowSetState>(FollowSetState.Loading)
+    private val _feedContent = MutableStateFlow<FollowSetFeedState>(FollowSetFeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
 
     fun refresh() {
@@ -67,9 +68,8 @@ class NostrUserListFeedViewModel(
         noteIdentifier: String,
         account: Account,
     ): AddressableNote? {
-//        checkNotInMainThread()
         val potentialNote =
-            runBlocking(Dispatchers.IO) { account.getFollowSetNotes() }
+            runBlocking(Dispatchers.IO) { account.followSetsState.getFollowSetNotes() }
                 .find { it.dTag() == noteIdentifier }
         return potentialNote
     }
@@ -79,7 +79,7 @@ class NostrUserListFeedViewModel(
         account: Account,
     ): Boolean {
         val potentialNote =
-            runBlocking(viewModelScope.coroutineContext) { account.getFollowSetNotes() }
+            runBlocking(viewModelScope.coroutineContext) { account.followSetsState.getFollowSetNotes() }
                 .find { (it.event as PeopleListEvent).nameOrTitle() == setName }
         return potentialNote != null
     }
@@ -94,7 +94,7 @@ class NostrUserListFeedViewModel(
 
             val newSets = dataSource.loadTop().toImmutableList()
 
-            if (oldFeedState is FollowSetState.Loaded) {
+            if (oldFeedState is FollowSetFeedState.Loaded) {
                 val oldFeedList = oldFeedState.feed.toImmutableList()
                 // Using size as a proxy for has changed.
                 if (!equalImmutableLists(newSets, oldFeedList)) {
@@ -108,7 +108,7 @@ class NostrUserListFeedViewModel(
                 this.javaClass.simpleName,
                 "refreshSuspended: Error loading or refreshing feed -> ${e.message}",
             )
-            _feedContent.update { FollowSetState.FeedError(e.message.toString()) }
+            _feedContent.update { FollowSetFeedState.FeedError(e.message.toString()) }
         } finally {
             isRefreshing.value = false
         }
@@ -190,7 +190,7 @@ class NostrUserListFeedViewModel(
                 PeopleListEvent.addUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
-                    isPrivate = followSet.visibility == ListVisibility.Private,
+                    isPrivate = followSet.visibility == SetVisibility.Private,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)
@@ -223,9 +223,9 @@ class NostrUserListFeedViewModel(
 
     private fun updateFeed(sets: ImmutableList<FollowSet>) {
         if (sets.isNotEmpty()) {
-            _feedContent.update { FollowSetState.Loaded(sets) }
+            _feedContent.update { FollowSetFeedState.Loaded(sets) }
         } else {
-            _feedContent.update { FollowSetState.Empty }
+            _feedContent.update { FollowSetFeedState.Empty }
         }
     }
 
@@ -244,7 +244,7 @@ class NostrUserListFeedViewModel(
 
     init {
         Log.d("Init", this.javaClass.simpleName)
-        Log.d(this.javaClass.simpleName, " FollowSetState : ${_feedContent.value}")
+        Log.d(this.javaClass.simpleName, " FollowSetFeedState : ${_feedContent.value}")
         collectorJob =
             viewModelScope.launch(Dispatchers.IO) {
                 LocalCache.live.newEventBundles.collect { newNotes ->
@@ -266,8 +266,8 @@ class NostrUserListFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            NostrUserListFeedViewModel(
-                FollowSetFeedFilter(account),
+            FollowSetFeedViewModel(
+                FollowSetFeedFilter(account.followSetsState),
             ) as T
     }
 }

@@ -20,8 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
-enum class ListVisibility {
-    Public,
-    Private,
-    Mixed,
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+
+sealed class FollowSetFeedState {
+    data object Loading : FollowSetFeedState()
+
+    data class Loaded(
+        val feed: List<FollowSet>,
+    ) : FollowSetFeedState()
+
+    data object Empty : FollowSetFeedState()
+
+    data class FeedError(
+        val errorMessage: String,
+    ) : FollowSetFeedState()
 }
