@@ -20,22 +20,25 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.followSets
 
-import androidx.compose.ui.util.fastAny
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class FollowSetState(
@@ -44,20 +47,24 @@ class FollowSetState(
     val scope: CoroutineScope,
 ) {
     val user = cache.getOrCreateUser(signer.pubKey)
+    private val isActive = MutableStateFlow(false)
 
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.Default) {
             val followSetNotes = LocalCache.getFollowSetNotesFor(user)
-            Log.d(this.javaClass.simpleName, "Number of follow sets: ${followSetNotes.size}")
+            Log.d(this@FollowSetState.javaClass.simpleName, "Number of follow sets: ${followSetNotes.size}")
             return@withContext followSetNotes
         }
 
     private fun getFollowSetNotesFlow() =
         flow {
-            val followSetNotes = getFollowSetNotes()
-            val followSets = followSetNotes.map { mapNoteToFollowSet(it) }
-            emit(followSets)
-        }.flowOn(Dispatchers.IO)
+            while (isActive.value) {
+                val followSetNotes = getFollowSetNotes()
+                val followSets = followSetNotes.map { mapNoteToFollowSet(it) }
+                emit(followSets)
+                delay(1000)
+            }
+        }.flowOn(Dispatchers.Default)
 
     val profilesFlow =
         getFollowSetNotesFlow()
@@ -65,27 +72,25 @@ class FollowSetState(
                 it.flatMapTo(mutableSetOf()) { it.profiles }.toSet()
             }.stateIn(scope, SharingStarted.Eagerly, emptySet())
 
-    fun isUserInFollowSets(user: User): Boolean =
-        runBlocking(scope.coroutineContext) {
-            LocalCache.getFollowSetNotesFor(user).fastAny { it ->
-                val listEvent = it.event as PeopleListEvent
-                val isInPublicSets =
-                    listEvent
-                        .publicPeople()
-                        .fastAny { it.toTagArray().value() == user.pubkeyHex }
-                val isInPrivateSets =
-                    listEvent
-                        .privatePeople(signer)
-                        ?.fastAny { it.toTagArray().value() == user.pubkeyHex } ?: false
-
-                isInPublicSets || isInPrivateSets
-            }
-        }
-
     fun mapNoteToFollowSet(note: Note): FollowSet =
         FollowSet
             .mapEventToSet(
                 event = note.event as PeopleListEvent,
                 signer,
             )
+
+    fun isUserInFollowSets(user: User): Boolean = profilesFlow.value.contains(user.pubkeyHex)
+
+    init {
+        isActive.update { true }
+        scope.launch(Dispatchers.Default) {
+            getFollowSetNotesFlow()
+                .onCompletion {
+                    isActive.update { false }
+                }.catch {
+                    Log.e(this@FollowSetState.javaClass.simpleName, "Error on flow collection: ${it.message}")
+                    isActive.update { false }
+                }.collect {}
+        }
+    }
 }
