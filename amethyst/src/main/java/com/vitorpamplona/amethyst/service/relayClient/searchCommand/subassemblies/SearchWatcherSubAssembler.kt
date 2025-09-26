@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
@@ -55,23 +56,25 @@ class SearchWatcherSubAssembler(
 
         if (mySearchString.isBlank()) return null
 
-        val defaultRelaysWithIndexAndSearch = key.account.followPlusAllMineWithIndexAndSearch.flow.value
+        val indexRelays =
+            key.account.indexerRelayList.flow.value
+                .ifEmpty { DefaultIndexerRelayList }
         val defaultRelaysWithSearch = key.account.followPlusAllMineWithSearch.flow.value
 
         val directFilters =
             runCatching {
                 if (Hex.isHex(mySearchString)) {
                     val hexKey = Hex.decode(mySearchString).toHexKey()
-                    filterByAuthor(hexKey, defaultRelaysWithIndexAndSearch) + filterByEvent(hexKey, defaultRelaysWithSearch)
+                    filterByAuthor(hexKey, indexRelays, defaultRelaysWithSearch) + filterByEvent(hexKey, defaultRelaysWithSearch)
                 } else {
                     val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
                     if (parsed != null) {
                         cache.consume(parsed)
 
                         when (parsed) {
-                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), defaultRelaysWithIndexAndSearch)
-                            is NPub -> filterByAuthor(parsed.hex, defaultRelaysWithIndexAndSearch)
-                            is NProfile -> filterByAuthor(parsed.hex, defaultRelaysWithIndexAndSearch)
+                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), indexRelays, defaultRelaysWithSearch)
+                            is NPub -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch)
+                            is NProfile -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch)
                             is NNote -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
                             is NEvent -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
                             is NEmbed -> emptyList()

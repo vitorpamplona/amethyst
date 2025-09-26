@@ -26,5 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun filterByAuthor(
     pubKey: HexKey,
+    indexRelays: Set<NormalizedRelayUrl>,
     defaultRelays: Set<NormalizedRelayUrl>,
-) = filterFindUserMetadataForKey(pubKey, defaultRelays)
+) = filterFindUserMetadataForKey(pubKey, indexRelays, defaultRelays)

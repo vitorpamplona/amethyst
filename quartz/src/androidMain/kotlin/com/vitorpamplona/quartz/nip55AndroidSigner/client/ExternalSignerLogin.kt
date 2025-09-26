@@ -29,9 +29,15 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.result
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 
 object ExternalSignerLogin {
-    fun createIntent(permissions: List<Permission> = LoginRequest.DefaultPermissions): Intent {
+    fun createIntent(
+        permissions: List<Permission> = LoginRequest.DefaultPermissions,
+        packageName: String = "",
+    ): Intent {
         val intent = LoginRequest.assemble(permissions)
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        if (packageName.isNotBlank()) {
+            intent.`package` = packageName
+        }
         return intent
     }
 

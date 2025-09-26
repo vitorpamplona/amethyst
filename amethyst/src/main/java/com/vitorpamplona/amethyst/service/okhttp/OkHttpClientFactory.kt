@@ -61,7 +61,8 @@ class OkHttpClientFactory(
     val myDispatcher =
         Dispatcher().apply {
             if (!isEmulator()) {
-                maxRequests = 512
+                maxRequestsPerHost = 10
+                maxRequests = 1024
             } else {
                 Log.i("OkHttpClientFactory", "Emulator detected, using default maxRequests: 64.")
             }

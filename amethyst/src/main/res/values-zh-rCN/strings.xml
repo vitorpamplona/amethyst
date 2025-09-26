@@ -112,6 +112,7 @@
     <string name="post">发布</string>
     <string name="save">保存</string>
     <string name="create">创建</string>
+    <string name="rename">重命名</string>
     <string name="cancel">取消</string>
     <string name="failed_to_upload_the_image">上传图片失败</string>
     <string name="relay_address">中继器地址</string>
@@ -445,6 +446,33 @@
     <string name="follow_list_aroundme">周围的人</string>
     <string name="follow_list_global">全球</string>
     <string name="follow_list_mute_list">静音列表</string>
+    <string name="follow_sets">关注集</string>
+    <string name="labeled_bookmarks">有标签的书签</string>
+    <string name="general_bookmarks">常规书签</string>
+    <string name="follow_set_type_public">公开</string>
+    <string name="follow_set_type_private">私密</string>
+    <string name="follow_set_type_mixed">混合</string>
+    <string name="follow_set_empty_feed_msg">        似乎你还没有任何关注集。
+        \n轻按下方刷新，或者轻按“+”按钮新建一个。
+    </string>
+    <string name="follow_set_add_author_from_note_action">添加作者到关注集</string>
+    <string name="follow_set_profile_actions_menu_description">从列表中添加或删除用户，或用此用户创建一个新列表。</string>
+    <string name="follow_set_type_description">%1$s 列表的图标</string>
+    <string name="follow_set_presence_indicator">"此列表中有 %1$s"</string>
+    <string name="follow_set_absence_indicator">"此列表中没有 %1$s"</string>
+    <string name="follow_set_man_dialog_title">您的关注集</string>
+    <string name="follow_set_empty_dialog_msg">未找到关注集，或者你还没有任何关注集。轻按下方刷新，或使用按钮新建。</string>
+    <string name="follow_set_error_dialog_msg">获取时出了问题： %1$s</string>
+    <string name="follow_set_creation_menu_title">新建列表</string>
+    <string name="follow_set_creation_item_label">创建用户新的 %1$s 列表</string>
+    <string name="follow_set_creation_item_description">创建 %1$s 关注集，并添加 %2$s 到其中。</string>
+    <string name="follow_set_creation_dialog_title">新的 %1$s 列表</string>
+    <string name="follow_set_creation_name_label">集合名</string>
+    <string name="follow_set_creation_desc_label">集合描述（可选）</string>
+    <string name="follow_set_creation_action_btn_label">新建集</string>
+    <string name="follow_set_rename_btn_label">重命名集</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">正将集合名称从 </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> 改为</string>
     <string name="connect_through_your_orbot_setup_short">默认端口为 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## 通过 Orbot 连线 Tor
         \n\n1. 安装 [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -1014,6 +1042,8 @@
     <string name="torrent_download">下载</string>
     <string name="torrent_failure">打开文件失败</string>
     <string name="torrent_no_apps">没有用于打开和下载文件的 Torrent 客户端</string>
+    <string name="torrent_no_info">事件没有足够信息来构建磁力链</string>
+    <string name="my_lists_and_sets">我的列表/集合</string>
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
     <string name="temporary_account">当设备锁定时注销</string>
     <string name="private_message">私信</string>

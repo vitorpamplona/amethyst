@@ -25,23 +25,12 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
-import com.abedelazizshe.lightcompressorlibrary.CompressionListener
-import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
-import com.abedelazizshe.lightcompressorlibrary.VideoQuality
-import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
-import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.default
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
-import java.io.File
-import kotlin.coroutines.resume
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 class MediaCompressorResult(
     val uri: Uri,
@@ -67,98 +56,15 @@ class MediaCompressor {
 
         // branch into compression based on content type
         return when {
-            contentType?.startsWith("video", ignoreCase = true) == true -> compressVideo(uri, contentType, applicationContext, mediaQuality)
+            contentType?.startsWith("video", ignoreCase = true) == true -> {
+                VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality)
+            }
             contentType?.startsWith("image", ignoreCase = true) == true &&
                 !contentType.contains("gif") &&
                 !contentType.contains("svg") ->
                 compressImage(uri, contentType, applicationContext, mediaQuality)
             else -> MediaCompressorResult(uri, contentType, null)
         }
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
-    private suspend fun compressVideo(
-        uri: Uri,
-        contentType: String?,
-        applicationContext: Context,
-        mediaQuality: CompressorQuality,
-    ): MediaCompressorResult {
-        val videoQuality =
-            when (mediaQuality) {
-                CompressorQuality.VERY_LOW -> VideoQuality.VERY_LOW
-                // Override user selection LOW to use VERY_LOW for better video streaming experience
-                CompressorQuality.LOW -> VideoQuality.VERY_LOW
-                CompressorQuality.MEDIUM -> VideoQuality.MEDIUM
-                CompressorQuality.HIGH -> VideoQuality.HIGH
-                CompressorQuality.VERY_HIGH -> VideoQuality.VERY_HIGH
-                else -> VideoQuality.MEDIUM
-            }
-
-        Log.d("MediaCompressor", "Using video compression $videoQuality")
-
-        val result =
-            withTimeoutOrNull(30000) {
-                suspendCancellableCoroutine { continuation ->
-                    VideoCompressor.start(
-                        // => This is required
-                        context = applicationContext,
-                        // => Source can be provided as content uris
-                        uris = listOf(uri),
-                        isStreamable = false,
-                        // THIS STORAGE
-                        // sharedStorageConfiguration = SharedStorageConfiguration(
-                        //    saveAt = SaveLocation.movies, // => default is movies
-                        //    videoName = "compressed_video" // => required name
-                        // ),
-                        // OR AND NOT BOTH
-                        storageConfiguration = AppSpecificStorageConfiguration(),
-                        configureWith =
-                            Configuration(
-                                quality = videoQuality,
-                                // => required name
-                                videoNames = listOf(Uuid.random().toString()),
-                            ),
-                        listener =
-                            object : CompressionListener {
-                                override fun onProgress(
-                                    index: Int,
-                                    percent: Float,
-                                ) {}
-
-                                override fun onStart(index: Int) {}
-
-                                override fun onSuccess(
-                                    index: Int,
-                                    size: Long,
-                                    path: String?,
-                                ) {
-                                    if (path != null) {
-                                        Log.d("MediaCompressor", "Video compression success. Compressed size [$size]")
-                                        continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
-                                    } else {
-                                        Log.d("MediaCompressor", "Video compression successful, but returned null path")
-                                        continuation.resume(null)
-                                    }
-                                }
-
-                                override fun onFailure(
-                                    index: Int,
-                                    failureMessage: String,
-                                ) {
-                                    Log.d("MediaCompressor", "Video compression failed: $failureMessage")
-                                    // keeps going with original video
-                                    continuation.resume(null)
-                                }
-
-                                override fun onCancelled(index: Int) {
-                                    continuation.resume(null)
-                                }
-                            },
-                    )
-                }
-            }
-
-        return result ?: MediaCompressorResult(uri, contentType, null)
     }
 
     private suspend fun compressImage(
@@ -202,15 +108,6 @@ class MediaCompressor {
                 2 -> CompressorQuality.HIGH
                 3 -> CompressorQuality.UNCOMPRESSED
                 else -> CompressorQuality.MEDIUM
-            }
-
-        fun compressorQualityToInt(compressorQuality: CompressorQuality): Int =
-            when (compressorQuality) {
-                CompressorQuality.LOW -> 0
-                CompressorQuality.MEDIUM -> 1
-                CompressorQuality.HIGH -> 2
-                CompressorQuality.UNCOMPRESSED -> 3
-                else -> 1
             }
     }
 }

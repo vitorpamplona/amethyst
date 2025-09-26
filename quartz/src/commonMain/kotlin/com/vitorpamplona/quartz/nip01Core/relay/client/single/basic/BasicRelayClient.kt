@@ -174,6 +174,8 @@ open class BasicRelayClient(
         }
 
         override fun onMessage(text: String) {
+            // Log.d(logTag, "Receiving: $text")
+
             if (text.startsWith(EVENT_MESSAGE_PREFIX)) {
                 // defers the parsing of ["EVENTS" to avoid blocking the HTTP thread
                 scope.launch(Dispatchers.Default) {
@@ -239,7 +241,7 @@ open class BasicRelayClient(
         text: String,
         onConnected: () -> Unit,
     ) {
-        // Log.d(logTag, "Receiving: $text")
+        // Log.d(logTag, "Processing: $text")
         stats.addBytesReceived(text.bytesUsedInMemory())
 
         try {
@@ -465,7 +467,7 @@ open class BasicRelayClient(
             )
         }
         socket?.let {
-            Log.d(logTag, "Sending: $str")
+            // Log.d(logTag, "Sending (${str.length} chars): $str")
             val result = it.send(str)
             listener.onSend(this@BasicRelayClient, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())
