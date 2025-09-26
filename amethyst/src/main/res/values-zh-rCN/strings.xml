@@ -1065,4 +1065,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">要用私信将最近的崩溃报告发送给 Amethyst 吗？不会分享个人信息</string>
     <string name="crashreport_found_send">发送它</string>
     <string name="this_message_will_disappear_in_days">此消息将在 %1$d 天内消失</string>
+    <string name="select_signer">选择签名者</string>
 </resources>
