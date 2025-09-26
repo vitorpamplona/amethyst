@@ -32,6 +32,14 @@ class FilterSerializer : StdSerializer<Filter>(Filter::class.java) {
     ) {
         gen.writeStartObject()
 
+        filter.kinds?.run {
+            gen.writeArrayFieldStart("kinds")
+            for (i in indices) {
+                gen.writeNumber(this[i])
+            }
+            gen.writeEndArray()
+        }
+
         filter.ids?.run {
             gen.writeArrayFieldStart("ids")
             for (i in indices) {
@@ -44,14 +52,6 @@ class FilterSerializer : StdSerializer<Filter>(Filter::class.java) {
             gen.writeArrayFieldStart("authors")
             for (i in indices) {
                 gen.writeString(this[i])
-            }
-            gen.writeEndArray()
-        }
-
-        filter.kinds?.run {
-            gen.writeArrayFieldStart("kinds")
-            for (i in indices) {
-                gen.writeNumber(this[i])
             }
             gen.writeEndArray()
         }
