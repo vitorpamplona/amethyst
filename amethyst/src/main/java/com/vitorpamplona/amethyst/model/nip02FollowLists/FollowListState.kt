@@ -79,7 +79,7 @@ class FollowListState(
     val userList =
         flow
             .map {
-                it.authors.map {
+                it.authors.mapNotNull {
                     cache.checkGetOrCreateUser(it)
                 }
             }.flowOn(Dispatchers.Default)
@@ -87,7 +87,7 @@ class FollowListState(
                 scope,
                 SharingStarted.Eagerly,
                 // this has priority.
-                flow.value.authors.map {
+                flow.value.authors.mapNotNull {
                     cache.checkGetOrCreateUser(it)
                 },
             )
