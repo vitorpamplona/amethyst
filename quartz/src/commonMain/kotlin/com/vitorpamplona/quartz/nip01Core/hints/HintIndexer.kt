@@ -42,7 +42,8 @@ class HintIndexer {
 
     // 3.75MB for keys
     private val pubKeyHints = BloomFilterMurMur3(30_000_000, 10)
-    private val relayDB = LargeCache<NormalizedRelayUrl, NormalizedRelayUrl>()
+
+    val relayDB = LargeCache<NormalizedRelayUrl, NormalizedRelayUrl>()
 
     private fun add(
         id: ByteArray,
