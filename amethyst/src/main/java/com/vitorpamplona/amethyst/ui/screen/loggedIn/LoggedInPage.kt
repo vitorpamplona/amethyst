@@ -121,7 +121,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
 
         if (notificationPermissionState.status.isGranted) {
             LifecycleResumeEffect(key1 = accountViewModel, notificationPermissionState.status.isGranted) {
-                Log.d("RegisterAccounts", "Registering for push notifications $notificationPermissionState")
+                Log.d("RegisterAccounts", "Registering for push notifications")
                 scope.launch {
                     PushNotificationUtils.checkAndInit(
                         LocalPreferences.allSavedAccounts(),
