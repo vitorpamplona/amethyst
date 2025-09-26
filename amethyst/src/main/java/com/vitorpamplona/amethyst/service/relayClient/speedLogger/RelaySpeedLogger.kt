@@ -33,7 +33,7 @@ class RelaySpeedLogger(
     val client: INostrClient,
 ) {
     companion object {
-        val TAG = RelaySpeedLogger::class.java.simpleName
+        val TAG: String = RelaySpeedLogger::class.java.simpleName
     }
 
     var current = FrameStat()
@@ -55,6 +55,8 @@ class RelaySpeedLogger(
     init {
         Log.d(TAG, "Init, Subscribe")
         client.subscribe(clientListener)
+        // OkHttpDebugLogging.enableHttp2()
+        // OkHttpDebugLogging.enableTaskRunner()
     }
 
     fun destroy() {

@@ -38,14 +38,16 @@ val MetadataAndRelayListKinds =
 
 fun filterFindUserMetadataForKey(
     author: HexKey,
+    indexRelays: Set<NormalizedRelayUrl>,
     defaultRelays: Set<NormalizedRelayUrl>,
 ): List<RelayBasedFilter> =
     LocalCache.checkGetOrCreateUser(author)?.let {
-        filterFindUserMetadataForKey(setOf(it), defaultRelays)
+        filterFindUserMetadataForKey(setOf(it), indexRelays, defaultRelays)
     } ?: emptyList()
 
 fun filterFindUserMetadataForKey(
     authors: Set<User>,
+    indexRelays: Set<NormalizedRelayUrl>,
     defaultRelays: Set<NormalizedRelayUrl>,
 ): List<RelayBasedFilter> {
     val perRelayKeys =
@@ -53,8 +55,8 @@ fun filterFindUserMetadataForKey(
             authors.forEach { key ->
                 val relays =
                     key.authorRelayList()?.writeRelaysNorm()
-                        ?: LocalCache.relayHints.hintsForKey(key.pubkeyHex).ifEmpty { null }
-                        ?: (key.relaysBeingUsed.keys + defaultRelays).toList()
+                        ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
+                        ?: defaultRelays.toList()
 
                 relays.forEach {
                     add(it, key.pubkeyHex)

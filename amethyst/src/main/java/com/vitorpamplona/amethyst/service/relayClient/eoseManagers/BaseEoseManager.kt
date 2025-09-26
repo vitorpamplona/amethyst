@@ -50,7 +50,7 @@ abstract class BaseEoseManager<T>(
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Default)
+    private val bundler = BundledUpdate(500, Dispatchers.Default)
 
     fun invalidateFilters() {
         bundler.invalidate {

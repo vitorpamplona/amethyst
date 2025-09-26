@@ -112,6 +112,7 @@
     <string name="post">पत्र प्रकाशन</string>
     <string name="save">अभिलेखन करें</string>
     <string name="create">बनाएँ</string>
+    <string name="rename">पुनःनामकरण</string>
     <string name="cancel">निरस्त करें</string>
     <string name="failed_to_upload_the_image">चित्र आरोहण असफल</string>
     <string name="relay_address">पुनःप्रसारक पता</string>
@@ -440,10 +441,38 @@
     <string name="no">नहीं</string>
     <string name="follow_list_selection">अनुचरण सूची</string>
     <string name="follow_list_kind3follows">सभी अनुचरित</string>
+    <string name="follow_list_kind3follows_users_only">प्रयोक्ता के सभी अनुगामी</string>
     <string name="follow_list_kind3follows_proxy">प्रतिनिधि द्वारा अनुचरित</string>
     <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
     <string name="follow_list_mute_list">मौन सूची</string>
+    <string name="follow_sets">अनुगम्य सूचियाँ</string>
+    <string name="labeled_bookmarks">सूचक युक्त स्मर्त्तव्य सूची</string>
+    <string name="general_bookmarks">सामान्य स्मर्त्तव्य सूची</string>
+    <string name="follow_set_type_public">सार्वजनिक</string>
+    <string name="follow_set_type_private">निजी</string>
+    <string name="follow_set_type_mixed">मिश्रित</string>
+    <string name="follow_set_empty_feed_msg">        लगता है आपका अब तक कोइ अनुगम्य समुच्चय नहीं है।
+        \nनवीकरण के लिए नीचे दबाएँ। अथवा एक नया बनाने के लिए जोड घुण्डियाँ टाँकें।
+    </string>
+    <string name="follow_set_add_author_from_note_action">लेखक जोडें अनुगम्य सूची में</string>
+    <string name="follow_set_profile_actions_menu_description">प्रयोक्ता को सूचियों में जोडें अथवा हटाएँ अथवा इस प्रयोक्ता के साथ नई सूची बनाएँ।</string>
+    <string name="follow_set_type_description">सूची %1$s के लिए चिह्न</string>
+    <string name="follow_set_presence_indicator">"%1$s इस सूची में है"</string>
+    <string name="follow_set_absence_indicator">"%1$s इस सूची में नहीं है"</string>
+    <string name="follow_set_man_dialog_title">आपके अनुगम्य सूचियाँ</string>
+    <string name="follow_set_empty_dialog_msg">कोई अनुगम्य सूचियाँ प्राप्त नहीं। अथवा आपका कोई अनुगम्य सूचियाँ हैं नहीं। नवीकरण के लिए नीचे दबाएँ अथवा विकल्पसूची द्वारा एक नया बनाएँ।</string>
+    <string name="follow_set_error_dialog_msg">लाने में अपक्रम : %1$s</string>
+    <string name="follow_set_creation_menu_title">नई सूची बनाएँ</string>
+    <string name="follow_set_creation_item_label">प्रयोक्ता के साथ नई सूची %1$s बनाएँ</string>
+    <string name="follow_set_creation_item_description">अनुगम्य सूची %1$s बनाता है तथा उससे %2$s जोडता है।</string>
+    <string name="follow_set_creation_dialog_title">नई %1$s सूची</string>
+    <string name="follow_set_creation_name_label">समुच्चय नाम</string>
+    <string name="follow_set_creation_desc_label">समुच्चय विवरण (आवश्यक नहीं)</string>
+    <string name="follow_set_creation_action_btn_label">समुच्चय बनाएँ</string>
+    <string name="follow_set_rename_btn_label">समुच्चय पुनःनामकरण</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">आप पनःनामकरण कर रहे हैं इस से </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> इस तक..</string>
     <string name="connect_through_your_orbot_setup_short">मूलविकल्प द्वार ९०५० है</string>
     <string name="connect_through_your_orbot_setup_markdown">## टोर द्वारा संयोजन करें ओर्बोट के साथ
         \n\n१. स्थापित करें [ओर्बोट](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -1013,6 +1042,8 @@
     <string name="torrent_download">अवरोहण</string>
     <string name="torrent_failure">अभिलेख खोलने में असफल</string>
     <string name="torrent_no_apps">कोई उग्रप्रवाह क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
+    <string name="torrent_no_info">अभिलेखविभेदक युक्त जालनिर्देशक बनाने के लिए पर्याप्त जानकारी नहीं है घटना में</string>
+    <string name="my_lists_and_sets">मेरे सूचियाँ / समुच्चय</string>
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
     <string name="temporary_account">यन्त्र ताला लगने पर निर्गमनांकन करें</string>
     <string name="private_message">निजी सन्देश</string>
@@ -1020,6 +1051,7 @@
     <string name="group_relay">चर्चा पुनःप्रसारक</string>
     <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
     <string name="share_image">चित्र बाँटें…</string>
+    <string name="unable_to_share_image">चित्र बाँटने में असफल। कृपया कुछ समय पश्चात पुनःप्रयास करें…</string>
     <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
     <string name="dont_translate_from">अनुवाद ना करें</string>
     <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>

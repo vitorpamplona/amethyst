@@ -1289,4 +1289,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Would you like to send the recent crash report to Amethyst in a DM? No personal information will be shared</string>
     <string name="crashreport_found_send">Send it</string>
     <string name="this_message_will_disappear_in_days">This message will disappear in %1$d days</string>
+    <string name="select_signer">Select Signer</string>
 </resources>
