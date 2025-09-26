@@ -52,7 +52,6 @@ class FollowSetState(
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.Default) {
             val followSetNotes = LocalCache.getFollowSetNotesFor(user)
-            Log.d(this@FollowSetState.javaClass.simpleName, "Number of follow sets: ${followSetNotes.size}")
             return@withContext followSetNotes
         }
 
@@ -62,7 +61,7 @@ class FollowSetState(
                 val followSetNotes = getFollowSetNotes()
                 val followSets = followSetNotes.map { mapNoteToFollowSet(it) }
                 emit(followSets)
-                delay(1000)
+                delay(2000)
             }
         }.flowOn(Dispatchers.Default)
 

@@ -412,7 +412,6 @@ fun observeUserIsFollowing(
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user1, accountViewModel)
     val isUserInFollowSets = accountViewModel.account.followSetsState.isUserInFollowSets(user2)
-    println("Is ${user2.toBestDisplayName()} in a Follow set? $isUserInFollowSets")
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
