@@ -242,16 +242,16 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz:<Amethyst Version>')
 ```
 
 Variations to each platform are also available:
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz-android:<Amethyst Version>')
-implementation('com.github.vitorpamplona.amethyst:quartz-jvm:<Amethyst Version>')
-implementation('com.github.vitorpamplona.amethyst:quartz-iosarm64:<Amethyst Version>')
-implementation('com.github.vitorpamplona.amethyst:quartz-iossimulatorarm64:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-android:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-jvm:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-iosarm64:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:<Amethyst Version>')
 ```
 
 ### How to use
