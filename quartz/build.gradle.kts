@@ -107,7 +107,7 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
 
                 // in your shared module's dependencies block
-                implementation( libs.kotlinx.datetime)
+                // implementation( libs.kotlinx.datetime)
 
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)

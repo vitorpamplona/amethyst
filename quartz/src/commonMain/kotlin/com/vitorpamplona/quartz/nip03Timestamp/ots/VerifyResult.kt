@@ -20,12 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip03Timestamp.ots
 
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.number
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
-
 /**
  * Class that lets us compare, sort, store and print timestamps.
  */
@@ -38,19 +32,12 @@ class VerifyResult(
     /**
      * Returns, if existing, a string representation describing the existence of a block attest
      */
-    @OptIn(ExperimentalTime::class)
     override fun toString(): String {
         if (height == 0 || timestamp == null) {
             return ""
         }
 
-        // 1. Create an Instant from the Unix timestamp (milliseconds)
-        val instant = Instant.fromEpochMilliseconds(timestamp * 1000)
-
-        // 2. Convert the Instant to a LocalDateTime in the UTC time zone
-        val dateTime = instant.toLocalDateTime(TimeZone.UTC)
-
-        return "block $height attests data existed as of ${dateTime.year}-${dateTime.month.number}-${dateTime.day} UTC"
+        return "block $height attests data existed as of unix timestamp of $timestamp"
     }
 
     override fun compareTo(other: VerifyResult): Int = this.height - other.height
