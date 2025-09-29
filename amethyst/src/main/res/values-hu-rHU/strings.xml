@@ -112,6 +112,7 @@
     <string name="post">Közzététel</string>
     <string name="save">Mentés</string>
     <string name="create">Létrehozás</string>
+    <string name="rename">Átnevezés</string>
     <string name="cancel">Mégse</string>
     <string name="failed_to_upload_the_image">Nem sikerült feltölteni a képet</string>
     <string name="relay_address">Atjátszó címe</string>
@@ -140,12 +141,12 @@
     <string name="ln_address">LN-cím</string>
     <string name="ln_url_outdated">LN-webcím (elavult)</string>
     <string name="save_to_gallery">Mentés a galériába</string>
-    <string name="image_saved_to_the_gallery">Kép elmentve a képgalériába</string>
+    <string name="image_saved_to_the_gallery">Kép mentve a képgalériába</string>
     <string name="video_download_has_started_toast">A videó letöltése megkezdődött…</string>
     <string name="media_download_has_started_toast">A média letöltése megkezdődött…</string>
     <string name="failed_to_save_the_image">Nem sikerült menteni a képet</string>
-    <string name="video_saved_to_the_gallery">Videó elmentve a videógalériába</string>
-    <string name="failed_to_save_the_video">Nem sikerült elmenteni a videót</string>
+    <string name="video_saved_to_the_gallery">Videó mentve a videógalériába</string>
+    <string name="failed_to_save_the_video">Nem sikerült menteni a videót</string>
     <string name="upload_image">Kép feltöltése</string>
     <string name="take_a_picture">Kép készítése</string>
     <string name="record_a_video">Videó rögzítése</string>
@@ -445,6 +446,33 @@
     <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
+    <string name="follow_sets">Követési gyüjtemények</string>
+    <string name="labeled_bookmarks">Címkézett könyvjelzők</string>
+    <string name="general_bookmarks">Általános könyvjelzők</string>
+    <string name="follow_set_type_public">Nyílvános</string>
+    <string name="follow_set_type_private">Privát</string>
+    <string name="follow_set_type_mixed">Kevert</string>
+    <string name="follow_set_empty_feed_msg">        Úgy tűnik, hogy még egyetlen gyüjteményt sem követ.
+        \nKoppintson a frissítéshez vagy érintse meg a hozzáadás gombot a gyüjtemény létrehozásához.
+    </string>
+    <string name="follow_set_add_author_from_note_action">Szerző hozzáadása a követési gyűjteményhez</string>
+    <string name="follow_set_profile_actions_menu_description">Felhasználó hozzáadása vagy eltávolítása a listákból, vagy új lista létrehozása ezzel a felhasználóval.</string>
+    <string name="follow_set_type_description">Ikon a(z) %1$s nevű listához</string>
+    <string name="follow_set_presence_indicator">"A(z) %1$s már a létezik a listában"</string>
+    <string name="follow_set_absence_indicator">"A(z) %1$s nincs a listában"</string>
+    <string name="follow_set_man_dialog_title">Saját követési gyüjtemények</string>
+    <string name="follow_set_empty_dialog_msg">Nem találhatók követési gyüjtemények, vagy nincs követési gyüjteménye. Érintse meg az alábbi gombot a frissítéshez vagy használja a menüt egy gyüjtemény létrehozásához.</string>
+    <string name="follow_set_error_dialog_msg">Probléma történt a következő lekérdezésekor: %1$s</string>
+    <string name="follow_set_creation_menu_title">Új lista létrehozása</string>
+    <string name="follow_set_creation_item_label">Új %1$s lista létrehozása felhasználóval</string>
+    <string name="follow_set_creation_item_description">%1$s követési gyüjtemény létrehozása, és hozzáadás a következhöz: %2$s.</string>
+    <string name="follow_set_creation_dialog_title">Új %1$s lista</string>
+    <string name="follow_set_creation_name_label">Név megadása</string>
+    <string name="follow_set_creation_desc_label">Leírás megadása (nem kötelező)</string>
+    <string name="follow_set_creation_action_btn_label">Gyüjtemény létrehozása</string>
+    <string name="follow_set_rename_btn_label">Gyüjtemény átnevezése</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Ön átnevezi a követési gyüjteményt erről: </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> erre:</string>
     <string name="connect_through_your_orbot_setup_short">Alapértelmezett port: 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Kapcsolódás a TORon keresztül az Orbot segítségével
         \n\n1. Telepítse az [Orbotot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -1014,6 +1042,8 @@
     <string name="torrent_download">Letöltés</string>
     <string name="torrent_failure">Nem sikerült megnyitni a fájlt</string>
     <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrent-alkalmazások telepítve.</string>
+    <string name="torrent_no_info">Az esemény nem tartalmaz elegendő információt a mágneshivatkozás létrehozásához</string>
+    <string name="my_lists_and_sets">Saját lista/gyüjtemény</string>
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="private_message">Privát üzenet</string>
@@ -1035,4 +1065,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Szeretné elküldeni a legutóbbi összeomlási jelentést az Amethystnek egy közvetlen üzenetben? A személyes adatait nem osztja meg</string>
     <string name="crashreport_found_send">Küldés</string>
     <string name="this_message_will_disappear_in_days">Ez az üzenet %1$d nap múlva eltűnik</string>
+    <string name="select_signer">Aláíró kiválasztása</string>
 </resources>
