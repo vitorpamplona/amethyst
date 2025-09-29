@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Account
@@ -411,6 +412,10 @@ fun observeUserIsFollowing(
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user1, accountViewModel)
+    val isUserInFollowSets =
+        remember(accountViewModel.account.followSetsState) {
+            accountViewModel.account.followSetsState.isUserInFollowSets(user2)
+        }
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -420,12 +425,14 @@ fun observeUserIsFollowing(
                 .follows.stateFlow
                 .sample(1000)
                 .mapLatest { userState ->
-                    userState.user.isFollowing(user2)
+                    userState.user.isFollowing(user2) || isUserInFollowSets
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
-    return flow.collectAsStateWithLifecycle(user1.isFollowing(user2))
+    return flow.collectAsStateWithLifecycle(
+        user1.isFollowing(user2) || isUserInFollowSets,
+    )
 }
 
 @SuppressLint("StateFlowValueCalledInComposition")

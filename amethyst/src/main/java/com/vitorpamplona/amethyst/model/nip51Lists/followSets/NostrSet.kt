@@ -18,18 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
+package com.vitorpamplona.amethyst.model.nip51Lists.followSets
 
-sealed class FollowSetState {
-    data object Loading : FollowSetState()
+sealed class NostrSet(
+    val setVisibility: SetVisibility,
+    val content: Collection<String>,
+)
 
-    data class Loaded(
-        val feed: List<FollowSet>,
-    ) : FollowSetState()
-
-    data object Empty : FollowSetState()
-
-    data class FeedError(
-        val errorMessage: String,
-    ) : FollowSetState()
-}
+class CuratedBookmarkSet(
+    val name: String,
+    val visibility: SetVisibility,
+    val setItems: List<String>,
+) : NostrSet(visibility, setItems)
