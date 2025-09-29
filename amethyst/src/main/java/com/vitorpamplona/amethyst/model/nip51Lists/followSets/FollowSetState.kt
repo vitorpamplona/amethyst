@@ -68,7 +68,7 @@ class FollowSetState(
     val profilesFlow =
         getFollowSetNotesFlow()
             .map { it ->
-                it.flatMapTo(mutableSetOf()) { it.profiles }.toSet()
+                it.flatMapTo(mutableSetOf()) { it.privateProfiles + it.publicProfiles }.toSet()
             }.stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     fun mapNoteToFollowSet(note: Note): FollowSet =
