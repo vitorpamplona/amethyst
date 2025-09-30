@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
@@ -117,8 +116,8 @@ class FollowSetFeedViewModel(
     fun addFollowSet(
         setName: String,
         setDescription: String?,
-        isListPrivate: Boolean,
         optionalFirstMemberHex: String? = null,
+        firstMemberShouldBePrivate: Boolean = false,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
@@ -129,7 +128,7 @@ class FollowSetFeedViewModel(
                     dTag = UUID.randomUUID().toString(),
                     title = setName,
                     description = setDescription,
-                    isPrivate = isListPrivate,
+                    isPrivate = firstMemberShouldBePrivate,
                     firstMemberHex = optionalFirstMemberHex,
                     signer = account.signer,
                 ) {
@@ -179,6 +178,7 @@ class FollowSetFeedViewModel(
     fun addUserToSet(
         userProfileHex: String,
         followSet: FollowSet,
+        shouldBePrivateMember: Boolean,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
@@ -190,7 +190,7 @@ class FollowSetFeedViewModel(
                 PeopleListEvent.addUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
-                    isPrivate = followSet.visibility == SetVisibility.Private,
+                    isPrivate = shouldBePrivateMember,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)

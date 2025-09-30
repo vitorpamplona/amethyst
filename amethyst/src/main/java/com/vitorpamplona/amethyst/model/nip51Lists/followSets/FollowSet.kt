@@ -31,7 +31,7 @@ data class FollowSet(
     val identifierTag: String,
     val title: String,
     val description: String?,
-    val visibility: SetVisibility,
+    val visibility: SetVisibility = SetVisibility.Mixed,
     val privateProfiles: Set<String> = emptySet(),
     val publicProfiles: Set<String> = emptySet(),
 ) : NostrSet(setVisibility = visibility, privateContent = privateProfiles, publicContent = publicProfiles) {
@@ -54,7 +54,6 @@ data class FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = SetVisibility.Private,
                     privateProfiles = privateFollows.toSet(),
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
@@ -62,7 +61,6 @@ data class FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = SetVisibility.Public,
                     publicProfiles = publicFollows.toSet(),
                 )
             } else {
@@ -70,7 +68,6 @@ data class FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = SetVisibility.Public,
                     privateProfiles = privateFollows.toSet(),
                     publicProfiles = publicFollows.toSet(),
                 )
