@@ -261,7 +261,7 @@ fun EditPostView(
                                         ImageVideoDescription(
                                             it,
                                             accountViewModel.account.settings.defaultFileServer,
-                                            onAdd = { alt, server, sensitiveContent, mediaQuality ->
+                                            onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                                                 postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context)
                                                 if (server.type != ServerType.NIP95) {
                                                     accountViewModel.account.settings.changeDefaultFileServer(server)

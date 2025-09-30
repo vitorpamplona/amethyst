@@ -45,6 +45,7 @@ class MediaCompressor {
         contentType: String?,
         mediaQuality: CompressorQuality,
         applicationContext: Context,
+        useH265: Boolean = false,
     ): MediaCompressorResult {
         // Skip compression if user selected uncompressed
         if (mediaQuality == CompressorQuality.UNCOMPRESSED) {
@@ -57,7 +58,7 @@ class MediaCompressor {
         // branch into compression based on content type
         return when {
             contentType?.startsWith("video", ignoreCase = true) == true -> {
-                VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality)
+                VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality, useH265)
             }
             contentType?.startsWith("image", ignoreCase = true) == true &&
                 !contentType.contains("gif") &&

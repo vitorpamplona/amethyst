@@ -29,6 +29,7 @@ import android.text.format.Formatter.formatFileSize
 import android.util.Log
 import android.widget.Toast
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
+import com.abedelazizshe.lightcompressorlibrary.VideoCodec
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
@@ -141,6 +142,7 @@ object VideoCompressionHelper {
         contentType: String?,
         applicationContext: Context,
         mediaQuality: CompressorQuality,
+        useH265: Boolean = false,
         timeoutMs: Long = 60_000L, // configurable, default 60s
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
@@ -186,6 +188,7 @@ object VideoCompressionHelper {
                                 resizer = resizer,
                                 videoNames = listOf(UUID.randomUUID().toString()),
                                 isMinBitrateCheckEnabled = false,
+                                videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
                             ),
                         listener =
                             object : CompressionListener {
