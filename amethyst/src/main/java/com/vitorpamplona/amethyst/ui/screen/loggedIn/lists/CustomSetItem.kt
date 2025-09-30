@@ -37,13 +37,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -56,7 +53,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -64,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import kotlin.let
 
 @Composable
 fun CustomSetItem(
@@ -96,20 +91,75 @@ fun CustomSetItem(
                 ) {
                     Text(followSet.title, fontWeight = FontWeight.Bold)
                     Spacer(modifier = StdHorzSpacer)
-                    FilterChip(
-                        selected = true,
-                        onClick = {},
-                        label = {
-                            Text(text = "${followSet.profiles.size}")
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.People,
-                                contentDescription = null,
+                    if (followSet.publicProfiles.isEmpty() && followSet.privateProfiles.isEmpty()) {
+                        FilterChip(
+                            selected = true,
+                            onClick = {},
+                            label = {
+                                Text(text = "No members")
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.People,
+                                    contentDescription = null,
+                                )
+                            },
+                            shape = ButtonBorder,
+                        )
+                    }
+                    if (followSet.publicProfiles.isNotEmpty()) {
+                        val publicMemberSize = followSet.publicProfiles.size
+                        val membersLabel =
+                            stringRes(
+                                context,
+                                if (publicMemberSize == 1) {
+                                    R.string.follow_set_single_member_label
+                                } else {
+                                    R.string.follow_set_multiple_member_label
+                                },
                             )
-                        },
-                        shape = ButtonBorder,
-                    )
+                        FilterChip(
+                            selected = true,
+                            onClick = {},
+                            label = {
+                                Text(text = "$publicMemberSize $membersLabel")
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.ic_public),
+                                    contentDescription = null,
+                                )
+                            },
+                            shape = ButtonBorder,
+                        )
+                        Spacer(modifier = StdHorzSpacer)
+                    }
+                    if (followSet.privateProfiles.isNotEmpty()) {
+                        val privateMemberSize = followSet.privateProfiles.size
+                        val membersLabel =
+                            stringRes(
+                                context,
+                                if (privateMemberSize == 1) {
+                                    R.string.follow_set_single_member_label
+                                } else {
+                                    R.string.follow_set_multiple_member_label
+                                },
+                            )
+                        FilterChip(
+                            selected = true,
+                            onClick = {},
+                            label = {
+                                Text(text = "$privateMemberSize $membersLabel")
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.lock),
+                                    contentDescription = null,
+                                )
+                            },
+                            shape = ButtonBorder,
+                        )
+                    }
                 }
                 Spacer(modifier = StdVertSpacer)
                 Text(
@@ -118,34 +168,6 @@ fun CustomSetItem(
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
-            }
-
-            followSet.visibility.let {
-                val text by derivedStateOf {
-                    when (it) {
-                        SetVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
-                        SetVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
-                        SetVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
-                    }
-                }
-                Column(
-                    modifier = Modifier.padding(top = 15.dp),
-                    verticalArrangement = Arrangement.Bottom,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        painter =
-                            painterResource(
-                                when (it) {
-                                    SetVisibility.Public -> R.drawable.ic_public
-                                    SetVisibility.Private -> R.drawable.lock
-                                    SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                                },
-                            ),
-                        contentDescription = stringRes(R.string.follow_set_type_description, text),
-                    )
-                    Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
-                }
             }
         }
 
