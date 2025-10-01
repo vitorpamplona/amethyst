@@ -1065,4 +1065,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">क्या आप निकटकालिक क्रमदोष सूचनापत्र एक सीधे सन्देश में अमेथिस्ट को भेजना चाहते हैं। कोई व्यक्तिगत जानकारी बाँटी नहीं जाएगी</string>
     <string name="crashreport_found_send">भेजें</string>
     <string name="this_message_will_disappear_in_days">यह सन्देश %1$d दिनों में अदृश्य हो जाएगा</string>
+    <string name="select_signer">हस्ताक्षरकर्ता चुनें</string>
 </resources>
