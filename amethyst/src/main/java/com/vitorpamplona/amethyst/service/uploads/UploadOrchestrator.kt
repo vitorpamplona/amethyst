@@ -288,9 +288,10 @@ class UploadOrchestrator {
         mimeType: String?,
         compressionQuality: CompressorQuality,
         context: Context,
+        useH265: Boolean = false,
     ) = if (compressionQuality != CompressorQuality.UNCOMPRESSED) {
         updateState(0.02, UploadingState.Compressing)
-        MediaCompressor().compress(uri, mimeType, compressionQuality, context.applicationContext)
+        MediaCompressor().compress(uri, mimeType, compressionQuality, context.applicationContext, useH265)
     } else {
         MediaCompressorResult(uri, mimeType, null)
     }
@@ -304,8 +305,9 @@ class UploadOrchestrator {
         server: ServerName,
         account: Account,
         context: Context,
+        useH265: Boolean = false,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context)
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
 
         return when (server.type) {
             ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
@@ -324,8 +326,9 @@ class UploadOrchestrator {
         server: ServerName,
         account: Account,
         context: Context,
+        useH265: Boolean = false,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context)
+        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265)
         val encrypted = EncryptFiles().encryptFile(context, compressed.uri, encrypt)
 
         return when (server.type) {

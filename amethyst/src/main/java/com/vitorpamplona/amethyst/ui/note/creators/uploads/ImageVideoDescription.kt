@@ -78,7 +78,7 @@ import kotlinx.collections.immutable.toImmutableList
 fun ImageVideoDescription(
     uris: MultiOrchestrator,
     defaultServer: ServerName,
-    onAdd: (String, ServerName, Boolean, Int) -> Unit,
+    onAdd: (String, ServerName, Boolean, Int, Boolean) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -91,7 +91,7 @@ fun ImageVideoDescription(
     uris: MultiOrchestrator,
     defaultServer: ServerName,
     includeNIP95: Boolean,
-    onAdd: (String, ServerName, Boolean, Int) -> Unit,
+    onAdd: (String, ServerName, Boolean, Int, Boolean) -> Unit,
     onDelete: (SelectedMediaProcessing) -> Unit,
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -127,6 +127,9 @@ fun ImageVideoDescription(
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by remember { mutableIntStateOf(1) }
+
+    // Codec selection: false = H264, true = H265
+    var useH265Codec by remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -294,32 +297,40 @@ fun ImageVideoDescription(
                 }
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text =
-                                when (mediaQualitySlider) {
-                                    0 -> stringRes(R.string.media_compression_quality_low)
-                                    1 -> stringRes(R.string.media_compression_quality_medium)
-                                    2 -> stringRes(R.string.media_compression_quality_high)
-                                    3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                                    else -> stringRes(R.string.media_compression_quality_medium)
-                                },
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-
-                    Slider(
-                        value = mediaQualitySlider.toFloat(),
-                        onValueChange = { mediaQualitySlider = it.toInt() },
-                        valueRange = 0f..3f,
-                        steps = 2,
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text =
+                            when (mediaQualitySlider) {
+                                0 -> stringRes(R.string.media_compression_quality_low)
+                                1 -> stringRes(R.string.media_compression_quality_medium)
+                                2 -> stringRes(R.string.media_compression_quality_high)
+                                3 -> stringRes(R.string.media_compression_quality_uncompressed)
+                                else -> stringRes(R.string.media_compression_quality_medium)
+                            },
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
+
+                Slider(
+                    value = mediaQualitySlider.toFloat(),
+                    onValueChange = { mediaQualitySlider = it.toInt() },
+                    valueRange = 0f..3f,
+                    steps = 2,
+                )
+            }
+
+            if (uris.first().media.isVideo() == true) {
+                SettingSwitchItem(
+                    title = R.string.video_codec_h265_label,
+                    description = R.string.video_codec_h265_description,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    checked = useH265Codec,
+                    onCheckedChange = { useH265Codec = it },
+                )
             }
 
             Button(
@@ -327,7 +338,7 @@ fun ImageVideoDescription(
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider) },
+                onClick = { onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec) },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(
