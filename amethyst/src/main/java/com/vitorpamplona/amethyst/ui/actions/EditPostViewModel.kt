@@ -87,6 +87,9 @@ open class EditPostViewModel : ViewModel() {
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
+    // Codec selection: false = H264, true = H265
+    var useH265Codec by mutableStateOf(false)
+
     // Invoices
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
@@ -201,6 +204,7 @@ open class EditPostViewModel : ViewModel() {
                     server,
                     myAccount,
                     context,
+                    useH265Codec,
                 )
 
             if (results.allGood) {

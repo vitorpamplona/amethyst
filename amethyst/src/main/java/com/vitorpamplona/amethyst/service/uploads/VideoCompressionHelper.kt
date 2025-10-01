@@ -149,7 +149,7 @@ object VideoCompressionHelper {
         contentType: String?,
         applicationContext: Context,
         mediaQuality: CompressorQuality,
-        useH265: Boolean = false,
+        useH265: Boolean,
         timeoutMs: Long = 60_000L, // configurable, default 60s
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
