@@ -115,12 +115,13 @@ class NostrClient(
             socketBuilder = websocketBuilder,
             listener = relayPool,
             stats = RelayStats.get(relay),
-            scope = scope,
         ) { liveRelay ->
             if (isActive) {
-                activeRequests.forEachSub(relay, liveRelay::sendRequest)
-                activeCounts.forEachSub(relay, liveRelay::sendCount)
-                eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
+                scope.launch(Dispatchers.Default) {
+                    activeRequests.forEachSub(relay, liveRelay::sendRequest)
+                    activeCounts.forEachSub(relay, liveRelay::sendCount)
+                    eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
+                }
             }
         }
 

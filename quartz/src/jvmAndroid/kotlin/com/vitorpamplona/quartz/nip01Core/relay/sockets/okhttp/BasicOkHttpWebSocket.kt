@@ -24,6 +24,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -35,6 +43,14 @@ class BasicOkHttpWebSocket(
     val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
 ) : WebSocket {
+    companion object {
+        // Exists to avoid exceptions stopping the coroutine
+        val exceptionHandler =
+            CoroutineExceptionHandler { _, throwable ->
+                Log.e("BasicOkHttpWebSocket", "WebsocketListener Caught exception: ${throwable.message}", throwable)
+            }
+    }
+
     private var socket: OkHttpWebSocket? = null
 
     override fun needsReconnect() = socket == null
@@ -44,6 +60,15 @@ class BasicOkHttpWebSocket(
 
         val listener =
             object : OkHttpWebSocketListener() {
+                val scope = CoroutineScope(Dispatchers.Default + exceptionHandler)
+                val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
+                val job = // Launch a coroutine to process messages from the channel.
+                    scope.launch {
+                        for (message in incomingMessages) {
+                            out.onMessage(message)
+                        }
+                    }
+
                 override fun onOpen(
                     webSocket: OkHttpWebSocket,
                     response: Response,
@@ -55,7 +80,13 @@ class BasicOkHttpWebSocket(
                 override fun onMessage(
                     webSocket: OkHttpWebSocket,
                     text: String,
-                ) = out.onMessage(text)
+                ) {
+                    Log.d("OkHttpWebsocketListener", "Processing: $text")
+                    // Asynchronously send the received message to the channel.
+                    // `trySendBlocking` is used here for simplicity within the callback,
+                    // but it's important to understand potential thread blocking if the buffer is full.
+                    incomingMessages.trySendBlocking(text)
+                }
 
                 override fun onClosing(
                     webSocket: OkHttpWebSocket,
@@ -67,13 +98,27 @@ class BasicOkHttpWebSocket(
                     webSocket: OkHttpWebSocket,
                     code: Int,
                     reason: String,
-                ) = out.onClosed(code, reason)
+                ) {
+                    // Close the channel when the WebSocket connection is closed.
+                    incomingMessages.close()
+                    job.cancel()
+                    scope.cancel()
+
+                    out.onClosed(code, reason)
+                }
 
                 override fun onFailure(
                     webSocket: OkHttpWebSocket,
                     t: Throwable,
                     response: Response?,
-                ) = out.onFailure(t, response?.code, response?.message)
+                ) {
+                    // Close the channel on failure, and propagate the error.
+                    incomingMessages.close()
+                    job.cancel()
+                    scope.cancel()
+
+                    out.onFailure(t, response?.code, response?.message)
+                }
             }
 
         socket = httpClient(url).newWebSocket(request, listener)

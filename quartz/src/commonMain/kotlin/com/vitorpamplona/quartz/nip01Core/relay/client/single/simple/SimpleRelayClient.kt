@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayCl
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
-import kotlinx.coroutines.CoroutineScope
 
 /**
  * This relay client saves any event that will be sent in an outbox
@@ -37,13 +36,11 @@ class SimpleRelayClient(
     socketBuilder: WebsocketBuilder,
     listener: IRelayClientListener,
     stats: RelayStat = RelayStat(),
-    scopeToParseEvents: CoroutineScope,
     defaultOnConnect: (BasicRelayClient) -> Unit = { },
 ) : IRelayClient by BasicRelayClient(
         url,
         socketBuilder,
         OutboxCache(listener),
         stats,
-        scopeToParseEvents,
         defaultOnConnect,
     )

@@ -51,9 +51,6 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
@@ -82,13 +79,11 @@ open class BasicRelayClient(
     val socketBuilder: WebsocketBuilder,
     val listener: IRelayClientListener,
     val stats: RelayStat = RelayStat(),
-    val scope: CoroutineScope,
     val defaultOnConnect: (BasicRelayClient) -> Unit = { },
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second
         const val DELAY_TO_RECONNECT_IN_SECS = 1
-        const val EVENT_MESSAGE_PREFIX = "[\"${EventMessage.LABEL}\""
     }
 
     private val logTag = "Relay ${url.displayUrl()}"
@@ -166,24 +161,13 @@ open class BasicRelayClient(
 
             markConnectionAsReady(pingMillis, compression)
 
-            scope.launch(Dispatchers.Default) {
-                onConnected()
-            }
+            onConnected()
 
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.CONNECTED)
         }
 
         override fun onMessage(text: String) {
-            // Log.d(logTag, "Receiving: $text")
-
-            if (text.startsWith(EVENT_MESSAGE_PREFIX)) {
-                // defers the parsing of ["EVENTS" to avoid blocking the HTTP thread
-                scope.launch(Dispatchers.Default) {
-                    consumeIncomingCommand(text, onConnected)
-                }
-            } else {
-                consumeIncomingCommand(text, onConnected)
-            }
+            consumeIncomingMessage(text, onConnected)
         }
 
         override fun onClosing(
@@ -237,7 +221,7 @@ open class BasicRelayClient(
         }
     }
 
-    fun consumeIncomingCommand(
+    fun consumeIncomingMessage(
         text: String,
         onConnected: () -> Unit,
     ) {
