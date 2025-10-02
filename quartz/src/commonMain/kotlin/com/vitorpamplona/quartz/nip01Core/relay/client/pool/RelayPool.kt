@@ -71,7 +71,7 @@ class RelayPool(
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
-    var lastReconnectCall = TimeUtils.now()
+    var lastReconnectCall = 0L
 
     fun reconnectIfNeedsToORIfItIsTime() {
         if (lastReconnectCall < TimeUtils.oneMinuteAgo()) {
