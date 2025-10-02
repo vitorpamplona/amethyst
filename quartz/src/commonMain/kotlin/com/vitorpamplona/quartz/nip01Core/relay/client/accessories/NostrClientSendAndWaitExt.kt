@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -46,7 +47,7 @@ suspend fun INostrClient.sendAndWaitForResponse(
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
 ): Boolean {
-    val resultChannel = Channel<Result>()
+    val resultChannel = Channel<Result>(UNLIMITED)
 
     Log.d("sendAndWaitForResponse", "Waiting for ${relayList.size} responses")
 
