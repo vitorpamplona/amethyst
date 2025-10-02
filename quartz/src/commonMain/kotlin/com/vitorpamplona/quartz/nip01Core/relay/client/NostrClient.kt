@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 
 /**
@@ -85,7 +86,8 @@ class NostrClient(
     // controls the state of the client in such a way that if it is active
     // new filters will be sent to the relays and a potential reconnect can
     // be triggered.
-    private var isActive = false
+    // STARTS active
+    private var isActive = true
 
     /**
      * Whatches for any changes in the relay list from subscriptions or outbox
@@ -302,6 +304,7 @@ class NostrClient(
         relayList: Set<NormalizedRelayUrl>,
     ) {
         eventOutbox.markAsSending(event, relayList)
+
         if (isActive) {
             relayPool.send(event, relayList)
 
