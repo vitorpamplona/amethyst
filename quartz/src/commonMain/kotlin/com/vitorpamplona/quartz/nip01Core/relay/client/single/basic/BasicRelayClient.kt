@@ -69,7 +69,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property defaultOnConnect Callback executed after a successful connection, allowing subclasses to add initialization logic.
  *
  * Reconnection Strategy:
- * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_MSECS] (500ms).
+ * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_SECS] (500ms).
  * - Doubles the delay between reconnection attempts in case of failure.
  *
  * Message Handling:
@@ -86,7 +86,7 @@ open class BasicRelayClient(
     val defaultOnConnect: (BasicRelayClient) -> Unit = { },
 ) : IRelayClient {
     companion object {
-        // waits 3 minutes to reconnect once things fail
+        // minimum wait time to reconnect: 1 second
         const val DELAY_TO_RECONNECT_IN_SECS = 1
         const val EVENT_MESSAGE_PREFIX = "[\"${EventMessage.LABEL}\""
     }
