@@ -231,7 +231,10 @@ class NostrClient(
 
                 if (newFilters.isNullOrEmpty()) {
                     // some relays are not in this sub anymore. Stop their subscriptions
-                    relayPool.close(relay, subId)
+                    if (!oldFilters.isNullOrEmpty()) {
+                        // only update if the old filters are not already closed.
+                        relayPool.close(relay, subId)
+                    }
                 } else if (oldFilters.isNullOrEmpty()) {
                     // new relays were added. Start a new sub in them
                     relayPool.sendRequest(relay, subId, newFilters)
@@ -267,7 +270,10 @@ class NostrClient(
 
                 if (newFilters.isNullOrEmpty()) {
                     // some relays are not in this sub anymore. Stop their subscriptions
-                    relayPool.close(relay, subId)
+                    if (!oldFilters.isNullOrEmpty()) {
+                        // only update if the old filters are not already closed.
+                        relayPool.close(relay, subId)
+                    }
                 } else if (oldFilters.isNullOrEmpty()) {
                     // new relays were added. Start a new sub in them
                     relayPool.sendCount(relay, subId, newFilters)
