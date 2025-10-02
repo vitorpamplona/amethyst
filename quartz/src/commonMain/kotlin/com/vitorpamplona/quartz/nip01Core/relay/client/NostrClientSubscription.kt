@@ -54,6 +54,10 @@ class NostrClientSubscription(
 
     fun closeSubscription() = client.close(subId)
 
+    fun destroy() {
+        client.unsubscribe(this)
+    }
+
     init {
         client.subscribe(this)
         updateFilter()
