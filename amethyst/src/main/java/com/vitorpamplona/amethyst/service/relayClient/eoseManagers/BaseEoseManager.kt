@@ -40,6 +40,7 @@ interface IEoseManager {
 abstract class BaseEoseManager<T>(
     val client: INostrClient,
     val allKeys: () -> Set<T>,
+    val sampleTime: Long = 500,
 ) : IEoseManager {
     protected val logTag: String = this.javaClass.simpleName
 
@@ -58,7 +59,7 @@ abstract class BaseEoseManager<T>(
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.Default)
+    private val bundler = BundledUpdate(sampleTime, Dispatchers.Default)
 
     override fun invalidateFilters(ignoreIfDoing: Boolean) {
         bundler.invalidate(ignoreIfDoing, ::forceInvalidate)
