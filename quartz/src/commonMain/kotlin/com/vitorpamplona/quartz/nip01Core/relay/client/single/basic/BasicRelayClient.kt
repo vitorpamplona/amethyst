@@ -258,7 +258,7 @@ open class BasicRelayClient(
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             stats.newError("Error processing: $text")
-            Log.e(logTag, "Error processing: $text")
+            Log.e(logTag, "Error processing: $text", e)
             listener.onError(this@BasicRelayClient, "", Error("Error processing $text"))
         }
     }
@@ -296,7 +296,7 @@ open class BasicRelayClient(
     }
 
     private fun processEose(msg: EoseMessage) {
-        // Log.w(logTag, "EOSE ${msg.subId}")
+        Log.d(logTag, "EOSE ${msg.subId}")
         afterEOSEPerSubscription[msg.subId] = true
         listener.onEOSE(this, msg.subId, TimeUtils.now())
     }
@@ -311,7 +311,7 @@ open class BasicRelayClient(
         msg: OkMessage,
         onConnected: () -> Unit,
     ) {
-        Log.w(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
+        Log.d(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
 
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
         if (authResponseWatcher.containsKey(msg.eventId)) {
