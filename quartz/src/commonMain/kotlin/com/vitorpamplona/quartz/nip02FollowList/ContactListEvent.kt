@@ -58,13 +58,13 @@ class ContactListEvent(
     /**
      * Returns a list of p-tags that are verified as hex keys.
      */
-    fun verifiedFollowKeySet(): Set<HexKey> = tags.mapNotNullTo(HashSet(), ContactTag::parseValidKey)
+    fun verifiedFollowKeySet(): Set<HexKey> = tags.mapNotNullTo(mutableSetOf(), ContactTag::parseValidKey)
 
     /**
      * Returns a list of a-tags that are verified as correct.
      */
     @Deprecated("Use CommunityListEvent instead.")
-    fun verifiedFollowAddressSet(): Set<HexKey> = tags.mapNotNullTo(HashSet(), ATag::parseValidAddress)
+    fun verifiedFollowAddressSet(): Set<HexKey> = tags.mapNotNullTo(mutableSetOf(), ATag::parseValidAddress)
 
     fun unverifiedFollowKeySet() = tags.mapNotNull(ContactTag::parseKey)
 
