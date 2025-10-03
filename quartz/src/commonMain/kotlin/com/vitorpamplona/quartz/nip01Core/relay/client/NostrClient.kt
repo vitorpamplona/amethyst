@@ -37,14 +37,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 
 /**
  * The NostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
@@ -140,21 +141,35 @@ class NostrClient(
 
     override fun isActive() = isActive
 
-    val myReconnectMutex = Mutex()
+    class Reconnect(
+        val onlyIfChanged: Boolean,
+        val ignoreRetryDelays: Boolean,
+    )
 
-    override fun reconnect(onlyIfChanged: Boolean) {
-        if (myReconnectMutex.tryLock()) {
-            try {
-                if (onlyIfChanged) {
-                    relayPool.reconnectIfNeedsToORIfItIsTime()
+    val refreshConnection = MutableStateFlow(Reconnect(false, false))
+
+    @OptIn(FlowPreview::class)
+    val debouncingConnection =
+        refreshConnection
+            .debounce(200)
+            .onEach {
+                if (it.onlyIfChanged) {
+                    relayPool.reconnectIfNeedsTo(it.ignoreRetryDelays)
                 } else {
                     relayPool.disconnect()
                     relayPool.connect()
                 }
-            } finally {
-                myReconnectMutex.unlock()
-            }
-        }
+            }.stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                false,
+            )
+
+    override fun reconnect(
+        onlyIfChanged: Boolean,
+        ignoreRetryDelays: Boolean,
+    ) {
+        refreshConnection.tryEmit(Reconnect(onlyIfChanged, ignoreRetryDelays))
     }
 
     fun needsToResendRequest(
@@ -250,7 +265,7 @@ class NostrClient(
             }
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -289,7 +304,7 @@ class NostrClient(
             }
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -301,7 +316,7 @@ class NostrClient(
             relayPool.getRelay(connectedRelay)?.send(event)
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -315,7 +330,7 @@ class NostrClient(
             relayPool.send(event, relayList)
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 

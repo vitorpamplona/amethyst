@@ -34,7 +34,7 @@ interface IRelayClient {
 
     fun connectAndRunAfterSync(onConnected: () -> Unit)
 
-    fun connectAndSyncFiltersIfDisconnected()
+    fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean = false)
 
     fun isConnected(): Boolean
 

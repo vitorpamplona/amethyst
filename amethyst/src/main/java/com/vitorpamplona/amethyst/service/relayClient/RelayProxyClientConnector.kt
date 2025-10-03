@@ -95,7 +95,10 @@ class RelayProxyClientConnector(
                     client.connect()
                 } else {
                     Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to")
-                    client.reconnect(true)
+                    client.reconnect(
+                        onlyIfChanged = true,
+                        ignoreRetryDelays = true,
+                    )
                 }
             }.onStart {
                 Log.d("ManageRelayServices", "Resuming Relay Services")

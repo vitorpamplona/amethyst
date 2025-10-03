@@ -36,7 +36,10 @@ interface INostrClient {
 
     fun disconnect()
 
-    fun reconnect(onlyIfChanged: Boolean = false)
+    fun reconnect(
+        onlyIfChanged: Boolean = false,
+        ignoreRetryDelays: Boolean = false,
+    )
 
     fun isActive(): Boolean
 
@@ -78,7 +81,10 @@ object EmptyNostrClient : INostrClient {
 
     override fun disconnect() { }
 
-    override fun reconnect(onlyIfChanged: Boolean) { }
+    override fun reconnect(
+        onlyIfChanged: Boolean,
+        ignoreRetryDelays: Boolean,
+    ) { }
 
     override fun isActive() = false
 

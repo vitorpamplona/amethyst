@@ -387,10 +387,10 @@ open class BasicRelayClient(
         }
     }
 
-    override fun connectAndSyncFiltersIfDisconnected() {
+    override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
         if (!isConnectionStarted() && !connectingMutex.load()) {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+            if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
                 upRelayDelayToConnect()
                 connect()
             }
