@@ -28,6 +28,13 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
+val DraftsReportsAndBookmarksFromKeyKinds =
+    listOf(
+        DraftWrapEvent.KIND,
+        ReportEvent.KIND,
+        BookmarkListEvent.KIND,
+    )
+
 val ReportsAndBookmarksFromKeyKinds =
     listOf(
         DraftWrapEvent.KIND,
@@ -36,6 +43,26 @@ val ReportsAndBookmarksFromKeyKinds =
     )
 
 fun filterDraftsAndReportsFromKey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = DraftsReportsAndBookmarksFromKeyKinds,
+                    authors = listOf(pubkey),
+                    since = since,
+                ),
+        ),
+    )
+}
+
+fun filterBookmarksAndReportsFromKey(
     relay: NormalizedRelayUrl,
     pubkey: HexKey?,
     since: Long?,

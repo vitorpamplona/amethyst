@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -47,13 +48,23 @@ class AccountMetadataEoseManager(
     ): List<RelayBasedFilter> =
         relayFlow(key).value.flatMap {
             val since = since?.get(it)?.time
-            listOf(
-                filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
-                filterFollowsAndMutesFromKey(it, user(key).pubkeyHex, since),
-                filterDraftsAndReportsFromKey(it, user(key).pubkeyHex, since),
-                filterLastPostsFromKey(it, user(key).pubkeyHex, since),
-                filterBasicAccountInfoFromKeys(it, key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
-            ).flatten()
+            if (key.account.isWriteable()) {
+                listOf(
+                    filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
+                    filterFollowsAndMutesFromKey(it, user(key).pubkeyHex, since),
+                    filterDraftsAndReportsFromKey(it, user(key).pubkeyHex, since),
+                    filterLastPostsFromKey(it, user(key).pubkeyHex, since ?: TimeUtils.oneMonthAgo()),
+                    filterBasicAccountInfoFromKeys(it, key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
+                ).flatten()
+            } else {
+                listOf(
+                    filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
+                    filterFollowsAndMutesFromKey(it, user(key).pubkeyHex, since),
+                    filterBookmarksAndReportsFromKey(it, user(key).pubkeyHex, since),
+                    filterLastPostsFromKey(it, user(key).pubkeyHex, since ?: TimeUtils.oneMonthAgo()),
+                    filterBasicAccountInfoFromKeys(it, key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
+                ).flatten()
+            }
         }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
