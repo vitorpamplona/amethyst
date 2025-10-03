@@ -36,7 +36,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -160,10 +159,10 @@ class FollowListState(
 
     init {
         settings.backupContactList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved contacts ${it.toJson()}")
+            Log.d("AccountRegisterObservers", "Loading saved ${it.tags.size} contacts")
 
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
+            scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
         // saves contact list for the next time.
