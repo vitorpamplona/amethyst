@@ -47,7 +47,6 @@ val UserProfilePostKinds1 =
         GenericRepostEvent.KIND,
         RepostEvent.KIND,
         LongTextNoteEvent.KIND,
-        PinListEvent.KIND,
         PollNoteEvent.KIND,
         HighlightEvent.KIND,
         WikiNoteEvent.KIND,
@@ -62,6 +61,7 @@ val UserProfilePostKinds2 =
         InteractiveStoryPrologueEvent.KIND,
         CommentEvent.KIND,
         VoiceReplyEvent.KIND,
+        PinListEvent.KIND,
     )
 
 fun filterUserProfilePosts(
@@ -70,8 +70,7 @@ fun filterUserProfilePosts(
 ): List<RelayBasedFilter> {
     val relays =
         user.outboxRelays()?.ifEmpty { null }
-            ?: user.relaysBeingUsed.keys.ifEmpty { null }
-            ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
+            ?: (user.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
 
     return relays
         .map { relay ->
