@@ -343,6 +343,14 @@ class NostrClient(
         listeners.forEach { it.onEOSE(relay, subId, arrivalTime) }
     }
 
+    override fun onClosed(
+        relay: IRelayClient,
+        subId: String,
+        message: String,
+    ) {
+        listeners.forEach { it.onClosed(relay, subId, message) }
+    }
+
     override fun onRelayStateChange(
         relay: IRelayClient,
         type: RelayState,
