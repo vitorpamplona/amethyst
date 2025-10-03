@@ -29,6 +29,7 @@ import android.text.format.Formatter.formatFileSize
 import android.util.Log
 import android.widget.Toast
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
+import com.abedelazizshe.lightcompressorlibrary.VideoCodec
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
@@ -88,11 +89,18 @@ data class CompressionRule(
     val bitrateMbps: Float,
     val description: String,
 ) {
-    fun getBitrateBps(framerate: Float): Int {
-        // Apply 1.5x multiplier for 60fps+ videos
-        val multiplier = if (framerate >= 60f) 1.5f else 1.0f
+    fun getBitrateBps(
+        framerate: Float,
+        useH265: Boolean,
+    ): Int {
+        // Apply 1.3x multiplier for 60fps+ videos, 0.7x multiplier for H265
+        val framerateMultiplier = if (framerate >= 60f) 1.3f else 1.0f
+        val codecMultiplier = if (useH265) 0.7f else 1.0f
+        val finalMultiplier = framerateMultiplier * codecMultiplier
 
-        return (bitrateMbps * multiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
+        Log.d("VideoCompressionHelper", "framerate: $framerate, useH265: $useH265, Bitrate multiplier: $finalMultiplier")
+
+        return (bitrateMbps * finalMultiplier * MBPS_TO_BPS_MULTIPLIER).toInt()
     }
 }
 
@@ -141,6 +149,7 @@ object VideoCompressionHelper {
         contentType: String?,
         applicationContext: Context,
         mediaQuality: CompressorQuality,
+        useH265: Boolean,
         timeoutMs: Long = 60_000L, // configurable, default 60s
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
@@ -152,8 +161,8 @@ object VideoCompressionHelper {
                         .getValue(mediaQuality)
                         .getValue(info.resolution.getStandard())
 
-                val bitrateBps = rule.getBitrateBps(info.framerate)
-                Log.d(LOG_TAG, "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps.")
+                val bitrateBps = rule.getBitrateBps(info.framerate, useH265)
+                Log.d(LOG_TAG, "Bitrate: ${bitrateBps}bps for ${info.resolution.getStandard()} quality=$mediaQuality framerate=${info.framerate}fps useH265=$useH265.")
 
                 Log.d(
                     LOG_TAG,
@@ -186,6 +195,7 @@ object VideoCompressionHelper {
                                 resizer = resizer,
                                 videoNames = listOf(UUID.randomUUID().toString()),
                                 isMinBitrateCheckEnabled = false,
+                                videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
                             ),
                         listener =
                             object : CompressionListener {

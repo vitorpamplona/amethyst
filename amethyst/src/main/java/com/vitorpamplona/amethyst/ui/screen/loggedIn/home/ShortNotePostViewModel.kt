@@ -624,8 +624,9 @@ open class ShortNotePostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        useH265: Boolean,
     ) = try {
-        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context, useH265)
     } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -640,6 +641,7 @@ open class ShortNotePostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        useH265: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -654,6 +656,7 @@ open class ShortNotePostViewModel :
                     server,
                     account,
                     context,
+                    useH265,
                 )
 
             if (results.allGood) {

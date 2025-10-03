@@ -261,4 +261,18 @@ fun ImageVideoPost(
             steps = 2,
         )
     }
+
+    // Only show H.265 codec option if there are videos in the upload
+    if (postViewModel.multiOrchestrator?.hasVideo() == true) {
+        SettingSwitchItem(
+            title = R.string.video_codec_h265_label,
+            description = R.string.video_codec_h265_description,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            checked = postViewModel.useH265Codec,
+            onCheckedChange = { postViewModel.useH265Codec = it },
+        )
+    }
 }

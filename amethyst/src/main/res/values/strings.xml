@@ -1042,6 +1042,8 @@
     <string name="media_compression_quality_medium">Medium</string>
     <string name="media_compression_quality_high">High</string>
     <string name="media_compression_quality_uncompressed">Uncompressed</string>
+    <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
+    <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
 
     <string name="edit_draft">Edit draft</string>
 

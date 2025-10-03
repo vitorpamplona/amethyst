@@ -242,16 +242,16 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz:<Amethyst Version>')
 ```
 
 Variations to each platform are also available:
 
 ```gradle
-implementation('com.github.vitorpamplona.amethyst:quartz-android:<Amethyst Version>')
-implementation('com.github.vitorpamplona.amethyst:quartz-jvm:<Amethyst Version>')
-implementation('com.github.vitorpamplona.amethyst:quartz-iosarm64:<Amethyst Version>')
-implementation('com.github.vitorpamplona.amethyst:quartz-iossimulatorarm64:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-android:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-jvm:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-iosarm64:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:<Amethyst Version>')
 ```
 
 ### How to use
@@ -259,25 +259,25 @@ implementation('com.github.vitorpamplona.amethyst:quartz-iossimulatorarm64:<Amet
 Manage logged in users with the `KeyPair` class
 
 ```kt
-val keys = KeyPair() // creates a random key
-val keys = KeyPair("hex...".hexToByteArray())
-val keys = KeyPair("nsec1...".bechToBytes())
-val keys = KeyPair(Nip06().privateKeyFromMnemonic("<mnemonic>"))
+val keyPair = KeyPair() // creates a random key
+val keyPair = KeyPair("hex...".hexToByteArray())
+val keyPair = KeyPair("nsec1...".bechToBytes())
+val keyPair = KeyPair(Nip06().privateKeyFromMnemonic("<mnemonic>"))
 val readOnly = KeyPair(pubKey = "hex...".hexToByteArray())
 val readOnly = KeyPair(pubKey = "npub1...".bechToBytes())
 ```
 
-Create signers that can be internal, when you have the private key or when it is a read-only user
-or external, when it is controlled by Amber in NIP-55
+Create signers that can be Internal, when you have the private key or a read-only public key,
+or External, when it is controlled by Amber in NIP-55. 
 
-the `NostrSignerInternal` and `NostrSignerExternal` classes.
+Use either the `NostrSignerInternal` or `NostrSignerExternal` class:
 
 ```kt
 val signer = NostrSignerInternal(keyPair)
 val amberSigner = NostrSignerExternal(
     pubKey = keyPair.pubKey.toHexKey(),
-    packageName = signerPackageName,
-    contentResolver = appContext.contentResolver,
+    packageName = signerPackageName, // Amber package name
+    contentResolver = appContext.contentResolver, 
 )
 ```
 
@@ -299,16 +299,19 @@ val client = NostrClient(socketBuilder, appScope)
 If you want to auth, given a logged-in `signer`:
 
 ```kt
-val authCoordinator = RelayAuthenticator(client, applicationIOScope) { challenge, relay ->
-    val authedEvent = RelayAuthEvent.create(relayUrl, challenge, signer)
+val authCoordinator = RelayAuthenticator(client, appScope) { challenge, relay ->
+    val authedEvent = RelayAuthEvent.create(relay.url, challenge, signer)
     client.sendIfExists(authedEvent, relay.url)
 }
 ```
 
-To manage subscriptions, the suggested approach is to use subscriptions in the Application class.
+To manage subscriptions, the simplest approach is to build mutable subscriptions in 
+the Application class. To use the best of the outbox model, this class allows you to 
+build filters for as many relays as needed. The `NostrClient` will connect to the 
+complete set of relays for all subscriptions.
 
 ```kt
-val metadataSub = RelayClientSubscription(
+val metadataSub = NostrClientSubscription(
     client = client,
     filter = {
         val filters = listOf(
@@ -329,6 +332,14 @@ val metadataSub = RelayClientSubscription(
     /* consume event */
 }
 ```
+
+In that way, you can simply call `metadataSub.updateFilter()` when you need to update 
+subscriptions to all relays. Or call `metadataSub.closeSubscription()` to stop the sub
+without deleting it.
+
+When your app goes to the background, you can use NostrClient's `connect` and `disconnect` 
+methods to stop all communication to relays. Add the `connect` to your `onResume` and `disconnect`
+to `onPause` methods.
 
 ## Contributing
 

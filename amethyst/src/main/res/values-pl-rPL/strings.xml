@@ -112,6 +112,7 @@
     <string name="post">Wyślij</string>
     <string name="save">Zapisz</string>
     <string name="create">Utwórz</string>
+    <string name="rename">Zmień nazwę</string>
     <string name="cancel">Anuluj</string>
     <string name="failed_to_upload_the_image">Nie udało się przesłać obrazu</string>
     <string name="relay_address">Adres transmitera</string>
@@ -442,6 +443,33 @@
     <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
     <string name="follow_list_mute_list">Zablokowane</string>
+    <string name="follow_sets">Zbiory obserwowanych</string>
+    <string name="labeled_bookmarks">Oznaczone zakładki</string>
+    <string name="general_bookmarks">Ogólne zakładki</string>
+    <string name="follow_set_type_public">Publiczna</string>
+    <string name="follow_set_type_private">Prywatna</string>
+    <string name="follow_set_type_mixed">Mieszana</string>
+    <string name="follow_set_empty_feed_msg">        Wygląda na to, że nie masz jeszcze żadnych zbiorów obserwowanych.
+        \nDotknij poniżej, aby odświeżyć, lub naciśnij przycisk Dodaj, aby utworzyć nowy.
+    </string>
+    <string name="follow_set_add_author_from_note_action">Dodaj autora do zbioru obserwowanych</string>
+    <string name="follow_set_profile_actions_menu_description">Dodaj lub usuń użytkownika z list, lub utwórz nową listę z tym użytkownikiem.</string>
+    <string name="follow_set_type_description">Ikona dla listy %1$s</string>
+    <string name="follow_set_presence_indicator">"%1$s jest obecny na liście"</string>
+    <string name="follow_set_absence_indicator">"%1$s nie jest na liście"</string>
+    <string name="follow_set_man_dialog_title">Twój zbiór obserwowanych</string>
+    <string name="follow_set_empty_dialog_msg">Nie znaleziono zbiorów obserwowanych lub nie masz żadnych zbiorów obserwowanych. Dotknij poniżej, aby odświeżyć lub użyj menu, aby go utworzyć.</string>
+    <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>
+    <string name="follow_set_creation_menu_title">Utwórz nową listę</string>
+    <string name="follow_set_creation_item_label">\"Utwórz nową listę %1$s z użytkownikiem</string>
+    <string name="follow_set_creation_item_description">Tworzy zbiór obserwowanych %1$s i dodaje do niego %2$s.</string>
+    <string name="follow_set_creation_dialog_title">Nowa lista %1$s</string>
+    <string name="follow_set_creation_name_label">Nazwa zbioru</string>
+    <string name="follow_set_creation_desc_label">Opis zbioru (opcjonalnie)</string>
+    <string name="follow_set_creation_action_btn_label">Utwórz zbiór</string>
+    <string name="follow_set_rename_btn_label">Zmień nazwę zbioru</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Zmieniasz nazwę z </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> do..</string>
     <string name="connect_through_your_orbot_setup_short">Domyślny port to 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Połącz przez Tor z Orbotem
         \n\n1. Zainstaluj [Orbota](https://play.google. om/store/apps/details?id= org.torproject.android)
@@ -1011,6 +1039,8 @@
     <string name="torrent_download">Pobierz</string>
     <string name="torrent_failure">Nie udało się otworzyć pliku</string>
     <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
+    <string name="torrent_no_info">Zdarzenie nie ma wystarczającej ilości informacji, aby zbudować link magnetyczny</string>
+    <string name="my_lists_and_sets">Moje Listy/Zbiory</string>
     <string name="select_list_to_filter">Wybierz listę, aby filtrować aktualności</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
@@ -1018,6 +1048,7 @@
     <string name="group_relay">Transmiter Czatu</string>
     <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
+    <string name="unable_to_share_image">Nie można udostępnić obrazu, spróbuj ponownie później…</string>
     <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
     <string name="dont_translate_from">Nie tłumacz z</string>
     <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>
@@ -1031,4 +1062,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Czy chcesz wysłać ostatni raport o awarii do Amethyst w DM? Żadne dane osobowe nie będą udostępnione</string>
     <string name="crashreport_found_send">Prześlij</string>
     <string name="this_message_will_disappear_in_days">Ta wiadomość zniknie za %1$d dni</string>
+    <string name="select_signer">Wybierz Sygnatariusza</string>
 </resources>
