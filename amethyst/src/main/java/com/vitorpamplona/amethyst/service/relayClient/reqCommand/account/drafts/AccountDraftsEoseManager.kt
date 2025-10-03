@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
@@ -27,14 +27,13 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class AccountMetadataEoseManager(
+class AccountDraftsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
@@ -46,15 +45,14 @@ class AccountMetadataEoseManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
-        relayFlow(key).value.flatMap {
-            val since = since?.get(it)?.time
-            listOf(
-                filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
-                filterFollowsAndMutesFromKey(it, user(key).pubkeyHex, since),
-                filterBookmarksAndReportsFromKey(it, user(key).pubkeyHex, since),
-                filterLastPostsFromKey(it, user(key).pubkeyHex, since ?: TimeUtils.oneMonthAgo()),
-                filterBasicAccountInfoFromKeys(it, key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
-            ).flatten()
+        if (key.account.isWriteable()) {
+            relayFlow(key).value.flatMap {
+                listOf(
+                    filterDraftsFromKey(it, user(key).pubkeyHex, since?.get(it)?.time),
+                ).flatten()
+            }
+        } else {
+            emptyList()
         }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
