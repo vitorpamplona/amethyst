@@ -21,20 +21,20 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import android.util.Log
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetState
 import kotlinx.coroutines.runBlocking
 
 class FollowSetFeedFilter(
-    val account: Account,
+    val followSetState: FollowSetState,
 ) : FeedFilter<FollowSet>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-followsets"
+    override fun feedKey(): String = followSetState.user.pubkeyHex + "-followsets"
 
     override fun feed(): List<FollowSet> =
-        runBlocking(account.scope.coroutineContext) {
+        runBlocking(followSetState.scope.coroutineContext) {
             try {
-                val fetchedSets = account.getFollowSetNotes()
-                val followSets = fetchedSets.map { account.mapNoteToFollowSet(it) }
+                val fetchedSets = followSetState.getFollowSetNotes()
+                val followSets = fetchedSets.map { followSetState.mapNoteToFollowSet(it) }
                 println("Updated follow set size for feed filter: ${followSets.size}")
                 followSets
             } catch (e: Exception) {

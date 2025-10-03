@@ -62,6 +62,9 @@ open class NewMediaModel : ViewModel() {
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
 
+    // Codec selection: false = H264, true = H265
+    var useH265Codec by mutableStateOf(false)
+
     open fun load(
         account: Account,
         uris: ImmutableList<SelectedMedia>,
@@ -111,6 +114,7 @@ open class NewMediaModel : ViewModel() {
                     serverToUse,
                     myAccount,
                     context,
+                    useH265Codec,
                 )
 
             if (results.allGood) {

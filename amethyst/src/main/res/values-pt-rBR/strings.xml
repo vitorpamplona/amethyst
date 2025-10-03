@@ -112,6 +112,7 @@
     <string name="post">Salvar</string>
     <string name="save">Salvar</string>
     <string name="create">Criar</string>
+    <string name="rename">Renomear</string>
     <string name="cancel">Cancelar</string>
     <string name="failed_to_upload_the_image">Falha ao enviar imagem</string>
     <string name="relay_address">Endereço do Relay</string>
@@ -443,6 +444,31 @@
     <string name="follow_list_aroundme">Perto de mim</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista Silenciada</string>
+    <string name="follow_sets">Conjuntos de Seguimento</string>
+    <string name="labeled_bookmarks">Favoritos com etiqueta</string>
+    <string name="general_bookmarks">Favoritos gerais</string>
+    <string name="follow_set_type_public">Público</string>
+    <string name="follow_set_type_private">Privado</string>
+    <string name="follow_set_type_mixed">Misto</string>
+    <string name="follow_set_empty_feed_msg">Parece que você ainda não tem conjuntos de seguimento.\nToque abaixo para atualizar ou use o botão de adicionar para criar um novo.</string>
+    <string name="follow_set_add_author_from_note_action">Adicionar autor ao conjunto de seguimento</string>
+    <string name="follow_set_profile_actions_menu_description">Adicionar ou remover usuário de listas, ou criar uma nova lista com este usuário.</string>
+    <string name="follow_set_type_description">Ícone da lista %1$s</string>
+    <string name="follow_set_presence_indicator">"%1$s está presente nesta lista"</string>
+    <string name="follow_set_absence_indicator">"%1$s não está nesta lista"</string>
+    <string name="follow_set_man_dialog_title">Seus conjuntos de seguimento</string>
+    <string name="follow_set_empty_dialog_msg">Nenhum conjunto de seguimento foi encontrado ou você não possui nenhum. Toque abaixo para atualizar ou use o menu para criar um.</string>
+    <string name="follow_set_error_dialog_msg">Houve um problema ao buscar: %1$s</string>
+    <string name="follow_set_creation_menu_title">Criar nova lista</string>
+    <string name="follow_set_creation_item_label">Criar nova lista %1$s com usuário</string>
+    <string name="follow_set_creation_item_description">Cria um conjunto de seguimento %1$s e adiciona %2$s a ele.</string>
+    <string name="follow_set_creation_dialog_title">Nova lista %1$s</string>
+    <string name="follow_set_creation_name_label">Nome do conjunto</string>
+    <string name="follow_set_creation_desc_label">Descrição do conjunto (opcional)</string>
+    <string name="follow_set_creation_action_btn_label">Criar conjunto</string>
+    <string name="follow_set_rename_btn_label">Renomear conjunto</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Você está renomeando de </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> para..</string>
     <string name="connect_through_your_orbot_setup_short">Porta padrão é 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conecte-se através do Tor com o Orbot
         \n\n1. Instale o [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -830,6 +856,8 @@
     <string name="media_compression_quality_medium">Média</string>
     <string name="media_compression_quality_high">Alta</string>
     <string name="media_compression_quality_uncompressed">Sem compressão</string>
+    <string name="video_codec_h265_label">Usar codec H.265/HEVC</string>
+    <string name="video_codec_h265_description">Melhor qualidade em arquivos menores, mas nem todos os dispositivos suportam reprodução em H.265.</string>
     <string name="edit_draft">Editar rascunho</string>
     <string name="login_with_qr_code">Entrar com Código QR</string>
     <string name="route">Rota</string>
@@ -1012,6 +1040,8 @@
     <string name="torrent_download">Baixar</string>
     <string name="torrent_failure">Falha ao abrir o arquivo</string>
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
+    <string name="torrent_no_info">O evento não tem informações suficientes para criar um link magnético</string>
+    <string name="my_lists_and_sets">Minhas listas/conjuntos</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
     <string name="private_message">Mensagem Privada</string>
@@ -1033,4 +1063,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Gostaria de enviar o relatório de falha recente para o Amethyst em uma DM? Nenhuma informação pessoal será compartilhada</string>
     <string name="crashreport_found_send">Enviar</string>
     <string name="this_message_will_disappear_in_days">Esta mensagem desaparecerá em %1$d dias</string>
+    <string name="select_signer">Selecionar assinador</string>
 </resources>

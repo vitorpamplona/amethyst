@@ -456,6 +456,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_list_aroundme">V moji okolici</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
+    <string name="follow_set_type_private">Zasebno</string>
+    <string name="follow_set_type_mixed">Mešano</string>
     <string name="connect_through_your_orbot_setup_short">Prevzeta vrata so 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot aplikacijo
         \n\n1. Namesti [Orbot aplikacijo](https://play.google.com/store/apps/details?id=org.torproject.android)

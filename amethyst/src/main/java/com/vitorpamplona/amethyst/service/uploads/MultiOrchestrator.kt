@@ -46,6 +46,8 @@ class MultiOrchestrator(
 
     fun first() = list.first()
 
+    fun hasVideo() = list.any { it.media.mimeType?.startsWith("video", ignoreCase = true) == true }
+
     suspend fun upload(
         alt: String?,
         contentWarningReason: String?,
@@ -53,6 +55,7 @@ class MultiOrchestrator(
         server: ServerName,
         account: Account,
         context: Context,
+        useH265: Boolean = false,
     ): Result {
         coroutineScope {
             val jobs =
@@ -67,6 +70,7 @@ class MultiOrchestrator(
                             server,
                             account,
                             context,
+                            useH265,
                         )
                     }
                 }
@@ -85,6 +89,7 @@ class MultiOrchestrator(
         server: ServerName,
         account: Account,
         context: Context,
+        useH265: Boolean = false,
     ): Result {
         coroutineScope {
             val jobs =
@@ -100,6 +105,7 @@ class MultiOrchestrator(
                             server,
                             account,
                             context,
+                            useH265,
                         )
                     }
                 }

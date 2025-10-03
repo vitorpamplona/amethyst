@@ -75,7 +75,7 @@ fun SettingSwitchItem(
                 text = stringRes(id = description),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
