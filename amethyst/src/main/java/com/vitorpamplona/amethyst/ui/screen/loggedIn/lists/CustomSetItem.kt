@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -67,6 +68,7 @@ fun CustomSetItem(
     followSet: FollowSet,
     onFollowSetClick: () -> Unit,
     onFollowSetRename: (String) -> Unit,
+    onFollowSetClone: (customName: String?, customDescription: String?) -> Unit,
     onFollowSetDelete: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -122,7 +124,7 @@ fun CustomSetItem(
                             selected = true,
                             onClick = {},
                             label = {
-                                Text(text = "$publicMemberSize $membersLabel")
+                                Text(text = "$publicMemberSize")
                             },
                             leadingIcon = {
                                 Icon(
@@ -149,7 +151,7 @@ fun CustomSetItem(
                             selected = true,
                             onClick = {},
                             label = {
-                                Text(text = "$privateMemberSize $membersLabel")
+                                Text(text = "$privateMemberSize")
                             },
                             leadingIcon = {
                                 Icon(
@@ -182,6 +184,7 @@ fun CustomSetItem(
             SetOptionsButton(
                 followSetName = followSet.title,
                 onListRename = onFollowSetRename,
+                onSetCloneCreate = onFollowSetClone,
                 onListDelete = onFollowSetDelete,
             )
         }
@@ -189,10 +192,11 @@ fun CustomSetItem(
 }
 
 @Composable
-fun SetOptionsButton(
+private fun SetOptionsButton(
     modifier: Modifier = Modifier,
     followSetName: String,
     onListRename: (String) -> Unit,
+    onSetCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onListDelete: () -> Unit,
 ) {
     val isMenuOpen = remember { mutableStateOf(false) }
@@ -207,6 +211,7 @@ fun SetOptionsButton(
             isExpanded = isMenuOpen.value,
             onDismiss = { isMenuOpen.value = false },
             onListRename = onListRename,
+            onSetClone = onSetCloneCreate,
             onDelete = onListDelete,
         )
     }
@@ -218,11 +223,16 @@ private fun SetOptionsMenu(
     isExpanded: Boolean,
     listName: String,
     onListRename: (String) -> Unit,
+    onSetClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val isRenameDialogOpen = remember { mutableStateOf(false) }
     val renameString = remember { mutableStateOf("") }
+
+    val isCopyDialogOpen = remember { mutableStateOf(false) }
+    val optionalCloneName = remember { mutableStateOf<String?>(null) }
+    val optionalCloneDescription = remember { mutableStateOf<String?>(null) }
 
     DropdownMenu(
         expanded = isExpanded,
@@ -245,6 +255,15 @@ private fun SetOptionsMenu(
                 onDismiss()
             },
         )
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.follow_set_copy_action_btn_label))
+            },
+            onClick = {
+                isCopyDialogOpen.value = true
+                onDismiss()
+            },
+        )
     }
 
     if (isRenameDialogOpen.value) {
@@ -258,6 +277,23 @@ private fun SetOptionsMenu(
             onListRename = {
                 onListRename(renameString.value)
             },
+        )
+    }
+
+    if (isCopyDialogOpen.value) {
+        SetCloneDialog(
+            optionalNewName = optionalCloneName.value,
+            optionalNewDesc = optionalCloneDescription.value,
+            onCloneNameChange = {
+                optionalCloneName.value = it
+            },
+            onCloneDescChange = {
+                optionalCloneDescription.value = it
+            },
+            onCloneCreate = { name, description ->
+                onSetClone(optionalCloneName.value, optionalCloneDescription.value)
+            },
+            onDismiss = { isCopyDialogOpen.value = false },
         )
     }
 }
@@ -318,6 +354,77 @@ private fun RenameDialog(
         },
         dismissButton = {
             Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun SetCloneDialog(
+    modifier: Modifier = Modifier,
+    optionalNewName: String?,
+    optionalNewDesc: String?,
+    onCloneNameChange: (String?) -> Unit,
+    onCloneDescChange: (String?) -> Unit,
+    onCloneCreate: (customName: String?, customDescription: String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringRes(R.string.follow_set_copy_dialog_title),
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.follow_set_copy_indicator_description),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Light,
+                    fontStyle = FontStyle.Italic,
+                )
+                // For the set clone name
+                TextField(
+                    value = optionalNewName ?: "",
+                    onValueChange = onCloneNameChange,
+                    label = {
+                        Text(text = stringRes(R.string.follow_set_copy_name_label))
+                    },
+                )
+                Spacer(modifier = DoubleVertSpacer)
+                // For the set clone description
+                TextField(
+                    value = optionalNewDesc ?: "",
+                    onValueChange = onCloneDescChange,
+                    label = {
+                        Text(text = stringRes(R.string.follow_set_copy_desc_label))
+                    },
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onCloneCreate(optionalNewName, optionalNewDesc)
+                    onDismiss()
+                },
+            ) {
+                Text(stringRes(R.string.follow_set_copy_action_btn_label))
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+            ) {
+                Text(stringRes(R.string.cancel))
+            }
         },
     )
 }

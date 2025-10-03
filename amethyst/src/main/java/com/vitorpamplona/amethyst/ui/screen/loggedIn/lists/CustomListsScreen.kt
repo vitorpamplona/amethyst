@@ -137,6 +137,14 @@ fun ListsAndSetsScreen(
                 account = accountViewModel.account,
             )
         },
+        cloneItem = { followSet, customName, customDescription ->
+            followSetsViewModel.cloneFollowSet(
+                currentFollowSet = followSet,
+                customCloneName = customName,
+                customCloneDescription = customDescription,
+                account = accountViewModel.account,
+            )
+        },
         deleteItem = { followSet ->
             followSetsViewModel.deleteFollowSet(
                 followSet = followSet,
@@ -155,6 +163,7 @@ fun CustomListsScreen(
     addItem: (title: String, description: String?) -> Unit,
     openItem: (identifier: String) -> Unit,
     renameItem: (followSet: FollowSet, newName: String) -> Unit,
+    cloneItem: (followSet: FollowSet, customName: String?, customDesc: String?) -> Unit,
     deleteItem: (followSet: FollowSet) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -213,6 +222,7 @@ fun CustomListsScreen(
                             onRefresh = refresh,
                             onOpenItem = openItem,
                             onRenameItem = renameItem,
+                            onItemClone = cloneItem,
                             onDeleteItem = deleteItem,
                         )
 
@@ -371,6 +381,9 @@ private fun SetItemPreview() {
             },
             onFollowSetRename = {
                 println("Follow set new name: $it")
+            },
+            onFollowSetClone = { newName, newDesc ->
+                println("The follow set has been cloned, and has custom name: $newName, Desc: $newDesc")
             },
             onFollowSetDelete = {
                 println(" The follow set ${sampleFollowSet.title} has been deleted.")
