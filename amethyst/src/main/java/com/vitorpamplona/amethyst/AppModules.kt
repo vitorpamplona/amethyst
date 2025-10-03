@@ -25,6 +25,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
@@ -250,6 +251,11 @@ class AppModules(
 
     fun initiate(appContext: Context) {
         Thread.setDefaultUncaughtExceptionHandler(UnexpectedCrashSaver(crashReportCache, applicationIOScope))
+
+        applicationIOScope.launch {
+            // loads main account quickly.
+            LocalPreferences.loadAccountConfigFromEncryptedStorage()
+        }
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
         uiPrefs
