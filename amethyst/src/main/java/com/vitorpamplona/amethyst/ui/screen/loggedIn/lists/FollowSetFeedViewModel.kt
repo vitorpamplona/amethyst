@@ -129,7 +129,8 @@ class FollowSetFeedViewModel(
                     title = setName,
                     description = setDescription,
                     isPrivate = firstMemberShouldBePrivate,
-                    firstMemberHex = optionalFirstMemberHex,
+                    firstPublicMembers = if (optionalFirstMemberHex != null) listOf(optionalFirstMemberHex) else emptyList(),
+                    firstPrivateMembers = if (optionalFirstMemberHex != null) listOf(optionalFirstMemberHex) else emptyList(),
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)
@@ -151,6 +152,31 @@ class FollowSetFeedViewModel(
                 PeopleListEvent.modifyListName(
                     earlierVersion = setEvent,
                     newName = newName,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
+    fun cloneFollowSet(
+        currentFollowSet: FollowSet,
+        customCloneName: String?,
+        customCloneDescription: String?,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                PeopleListEvent.createListWithDescription(
+                    dTag = UUID.randomUUID().toString(),
+                    title = customCloneName ?: currentFollowSet.title,
+                    description = customCloneDescription ?: currentFollowSet.description,
+                    isPrivate = false,
+                    firstPublicMembers = currentFollowSet.publicProfiles.toList(),
+                    firstPrivateMembers = currentFollowSet.privateProfiles.toList(),
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)

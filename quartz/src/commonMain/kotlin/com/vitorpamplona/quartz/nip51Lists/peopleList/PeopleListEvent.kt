@@ -223,18 +223,28 @@ class PeopleListEvent(
             title: String,
             description: String? = null,
             isPrivate: Boolean,
-            firstMemberHex: String? = null,
+            firstPublicMembers: List<String> = emptyList(),
+            firstPrivateMembers: List<String> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
         ) {
-            val isFirstMemberSpecified = firstMemberHex != null
             if (description == null) {
                 val newListTemplate =
                     build(
                         name = title,
-                        publicPeople = if (!isPrivate && isFirstMemberSpecified) listOf(UserTag(pubKey = firstMemberHex)) else emptyList(),
-                        privatePeople = if (isPrivate && isFirstMemberSpecified) listOf(UserTag(pubKey = firstMemberHex)) else emptyList(),
+                        publicPeople =
+                            if (!isPrivate && firstPublicMembers.isNotEmpty()) {
+                                firstPublicMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
+                        privatePeople =
+                            if (isPrivate && firstPrivateMembers.isNotEmpty()) {
+                                firstPrivateMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
                         signer = signer,
                         dTag = dTag,
                         createdAt = createdAt,
@@ -245,8 +255,18 @@ class PeopleListEvent(
                 val event =
                     build(
                         name = title,
-                        publicPeople = if (!isPrivate && isFirstMemberSpecified) listOf(UserTag(pubKey = firstMemberHex)) else emptyList(),
-                        privatePeople = if (isPrivate && isFirstMemberSpecified) listOf(UserTag(pubKey = firstMemberHex)) else emptyList(),
+                        publicPeople =
+                            if (!isPrivate && firstPublicMembers.isNotEmpty()) {
+                                firstPublicMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
+                        privatePeople =
+                            if (isPrivate && firstPrivateMembers.isNotEmpty()) {
+                                firstPrivateMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
                         signer = signer,
                         dTag = dTag,
                         createdAt = createdAt,
