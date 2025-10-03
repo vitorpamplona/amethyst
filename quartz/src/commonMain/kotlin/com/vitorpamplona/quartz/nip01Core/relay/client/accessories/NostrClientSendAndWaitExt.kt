@@ -95,6 +95,7 @@ suspend fun INostrClient.sendAndWaitForResponse(
                 val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
                 // The withTimeout block will cancel the coroutine if the loop takes too long
                 withTimeoutOrNull(timeoutInSeconds * 1000) {
+                    send(event, relayList)
                     while (receivedResults.size < relayList.size) {
                         val result = resultChannel.receive()
 
@@ -108,8 +109,6 @@ suspend fun INostrClient.sendAndWaitForResponse(
                 receivedResults
             }
         }
-
-    send(event, relayList)
 
     val receivedResults = resultSubscription.await()
 
