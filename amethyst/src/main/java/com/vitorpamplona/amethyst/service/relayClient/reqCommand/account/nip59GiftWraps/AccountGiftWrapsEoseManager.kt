@@ -42,14 +42,20 @@ class AccountGiftWrapsEoseManager(
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        key.account.dmRelays.flow.value.flatMap { relay ->
-            filterGiftWrapsToPubkey(
-                relay = relay,
-                pubkey = user(key).pubkeyHex,
-                since = since?.get(relay)?.time,
-            )
+    ): List<RelayBasedFilter> {
+        // Only loads DMs if the account is writeable
+        return if (key.account.isWriteable()) {
+            key.account.dmRelays.flow.value.flatMap { relay ->
+                filterGiftWrapsToPubkey(
+                    relay = relay,
+                    pubkey = user(key).pubkeyHex,
+                    since = since?.get(relay)?.time,
+                )
+            }
+        } else {
+            emptyList()
         }
+    }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 

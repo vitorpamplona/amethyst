@@ -40,12 +40,16 @@ class DMsFromUserFilterSubAssembler(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        key.account.homeRelays.flow.value.map {
-            filterNip04DMsFromMe(key.account.userProfile(), it, since?.get(it)?.time)
-        } +
-            key.account.dmRelays.flow.value.map {
-                filterNip04DMsToMe(key.account.userProfile(), it, since?.get(it)?.time)
-            }
+        if (key.account.isWriteable()) {
+            key.account.homeRelays.flow.value.map {
+                filterNip04DMsFromMe(key.account.userProfile(), it, since?.get(it)?.time)
+            } +
+                key.account.dmRelays.flow.value.map {
+                    filterNip04DMsToMe(key.account.userProfile(), it, since?.get(it)?.time)
+                }
+        } else {
+            emptyList()
+        }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
