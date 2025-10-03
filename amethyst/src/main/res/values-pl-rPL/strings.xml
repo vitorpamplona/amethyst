@@ -857,6 +857,8 @@
     <string name="media_compression_quality_medium">Średnia</string>
     <string name="media_compression_quality_high">Wysoka</string>
     <string name="media_compression_quality_uncompressed">Nieskompresowane</string>
+    <string name="video_codec_h265_label">Użyj kodeka H.265/HEVC</string>
+    <string name="video_codec_h265_description">Lepsza jakość przy mniejszych rozmiarach plików, lecz nie wszystkie urządzenia obsługują odtwarzanie H.265.</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route">Ścieżka</string>
