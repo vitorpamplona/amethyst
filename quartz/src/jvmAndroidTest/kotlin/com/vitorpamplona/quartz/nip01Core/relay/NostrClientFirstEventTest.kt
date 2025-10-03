@@ -24,6 +24,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,6 +36,7 @@ class NostrClientFirstEventTest : BaseNostrClientTest() {
     @Test
     fun testDownloadFirstEvent() =
         runBlocking {
+            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val event =
@@ -45,6 +50,7 @@ class NostrClientFirstEventTest : BaseNostrClientTest() {
                 )
 
             client.disconnect()
+            appScope.cancel()
 
             assertEquals(MetadataEvent.KIND, event?.kind)
             assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", event?.pubKey)

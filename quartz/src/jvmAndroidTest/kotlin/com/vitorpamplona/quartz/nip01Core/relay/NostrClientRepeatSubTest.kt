@@ -29,6 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
@@ -42,6 +46,7 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
     @Test
     fun testRepeatSubEvents() =
         runBlocking {
+            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val resultChannel = Channel<String>(UNLIMITED)
@@ -120,6 +125,8 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
             client.close(mySubId)
             client.unsubscribe(listener)
             client.disconnect()
+
+            appScope.cancel()
 
             assertEquals(202, events.size)
             assertEquals(true, events.take(100).all { it.length == 64 })

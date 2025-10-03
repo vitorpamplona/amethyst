@@ -21,24 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
-import kotlin.test.fail
 
 open class BaseNostrClientTest {
     companion object {
-        // Exists to avoid exceptions stopping the coroutine
-        val exceptionHandler =
-            CoroutineExceptionHandler { _, throwable ->
-                Log.e("AmethystCoroutine", "Caught exception: ${throwable.message}", throwable)
-                fail("Should not fail")
-            }
-
-        val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob() + exceptionHandler)
         val rootClient = OkHttpClient.Builder().build()
         val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
     }

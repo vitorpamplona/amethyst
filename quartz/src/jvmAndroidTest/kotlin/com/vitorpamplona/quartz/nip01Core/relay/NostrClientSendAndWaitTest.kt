@@ -26,6 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitFo
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,6 +38,7 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
     @Test
     fun testSendAndWaitForResponse() =
         runBlocking {
+            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val randomSigner = NostrSignerInternal(KeyPair())
@@ -53,6 +58,7 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
                 )
 
             client.disconnect()
+            appScope.cancel()
 
             assertEquals(true, resultDamus)
             assertEquals(false, resultNos)

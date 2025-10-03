@@ -26,6 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClientSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
@@ -37,6 +41,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
     @Test
     fun testNostrClientSubscription() =
         runBlocking {
+            val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
             val resultChannel = Channel<Event>(UNLIMITED)
@@ -73,6 +78,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
             sub.closeSubscription()
 
             client.disconnect()
+            appScope.cancel()
 
             assertEquals(100, events.size)
         }
