@@ -29,17 +29,26 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 
+interface IEoseManager {
+    fun invalidateFilters(ignoreIfDoing: Boolean = false)
+
+    fun destroy()
+
+    fun printStats()
+}
+
 abstract class BaseEoseManager<T>(
     val client: INostrClient,
     val allKeys: () -> Set<T>,
-) {
+    val sampleTime: Long = 500,
+) : IEoseManager {
     protected val logTag: String = this.javaClass.simpleName
 
     private val orchestrator = SubscriptionController(client)
 
     abstract fun updateSubscriptions(keys: Set<T>)
 
-    fun printStats() = orchestrator.printStats(logTag)
+    override fun printStats() = orchestrator.printStats(logTag)
 
     fun newSubscriptionId() = if (isDebug) logTag + newSubId() else newSubId()
 
@@ -50,21 +59,18 @@ abstract class BaseEoseManager<T>(
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.Default)
+    private val bundler = BundledUpdate(sampleTime, Dispatchers.Default)
 
-    fun invalidateFilters() {
-        bundler.invalidate {
-            forceInvalidate()
-        }
+    override fun invalidateFilters(ignoreIfDoing: Boolean) {
+        bundler.invalidate(ignoreIfDoing, ::forceInvalidate)
     }
 
     fun forceInvalidate() {
         updateSubscriptions(allKeys())
-
         orchestrator.updateRelays()
     }
 
-    fun destroy() {
+    override fun destroy() {
         bundler.cancel()
         orchestrator.destroy()
         if (isDebug) {

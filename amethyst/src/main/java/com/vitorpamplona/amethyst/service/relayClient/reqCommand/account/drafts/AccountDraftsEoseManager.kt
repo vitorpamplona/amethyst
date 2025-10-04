@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
@@ -33,29 +33,27 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class AccountGiftWrapsEoseManager(
+class AccountDraftsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
+    fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow
+
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> {
-        // Only loads DMs if the account is writeable
-        return if (key.account.isWriteable()) {
-            key.account.dmRelays.flow.value.flatMap { relay ->
-                filterGiftWrapsToPubkey(
-                    relay = relay,
-                    pubkey = user(key).pubkeyHex,
-                    since = since?.get(relay)?.time,
-                )
+    ): List<RelayBasedFilter> =
+        if (key.account.isWriteable()) {
+            relayFlow(key).value.flatMap {
+                listOf(
+                    filterDraftsFromKey(it, user(key).pubkeyHex, since?.get(it)?.time),
+                ).flatten()
             }
         } else {
             emptyList()
         }
-    }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -66,7 +64,7 @@ class AccountGiftWrapsEoseManager(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.dmRelays.flow.collectLatest {
+                    relayFlow(key).collectLatest {
                         invalidateFilters()
                     }
                 },

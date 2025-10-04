@@ -25,6 +25,10 @@ import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.quartz.utils.Log
 
 class Amethyst : Application() {
+    init {
+        Log.d("AmethystApp", "Creating App $this")
+    }
+
     companion object {
         lateinit var instance: AppModules
             private set

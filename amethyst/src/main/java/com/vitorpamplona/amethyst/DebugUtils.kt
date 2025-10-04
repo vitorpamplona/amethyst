@@ -26,6 +26,7 @@ import android.content.pm.ApplicationInfo
 import android.os.Debug
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizedUrls
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
@@ -66,6 +67,13 @@ fun debugState(context: Context) {
             Amethyst.instance.client
                 .relayStatusFlow()
                 .value.available.size,
+    )
+
+    Log.d(
+        STATE_DUMP_TAG,
+        "Indexed Relays: " +
+            Amethyst.instance.cache.relayHints.relayDB
+                .size() + "/" + normalizedUrls.size(),
     )
 
     Log.d(

@@ -37,13 +37,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.launch
 
 /**
  * The NostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
@@ -85,7 +87,8 @@ class NostrClient(
     // controls the state of the client in such a way that if it is active
     // new filters will be sent to the relays and a potential reconnect can
     // be triggered.
-    private var isActive = false
+    // STARTS active
+    private var isActive = true
 
     /**
      * Whatches for any changes in the relay list from subscriptions or outbox
@@ -115,12 +118,13 @@ class NostrClient(
             socketBuilder = websocketBuilder,
             listener = relayPool,
             stats = RelayStats.get(relay),
-            scope = scope,
         ) { liveRelay ->
             if (isActive) {
-                activeRequests.forEachSub(relay, liveRelay::sendRequest)
-                activeCounts.forEachSub(relay, liveRelay::sendCount)
-                eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
+                scope.launch(Dispatchers.Default) {
+                    activeRequests.forEachSub(relay, liveRelay::sendRequest)
+                    activeCounts.forEachSub(relay, liveRelay::sendCount)
+                    eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
+                }
             }
         }
 
@@ -137,21 +141,35 @@ class NostrClient(
 
     override fun isActive() = isActive
 
-    val myReconnectMutex = Mutex()
+    class Reconnect(
+        val onlyIfChanged: Boolean,
+        val ignoreRetryDelays: Boolean,
+    )
 
-    override fun reconnect(onlyIfChanged: Boolean) {
-        if (myReconnectMutex.tryLock()) {
-            try {
-                if (onlyIfChanged) {
-                    relayPool.reconnectIfNeedsToORIfItIsTime()
+    val refreshConnection = MutableStateFlow(Reconnect(false, false))
+
+    @OptIn(FlowPreview::class)
+    val debouncingConnection =
+        refreshConnection
+            .debounce(200)
+            .onEach {
+                if (it.onlyIfChanged) {
+                    relayPool.reconnectIfNeedsTo(it.ignoreRetryDelays)
                 } else {
                     relayPool.disconnect()
                     relayPool.connect()
                 }
-            } finally {
-                myReconnectMutex.unlock()
-            }
-        }
+            }.stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                false,
+            )
+
+    override fun reconnect(
+        onlyIfChanged: Boolean,
+        ignoreRetryDelays: Boolean,
+    ) {
+        refreshConnection.tryEmit(Reconnect(onlyIfChanged, ignoreRetryDelays))
     }
 
     fun needsToResendRequest(
@@ -228,7 +246,10 @@ class NostrClient(
 
                 if (newFilters.isNullOrEmpty()) {
                     // some relays are not in this sub anymore. Stop their subscriptions
-                    relayPool.close(relay, subId)
+                    if (!oldFilters.isNullOrEmpty()) {
+                        // only update if the old filters are not already closed.
+                        relayPool.close(relay, subId)
+                    }
                 } else if (oldFilters.isNullOrEmpty()) {
                     // new relays were added. Start a new sub in them
                     relayPool.sendRequest(relay, subId, newFilters)
@@ -244,7 +265,7 @@ class NostrClient(
             }
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -264,7 +285,10 @@ class NostrClient(
 
                 if (newFilters.isNullOrEmpty()) {
                     // some relays are not in this sub anymore. Stop their subscriptions
-                    relayPool.close(relay, subId)
+                    if (!oldFilters.isNullOrEmpty()) {
+                        // only update if the old filters are not already closed.
+                        relayPool.close(relay, subId)
+                    }
                 } else if (oldFilters.isNullOrEmpty()) {
                     // new relays were added. Start a new sub in them
                     relayPool.sendCount(relay, subId, newFilters)
@@ -280,7 +304,7 @@ class NostrClient(
             }
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -292,7 +316,7 @@ class NostrClient(
             relayPool.getRelay(connectedRelay)?.send(event)
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -301,11 +325,12 @@ class NostrClient(
         relayList: Set<NormalizedRelayUrl>,
     ) {
         eventOutbox.markAsSending(event, relayList)
+
         if (isActive) {
             relayPool.send(event, relayList)
 
             // wakes up all the other relays
-            relayPool.reconnectIfNeedsToORIfItIsTime()
+            reconnect(true)
         }
     }
 
@@ -331,6 +356,14 @@ class NostrClient(
         arrivalTime: Long,
     ) {
         listeners.forEach { it.onEOSE(relay, subId, arrivalTime) }
+    }
+
+    override fun onClosed(
+        relay: IRelayClient,
+        subId: String,
+        message: String,
+    ) {
+        listeners.forEach { it.onClosed(relay, subId, message) }
     }
 
     override fun onRelayStateChange(

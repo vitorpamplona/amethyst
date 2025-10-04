@@ -83,17 +83,50 @@ class HexEncodingTest {
         assertFalse("`a", Hex.isHex("`a"))
         assertFalse("gg", Hex.isHex("gg"))
         assertFalse("fg", Hex.isHex("fg"))
+        assertFalse("\uD83E\uDD70", Hex.isHex("\uD83E\uDD70"))
     }
 
     @OptIn(ExperimentalStdlibApi::class)
     @Test
     fun testRandomsIsHex() {
+        val lowerCaseHexNeg = "ghijklmnopqrstuvwxyz"
+        val upperCaseHexNeg = "GHIJKLMNOPQRSTUVWXYZ"
+
         for (i in 0..10000) {
             val bytes = RandomInstance.bytes(32)
             val hex = bytes.toHexString(HexFormat.Default)
             assertTrue(hex, Hex.isHex(hex))
             val hexUpper = bytes.toHexString(HexFormat.UpperCase)
             assertTrue(hexUpper, Hex.isHex(hexUpper))
+
+            // scramble
+            val negHex = hex.replaceFirst(hex.random(), lowerCaseHexNeg.random())
+            val negHexUpper = hexUpper.replaceFirst(hexUpper.random(), upperCaseHexNeg.random())
+
+            assertFalse(negHex, Hex.isHex(negHex))
+            assertFalse(negHexUpper, Hex.isHex(negHexUpper))
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @Test
+    fun testRandomsIsHex64() {
+        val lowerCaseHexNeg = "ghijklmnopqrstuvwxyz"
+        val upperCaseHexNeg = "GHIJKLMNOPQRSTUVWXYZ"
+
+        for (i in 0..10000) {
+            val bytes = RandomInstance.bytes(32)
+            val hex = bytes.toHexString(HexFormat.Default)
+            assertTrue(hex, Hex.isHex64(hex))
+            val hexUpper = bytes.toHexString(HexFormat.UpperCase)
+            assertTrue(hexUpper, Hex.isHex64(hexUpper))
+
+            // scramble
+            val negHex = hex.replaceFirst(hex.random(), lowerCaseHexNeg.random())
+            val negHexUpper = hexUpper.replaceFirst(hexUpper.random(), upperCaseHexNeg.random())
+
+            assertFalse(hex + ":" + negHex, Hex.isHex64(negHex))
+            assertFalse(hexUpper + ":" + negHexUpper, Hex.isHex64(negHexUpper))
         }
     }
 

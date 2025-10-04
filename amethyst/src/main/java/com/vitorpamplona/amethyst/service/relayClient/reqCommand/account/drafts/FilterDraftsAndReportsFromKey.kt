@@ -18,24 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
-val ReportsAndBookmarksFromKeyKinds =
+val DraftKinds =
     listOf(
         DraftWrapEvent.KIND,
-        ReportEvent.KIND,
-        BookmarkListEvent.KIND,
     )
 
-fun filterDraftsAndReportsFromKey(
+fun filterDraftsFromKey(
     relay: NormalizedRelayUrl,
     pubkey: HexKey?,
     since: Long?,
@@ -47,7 +43,7 @@ fun filterDraftsAndReportsFromKey(
             relay = relay,
             filter =
                 Filter(
-                    kinds = ReportsAndBookmarksFromKeyKinds,
+                    kinds = DraftKinds,
                     authors = listOf(pubkey),
                     since = since,
                 ),

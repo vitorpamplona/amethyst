@@ -34,10 +34,6 @@ class NostrClientSubscription(
 ) : IRelayClientListener {
     private val subId = RandomInstance.randomChars(10)
 
-    init {
-        client.subscribe(this)
-    }
-
     override fun onEvent(
         relay: IRelayClient,
         subId: String,
@@ -57,4 +53,13 @@ class NostrClientSubscription(
     fun updateFilter() = client.openReqSubscription(subId, filter())
 
     fun closeSubscription() = client.close(subId)
+
+    fun destroy() {
+        client.unsubscribe(this)
+    }
+
+    init {
+        client.subscribe(this)
+        updateFilter()
+    }
 }

@@ -26,15 +26,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.tooling.preview.Preview
+import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
-import com.halilibo.richtext.commonmark.MarkdownParseOptions
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.material3.RichText
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -69,24 +71,25 @@ fun RenderContentAsMarkdown(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val uri = LocalUriHandler.current
+    val uriHandler = LocalUriHandler.current
     val onClick =
-        remember {
-            { link: String ->
-                val route = uriToRoute(link, accountViewModel.account)
-                if (route != null) {
-                    nav.nav(route)
-                } else {
-                    runCatching { uri.openUri(link) }
+        remember(uriHandler) {
+            object : UriHandler {
+                override fun openUri(uri: String) {
+                    val route = uriToRoute(uri, accountViewModel.account)
+                    if (route != null) {
+                        nav.nav(route)
+                    } else {
+                        runCatching { uriHandler.openUri(uri) }
+                    }
                 }
-                Unit
             }
         }
 
     ProvideTextStyle(MarkdownTextStyle) {
         val astNode =
             remember(content) {
-                CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content)
+                CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
             }
 
         val renderer =
@@ -103,12 +106,13 @@ fun RenderContentAsMarkdown(
                 )
             }
 
-        RichText(
-            style = MaterialTheme.colorScheme.markdownStyle,
-            linkClickHandler = onClick,
-            renderer = renderer,
-        ) {
-            BasicMarkdown(astNode)
+        CompositionLocalProvider(LocalUriHandler provides onClick) {
+            RichText(
+                style = MaterialTheme.colorScheme.markdownStyle,
+                renderer = renderer,
+            ) {
+                BasicMarkdown(astNode)
+            }
         }
     }
 }

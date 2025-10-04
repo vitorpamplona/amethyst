@@ -36,7 +36,7 @@ class EventWatcherSubAssembler(
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys) {
     var lastNotesOnFilter = emptyList<Note>()
-    var latestEOSEs: EOSEAccountFast<Note> = EOSEAccountFast<Note>(10000)
+    var latestEOSEs: EOSEAccountFast<Note> = EOSEAccountFast<Note>(1000)
 
     override fun newEose(
         relay: NormalizedRelayUrl,

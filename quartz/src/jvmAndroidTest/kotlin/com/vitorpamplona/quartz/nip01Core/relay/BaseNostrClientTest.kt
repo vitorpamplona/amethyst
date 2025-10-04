@@ -18,29 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.single.simple
+package com.vitorpamplona.quartz.nip01Core.relay
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import okhttp3.OkHttpClient
 
-/**
- * This relay client saves any event that will be sent in an outbox
- * waits for auth and sends it again to make sure it is delivered.
- */
-class SimpleRelayClient(
-    url: NormalizedRelayUrl,
-    socketBuilder: WebsocketBuilder,
-    listener: IRelayClientListener,
-    stats: RelayStat = RelayStat(),
-    defaultOnConnect: (BasicRelayClient) -> Unit = { },
-) : IRelayClient by BasicRelayClient(
-        url,
-        socketBuilder,
-        OutboxCache(listener),
-        stats,
-        defaultOnConnect,
-    )
+open class BaseNostrClientTest {
+    companion object {
+        val rootClient = OkHttpClient.Builder().build()
+        val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
+    }
+}

@@ -27,14 +27,48 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.withTimeoutOrNull
+
+suspend fun INostrClient.downloadFirstEvent(
+    relay: String,
+    filter: Filter,
+) = downloadFirstEvent(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)))
+
+suspend fun INostrClient.downloadFirstEvent(
+    relay: String,
+    filters: List<Filter>,
+) = downloadFirstEvent(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters))
+
+suspend fun INostrClient.downloadFirstEvent(
+    subscriptionId: String = newSubId(),
+    relay: String,
+    filters: List<Filter>,
+) = downloadFirstEvent(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters))
+
+suspend fun INostrClient.downloadFirstEvent(
+    relay: NormalizedRelayUrl,
+    filter: Filter,
+) = downloadFirstEvent(newSubId(), mapOf(relay to listOf(filter)))
+
+suspend fun INostrClient.downloadFirstEvent(
+    relay: NormalizedRelayUrl,
+    filters: List<Filter>,
+) = downloadFirstEvent(newSubId(), mapOf(relay to filters))
+
+suspend fun INostrClient.downloadFirstEvent(
+    subscriptionId: String = newSubId(),
+    relay: NormalizedRelayUrl,
+    filters: List<Filter>,
+) = downloadFirstEvent(subscriptionId, mapOf(relay to filters))
 
 suspend fun INostrClient.downloadFirstEvent(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
 ): Event? {
-    val resultChannel = Channel<Event>()
+    val resultChannel = Channel<Event>(UNLIMITED)
 
     val listener =
         object : IRelayClientListener {

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class ChatroomFilterSubAssembler(
     client: INostrClient,
@@ -31,7 +32,12 @@ class ChatroomFilterSubAssembler(
     override fun updateFilter(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
-    ) = filterNip04DMs(key.room.users, key.account, since)
+    ): List<RelayBasedFilter>? =
+        if (key.account.isWriteable()) {
+            filterNip04DMs(key.room.users, key.account, since)
+        } else {
+            emptyList()
+        }
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 

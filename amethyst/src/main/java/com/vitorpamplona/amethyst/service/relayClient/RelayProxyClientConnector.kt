@@ -72,7 +72,7 @@ class RelayProxyClientConnector(
                 if (it.connectivity is ConnectivityStatus.StartingService) {
                     // ignore
                 } else if (it.connectivity is ConnectivityStatus.Off) {
-                    Log.d("ManageRelayServices", "Pausing Relay Services ${it.connectivity}")
+                    Log.d("ManageRelayServices", "Connectivity Off: Pausing Relay Services ${it.connectivity}")
                     if (client.isActive()) {
                         client.disconnect()
                     }
@@ -82,7 +82,7 @@ class RelayProxyClientConnector(
                         Log.d("ManageRelayServices", "Pausing Tor Activity")
                     }
                 } else if (it.connectivity is ConnectivityStatus.Active && !client.isActive()) {
-                    Log.d("ManageRelayServices", "Resuming Relay Services")
+                    Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
 
                     val torStatus = torManager.status.value
                     if (torStatus is TorServiceStatus.Active) {
@@ -95,7 +95,10 @@ class RelayProxyClientConnector(
                     client.connect()
                 } else {
                     Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to")
-                    client.reconnect(true)
+                    client.reconnect(
+                        onlyIfChanged = true,
+                        ignoreRetryDelays = true,
+                    )
                 }
             }.onStart {
                 Log.d("ManageRelayServices", "Resuming Relay Services")

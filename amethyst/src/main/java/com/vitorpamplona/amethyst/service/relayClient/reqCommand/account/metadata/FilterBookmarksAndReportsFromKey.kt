@@ -18,29 +18,37 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.single.simple
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
-/**
- * This relay client saves any event that will be sent in an outbox
- * waits for auth and sends it again to make sure it is delivered.
- */
-class SimpleRelayClient(
-    url: NormalizedRelayUrl,
-    socketBuilder: WebsocketBuilder,
-    listener: IRelayClientListener,
-    stats: RelayStat = RelayStat(),
-    defaultOnConnect: (BasicRelayClient) -> Unit = { },
-) : IRelayClient by BasicRelayClient(
-        url,
-        socketBuilder,
-        OutboxCache(listener),
-        stats,
-        defaultOnConnect,
+val ReportsAndBookmarksFromKeyKinds =
+    listOf(
+        ReportEvent.KIND,
+        BookmarkListEvent.KIND,
     )
+
+fun filterBookmarksAndReportsFromKey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = ReportsAndBookmarksFromKeyKinds,
+                    authors = listOf(pubkey),
+                    since = since,
+                ),
+        ),
+    )
+}

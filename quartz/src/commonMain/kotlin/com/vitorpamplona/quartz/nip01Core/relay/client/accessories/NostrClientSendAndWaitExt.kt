@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -46,7 +47,7 @@ suspend fun INostrClient.sendAndWaitForResponse(
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
 ): Boolean {
-    val resultChannel = Channel<Result>()
+    val resultChannel = Channel<Result>(UNLIMITED)
 
     Log.d("sendAndWaitForResponse", "Waiting for ${relayList.size} responses")
 
@@ -91,25 +92,28 @@ suspend fun INostrClient.sendAndWaitForResponse(
     // subscribe before sending the result.
     val resultSubscription =
         coroutineScope {
-            async(Dispatchers.IO) {
-                val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
-                // The withTimeout block will cancel the coroutine if the loop takes too long
-                withTimeoutOrNull(timeoutInSeconds * 1000) {
-                    while (receivedResults.size < relayList.size) {
-                        val result = resultChannel.receive()
+            val result =
+                async(Dispatchers.IO) {
+                    val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
+                    // The withTimeout block will cancel the coroutine if the loop takes too long
+                    withTimeoutOrNull(timeoutInSeconds * 1000) {
+                        while (receivedResults.size < relayList.size) {
+                            val result = resultChannel.receive()
 
-                        val currentResult = receivedResults[result.relay]
-                        // do not override a successful result.
-                        if (currentResult == null || !currentResult) {
-                            receivedResults.put(result.relay, result.success)
+                            val currentResult = receivedResults[result.relay]
+                            // do not override a successful result.
+                            if (currentResult == null || !currentResult) {
+                                receivedResults.put(result.relay, result.success)
+                            }
                         }
                     }
+                    receivedResults
                 }
-                receivedResults
-            }
-        }
 
-    send(event, relayList)
+            send(event, relayList)
+
+            result
+        }
 
     val receivedResults = resultSubscription.await()
 

@@ -51,9 +51,6 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
@@ -69,7 +66,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property defaultOnConnect Callback executed after a successful connection, allowing subclasses to add initialization logic.
  *
  * Reconnection Strategy:
- * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_MSECS] (500ms).
+ * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_SECS] (500ms).
  * - Doubles the delay between reconnection attempts in case of failure.
  *
  * Message Handling:
@@ -82,13 +79,11 @@ open class BasicRelayClient(
     val socketBuilder: WebsocketBuilder,
     val listener: IRelayClientListener,
     val stats: RelayStat = RelayStat(),
-    val scope: CoroutineScope,
     val defaultOnConnect: (BasicRelayClient) -> Unit = { },
 ) : IRelayClient {
     companion object {
-        // waits 3 minutes to reconnect once things fail
+        // minimum wait time to reconnect: 1 second
         const val DELAY_TO_RECONNECT_IN_SECS = 1
-        const val EVENT_MESSAGE_PREFIX = "[\"${EventMessage.LABEL}\""
     }
 
     private val logTag = "Relay ${url.displayUrl()}"
@@ -166,24 +161,13 @@ open class BasicRelayClient(
 
             markConnectionAsReady(pingMillis, compression)
 
-            scope.launch(Dispatchers.Default) {
-                onConnected()
-            }
+            onConnected()
 
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.CONNECTED)
         }
 
         override fun onMessage(text: String) {
-            // Log.d(logTag, "Receiving: $text")
-
-            if (text.startsWith(EVENT_MESSAGE_PREFIX)) {
-                // defers the parsing of ["EVENTS" to avoid blocking the HTTP thread
-                scope.launch(Dispatchers.Default) {
-                    consumeIncomingCommand(text, onConnected)
-                }
-            } else {
-                consumeIncomingCommand(text, onConnected)
-            }
+            consumeIncomingMessage(text, onConnected)
         }
 
         override fun onClosing(
@@ -237,7 +221,7 @@ open class BasicRelayClient(
         }
     }
 
-    fun consumeIncomingCommand(
+    fun consumeIncomingMessage(
         text: String,
         onConnected: () -> Unit,
     ) {
@@ -258,7 +242,7 @@ open class BasicRelayClient(
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             stats.newError("Error processing: $text")
-            Log.e(logTag, "Error processing: $text")
+            Log.e(logTag, "Error processing: $text", e)
             listener.onError(this@BasicRelayClient, "", Error("Error processing $text"))
         }
     }
@@ -296,7 +280,7 @@ open class BasicRelayClient(
     }
 
     private fun processEose(msg: EoseMessage) {
-        // Log.w(logTag, "EOSE ${msg.subId}")
+        Log.d(logTag, "EOSE ${msg.subId}")
         afterEOSEPerSubscription[msg.subId] = true
         listener.onEOSE(this, msg.subId, TimeUtils.now())
     }
@@ -311,7 +295,7 @@ open class BasicRelayClient(
         msg: OkMessage,
         onConnected: () -> Unit,
     ) {
-        Log.w(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
+        Log.d(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
 
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
         if (authResponseWatcher.containsKey(msg.eventId)) {
@@ -403,10 +387,10 @@ open class BasicRelayClient(
         }
     }
 
-    override fun connectAndSyncFiltersIfDisconnected() {
+    override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
         if (!isConnectionStarted() && !connectingMutex.load()) {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+            if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
                 upRelayDelayToConnect()
                 connect()
             }

@@ -310,6 +310,8 @@ dependencies {
 
     // Language picker and Theme chooser
     implementation libs.androidx.appcompat
+
+    // Dynamically adjust between phone and tablet UI
     implementation libs.androidx.window.core.android
 
     // Local model for language identification
