@@ -223,50 +223,58 @@ class PeopleListEvent(
             title: String,
             description: String? = null,
             isPrivate: Boolean,
-            firstMemberHex: String? = null,
+            firstPublicMembers: List<String> = emptyList(),
+            firstPrivateMembers: List<String> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
         ) {
             if (description == null) {
-                val newList =
-                    create(
+                val newListTemplate =
+                    build(
                         name = title,
-                        person = UserTag(pubKey = firstMemberHex ?: signer.pubKey),
-                        isPrivate = isPrivate,
+                        publicPeople =
+                            if (!isPrivate && firstPublicMembers.isNotEmpty()) {
+                                firstPublicMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
+                        privatePeople =
+                            if (isPrivate && firstPrivateMembers.isNotEmpty()) {
+                                firstPrivateMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
                         signer = signer,
                         dTag = dTag,
                         createdAt = createdAt,
                     )
+                val newList = signer.sign(newListTemplate)
                 onReady(newList)
             } else {
-                if (isPrivate) {
-                    val event =
-                        build(
-                            name = title,
-                            privatePeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
-                            signer = signer,
-                            dTag = dTag,
-                            createdAt = createdAt,
-                        ) {
-                            addUnique(arrayOf("description", description))
-                        }
-                    val list = signer.sign(event)
-                    onReady(list)
-                } else {
-                    val event =
-                        build(
-                            name = title,
-                            publicPeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
-                            signer = signer,
-                            dTag = dTag,
-                            createdAt = createdAt,
-                        ) {
-                            addUnique(arrayOf("description", description))
-                        }
-                    val list = signer.sign(event)
-                    onReady(list)
-                }
+                val event =
+                    build(
+                        name = title,
+                        publicPeople =
+                            if (!isPrivate && firstPublicMembers.isNotEmpty()) {
+                                firstPublicMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
+                        privatePeople =
+                            if (isPrivate && firstPrivateMembers.isNotEmpty()) {
+                                firstPrivateMembers.map { UserTag(pubKey = it) }
+                            } else {
+                                emptyList()
+                            },
+                        signer = signer,
+                        dTag = dTag,
+                        createdAt = createdAt,
+                    ) {
+                        addUnique(arrayOf("description", description))
+                    }
+                val list = signer.sign(event)
+                onReady(list)
             }
         }
 

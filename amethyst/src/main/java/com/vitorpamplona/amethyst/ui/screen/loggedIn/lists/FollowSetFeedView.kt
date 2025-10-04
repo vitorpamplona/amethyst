@@ -51,6 +51,7 @@ fun FollowSetFeedView(
     onRefresh: () -> Unit = {},
     onOpenItem: (String) -> Unit = {},
     onRenameItem: (targetSet: FollowSet, newName: String) -> Unit,
+    onItemClone: (followSet: FollowSet, customName: String?, customDesc: String?) -> Unit,
     onDeleteItem: (followSet: FollowSet) -> Unit,
 ) {
     when (followSetFeedState) {
@@ -63,6 +64,7 @@ fun FollowSetFeedView(
                 onRefresh = onRefresh,
                 onItemClick = onOpenItem,
                 onItemRename = onRenameItem,
+                onItemClone = onItemClone,
                 onItemDelete = onDeleteItem,
             )
         }
@@ -91,6 +93,7 @@ fun FollowSetLoaded(
     onRefresh: () -> Unit = {},
     onItemClick: (itemIdentifier: String) -> Unit = {},
     onItemRename: (followSet: FollowSet, newName: String) -> Unit,
+    onItemClone: (followSet: FollowSet, customName: String?, customDesc: String?) -> Unit,
     onItemDelete: (followSet: FollowSet) -> Unit,
 ) {
     Log.d("FollowSetComposable", "FollowSetLoaded: Follow Set size: ${loadedFeedState.size}")
@@ -112,6 +115,9 @@ fun FollowSetLoaded(
                     },
                     onFollowSetRename = {
                         onItemRename(set, it)
+                    },
+                    onFollowSetClone = { cloneName, cloneDescription ->
+                        onItemClone(set, cloneName, cloneDescription)
                     },
                     onFollowSetDelete = {
                         onItemDelete(set)

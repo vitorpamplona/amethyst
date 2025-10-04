@@ -25,20 +25,16 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class FollowSetState(
@@ -50,7 +46,7 @@ class FollowSetState(
     private val isActive = MutableStateFlow(false)
 
     suspend fun getFollowSetNotes() =
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val followSetNotes = LocalCache.getFollowSetNotesFor(user)
             return@withContext followSetNotes
         }
@@ -63,12 +59,12 @@ class FollowSetState(
                 emit(followSets)
                 delay(2000)
             }
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
 
     val profilesFlow =
         getFollowSetNotesFlow()
             .map { it ->
-                it.flatMapTo(mutableSetOf()) { it.profiles }.toSet()
+                it.flatMapTo(mutableSetOf()) { it.privateProfiles + it.publicProfiles }.toSet()
             }.stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     fun mapNoteToFollowSet(note: Note): FollowSet =
@@ -82,14 +78,5 @@ class FollowSetState(
 
     init {
         isActive.update { true }
-        scope.launch(Dispatchers.Default) {
-            getFollowSetNotesFlow()
-                .onCompletion {
-                    isActive.update { false }
-                }.catch {
-                    Log.e(this@FollowSetState.javaClass.simpleName, "Error on flow collection: ${it.message}")
-                    isActive.update { false }
-                }.collect {}
-        }
     }
 }
