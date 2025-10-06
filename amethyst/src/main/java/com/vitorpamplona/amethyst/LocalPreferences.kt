@@ -389,7 +389,7 @@ object LocalPreferences {
 
     suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
-    suspend fun saveSharedSettings(
+    fun saveSharedSettings(
         sharedSettings: UiSettings,
         prefs: SharedPreferences = encryptedPreferences(),
     ) {
@@ -399,7 +399,7 @@ object LocalPreferences {
         }
     }
 
-    suspend fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
+    fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
         Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
             return try {
