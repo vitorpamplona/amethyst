@@ -860,6 +860,8 @@
     <string name="media_compression_quality_medium">Közepes</string>
     <string name="media_compression_quality_high">Magas</string>
     <string name="media_compression_quality_uncompressed">Tömörítetlen</string>
+    <string name="video_codec_h265_label">H.265/HEVC-kodek használata</string>
+    <string name="video_codec_h265_description">Jobb minőség kisebb fájlméret mellett, de nem minden eszköz támogatja a H.265 lejátszást.</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR-kóddal</string>
     <string name="route">Útvonal</string>
