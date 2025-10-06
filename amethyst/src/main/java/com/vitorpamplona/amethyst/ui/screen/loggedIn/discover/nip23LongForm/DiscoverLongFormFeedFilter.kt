@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -45,13 +47,11 @@ open class DiscoverLongFormFeedFilter(
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
-
         val notes =
-            LocalCache.addressables.filterIntoSet { _, it ->
+            LocalCache.addressables.filterIntoSet(LongTextNoteEvent.KIND) { _, it ->
                 val noteEvent = it.event
                 noteEvent is LongTextNoteEvent && params.match(noteEvent)
             }
-
         return sort(notes)
     }
 
