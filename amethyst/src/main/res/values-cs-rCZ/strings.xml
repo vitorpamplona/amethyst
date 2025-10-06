@@ -112,6 +112,7 @@
     <string name="post">Příspěvek</string>
     <string name="save">Uložit</string>
     <string name="create">Vytvořit</string>
+    <string name="rename">Přejmenovat</string>
     <string name="cancel">Zrušit</string>
     <string name="failed_to_upload_the_image">Selhalo nahrávání obrázku</string>
     <string name="relay_address">Adresa relé</string>
@@ -443,6 +444,31 @@
     <string name="follow_list_aroundme">Kolem mě</string>
     <string name="follow_list_global">Globální</string>
     <string name="follow_list_mute_list">Seznam ztlumení</string>
+    <string name="follow_sets">Sady sledování</string>
+    <string name="labeled_bookmarks">Označené záložky</string>
+    <string name="general_bookmarks">Obecné záložky</string>
+    <string name="follow_set_type_public">Veřejné</string>
+    <string name="follow_set_type_private">Soukromé</string>
+    <string name="follow_set_type_mixed">Smíšené</string>
+    <string name="follow_set_empty_feed_msg">Zdá se, že zatím nemáte žádné sady sledování.\nKlepněte níže pro obnovení nebo použijte tlačítko přidat k vytvoření nové.</string>
+    <string name="follow_set_add_author_from_note_action">Přidat autora do sady sledování</string>
+    <string name="follow_set_profile_actions_menu_description">Přidat nebo odebrat uživatele ze seznamů, nebo vytvořit nový seznam s tímto uživatelem.</string>
+    <string name="follow_set_type_description">Ikona pro seznam %1$s</string>
+    <string name="follow_set_presence_indicator">"%1$s je v tomto seznamu"</string>
+    <string name="follow_set_absence_indicator">"%1$s není v tomto seznamu"</string>
+    <string name="follow_set_man_dialog_title">Vaše sady sledování</string>
+    <string name="follow_set_empty_dialog_msg">Nebyly nalezeny žádné sady sledování, nebo žádné nemáte. Klepněte níže pro obnovení nebo použijte menu pro vytvoření nové.</string>
+    <string name="follow_set_error_dialog_msg">Došlo k problému při načítání: %1$s</string>
+    <string name="follow_set_creation_menu_title">Vytvořit nový seznam</string>
+    <string name="follow_set_creation_item_label">Vytvořit nový seznam %1$s s uživatelem</string>
+    <string name="follow_set_creation_item_description">Vytvoří %1$s sadu sledování a přidá do ní %2$s.</string>
+    <string name="follow_set_creation_dialog_title">Nový seznam %1$s</string>
+    <string name="follow_set_creation_name_label">Název sady</string>
+    <string name="follow_set_creation_desc_label">Popis sady (volitelné)</string>
+    <string name="follow_set_creation_action_btn_label">Vytvořit sadu</string>
+    <string name="follow_set_rename_btn_label">Přejmenovat sadu</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Přejmenováváte z </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> na..</string>
     <string name="connect_through_your_orbot_setup_short">Výchozí port je 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Připojte se přes Tor s Orbotem
         \n\n1. Nainstalujte [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -830,6 +856,8 @@
     <string name="media_compression_quality_medium">Střední</string>
     <string name="media_compression_quality_high">Vysoká</string>
     <string name="media_compression_quality_uncompressed">Bez komprese</string>
+    <string name="video_codec_h265_label">Použít kodek H.265/HEVC</string>
+    <string name="video_codec_h265_description">Lepší kvalita při menší velikosti souboru, ale ne všechna zařízení podporují přehrávání H.265.</string>
     <string name="edit_draft">Upravit koncept</string>
     <string name="login_with_qr_code">Přihlášení pomocí QR kódu</string>
     <string name="route">Trasa</string>
@@ -1012,6 +1040,8 @@
     <string name="torrent_download">Stáhnout</string>
     <string name="torrent_failure">Nepodařilo se otevřít soubor</string>
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
+    <string name="torrent_no_info">Událost nemá dostatek informací pro vytvoření magnet odkazu</string>
+    <string name="my_lists_and_sets">Moje seznamy/sady</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
     <string name="private_message">Soukromá zpráva</string>
@@ -1033,4 +1063,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Chcete poslat poslední záznam o pádu do Amethystu v soukromé zprávě? Žádné osobní údaje nebudou sdíleny</string>
     <string name="crashreport_found_send">Odeslat</string>
     <string name="this_message_will_disappear_in_days">Tato zpráva zmizí za %1$d dní</string>
+    <string name="select_signer">Vybrat podepisovatele</string>
 </resources>

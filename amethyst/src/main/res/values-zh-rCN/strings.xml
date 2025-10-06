@@ -860,6 +860,8 @@
     <string name="media_compression_quality_medium">中等质量</string>
     <string name="media_compression_quality_high">高质量</string>
     <string name="media_compression_quality_uncompressed">未压缩</string>
+    <string name="video_codec_h265_label">使用 H.265/HEVC 编解码器</string>
+    <string name="video_codec_h265_description">文件较小而质量更佳，但不是所有设备都支持 H.265 播放。</string>
     <string name="edit_draft">编辑草稿</string>
     <string name="login_with_qr_code">使用二维码登录</string>
     <string name="route">路径</string>

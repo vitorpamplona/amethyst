@@ -325,6 +325,7 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
                         settings.defaultDiscoveryFollowList.value,
                     )
+
                     putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
 
                     putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
@@ -383,7 +384,7 @@ object LocalPreferences {
 
     suspend fun loadAccountConfigFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadAccountConfigFromEncryptedStorage(it) }
 
-    suspend fun saveSharedSettings(
+    fun saveSharedSettings(
         sharedSettings: UiSettings,
         prefs: SharedPreferences = encryptedPreferences(),
     ) {
@@ -393,7 +394,7 @@ object LocalPreferences {
         }
     }
 
-    suspend fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
+    fun loadSharedSettings(prefs: SharedPreferences = encryptedPreferences()): UiSettings? {
         Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
             return try {
@@ -579,6 +580,17 @@ object LocalPreferences {
     ) {
         if (event != null) {
             putString(key, OptimizedJsonMapper.toJson(event))
+        } else {
+            remove(key)
+        }
+    }
+
+    fun SharedPreferences.Editor.putOrRemove(
+        key: String,
+        nwc: Nip47WalletConnect.Nip47URI?,
+    ) {
+        if (nwc != null) {
+            putString(key, JsonMapper.toJson(nwc))
         } else {
             remove(key)
         }
