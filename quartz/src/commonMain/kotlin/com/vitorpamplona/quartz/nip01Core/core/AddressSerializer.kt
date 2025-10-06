@@ -31,7 +31,13 @@ class AddressSerializer {
             kind: Int,
             pubKeyHex: HexKey,
             dTag: String = "",
-        ) = "$kind:$pubKeyHex:$dTag"
+        ) = buildString {
+            append(kind)
+            append(":")
+            append(pubKeyHex)
+            append(":")
+            append(dTag)
+        }
 
         fun parse(addressId: String): Address? {
             if (addressId.isBlank()) return null
