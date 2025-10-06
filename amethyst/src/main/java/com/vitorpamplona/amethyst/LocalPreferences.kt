@@ -326,12 +326,7 @@ object LocalPreferences {
                         settings.defaultDiscoveryFollowList.value,
                     )
 
-                    val nwcToBeSaved = settings.zapPaymentRequest.value?.denormalize()
-                    if (nwcToBeSaved != null) {
-                        putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, JsonMapper.toJson(nwcToBeSaved))
-                    } else {
-                        remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
-                    }
+                    putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
 
                     putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
 
@@ -585,6 +580,17 @@ object LocalPreferences {
     ) {
         if (event != null) {
             putString(key, OptimizedJsonMapper.toJson(event))
+        } else {
+            remove(key)
+        }
+    }
+
+    fun SharedPreferences.Editor.putOrRemove(
+        key: String,
+        nwc: Nip47WalletConnect.Nip47URI?,
+    ) {
+        if (nwc != null) {
+            putString(key, JsonMapper.toJson(nwc))
         } else {
             remove(key)
         }
