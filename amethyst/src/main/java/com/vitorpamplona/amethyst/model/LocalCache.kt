@@ -414,11 +414,8 @@ object LocalCache : ILocalCache {
     }
 
     private fun isValidHex(key: String): Boolean {
-        if (key.isBlank()) return false
         if (key.length != 64) return false
-        if (key.contains(':')) return false
-
-        return Hex.isHex(key)
+        return Hex.isHex64(key)
     }
 
     fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
