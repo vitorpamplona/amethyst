@@ -297,12 +297,7 @@ object LocalCache : ILocalCache {
         observablesByKindAndAuthor[event.kind]?.get(event.pubKey)?.updateIfMatches(event)
     }
 
-    fun checkGetOrCreateUser(key: String): User? {
-        if (isValidHex(key)) {
-            return getOrCreateUser(key)
-        }
-        return null
-    }
+    fun checkGetOrCreateUser(key: String): User? = getOrCreateUser(key)
 
     fun getOrCreateUser(key: HexKey): User {
         require(isValidHex(key = key)) { "$key is not a valid hex" }
