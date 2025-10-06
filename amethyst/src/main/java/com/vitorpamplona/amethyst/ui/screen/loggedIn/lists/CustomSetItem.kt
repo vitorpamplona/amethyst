@@ -98,7 +98,7 @@ fun CustomSetItem(
                             selected = true,
                             onClick = {},
                             label = {
-                                Text(text = "No members")
+                                Text(text = stringRes(R.string.follow_set_empty_label))
                             },
                             leadingIcon = {
                                 Icon(
