@@ -1068,5 +1068,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Möchten Sie den letzten Absturzbericht per Direktnachricht an Amethyst senden? Es werden keine persönlichen Daten weitergegeben</string>
     <string name="crashreport_found_send">Senden</string>
     <string name="this_message_will_disappear_in_days">Diese Nachricht verschwindet in %1$d Tagen</string>
-    <string name="select_signer">Signierer auswählen</string>
 </resources>
