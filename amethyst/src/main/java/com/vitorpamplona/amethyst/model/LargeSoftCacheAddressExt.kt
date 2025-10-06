@@ -25,6 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.cache.CacheCollectors
 
 const val START_KEY = "0000000000000000000000000000000000000000000000000000000000000000"
+const val END_KEY = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+const val START_D_TAG = ""
+const val END_D_TAG = "\uFFFF\uFFFF\uFFFF\uFFFF"
 
 fun kindStart(
     kind: Int,
@@ -34,20 +37,22 @@ fun kindStart(
 fun kindEnd(
     kind: Int,
     pubKey: HexKey,
-) = Address(kind + 1, pubKey, "")
+) = Address(kind, pubKey, END_D_TAG)
 
 fun kindStart(kind: Int) = kindStart(kind, START_KEY)
 
-fun kindEnd(kind: Int) = kindEnd(kind + 1, START_KEY)
+fun kindEnd(kind: Int) = kindEnd(kind, END_KEY)
+
+val ACCEPT_ALL_FILTER = CacheCollectors.BiFilter<Address, AddressableNote> { key, note -> true }
 
 fun LargeSoftCache<Address, AddressableNote>.filterIntoSet(
     kind: Int,
-    consumer: CacheCollectors.BiFilter<Address, AddressableNote>,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
 ): Set<AddressableNote> = filterIntoSet(kindStart(kind), kindEnd(kind), consumer)
 
 fun LargeSoftCache<Address, AddressableNote>.filterIntoSet(
     kinds: List<Int>,
-    consumer: CacheCollectors.BiFilter<Address, AddressableNote>,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
 ): Set<AddressableNote> {
     val set = mutableSetOf<AddressableNote>()
     kinds.forEach {
@@ -59,7 +64,7 @@ fun LargeSoftCache<Address, AddressableNote>.filterIntoSet(
 fun LargeSoftCache<Address, AddressableNote>.filterIntoSet(
     kind: Int,
     pubKey: HexKey,
-    consumer: CacheCollectors.BiFilter<Address, AddressableNote>,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
 ): Set<AddressableNote> = filterIntoSet(kindStart(kind, pubKey), kindEnd(kind, pubKey), consumer)
 
 fun <R> LargeSoftCache<Address, AddressableNote>.mapNotNullIntoSet(

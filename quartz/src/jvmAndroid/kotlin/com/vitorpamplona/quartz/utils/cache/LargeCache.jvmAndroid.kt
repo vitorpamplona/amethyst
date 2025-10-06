@@ -85,6 +85,8 @@ actual class LargeCache<K, V> : CacheOperations<K, V> {
         to: K,
         consumer: BiConsumer<K, V>,
     ) {
-        cache.subMap(from, to).forEach(consumer)
+        cache
+            .subMap(from, true, to, true)
+            .forEach(consumer)
     }
 }

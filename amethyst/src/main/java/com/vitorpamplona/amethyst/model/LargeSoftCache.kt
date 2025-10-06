@@ -130,7 +130,9 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
         to: K,
         consumer: BiConsumer<K, V>,
     ) {
-        cache.subMap(from, to).forEach(BiConsumerWrapper(this, consumer))
+        cache
+            .subMap(from, true, to, true)
+            .forEach(BiConsumerWrapper(this, consumer))
     }
 
     class BiConsumerWrapper<K, V>(

@@ -92,6 +92,104 @@ expect class LargeCache<K, V>() : ICacheOperations<K, V> {
 
     override fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?>
 
+    override fun filter(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): List<V>
+
+    override fun filterIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): Set<V>
+
+    override fun <R> map(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): List<R>
+
+    override fun <R> mapNotNull(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, R?>,
+    ): List<R>
+
+    override fun <R> mapNotNullIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, R?>,
+    ): Set<R>
+
+    override fun <R> mapFlatten(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>,
+    ): List<R>
+
+    override fun <R> mapFlattenIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>,
+    ): Set<R>
+
+    override fun maxOrNullOf(
+        from: K,
+        to: K,
+        filter: CacheCollectors.BiFilter<K, V>,
+        comparator: Comparator<V>,
+    ): V?
+
+    override fun sumOf(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiSumOf<K, V>,
+    ): Int
+
+    override fun sumOfLong(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiSumOfLong<K, V>,
+    ): Long
+
+    override fun <R> groupBy(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): Map<R, List<V>>
+
+    override fun <R> countByGroup(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): Map<R, Int>
+
+    override fun <R> sumByGroup(
+        from: K,
+        to: K,
+        groupMap: CacheCollectors.BiNotNullMapper<K, V, R>,
+        sumOf: CacheCollectors.BiNotNullMapper<K, V, Long>,
+    ): Map<R, Long>
+
+    override fun count(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): Int
+
+    override fun <T, U> associate(
+        from: K,
+        to: K,
+        transform: (K, V) -> Pair<T, U>,
+    ): Map<T, U>
+
+    override fun <U> associateWith(
+        from: K,
+        to: K,
+        transform: (K, V) -> U?,
+    ): Map<K, U?>
+
     override fun joinToString(
         separator: CharSequence,
         prefix: CharSequence,
