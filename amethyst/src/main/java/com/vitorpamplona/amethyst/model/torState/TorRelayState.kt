@@ -61,8 +61,8 @@ class TorRelayState(
                 torType = torType,
                 onionRelaysViaTor = onionRelaysViaTor,
                 dmRelaysViaTor = dmRelaysViaTor,
-                trustedRelaysViaTor = trustedRelaysViaTor,
                 newRelaysViaTor = newRelaysViaTor,
+                trustedRelaysViaTor = trustedRelaysViaTor,
             )
         }.onStart {
             emit(
@@ -70,8 +70,8 @@ class TorRelayState(
                     torType = torSettingsFlow.torType.value,
                     onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
                     dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
-                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
                     newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
+                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -82,8 +82,8 @@ class TorRelayState(
                     torType = torSettingsFlow.torType.value,
                     onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
                     dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
-                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
                     newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
+                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
                 ),
             )
 

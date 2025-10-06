@@ -43,25 +43,25 @@ class DualHttpClientManager(
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache)
+    val factory = OkHttpClientFactory(keyCache, userAgent)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
-            factory.buildHttpClient(proxy, mobile, userAgent)
+            factory.buildHttpClient(proxy, mobile)
         }.stateIn(
             scope,
             SharingStarted.WhileSubscribed(1000),
-            factory.buildHttpClient(proxyPortProvider.value, isMobileDataProvider.value, userAgent),
+            factory.buildHttpClient(proxyPortProvider.value, isMobileDataProvider.value),
         )
 
     val defaultHttpClientWithoutProxy: StateFlow<OkHttpClient> =
         isMobileDataProvider
             .map { mobile ->
-                factory.buildHttpClient(mobile, userAgent)
+                factory.buildHttpClient(mobile)
             }.stateIn(
                 scope,
                 SharingStarted.WhileSubscribed(1000),
-                factory.buildHttpClient(isMobileDataProvider.value, userAgent),
+                factory.buildHttpClient(isMobileDataProvider.value),
             )
 
     fun getCurrentProxy(): Proxy? = defaultHttpClient.value.proxy

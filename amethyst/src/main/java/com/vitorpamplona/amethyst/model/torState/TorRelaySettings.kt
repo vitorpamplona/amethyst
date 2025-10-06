@@ -26,6 +26,6 @@ data class TorRelaySettings(
     val torType: TorType = TorType.OFF,
     val onionRelaysViaTor: Boolean = true,
     val dmRelaysViaTor: Boolean = false,
-    val trustedRelaysViaTor: Boolean = false,
     val newRelaysViaTor: Boolean = false,
+    val trustedRelaysViaTor: Boolean = false,
 )

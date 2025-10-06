@@ -30,6 +30,7 @@ import java.time.Duration
 
 class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
+    val userAgent: String,
 ) {
     companion object {
         // by picking a random proxy port, the connection will fail as it should.
@@ -74,12 +75,14 @@ class OkHttpClientFactory(
             .dispatcher(myDispatcher)
             .followRedirects(true)
             .followSslRedirects(true)
+            .addInterceptor(DefaultContentTypeInterceptor(userAgent))
+            .addNetworkInterceptor(logging)
+            .addNetworkInterceptor(keyDecryptor)
             .build()
 
     fun buildHttpClient(
         proxy: Proxy?,
         timeoutSeconds: Int,
-        userAgent: String,
     ): OkHttpClient {
         val seconds = if (proxy != null) timeoutSeconds * 3 else timeoutSeconds
         return rootClient
@@ -88,31 +91,22 @@ class OkHttpClientFactory(
             .connectTimeout(Duration.ofSeconds(seconds.toLong()))
             .readTimeout(Duration.ofSeconds(seconds.toLong() * 3))
             .writeTimeout(Duration.ofSeconds(seconds.toLong() * 3))
-            .addInterceptor(DefaultContentTypeInterceptor(userAgent))
-            .addNetworkInterceptor(logging)
-            .addNetworkInterceptor(keyDecryptor)
             .build()
     }
 
     fun buildHttpClient(
         localSocksProxyPort: Int?,
         isMobile: Boolean?,
-        userAgent: String,
     ): OkHttpClient =
         buildHttpClient(
             buildLocalSocksProxy(localSocksProxyPort),
             buildTimeout(isMobile ?: DEFAULT_IS_MOBILE),
-            userAgent,
         )
 
-    fun buildHttpClient(
-        isMobile: Boolean?,
-        userAgent: String,
-    ): OkHttpClient =
+    fun buildHttpClient(isMobile: Boolean?): OkHttpClient =
         buildHttpClient(
             null,
             buildTimeout(isMobile ?: DEFAULT_IS_MOBILE),
-            userAgent,
         )
 
     fun buildTimeout(isMobile: Boolean): Int =
