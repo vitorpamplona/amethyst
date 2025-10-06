@@ -325,7 +325,13 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
                         settings.defaultDiscoveryFollowList.value,
                     )
-                    putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
+
+                    val nwcToBeSaved = settings.zapPaymentRequest.value?.denormalize()
+                    if (nwcToBeSaved != null) {
+                        putString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, JsonMapper.toJson(nwcToBeSaved))
+                    } else {
+                        remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
+                    }
 
                     putOrRemove(PrefKeys.LATEST_CONTACT_LIST, settings.backupContactList)
 
