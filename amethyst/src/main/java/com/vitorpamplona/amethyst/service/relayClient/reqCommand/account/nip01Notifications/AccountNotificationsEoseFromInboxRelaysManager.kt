@@ -55,12 +55,12 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                 relay = it,
                 pubkey = user(key).pubkeyHex,
                 since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
-            )
-            filterNotificationsToPubkey(
-                relay = it,
-                pubkey = user(key).pubkeyHex,
-                since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
-            )
+            ) +
+                filterNotificationsToPubkey(
+                    relay = it,
+                    pubkey = user(key).pubkeyHex,
+                    since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
+                )
         }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
