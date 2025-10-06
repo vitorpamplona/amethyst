@@ -52,15 +52,19 @@ class AccountsTorStateConnector(
                         listOf(MutableStateFlow(emptySet()))
                     }
 
-                emitAll(
-                    combine(dmFlowReady) {
-                        val dmRelays = mutableSetOf<NormalizedRelayUrl>()
-                        it.forEach {
-                            dmRelays.addAll(it)
-                        }
-                        dmRelays.toSet()
-                    },
-                )
+                if (dmFlowReady.isEmpty()) {
+                    emit(emptySet())
+                } else {
+                    emitAll(
+                        combine(dmFlowReady) {
+                            val dmRelays = mutableSetOf<NormalizedRelayUrl>()
+                            it.forEach {
+                                dmRelays.addAll(it)
+                            }
+                            dmRelays.toSet()
+                        },
+                    )
+                }
             }.onEach {
                 torEvaluatorFlow.dmRelays.tryEmit(it)
             }.stateIn(
@@ -74,22 +78,26 @@ class AccountsTorStateConnector(
         accountsCache.accounts
             .debounce(200)
             .transformLatest { snapshot ->
-                val dmFlows = snapshot.map { it.value.dmRelayList.flow }
+                val trustedRelayFlows = snapshot.map { it.value.trustedRelays.flow }
 
-                val dmFlowReady =
-                    dmFlows.ifEmpty {
+                val trustedRelayFlowReady =
+                    trustedRelayFlows.ifEmpty {
                         listOf(MutableStateFlow(emptySet()))
                     }
 
-                emitAll(
-                    combine(dmFlowReady) {
-                        val dmRelays = mutableSetOf<NormalizedRelayUrl>()
-                        it.forEach {
-                            dmRelays.addAll(it)
-                        }
-                        dmRelays.toSet()
-                    },
-                )
+                if (trustedRelayFlowReady.isEmpty()) {
+                    emit(emptySet())
+                } else {
+                    emitAll(
+                        combine(trustedRelayFlowReady) {
+                            val trustedRelays = mutableSetOf<NormalizedRelayUrl>()
+                            it.forEach {
+                                trustedRelays.addAll(it)
+                            }
+                            trustedRelays.toSet()
+                        },
+                    )
+                }
             }.onEach {
                 torEvaluatorFlow.trustedRelays.tryEmit(it)
             }.stateIn(
