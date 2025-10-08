@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
@@ -55,7 +56,7 @@ open class DiscoverNIP89FeedFilter(
 
     override fun feed(): List<Note> {
         val notes =
-            LocalCache.addressables.filterIntoSet { _, it ->
+            LocalCache.addressables.filterIntoSet(AppDefinitionEvent.KIND) { _, it ->
                 acceptDVM(it)
             }
 

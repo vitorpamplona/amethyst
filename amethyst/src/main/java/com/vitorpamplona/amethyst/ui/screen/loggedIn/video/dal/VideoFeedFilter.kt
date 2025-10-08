@@ -24,7 +24,9 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -67,7 +69,10 @@ class VideoFeedFilter(
             LocalCache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
             } +
-                LocalCache.addressables.filterIntoSet { _, it ->
+                LocalCache.addressables.filterIntoSet(VideoHorizontalEvent.KIND) { _, it ->
+                    acceptableEvent(it, params)
+                } +
+                LocalCache.addressables.filterIntoSet(VideoVerticalEvent.KIND) { _, it ->
                     acceptableEvent(it, params)
                 }
 

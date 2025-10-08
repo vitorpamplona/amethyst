@@ -70,6 +70,108 @@ interface ICacheOperations<K, V> {
 
     fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?>
 
+    // --
+    // Sub map operations
+    // --
+
+    fun filter(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): List<V>
+
+    fun filterIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): Set<V>
+
+    fun <R> map(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): List<R>
+
+    fun <R> mapNotNull(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, R?>,
+    ): List<R>
+
+    fun <R> mapNotNullIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, R?>,
+    ): Set<R>
+
+    fun <R> mapFlatten(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>,
+    ): List<R>
+
+    fun <R> mapFlattenIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>,
+    ): Set<R>
+
+    fun maxOrNullOf(
+        from: K,
+        to: K,
+        filter: CacheCollectors.BiFilter<K, V>,
+        comparator: Comparator<V>,
+    ): V?
+
+    fun sumOf(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiSumOf<K, V>,
+    ): Int
+
+    fun sumOfLong(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiSumOfLong<K, V>,
+    ): Long
+
+    fun <R> groupBy(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): Map<R, List<V>>
+
+    fun <R> countByGroup(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): Map<R, Int>
+
+    fun <R> sumByGroup(
+        from: K,
+        to: K,
+        groupMap: CacheCollectors.BiNotNullMapper<K, V, R>,
+        sumOf: CacheCollectors.BiNotNullMapper<K, V, Long>,
+    ): Map<R, Long>
+
+    fun count(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): Int
+
+    fun <T, U> associate(
+        from: K,
+        to: K,
+        transform: (K, V) -> Pair<T, U>,
+    ): Map<T, U>
+
+    fun <U> associateWith(
+        from: K,
+        to: K,
+        transform: (K, V) -> U?,
+    ): Map<K, U?>
+
     fun joinToString(
         separator: CharSequence = ", ",
         prefix: CharSequence = "",

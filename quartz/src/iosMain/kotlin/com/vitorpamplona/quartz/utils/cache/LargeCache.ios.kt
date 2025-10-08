@@ -147,6 +147,136 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
         TODO("Not yet implemented")
     }
 
+    actual override fun filter(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): List<V> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun filterIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): Set<V> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> map(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): List<R> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> mapNotNull(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, R?>,
+    ): List<R> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> mapNotNullIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, R?>,
+    ): Set<R> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> mapFlatten(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>,
+    ): List<R> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> mapFlattenIntoSet(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>,
+    ): Set<R> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun maxOrNullOf(
+        from: K,
+        to: K,
+        filter: CacheCollectors.BiFilter<K, V>,
+        comparator: Comparator<V>,
+    ): V? {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun sumOf(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiSumOf<K, V>,
+    ): Int {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun sumOfLong(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiSumOfLong<K, V>,
+    ): Long {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> groupBy(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): Map<R, List<V>> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> countByGroup(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiNotNullMapper<K, V, R>,
+    ): Map<R, Int> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <R> sumByGroup(
+        from: K,
+        to: K,
+        groupMap: CacheCollectors.BiNotNullMapper<K, V, R>,
+        sumOf: CacheCollectors.BiNotNullMapper<K, V, Long>,
+    ): Map<R, Long> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun count(
+        from: K,
+        to: K,
+        consumer: CacheCollectors.BiFilter<K, V>,
+    ): Int {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <T, U> associate(
+        from: K,
+        to: K,
+        transform: (K, V) -> Pair<T, U>,
+    ): Map<T, U> {
+        TODO("Not yet implemented")
+    }
+
+    actual override fun <U> associateWith(
+        from: K,
+        to: K,
+        transform: (K, V) -> U?,
+    ): Map<K, U?> {
+        TODO("Not yet implemented")
+    }
+
     actual override fun joinToString(
         separator: CharSequence,
         prefix: CharSequence,

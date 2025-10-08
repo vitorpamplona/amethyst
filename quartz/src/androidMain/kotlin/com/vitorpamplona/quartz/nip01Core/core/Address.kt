@@ -40,16 +40,16 @@ actual data class Address actual constructor(
             dTag.bytesUsedInMemory()
 
     actual override fun compareTo(other: Address): Int {
-        val result = kind.compareTo(other.kind)
-        return if (result == 0) {
-            val result2 = pubKeyHex.compareTo(other.pubKeyHex)
-            if (result2 == 0) {
+        val kindComparison = kind.compareTo(other.kind)
+        return if (kindComparison == 0) {
+            val pubkeyComparison = pubKeyHex.compareTo(other.pubKeyHex)
+            if (pubkeyComparison == 0) {
                 dTag.compareTo(other.dTag)
             } else {
-                result2
+                pubkeyComparison
             }
         } else {
-            result
+            kindComparison
         }
     }
 

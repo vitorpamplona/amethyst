@@ -24,9 +24,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
 import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -37,6 +39,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -47,6 +50,11 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
@@ -58,10 +66,25 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 class NotificationFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
+    companion object {
+        val ADDRESSABLE_KINDS =
+            listOf(
+                AudioTrackEvent.KIND,
+                WikiNoteEvent.KIND,
+                ClassifiedsEvent.KIND,
+                LongTextNoteEvent.KIND,
+                CalendarTimeSlotEvent.KIND,
+                CalendarDateSlotEvent.KIND,
+                CalendarRSVPEvent.KIND,
+                LiveActivitiesEvent.KIND,
+            )
+    }
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultNotificationFollowList.value
 
     override fun showHiddenKey(): Boolean =
@@ -83,7 +106,7 @@ class NotificationFeedFilter(
             LocalCache.notes.filterIntoSet { _, note ->
                 note.event !is AddressableEvent && acceptableEvent(note, filterParams)
             } +
-                LocalCache.addressables.filterIntoSet { _, note ->
+                LocalCache.addressables.filterIntoSet(ADDRESSABLE_KINDS) { _, note ->
                     acceptableEvent(note, filterParams)
                 }
 

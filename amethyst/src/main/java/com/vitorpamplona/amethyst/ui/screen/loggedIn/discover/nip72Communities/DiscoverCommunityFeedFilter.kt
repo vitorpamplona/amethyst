@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.mapNotNullIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -54,7 +55,7 @@ open class DiscoverCommunityFeedFilter(
 
         // Here we only need to look for CommunityDefinition Events
         val notes =
-            LocalCache.addressables.mapNotNullIntoSet { key, note ->
+            LocalCache.addressables.mapNotNullIntoSet(CommunityDefinitionEvent.KIND) { key, note ->
                 val noteEvent = note.event
                 if (noteEvent == null && shouldInclude(key, filterParams, note.relays)) {
                     // send unloaded communities to the screen

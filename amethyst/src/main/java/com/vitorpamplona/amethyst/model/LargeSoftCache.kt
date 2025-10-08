@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
 
 class LargeSoftCache<K, V> : CacheOperations<K, V> {
-    private val cache = ConcurrentSkipListMap<K, WeakReference<V>>()
+    protected val cache = ConcurrentSkipListMap<K, WeakReference<V>>()
 
     fun keys() = cache.keys
 
@@ -123,6 +123,16 @@ class LargeSoftCache<K, V> : CacheOperations<K, V> {
 
     override fun forEach(consumer: BiConsumer<K, V>) {
         cache.forEach(BiConsumerWrapper(this, consumer))
+    }
+
+    override fun forEach(
+        from: K,
+        to: K,
+        consumer: BiConsumer<K, V>,
+    ) {
+        cache
+            .subMap(from, true, to, true)
+            .forEach(BiConsumerWrapper(this, consumer))
     }
 
     class BiConsumerWrapper<K, V>(

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
@@ -46,7 +47,7 @@ open class DiscoverMarketplaceFeedFilter(
         val params = buildFilterParams(account)
 
         val notes =
-            LocalCache.addressables.filterIntoSet { _, it ->
+            LocalCache.addressables.filterIntoSet(ClassifiedsEvent.KIND) { _, it ->
                 val noteEvent = it.event
                 noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent)
             }

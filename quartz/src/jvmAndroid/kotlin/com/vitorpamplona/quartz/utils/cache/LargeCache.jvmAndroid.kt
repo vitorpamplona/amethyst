@@ -79,4 +79,14 @@ actual class LargeCache<K, V> : CacheOperations<K, V> {
     override fun forEach(consumer: BiConsumer<K, V>) {
         cache.forEach(consumer)
     }
+
+    override fun forEach(
+        from: K,
+        to: K,
+        consumer: BiConsumer<K, V>,
+    ) {
+        cache
+            .subMap(from, true, to, true)
+            .forEach(consumer)
+    }
 }

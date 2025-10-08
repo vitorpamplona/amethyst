@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -45,6 +46,17 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 class HomeNewThreadFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
+    companion object {
+        val ADDRESSABLE_KINDS =
+            listOf(
+                AudioTrackEvent.KIND,
+                InteractiveStoryPrologueEvent.KIND,
+                WikiNoteEvent.KIND,
+                ClassifiedsEvent.KIND,
+                LongTextNoteEvent.KIND,
+            )
+    }
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
@@ -67,7 +79,9 @@ class HomeNewThreadFeedFilter(
             }
 
         val longFormNotes =
-            LocalCache.addressables.filterIntoSet { _, note ->
+            LocalCache.addressables.filterIntoSet(
+                kinds = ADDRESSABLE_KINDS,
+            ) { _, note ->
                 acceptableEvent(note, filterParams)
             }
 
