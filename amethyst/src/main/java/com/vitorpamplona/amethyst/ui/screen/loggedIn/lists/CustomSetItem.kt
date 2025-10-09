@@ -260,7 +260,7 @@ private fun SetOptionsMenu(
         )
         DropdownMenuItem(
             text = {
-                Text(text = "Modify description")
+                Text(text = stringRes(R.string.follow_set_desc_modify_label))
             },
             onClick = {
                 isDescriptionModDialogOpen.value = true
@@ -397,10 +397,10 @@ private fun SetModifyDescriptionDialog(
 
     val modifyIndicatorLabel =
         if (currentDescription == null) {
-            "This list doesn't have a description"
+            stringRes(R.string.follow_set_empty_desc_label)
         } else {
             buildAnnotatedString {
-                append("Current description: ")
+                append(stringRes(R.string.follow_set_current_desc_label) + " ")
                 withStyle(
                     SpanStyle(
                         fontWeight = FontWeight.Bold,
@@ -416,7 +416,7 @@ private fun SetModifyDescriptionDialog(
     AlertDialog(
         onDismissRequest = onDismissDialog,
         title = {
-            Text(text = "Modify description")
+            Text(text = stringRes(R.string.follow_set_desc_modify_label))
         },
         text = {
             Column(
@@ -441,7 +441,7 @@ private fun SetModifyDescriptionDialog(
                     onModifyDescription(updatedDescription.value)
                     onDismissDialog()
                 },
-            ) { Text(text = "Modify") }
+            ) { Text(text = stringRes(R.string.follow_set_desc_modify_btn_label)) }
         },
         dismissButton = {
             Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
