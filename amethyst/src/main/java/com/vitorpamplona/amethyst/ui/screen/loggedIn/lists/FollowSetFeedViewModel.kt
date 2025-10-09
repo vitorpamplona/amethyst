@@ -191,11 +191,10 @@ class FollowSetFeedViewModel(
             println("You are in read-only mode. Please login to make modifications.")
         } else {
             viewModelScope.launch(Dispatchers.IO) {
-                PeopleListEvent.createListWithDescription(
+                PeopleListEvent.copy(
                     dTag = UUID.randomUUID().toString(),
                     title = customCloneName ?: currentFollowSet.title,
                     description = customCloneDescription ?: currentFollowSet.description,
-                    isPrivate = false,
                     firstPublicMembers = currentFollowSet.publicProfiles.toList(),
                     firstPrivateMembers = currentFollowSet.privateProfiles.toList(),
                     signer = account.signer,

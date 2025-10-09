@@ -229,53 +229,55 @@ class PeopleListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
         ) {
-            if (description == null) {
-                val newListTemplate =
-                    build(
-                        name = title,
-                        publicPeople =
-                            if (!isPrivate && firstPublicMembers.isNotEmpty()) {
-                                firstPublicMembers.map { UserTag(pubKey = it) }
-                            } else {
-                                emptyList()
-                            },
-                        privatePeople =
-                            if (isPrivate && firstPrivateMembers.isNotEmpty()) {
-                                firstPrivateMembers.map { UserTag(pubKey = it) }
-                            } else {
-                                emptyList()
-                            },
-                        signer = signer,
-                        dTag = dTag,
-                        createdAt = createdAt,
-                    )
-                val newList = signer.sign(newListTemplate)
-                onReady(newList)
-            } else {
-                val event =
-                    build(
-                        name = title,
-                        publicPeople =
-                            if (!isPrivate && firstPublicMembers.isNotEmpty()) {
-                                firstPublicMembers.map { UserTag(pubKey = it) }
-                            } else {
-                                emptyList()
-                            },
-                        privatePeople =
-                            if (isPrivate && firstPrivateMembers.isNotEmpty()) {
-                                firstPrivateMembers.map { UserTag(pubKey = it) }
-                            } else {
-                                emptyList()
-                            },
-                        signer = signer,
-                        dTag = dTag,
-                        createdAt = createdAt,
-                    ) {
-                        addUnique(DescriptionTag.assemble(description))
-                    }
-                val list = signer.sign(event)
-                onReady(list)
-            }
+            val newListTemplate =
+                build(
+                    name = title,
+                    publicPeople =
+                        if (!isPrivate && firstPublicMembers.isNotEmpty()) {
+                            firstPublicMembers.map { UserTag(pubKey = it) }
+                        } else {
+                            emptyList()
+                        },
+                    privatePeople =
+                        if (isPrivate && firstPrivateMembers.isNotEmpty()) {
+                            firstPrivateMembers.map { UserTag(pubKey = it) }
+                        } else {
+                            emptyList()
+                        },
+                    signer = signer,
+                    dTag = dTag,
+                    createdAt = createdAt,
+                ) {
+                    if (description != null) addUnique(DescriptionTag.assemble(description))
+                }
+            val newList = signer.sign(newListTemplate)
+            onReady(newList)
+        }
+
+        suspend fun copy(
+            dTag: String,
+            title: String,
+            description: String? = null,
+            firstPublicMembers: List<String> = emptyList(),
+            firstPrivateMembers: List<String> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            val cloneTemplate =
+                build(
+                    name = title,
+                    publicPeople = firstPublicMembers.map { UserTag(pubKey = it) },
+                    privatePeople = firstPrivateMembers.map { UserTag(pubKey = it) },
+                    signer = signer,
+                    dTag = dTag,
+                    createdAt = createdAt,
+                ) {
+                    if (description != null) addUnique(DescriptionTag.assemble(description))
+                }
+
+            val listClone = signer.sign(cloneTemplate)
+            onReady(listClone)
         }
 
         suspend fun createListWithUser(
