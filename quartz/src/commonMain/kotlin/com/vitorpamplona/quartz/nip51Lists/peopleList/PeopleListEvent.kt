@@ -271,7 +271,7 @@ class PeopleListEvent(
                         dTag = dTag,
                         createdAt = createdAt,
                     ) {
-                        addUnique(arrayOf("description", description))
+                        addUnique(DescriptionTag.assemble(description))
                     }
                 val list = signer.sign(event)
                 onReady(list)
@@ -358,6 +358,52 @@ class PeopleListEvent(
                     createdAt = createdAt,
                 )
             onReady(modified)
+        }
+
+        suspend fun modifyDescription(
+            earlierVersion: PeopleListEvent,
+            newDescription: String?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit = {},
+        ) {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val currentDescriptionTag = earlierVersion.tags.firstOrNull { it[0] == DescriptionTag.TAG_NAME }
+            val currentDescription = currentDescriptionTag?.get(1)
+            if (currentDescription.equals(newDescription)) {
+                // Do nothing
+                return
+            } else {
+                if (newDescription == null || newDescription.isEmpty()) {
+                    val modified =
+                        resign(
+                            publicTags = earlierVersion.tags.remove { it[0] == DescriptionTag.TAG_NAME },
+                            privateTags = privateTags.remove { it[0] == DescriptionTag.TAG_NAME },
+                            signer = signer,
+                            createdAt = createdAt,
+                        )
+                    onReady(modified)
+                } else {
+                    val newDescriptionTag = DescriptionTag.assemble(newDescription)
+                    val modified =
+                        if (currentDescriptionTag == null) {
+                            resign(
+                                publicTags = earlierVersion.tags.plusElement(newDescriptionTag),
+                                privateTags = privateTags,
+                                signer = signer,
+                                createdAt = createdAt,
+                            )
+                        } else {
+                            resign(
+                                publicTags = earlierVersion.tags.replaceAll(currentDescriptionTag, newDescriptionTag),
+                                privateTags = privateTags.replaceAll(currentDescriptionTag, newDescriptionTag),
+                                signer = signer,
+                                createdAt = createdAt,
+                            )
+                        }
+                    onReady(modified)
+                }
+            }
         }
     }
 }
