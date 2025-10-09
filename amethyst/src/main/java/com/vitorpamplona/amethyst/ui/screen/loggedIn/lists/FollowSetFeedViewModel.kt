@@ -160,6 +160,27 @@ class FollowSetFeedViewModel(
         }
     }
 
+    fun modifyFollowSetDescription(
+        newDescription: String?,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.modifyDescription(
+                    earlierVersion = setEvent,
+                    newDescription = newDescription,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
     fun cloneFollowSet(
         currentFollowSet: FollowSet,
         customCloneName: String?,

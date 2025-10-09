@@ -68,6 +68,7 @@ fun CustomSetItem(
     followSet: FollowSet,
     onFollowSetClick: () -> Unit,
     onFollowSetRename: (String) -> Unit,
+    onFollowSetDescriptionChange: (String?) -> Unit,
     onFollowSetClone: (customName: String?, customDescription: String?) -> Unit,
     onFollowSetDelete: () -> Unit,
 ) {
@@ -183,7 +184,9 @@ fun CustomSetItem(
         ) {
             SetOptionsButton(
                 followSetName = followSet.title,
-                onListRename = onFollowSetRename,
+                followSetDescription = followSet.description,
+                onSetRename = onFollowSetRename,
+                onSetDescriptionChange = onFollowSetDescriptionChange,
                 onSetCloneCreate = onFollowSetClone,
                 onListDelete = onFollowSetDelete,
             )
@@ -195,7 +198,9 @@ fun CustomSetItem(
 private fun SetOptionsButton(
     modifier: Modifier = Modifier,
     followSetName: String,
-    onListRename: (String) -> Unit,
+    followSetDescription: String?,
+    onSetRename: (String) -> Unit,
+    onSetDescriptionChange: (String?) -> Unit,
     onSetCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onListDelete: () -> Unit,
 ) {
@@ -207,10 +212,12 @@ private fun SetOptionsButton(
         VerticalDotsIcon()
 
         SetOptionsMenu(
-            listName = followSetName,
+            setName = followSetName,
+            setDescription = followSetDescription,
             isExpanded = isMenuOpen.value,
             onDismiss = { isMenuOpen.value = false },
-            onListRename = onListRename,
+            onSetRename = onSetRename,
+            onSetDescriptionChange = onSetDescriptionChange,
             onSetClone = onSetCloneCreate,
             onDelete = onListDelete,
         )
@@ -221,14 +228,18 @@ private fun SetOptionsButton(
 private fun SetOptionsMenu(
     modifier: Modifier = Modifier,
     isExpanded: Boolean,
-    listName: String,
-    onListRename: (String) -> Unit,
+    setName: String,
+    setDescription: String?,
+    onSetRename: (String) -> Unit,
+    onSetDescriptionChange: (String?) -> Unit,
     onSetClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val isRenameDialogOpen = remember { mutableStateOf(false) }
     val renameString = remember { mutableStateOf("") }
+
+    val isDescriptionModDialogOpen = remember { mutableStateOf(false) }
 
     val isCopyDialogOpen = remember { mutableStateOf(false) }
     val optionalCloneName = remember { mutableStateOf<String?>(null) }
@@ -240,18 +251,19 @@ private fun SetOptionsMenu(
     ) {
         DropdownMenuItem(
             text = {
-                Text(text = stringRes(R.string.quick_action_delete))
-            },
-            onClick = {
-                onDelete()
-            },
-        )
-        DropdownMenuItem(
-            text = {
                 Text(text = stringRes(R.string.follow_set_rename_btn_label))
             },
             onClick = {
                 isRenameDialogOpen.value = true
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                Text(text = "Modify description")
+            },
+            onClick = {
+                isDescriptionModDialogOpen.value = true
                 onDismiss()
             },
         )
@@ -264,19 +276,35 @@ private fun SetOptionsMenu(
                 onDismiss()
             },
         )
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.quick_action_delete))
+            },
+            onClick = {
+                onDelete()
+            },
+        )
     }
 
     if (isRenameDialogOpen.value) {
-        RenameDialog(
-            currentName = listName,
+        SetRenameDialog(
+            currentName = setName,
             newName = renameString.value,
             onStringRenameChange = {
                 renameString.value = it
             },
             onDismissDialog = { isRenameDialogOpen.value = false },
             onListRename = {
-                onListRename(renameString.value)
+                onSetRename(renameString.value)
             },
+        )
+    }
+
+    if (isDescriptionModDialogOpen.value) {
+        SetModifyDescriptionDialog(
+            currentDescription = setDescription,
+            onDismissDialog = { isDescriptionModDialogOpen.value = false },
+            onModifyDescription = onSetDescriptionChange,
         )
     }
 
@@ -299,7 +327,7 @@ private fun SetOptionsMenu(
 }
 
 @Composable
-private fun RenameDialog(
+private fun SetRenameDialog(
     modifier: Modifier = Modifier,
     currentName: String,
     newName: String,
@@ -351,6 +379,69 @@ private fun RenameDialog(
                     onDismissDialog()
                 },
             ) { Text(text = stringRes(R.string.rename)) }
+        },
+        dismissButton = {
+            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun SetModifyDescriptionDialog(
+    modifier: Modifier = Modifier,
+    currentDescription: String?,
+    onDismissDialog: () -> Unit,
+    onModifyDescription: (String?) -> Unit,
+) {
+    val updatedDescription = remember { mutableStateOf<String?>(null) }
+
+    val modifyIndicatorLabel =
+        if (currentDescription == null) {
+            "This list doesn't have a description"
+        } else {
+            buildAnnotatedString {
+                append("Current description: ")
+                withStyle(
+                    SpanStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontStyle = FontStyle.Normal,
+                        fontSize = 15.sp,
+                    ),
+                ) {
+                    append("\"" + currentDescription + "\"")
+                }
+            }.text
+        }
+
+    AlertDialog(
+        onDismissRequest = onDismissDialog,
+        title = {
+            Text(text = "Modify description")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = modifyIndicatorLabel,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Light,
+                    fontStyle = FontStyle.Italic,
+                )
+                TextField(
+                    value = updatedDescription.value ?: "",
+                    onValueChange = { updatedDescription.value = it },
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onModifyDescription(updatedDescription.value)
+                    onDismissDialog()
+                },
+            ) { Text(text = "Modify") }
         },
         dismissButton = {
             Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
