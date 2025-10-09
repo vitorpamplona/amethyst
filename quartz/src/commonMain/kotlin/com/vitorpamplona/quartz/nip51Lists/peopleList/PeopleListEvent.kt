@@ -223,51 +223,61 @@ class PeopleListEvent(
             title: String,
             description: String? = null,
             isPrivate: Boolean,
-            firstMemberHex: String? = null,
+            firstPublicMembers: List<String> = emptyList(),
+            firstPrivateMembers: List<String> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
         ) {
-            if (description == null) {
-                val newList =
-                    create(
-                        name = title,
-                        person = UserTag(pubKey = firstMemberHex ?: signer.pubKey),
-                        isPrivate = isPrivate,
-                        signer = signer,
-                        dTag = dTag,
-                        createdAt = createdAt,
-                    )
-                onReady(newList)
-            } else {
-                if (isPrivate) {
-                    val event =
-                        build(
-                            name = title,
-                            privatePeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
-                            signer = signer,
-                            dTag = dTag,
-                            createdAt = createdAt,
-                        ) {
-                            addUnique(arrayOf("description", description))
-                        }
-                    val list = signer.sign(event)
-                    onReady(list)
-                } else {
-                    val event =
-                        build(
-                            name = title,
-                            publicPeople = listOf(UserTag(pubKey = firstMemberHex ?: signer.pubKey)),
-                            signer = signer,
-                            dTag = dTag,
-                            createdAt = createdAt,
-                        ) {
-                            addUnique(arrayOf("description", description))
-                        }
-                    val list = signer.sign(event)
-                    onReady(list)
+            val newListTemplate =
+                build(
+                    name = title,
+                    publicPeople =
+                        if (!isPrivate && firstPublicMembers.isNotEmpty()) {
+                            firstPublicMembers.map { UserTag(pubKey = it) }
+                        } else {
+                            emptyList()
+                        },
+                    privatePeople =
+                        if (isPrivate && firstPrivateMembers.isNotEmpty()) {
+                            firstPrivateMembers.map { UserTag(pubKey = it) }
+                        } else {
+                            emptyList()
+                        },
+                    signer = signer,
+                    dTag = dTag,
+                    createdAt = createdAt,
+                ) {
+                    if (description != null) addUnique(DescriptionTag.assemble(description))
                 }
-            }
+            val newList = signer.sign(newListTemplate)
+            onReady(newList)
+        }
+
+        suspend fun copy(
+            dTag: String,
+            title: String,
+            description: String? = null,
+            firstPublicMembers: List<String> = emptyList(),
+            firstPrivateMembers: List<String> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            val cloneTemplate =
+                build(
+                    name = title,
+                    publicPeople = firstPublicMembers.map { UserTag(pubKey = it) },
+                    privatePeople = firstPrivateMembers.map { UserTag(pubKey = it) },
+                    signer = signer,
+                    dTag = dTag,
+                    createdAt = createdAt,
+                ) {
+                    if (description != null) addUnique(DescriptionTag.assemble(description))
+                }
+
+            val listClone = signer.sign(cloneTemplate)
+            onReady(listClone)
         }
 
         suspend fun createListWithUser(
@@ -350,6 +360,52 @@ class PeopleListEvent(
                     createdAt = createdAt,
                 )
             onReady(modified)
+        }
+
+        suspend fun modifyDescription(
+            earlierVersion: PeopleListEvent,
+            newDescription: String?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit = {},
+        ) {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val currentDescriptionTag = earlierVersion.tags.firstOrNull { it[0] == DescriptionTag.TAG_NAME }
+            val currentDescription = currentDescriptionTag?.get(1)
+            if (currentDescription.equals(newDescription)) {
+                // Do nothing
+                return
+            } else {
+                if (newDescription == null || newDescription.isEmpty()) {
+                    val modified =
+                        resign(
+                            publicTags = earlierVersion.tags.remove { it[0] == DescriptionTag.TAG_NAME },
+                            privateTags = privateTags.remove { it[0] == DescriptionTag.TAG_NAME },
+                            signer = signer,
+                            createdAt = createdAt,
+                        )
+                    onReady(modified)
+                } else {
+                    val newDescriptionTag = DescriptionTag.assemble(newDescription)
+                    val modified =
+                        if (currentDescriptionTag == null) {
+                            resign(
+                                publicTags = earlierVersion.tags.plusElement(newDescriptionTag),
+                                privateTags = privateTags,
+                                signer = signer,
+                                createdAt = createdAt,
+                            )
+                        } else {
+                            resign(
+                                publicTags = earlierVersion.tags.replaceAll(currentDescriptionTag, newDescriptionTag),
+                                privateTags = privateTags.replaceAll(currentDescriptionTag, newDescriptionTag),
+                                signer = signer,
+                                createdAt = createdAt,
+                            )
+                        }
+                    onReady(modified)
+                }
+            }
         }
     }
 }
