@@ -81,7 +81,6 @@ class BasicOkHttpWebSocket(
                     webSocket: OkHttpWebSocket,
                     text: String,
                 ) {
-                    Log.d("OkHttpWebsocketListener", "Processing: $text")
                     // Asynchronously send the received message to the channel.
                     // `trySendBlocking` is used here for simplicity within the callback,
                     // but it's important to understand potential thread blocking if the buffer is full.
