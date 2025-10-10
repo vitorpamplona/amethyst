@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.utils.Log
@@ -195,6 +196,8 @@ class AppModules(
 
     // Tries to verify new OTS events when they arrive.
     val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationDefaultScope)
+
+    val relayStats = RelayStats(client)
 
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 

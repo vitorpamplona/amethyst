@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.model
 
 import android.util.LruCache
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -93,7 +93,9 @@ class AntiSpamFilter {
                 val spammer = logOffender(hash, event)
 
                 if (spammer.shouldHide() && relay != null) {
-                    RelayStats.newSpam(relay, "$link1 $link2")
+                    Amethyst.instance.relayStats
+                        .get(relay)
+                        .newSpam("$link1 $link2")
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))
@@ -119,7 +121,9 @@ class AntiSpamFilter {
                 val spammer = logOffender(hash, event)
 
                 if (spammer.shouldHide() && relay != null) {
-                    RelayStats.newSpam(relay, "$link1 $link2")
+                    Amethyst.instance.relayStats
+                        .get(relay)
+                        .newSpam("$link1 $link2")
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))

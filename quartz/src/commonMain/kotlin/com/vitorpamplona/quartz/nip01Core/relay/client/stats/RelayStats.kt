@@ -21,9 +21,12 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 
 import androidx.collection.LruCache
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-object RelayStats {
+class RelayStats(
+    val client: INostrClient,
+) {
     private val innerCache =
         object : LruCache<NormalizedRelayUrl, RelayStat>(1000) {
             override fun create(key: NormalizedRelayUrl): RelayStat = RelayStat()

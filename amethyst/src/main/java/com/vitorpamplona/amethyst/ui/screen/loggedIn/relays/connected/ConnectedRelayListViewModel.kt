@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
-import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
@@ -35,7 +34,7 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
             .map {
                 BasicRelaySetupInfo(
                     relay = it,
-                    relayStat = RelayStats.get(it),
+                    relayStat = Amethyst.instance.relayStats.get(it),
                     forcesTor =
                         Amethyst.instance.torEvaluatorFlow.flow.value
                             .useTor(it),

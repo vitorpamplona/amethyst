@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -74,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayDebugMessage
-import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -129,7 +129,7 @@ fun RelayInformationScreen(
 
         val messages =
             remember(relay) {
-                RelayStats
+                Amethyst.instance.relayStats
                     .get(url = relay)
                     .messages
                     .snapshot()
@@ -158,7 +158,10 @@ fun RelayInformationScreen(
                             iconUrl = relayInfo.icon,
                             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
                             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-                            RelayStats.get(relay).pingInMs,
+                            pingInMs =
+                                Amethyst.instance.relayStats
+                                    .get(relay)
+                                    .pingInMs,
                             iconModifier = LargeRelayIconModifier,
                         )
                     }

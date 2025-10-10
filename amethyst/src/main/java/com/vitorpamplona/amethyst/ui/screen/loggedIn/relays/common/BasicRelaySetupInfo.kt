@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
-import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Immutable
@@ -41,6 +41,6 @@ fun relaySetupInfoBuilder(
 ): BasicRelaySetupInfo =
     BasicRelaySetupInfo(
         relay = normalized,
-        relayStat = RelayStats.get(normalized),
+        relayStat = Amethyst.instance.relayStats.get(normalized),
         forcesTor = forcesTor,
     )
