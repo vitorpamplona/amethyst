@@ -50,33 +50,51 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                         event = EventManualDeserializer.fromJson(event),
                     )
                 }
+
                 EoseMessage.LABEL ->
                     EoseMessage(
                         subId = jp.nextTextValue(),
                     )
+
                 NoticeMessage.LABEL ->
                     NoticeMessage(
                         message = jp.nextTextValue(),
                     )
+
                 OkMessage.LABEL ->
                     OkMessage(
                         eventId = jp.nextTextValue(),
                         success = jp.nextBooleanValue(),
                         message = jp.nextTextValue() ?: "",
                     )
+
                 AuthMessage.LABEL ->
                     AuthMessage(
                         challenge = jp.nextTextValue(),
                     )
+
                 NotifyMessage.LABEL ->
                     NotifyMessage(
                         message = jp.nextTextValue(),
                     )
+
                 ClosedMessage.LABEL ->
                     ClosedMessage(
                         subId = jp.nextTextValue(),
                         message = jp.nextTextValue(),
                     )
+
+                CountMessage.LABEL -> {
+                    val queryId = jp.nextTextValue()
+                    jp.nextToken()
+                    val result: JsonNode = jp.codec.readTree(jp)
+
+                    CountMessage(
+                        queryId = queryId,
+                        result = CountResultDeserializer.fromJson(result),
+                    )
+                }
+
                 else -> {
                     throw IllegalArgumentException("Message $type is not supported")
                 }

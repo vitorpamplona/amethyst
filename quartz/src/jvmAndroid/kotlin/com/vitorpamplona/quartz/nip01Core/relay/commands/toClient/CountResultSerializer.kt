@@ -23,58 +23,17 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.vitorpamplona.quartz.nip01Core.jackson.EventSerializer
+import kotlin.jvm.java
 
-class MessageSerializer : StdSerializer<Message>(Message::class.java) {
-    val eventSerializer = EventSerializer()
-    val countSerializer = CountResultSerializer()
-
+class CountResultSerializer : StdSerializer<CountResult>(CountResult::class.java) {
     override fun serialize(
-        msg: Message,
+        result: CountResult,
         gen: JsonGenerator,
         provider: SerializerProvider,
     ) {
-        gen.writeStartArray()
-        gen.writeString(msg.label())
-
-        when (msg) {
-            is EventMessage -> {
-                gen.writeString(msg.subId)
-                eventSerializer.serialize(msg.event, gen, provider)
-            }
-
-            is NoticeMessage -> {
-                gen.writeString(msg.message)
-            }
-
-            is OkMessage -> {
-                gen.writeString(msg.eventId)
-                gen.writeString(msg.success.toString())
-                if (msg.message.isNotBlank()) {
-                    gen.writeString(msg.message)
-                }
-            }
-
-            is AuthMessage -> {
-                gen.writeString(msg.challenge)
-            }
-
-            is NotifyMessage -> {
-                gen.writeString(msg.message)
-            }
-
-            is ClosedMessage -> {
-                gen.writeString(msg.subId)
-                gen.writeString(msg.message)
-            }
-
-            is CountMessage -> {
-                countSerializer.serialize(msg.result, gen, provider)
-            }
-
-            else -> null
-        }
-
-        gen.writeEndArray()
+        gen.writeStartObject()
+        gen.writeNumberField("count", result.count)
+        gen.writeBooleanField("pubkey", result.approximate)
+        gen.writeEndObject()
     }
 }
