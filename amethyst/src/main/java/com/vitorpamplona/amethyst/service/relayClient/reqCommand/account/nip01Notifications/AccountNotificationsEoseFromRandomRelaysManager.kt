@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -51,14 +52,10 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         // only loads this after the feed is built
-        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
-        return if (defaultSince != null) {
-            (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
-                val since = since?.get(it)?.time ?: defaultSince
-                filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
-            }
-        } else {
-            emptyList()
+        val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo()
+        return (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
+            val since = since?.get(it)?.time ?: defaultSince
+            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
         }
     }
 
