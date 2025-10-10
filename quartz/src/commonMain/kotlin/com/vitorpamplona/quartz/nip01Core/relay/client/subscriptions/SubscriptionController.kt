@@ -50,7 +50,6 @@ class SubscriptionController(
     val client: INostrClient,
 ) {
     private val subscriptions = LargeCache<String, Subscription>()
-    private val stats = SubscriptionStats()
 
     private val clientListener =
         object : IRelayClientListener {
@@ -62,7 +61,6 @@ class SubscriptionController(
                 afterEOSE: Boolean,
             ) {
                 if (subscriptions.containsKey(subId)) {
-                    stats.add(subId, event.kind)
                     if (afterEOSE) {
                         subscriptions.get(subId)?.callEose(arrivalTime, relay.url)
                     }
