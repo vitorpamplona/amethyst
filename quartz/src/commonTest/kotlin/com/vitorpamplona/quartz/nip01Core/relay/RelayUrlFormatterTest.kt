@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class RelayUrlFormatterTest {
     @Test
@@ -43,5 +44,12 @@ class RelayUrlFormatterTest {
         assertEquals("ws://a.onion/", RelayUrlNormalizer.normalizeOrNull("a.onion/")?.url)
 
         assertEquals("wss://nostr.mom/", RelayUrlNormalizer.normalizeOrNull("wss://nostr.mom")?.url)
+
+        assertEquals("wss://relay.nostr.band/", RelayUrlNormalizer.normalizeOrNull("Wss://relay.nostr.band")?.url)
+    }
+
+    @Test
+    fun weirdRelay() {
+        assertNull(RelayUrlNormalizer.normalizeOrNull("wss://relay%20list%20to%20discover%20the%20user's%20content"))
     }
 }

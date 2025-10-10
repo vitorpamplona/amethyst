@@ -87,7 +87,7 @@ class RelayUrlNormalizer {
         @OptIn(ExperimentalContracts::class)
         fun fix(url: String): String? {
             if (url.length < 4) return null
-            if (url.contains("%00")) return null
+            if (url.contains("%00") || url.contains("%20")) return null
 
             if (url.length > 50) {
                 // removes multiple urls in the same line
@@ -138,9 +138,14 @@ class RelayUrlNormalizer {
                 return "wss://${trimmed.drop(6)}"
             }
 
+            // fast for good ww:// urls
+            if (trimmed.startsWith("Wss://")) {
+                return "wss://${trimmed.drop(6)}"
+            }
+
             if (trimmed.contains("://")) {
                 // some other scheme we cannot connect to.
-                Log.w("RelayUrlNormalizer", "Rejected relay URL: $url")
+                Log.w("RelayUrlNormalizer", "Rejected $url")
                 return null
             }
 
@@ -173,14 +178,14 @@ class RelayUrlNormalizer {
                     normalizedUrls.put(url, NormalizationResult.Success(normalized))
                     normalized
                 } else {
-                    Log.w("NormalizedRelayUrl", "Rejected Error $url")
+                    Log.w("NormalizedRelayUrl", "Rejected $url")
                     normalizedUrls.put(url, NormalizationResult.Error)
                     null
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 normalizedUrls.put(url, NormalizationResult.Error)
-                Log.w("NormalizedRelayUrl", "Rejected Error $url")
+                Log.w("NormalizedRelayUrl", "Rejected $url")
                 null
             }
         }
