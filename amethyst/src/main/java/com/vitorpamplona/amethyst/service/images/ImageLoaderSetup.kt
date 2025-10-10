@@ -39,8 +39,9 @@ import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
-import coil3.util.DebugLogger
+import coil3.util.Logger
 import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Call
 
 class ImageLoaderSetup {
@@ -53,7 +54,7 @@ class ImageLoaderSetup {
             }
         val svgFactory = SvgDecoder.Factory()
 
-        val debugLogger = if (isDebug) DebugLogger() else null
+        val debugLogger = if (isDebug) MyDebugLogger() else null
 
         @OptIn(DelicateCoilApi::class)
         fun setup(
@@ -79,6 +80,31 @@ class ImageLoaderSetup {
                         add(OkHttpFactory(callFactory))
                     }.build(),
             )
+        }
+    }
+}
+
+/**
+ * Copied from Coil to block the printout of stack traces
+ */
+class MyDebugLogger(
+    override var minLevel: Logger.Level = Logger.Level.Debug,
+) : Logger {
+    override fun log(
+        tag: String,
+        level: Logger.Level,
+        message: String?,
+        throwable: Throwable?,
+    ) {
+        val msg = message ?: throwable?.message
+        if (msg != null) {
+            when (level) {
+                Logger.Level.Error -> Log.e(tag, msg)
+                Logger.Level.Verbose -> Log.d(tag, msg)
+                Logger.Level.Debug -> Log.d(tag, msg)
+                Logger.Level.Info -> Log.i(tag, msg)
+                Logger.Level.Warn -> Log.w(tag, msg)
+            }
         }
     }
 }
