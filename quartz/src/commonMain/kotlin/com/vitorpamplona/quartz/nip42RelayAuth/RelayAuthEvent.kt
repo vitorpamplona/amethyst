@@ -23,8 +23,10 @@ package com.vitorpamplona.quartz.nip42RelayAuth
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip42RelayAuth.tags.ChallengeTag
 import com.vitorpamplona.quartz.nip42RelayAuth.tags.RelayTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -44,6 +46,17 @@ class RelayAuthEvent(
 
     companion object {
         const val KIND = 22242
+
+        fun build(
+            relay: NormalizedRelayUrl,
+            challenge: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<RelayAuthEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            relay(relay)
+            challenge(challenge)
+            initializer()
+        }
 
         suspend fun create(
             relay: NormalizedRelayUrl,
