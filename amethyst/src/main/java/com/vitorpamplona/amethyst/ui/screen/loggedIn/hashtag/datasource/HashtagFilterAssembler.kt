@@ -45,6 +45,4 @@ class HashtagFilterAssembler(
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
     override fun destroy() = group.forEach { it.destroy() }
-
-    override fun printStats() = group.forEach { it.printStats() }
 }

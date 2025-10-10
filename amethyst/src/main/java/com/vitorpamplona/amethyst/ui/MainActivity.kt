@@ -99,7 +99,6 @@ class MainActivity : AppCompatActivity() {
         @OptIn(DelicateCoroutinesApi::class)
         GlobalScope.launch(Dispatchers.IO) {
             debugState(this@MainActivity)
-            Amethyst.instance.sources.printCounters()
         }
 
         super.onPause()

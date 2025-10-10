@@ -26,6 +26,4 @@ interface ComposeSubscriptionManagerControls {
     fun invalidateFilters()
 
     fun destroy()
-
-    fun printStats()
 }

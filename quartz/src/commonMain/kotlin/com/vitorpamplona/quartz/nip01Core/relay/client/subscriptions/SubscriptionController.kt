@@ -88,8 +88,6 @@ class SubscriptionController(
         client.unsubscribe(clientListener)
     }
 
-    fun printStats(tag: String) = stats.printCounter(tag)
-
     fun getSub(subId: String) = subscriptions.get(subId)
 
     fun requestNewSubscription(

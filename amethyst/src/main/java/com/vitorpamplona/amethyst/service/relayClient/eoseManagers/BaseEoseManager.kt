@@ -33,8 +33,6 @@ interface IEoseManager {
     fun invalidateFilters(ignoreIfDoing: Boolean = false)
 
     fun destroy()
-
-    fun printStats()
 }
 
 abstract class BaseEoseManager<T>(
@@ -47,8 +45,6 @@ abstract class BaseEoseManager<T>(
     private val orchestrator = SubscriptionController(client)
 
     abstract fun updateSubscriptions(keys: Set<T>)
-
-    override fun printStats() = orchestrator.printStats(logTag)
 
     fun newSubscriptionId() = if (isDebug) logTag + newSubId() else newSubId()
 
