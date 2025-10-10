@@ -24,4 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 
 interface Command : OptimizedSerializable {
     fun label(): String
+
+    fun isValid(): Boolean
 }

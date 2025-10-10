@@ -28,6 +28,8 @@ class CountCmd(
 ) : Command {
     override fun label(): String = LABEL
 
+    override fun isValid() = subId.isNotEmpty() && filters.isNotEmpty()
+
     companion object {
         const val LABEL = "COUNT"
     }

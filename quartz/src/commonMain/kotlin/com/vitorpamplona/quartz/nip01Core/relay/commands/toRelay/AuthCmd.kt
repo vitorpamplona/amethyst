@@ -27,6 +27,8 @@ class AuthCmd(
 ) : Command {
     override fun label(): String = LABEL
 
+    override fun isValid() = true
+
     companion object {
         const val LABEL = "AUTH"
     }

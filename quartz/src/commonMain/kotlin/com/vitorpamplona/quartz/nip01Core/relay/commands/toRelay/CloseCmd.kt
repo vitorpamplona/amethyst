@@ -25,6 +25,8 @@ class CloseCmd(
 ) : Command {
     override fun label(): String = LABEL
 
+    override fun isValid() = subId.isNotEmpty()
+
     companion object {
         const val LABEL = "CLOSE"
     }
