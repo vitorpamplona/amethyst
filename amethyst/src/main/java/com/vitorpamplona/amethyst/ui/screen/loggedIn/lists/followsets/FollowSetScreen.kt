@@ -200,6 +200,7 @@ fun FollowSetScreen(
                     onDeleteUser = {
                         followSetViewModel.removeUserFromSet(
                             it,
+                            userIsPrivate = selectedSet.privateProfiles.contains(it),
                             selectedSet,
                             accountViewModel.account,
                         )

@@ -187,6 +187,7 @@ fun FollowSetsManagementDialog(
                                 )
                                 followSetsViewModel.removeUserFromSet(
                                     userHex,
+                                    userIsPrivate = set.privateProfiles.contains(userHex),
                                     set,
                                     account,
                                 )

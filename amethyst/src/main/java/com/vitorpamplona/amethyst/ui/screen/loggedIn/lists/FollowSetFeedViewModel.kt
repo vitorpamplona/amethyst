@@ -247,6 +247,7 @@ class FollowSetFeedViewModel(
 
     fun removeUserFromSet(
         userProfileHex: String,
+        userIsPrivate: Boolean,
         followSet: FollowSet,
         account: Account,
     ) {
@@ -259,6 +260,7 @@ class FollowSetFeedViewModel(
                 PeopleListEvent.removeUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
+                    isUserPrivate = userIsPrivate,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)
