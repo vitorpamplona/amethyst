@@ -155,6 +155,31 @@ class PeopleListEvent(
             )
         }
 
+        suspend fun remove(
+            earlierVersion: PeopleListEvent,
+            person: UserTag,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): PeopleListEvent {
+            if (isPrivate) {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                return resign(
+                    publicTags = earlierVersion.tags,
+                    privateTags = privateTags.remove(person.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                return resign(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.remove(person.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+        }
+
         suspend fun resign(
             publicTags: TagArray,
             privateTags: TagArray,
@@ -321,6 +346,7 @@ class PeopleListEvent(
         suspend fun removeUser(
             earlierVersion: PeopleListEvent,
             pubKeyHex: String,
+            isUserPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
@@ -329,6 +355,7 @@ class PeopleListEvent(
                 remove(
                     earlierVersion = earlierVersion,
                     person = UserTag(pubKey = pubKeyHex),
+                    isPrivate = isUserPrivate,
                     signer = signer,
                     createdAt = createdAt,
                 )
