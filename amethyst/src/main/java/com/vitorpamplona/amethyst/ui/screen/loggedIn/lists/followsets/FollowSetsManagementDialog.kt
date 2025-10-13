@@ -346,7 +346,7 @@ fun FollowSetItem(
                 Spacer(modifier = StdHorzSpacer)
                 Icon(
                     painter = painterResource(R.drawable.format_list_bulleted_type),
-                    contentDescription = stringRes(R.string.follow_set_type_description),
+                    contentDescription = stringRes(R.string.follow_set_icon_description),
                 )
             }
 
@@ -455,7 +455,7 @@ private fun UserAdditionOptionsMenu(
     ) {
         DropdownMenuItem(
             text = {
-                Text(text = "Add as public member")
+                Text(text = stringRes(R.string.follow_set_public_member_add_label))
             },
             onClick = {
                 onUserAdd(false)
@@ -464,7 +464,7 @@ private fun UserAdditionOptionsMenu(
         )
         DropdownMenuItem(
             text = {
-                Text(text = "Add as private member")
+                Text(text = stringRes(R.string.follow_set_private_member_add_label))
             },
             onClick = {
                 onUserAdd(true)

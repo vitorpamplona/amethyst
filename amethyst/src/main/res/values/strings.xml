@@ -519,11 +519,16 @@
         It seems you do not have any follow sets yet.
         \nTap below to refresh, or tap the add buttons to create a new one.
     </string>
+    <string name="follow_set_create_btn_label">New</string>
     <string name="follow_set_add_author_from_note_action">Add author to follow set</string>
     <string name="follow_set_profile_actions_menu_description">Add or remove user from lists, or create a new list with this user.</string>
-    <string name="follow_set_type_description">Icon for %1$s List</string>
+    <string name="follow_set_icon_description">Icon for follow set</string>
     <string name="follow_set_public_presence_indicator">%1$s is a public member</string>
     <string name="follow_set_private_presence_indicator">%1$s is a private member</string>
+    <string name="follow_set_public_member_add_label">Add as public member</string>
+    <string name="follow_set_private_member_add_label">Add as private member</string>
+    <string name="follow_set_public_members_header_label">Public Profiles</string>
+    <string name="follow_set_private_members_header_label">Private Profiles</string>
     <string name="follow_set_single_member_label">member</string>
     <string name="follow_set_multiple_member_label">members</string>
     <string name="follow_set_empty_label">No members</string>

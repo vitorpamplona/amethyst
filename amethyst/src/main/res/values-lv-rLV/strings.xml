@@ -114,7 +114,7 @@
     <string name="yes">Jā</string>
     <string name="no">Nē</string>
     <string name="follow_list_selection">Sekot saraksts</string>
-    <string name="follow_set_type_description">Ikona %1$s sarakstam</string>
+    <string name="follow_set_icon_description">Ikona %1$s sarakstam</string>
     <string name="follow_set_creation_menu_title">Izveidot jaunu sarakstu</string>
     <string name="follow_set_creation_dialog_title">Jaunais %1$s saraksts</string>
     <string name="follow_set_creation_name_label">Kolekcijas nosaukums</string>

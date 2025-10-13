@@ -252,7 +252,7 @@ private fun FollowSetFabsAndMenu(
 
     ExtendedFloatingActionButton(
         text = {
-            Text(text = "New")
+            Text(text = stringRes(R.string.follow_set_create_btn_label))
         },
         icon = {
             Icon(

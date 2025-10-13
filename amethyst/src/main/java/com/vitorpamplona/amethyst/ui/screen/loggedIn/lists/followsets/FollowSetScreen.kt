@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
@@ -277,7 +278,7 @@ private fun FollowSetListView(
                     modifier = VertPadding,
                 ) {
                     Text(
-                        text = "Public Profiles",
+                        text = stringRes(R.string.follow_set_public_members_header_label),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -304,7 +305,7 @@ private fun FollowSetListView(
         if (privateMemberList.isNotEmpty()) {
             stickyHeader {
                 Text(
-                    text = "Private Profiles",
+                    text = stringRes(R.string.follow_set_private_members_header_label),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )

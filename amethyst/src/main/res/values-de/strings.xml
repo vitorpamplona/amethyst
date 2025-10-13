@@ -1001,8 +1001,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_empty_feed_msg">Es scheint, dass du noch keine Folge-Sets hast.\nTippe unten zum Aktualisieren oder verwende die Plus-Taste, um ein neues zu erstellen.</string>
     <string name="follow_set_add_author_from_note_action">Autor zum Folge-Set hinzufügen</string>
     <string name="follow_set_profile_actions_menu_description">Benutzer zu Listen hinzufügen oder entfernen, oder eine neue Liste mit diesem Benutzer erstellen.</string>
-    <string name="follow_set_type_description">Symbol für %1$s-Liste</string>
-    <string name="follow_set_presence_indicator">%1$s ist in dieser Liste</string>
+    <string name="follow_set_icon_description">Symbol für %1$s-Liste</string>
     <string name="follow_set_absence_indicator">%1$s ist nicht in dieser Liste</string>
     <string name="follow_set_man_dialog_title">Deine Folge-Sets</string>
     <string name="follow_set_empty_dialog_msg">Keine Folge-Sets gefunden oder du hast keine. Tippe unten zum Aktualisieren oder verwende das Menü, um eines zu erstellen.</string>
