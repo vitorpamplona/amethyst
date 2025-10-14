@@ -45,6 +45,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -69,6 +71,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -165,16 +168,18 @@ fun FollowSetsManagementDialog(
         ) {
             when (followSetsState) {
                 is FollowSetFeedState.Loaded -> {
-                    val lists = (followSetsState as FollowSetFeedState.Loaded).feed
+                    val sets = (followSetsState as FollowSetFeedState.Loaded).feed
 
-                    lists.forEachIndexed { index, list ->
+                    sets.forEachIndexed { index, set ->
+
                         Spacer(StdVertSpacer)
                         FollowSetItem(
                             modifier = Modifier.fillMaxWidth(),
-                            listHeader = list.title,
-                            setVisibility = list.visibility,
+                            listHeader = set.title,
+                            setVisibility = set.visibility,
                             userName = userInfo.toBestDisplayName(),
-                            isUserInList = list.profiles.contains(userHex),
+                            userIsPrivateMember = set.privateProfiles.contains(userHex),
+                            userIsPublicMember = set.publicProfiles.contains(userHex),
                             onRemoveUser = {
                                 Log.d(
                                     "Amethyst",
@@ -182,23 +187,31 @@ fun FollowSetsManagementDialog(
                                 )
                                 followSetsViewModel.removeUserFromSet(
                                     userHex,
-                                    list,
+                                    userIsPrivate = set.privateProfiles.contains(userHex),
+                                    set,
                                     account,
                                 )
                                 Log.d(
                                     "Amethyst",
-                                    "Updated List. New size: ${list.profiles.size}",
+                                    "Updated List. Private profiles size: ${set.privateProfiles.size}," +
+                                        "Public profiles size: ${set.publicProfiles.size}",
                                 )
                             },
-                            onAddUser = {
+                            onAddUserToList = { userShouldBePrivate ->
                                 Log.d(
                                     "Amethyst",
                                     "ProfileActions: Adding item to list ...",
                                 )
-                                followSetsViewModel.addUserToSet(userHex, list, account)
+                                followSetsViewModel.addUserToSet(
+                                    userHex,
+                                    set,
+                                    userShouldBePrivate,
+                                    account,
+                                )
                                 Log.d(
                                     "Amethyst",
-                                    "Updated List. New size: ${list.profiles.size}",
+                                    "Updated List. Private profiles size: ${set.privateProfiles.size}," +
+                                        "Public profiles size: ${set.publicProfiles.size}",
                                 )
                             },
                         )
@@ -222,11 +235,11 @@ fun FollowSetsManagementDialog(
             if (followSetsState != FollowSetFeedState.Loading) {
                 FollowSetsCreationMenu(
                     userName = userInfo.toBestDisplayName(),
-                    onSetCreate = { setName, setIsPrivate, description ->
+                    onSetCreate = { setName, memberShouldBePrivate, description ->
                         followSetsViewModel.addFollowSet(
                             setName = setName,
                             setDescription = description,
-                            isListPrivate = setIsPrivate,
+                            firstMemberShouldBePrivate = memberShouldBePrivate,
                             optionalFirstMemberHex = userHex,
                             account = account,
                         )
@@ -306,11 +319,13 @@ fun FollowSetItem(
     listHeader: String,
     setVisibility: SetVisibility,
     userName: String,
-    isUserInList: Boolean,
-    onAddUser: () -> Unit,
+    userIsPrivateMember: Boolean,
+    userIsPublicMember: Boolean,
+    onAddUserToList: (shouldBePrivateMember: Boolean) -> Unit,
     onRemoveUser: () -> Unit,
 ) {
     val context = LocalContext.current
+    val isUserInList = userIsPrivateMember || userIsPublicMember
     Row(
         modifier =
             modifier
@@ -330,26 +345,10 @@ fun FollowSetItem(
             ) {
                 Text(listHeader, fontWeight = FontWeight.Bold)
                 Spacer(modifier = StdHorzSpacer)
-                setVisibility.let {
-                    val text by derivedStateOf {
-                        when (it) {
-                            SetVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
-                            SetVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
-                            SetVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
-                        }
-                    }
-                    Icon(
-                        painter =
-                            painterResource(
-                                when (setVisibility) {
-                                    SetVisibility.Public -> R.drawable.ic_public
-                                    SetVisibility.Private -> R.drawable.lock
-                                    SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                                },
-                            ),
-                        contentDescription = stringRes(R.string.follow_set_type_description, text),
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.format_list_bulleted_type),
+                    contentDescription = stringRes(R.string.follow_set_icon_description),
+                )
             }
 
             Spacer(modifier = StdVertSpacer)
@@ -362,7 +361,11 @@ fun FollowSetItem(
                         Text(
                             text =
                                 if (isUserInList) {
-                                    stringRes(R.string.follow_set_presence_indicator, userName)
+                                    if (userIsPublicMember) {
+                                        stringRes(R.string.follow_set_public_presence_indicator, userName)
+                                    } else {
+                                        stringRes(R.string.follow_set_private_presence_indicator, userName)
+                                    }
                                 } else {
                                     stringRes(R.string.follow_set_absence_indicator, userName)
                                 },
@@ -389,9 +392,14 @@ fun FollowSetItem(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            val isUserAddTapped = remember { mutableStateOf(false) }
             IconButton(
                 onClick = {
-                    if (isUserInList) onRemoveUser() else onAddUser()
+                    if (isUserInList) {
+                        onRemoveUser()
+                    } else {
+                        isUserAddTapped.value = true
+                    }
                 },
                 modifier =
                     Modifier
@@ -423,7 +431,47 @@ fun FollowSetItem(
                 text = stringRes(if (isUserInList) R.string.remove else R.string.add),
                 color = MaterialTheme.colorScheme.onBackground,
             )
+
+            UserAdditionOptionsMenu(
+                isExpanded = isUserAddTapped.value,
+                onUserAdd = { shouldBePrivateMember ->
+                    onAddUserToList(shouldBePrivateMember)
+                },
+                onDismiss = { isUserAddTapped.value = false },
+            )
         }
+    }
+}
+
+@Composable
+private fun UserAdditionOptionsMenu(
+    modifier: Modifier = Modifier,
+    isExpanded: Boolean,
+    onUserAdd: (asPrivateMember: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = isExpanded,
+        onDismissRequest = onDismiss,
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.follow_set_public_member_add_label))
+            },
+            onClick = {
+                onUserAdd(false)
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.follow_set_private_member_add_label))
+            },
+            onClick = {
+                onUserAdd(true)
+                onDismiss()
+            },
+        )
     }
 }
 
@@ -431,7 +479,7 @@ fun FollowSetItem(
 fun FollowSetsCreationMenu(
     modifier: Modifier = Modifier,
     userName: String,
-    onSetCreate: (setName: String, setIsPrivate: Boolean, description: String?) -> Unit,
+    onSetCreate: (setName: String, memberShouldBePrivate: Boolean, description: String?) -> Unit,
 ) {
     val isListAdditionDialogOpen = remember { mutableStateOf(false) }
     val isPrivateOptionTapped = remember { mutableStateOf(false) }
@@ -474,7 +522,6 @@ fun FollowSetsCreationMenu(
                 isListAdditionDialogOpen.value = false
                 isPrivateOptionTapped.value = false
             },
-            shouldBePrivate = isPrivateOptionTapped.value,
             onCreateList = { name, description ->
                 onSetCreate(name, isPrivateOptionTapped.value, description)
             },
@@ -528,7 +575,11 @@ fun FollowSetCreationItem(
         }
         Spacer(modifier = StdVertSpacer)
         Text(
-            stringRes(R.string.follow_set_creation_item_description, setTypeLabel, userName),
+            stringRes(
+                R.string.follow_set_creation_item_description,
+                userName,
+                setTypeLabel.lowercase(Locale.current.platformLocale),
+            ),
             fontWeight = FontWeight.Light,
             overflow = TextOverflow.Ellipsis,
             maxLines = 2,

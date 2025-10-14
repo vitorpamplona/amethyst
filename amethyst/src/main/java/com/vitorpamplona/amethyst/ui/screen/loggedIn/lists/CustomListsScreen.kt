@@ -30,9 +30,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
@@ -48,8 +50,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -119,12 +119,11 @@ fun ListsAndSetsScreen(
         refresh = {
             followSetsViewModel.invalidateData()
         },
-        addItem = { title: String, description: String?, listType: SetVisibility ->
-            val isSetPrivate = listType == SetVisibility.Private
+        addItem = { title: String, description: String? ->
+
             followSetsViewModel.addFollowSet(
                 setName = title,
                 setDescription = description,
-                isListPrivate = isSetPrivate,
                 account = accountViewModel.account,
             )
         },
@@ -135,6 +134,21 @@ fun ListsAndSetsScreen(
             followSetsViewModel.renameFollowSet(
                 newName = newValue,
                 followSet = followSet,
+                account = accountViewModel.account,
+            )
+        },
+        changeItemDescription = { followSet, newDescription ->
+            followSetsViewModel.modifyFollowSetDescription(
+                newDescription = newDescription,
+                followSet = followSet,
+                account = accountViewModel.account,
+            )
+        },
+        cloneItem = { followSet, customName, customDescription ->
+            followSetsViewModel.cloneFollowSet(
+                currentFollowSet = followSet,
+                customCloneName = customName,
+                customCloneDescription = customDescription,
                 account = accountViewModel.account,
             )
         },
@@ -153,14 +167,16 @@ fun ListsAndSetsScreen(
 fun CustomListsScreen(
     followSetFeedState: FollowSetFeedState,
     refresh: () -> Unit,
-    addItem: (title: String, description: String?, listType: SetVisibility) -> Unit,
+    addItem: (title: String, description: String?) -> Unit,
     openItem: (identifier: String) -> Unit,
     renameItem: (followSet: FollowSet, newName: String) -> Unit,
+    changeItemDescription: (followSet: FollowSet, newDescription: String?) -> Unit,
+    cloneItem: (followSet: FollowSet, customName: String?, customDesc: String?) -> Unit,
     deleteItem: (followSet: FollowSet) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 3 }
+    val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()
 
     DisappearingScaffold(
@@ -185,22 +201,14 @@ fun CustomListsScreen(
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                         text = { Text(text = stringRes(R.string.labeled_bookmarks), overflow = TextOverflow.Visible) },
                     )
-                    Tab(
-                        selected = pagerState.currentPage == 2,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                        text = { Text(text = stringRes(R.string.general_bookmarks), overflow = TextOverflow.Visible) },
-                    )
                 }
             }
         },
         floatingButton = {
             // TODO: Show components based on current tab
             FollowSetFabsAndMenu(
-                onAddPrivateSet = { name: String, description: String? ->
-                    addItem(name, description, SetVisibility.Private)
-                },
-                onAddPublicSet = { name: String, description: String? ->
-                    addItem(name, description, SetVisibility.Public)
+                onAddSet = { name: String, description: String? ->
+                    addItem(name, description)
                 },
             )
         },
@@ -222,11 +230,13 @@ fun CustomListsScreen(
                             onRefresh = refresh,
                             onOpenItem = openItem,
                             onRenameItem = renameItem,
+                            onItemDescriptionChange = changeItemDescription,
+                            onItemClone = cloneItem,
                             onDeleteItem = deleteItem,
                         )
 
                     1 -> LabeledBookmarksFeedView()
-                    2 -> GeneralBookmarksFeedView()
+//                    2 -> GeneralBookmarksFeedView()
                 }
             }
         }
@@ -236,57 +246,34 @@ fun CustomListsScreen(
 @Composable
 private fun FollowSetFabsAndMenu(
     modifier: Modifier = Modifier,
-    onAddPrivateSet: (name: String, description: String?) -> Unit,
-    onAddPublicSet: (name: String, description: String?) -> Unit,
+    onAddSet: (name: String, description: String?) -> Unit,
 ) {
     val isSetAdditionDialogOpen = remember { mutableStateOf(false) }
-    val isPrivateOptionTapped = remember { mutableStateOf(false) }
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        FloatingActionButton(
-            onClick = {
-                isPrivateOptionTapped.value = true
-                isSetAdditionDialogOpen.value = true
-            },
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-        ) {
+    ExtendedFloatingActionButton(
+        text = {
+            Text(text = stringRes(R.string.follow_set_create_btn_label))
+        },
+        icon = {
             Icon(
-                painter = painterResource(R.drawable.lock_plus),
+                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                 contentDescription = null,
-                tint = Color.White,
             )
-        }
-        FloatingActionButton(
-            onClick = {
-                isSetAdditionDialogOpen.value = true
-            },
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.earth_plus),
-                contentDescription = null,
-                tint = Color.White,
-            )
-        }
-    }
+        },
+        onClick = {
+            isSetAdditionDialogOpen.value = true
+        },
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    )
 
     if (isSetAdditionDialogOpen.value) {
         NewSetCreationDialog(
             onDismiss = {
                 isSetAdditionDialogOpen.value = false
-                isPrivateOptionTapped.value = false
             },
-            shouldBePrivate = isPrivateOptionTapped.value,
             onCreateList = { name, description ->
-                if (isPrivateOptionTapped.value) {
-                    onAddPrivateSet(name, description)
-                } else {
-                    onAddPublicSet(name, description)
-                }
+                onAddSet(name, description)
             },
         )
     }
@@ -296,27 +283,10 @@ private fun FollowSetFabsAndMenu(
 fun NewSetCreationDialog(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
-    shouldBePrivate: Boolean,
     onCreateList: (name: String, description: String?) -> Unit,
 ) {
     val newListName = remember { mutableStateOf("") }
     val newListDescription = remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-
-    val listTypeText =
-        stringRes(
-            context,
-            when (shouldBePrivate) {
-                true -> R.string.follow_set_type_private
-                false -> R.string.follow_set_type_public
-            },
-        )
-
-    val listTypeIcon =
-        when (shouldBePrivate) {
-            true -> R.drawable.lock
-            false -> R.drawable.ic_public
-        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -325,12 +295,8 @@ fun NewSetCreationDialog(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    painter = painterResource(listTypeIcon),
-                    contentDescription = null,
-                )
                 Text(
-                    text = stringRes(R.string.follow_set_creation_dialog_title, listTypeText),
+                    text = stringRes(R.string.follow_set_creation_dialog_title),
                 )
             }
         },
@@ -347,7 +313,7 @@ fun NewSetCreationDialog(
                     },
                 )
                 Spacer(modifier = DoubleVertSpacer)
-                // For the list description
+                // For the set description
                 TextField(
                     value =
                         (
@@ -424,6 +390,12 @@ private fun SetItemPreview() {
             },
             onFollowSetRename = {
                 println("Follow set new name: $it")
+            },
+            onFollowSetDescriptionChange = { description ->
+                println("The follow set's description has been changed to $description")
+            },
+            onFollowSetClone = { newName, newDesc ->
+                println("The follow set has been cloned, and has custom name: $newName, Desc: $newDesc")
             },
             onFollowSetDelete = {
                 println(" The follow set ${sampleFollowSet.title} has been deleted.")

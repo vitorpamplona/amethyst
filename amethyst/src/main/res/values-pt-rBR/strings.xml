@@ -453,8 +453,7 @@
     <string name="follow_set_empty_feed_msg">Parece que você ainda não tem conjuntos de seguimento.\nToque abaixo para atualizar ou use o botão de adicionar para criar um novo.</string>
     <string name="follow_set_add_author_from_note_action">Adicionar autor ao conjunto de seguimento</string>
     <string name="follow_set_profile_actions_menu_description">Adicionar ou remover usuário de listas, ou criar uma nova lista com este usuário.</string>
-    <string name="follow_set_type_description">Ícone da lista %1$s</string>
-    <string name="follow_set_presence_indicator">"%1$s está presente nesta lista"</string>
+    <string name="follow_set_icon_description">Ícone da lista %1$s</string>
     <string name="follow_set_absence_indicator">"%1$s não está nesta lista"</string>
     <string name="follow_set_man_dialog_title">Seus conjuntos de seguimento</string>
     <string name="follow_set_empty_dialog_msg">Nenhum conjunto de seguimento foi encontrado ou você não possui nenhum. Toque abaixo para atualizar ou use o menu para criar um.</string>

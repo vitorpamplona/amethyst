@@ -31,9 +31,10 @@ data class FollowSet(
     val identifierTag: String,
     val title: String,
     val description: String?,
-    val visibility: SetVisibility,
-    val profiles: Set<String>,
-) : NostrSet(setVisibility = visibility, content = profiles) {
+    val visibility: SetVisibility = SetVisibility.Mixed,
+    val privateProfiles: Set<String> = emptySet(),
+    val publicProfiles: Set<String> = emptySet(),
+) : NostrSet(setVisibility = visibility, privateContent = privateProfiles, publicContent = publicProfiles) {
     companion object {
         fun mapEventToSet(
             event: PeopleListEvent,
@@ -53,26 +54,22 @@ data class FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = SetVisibility.Private,
-                    profiles = privateFollows.toSet(),
+                    privateProfiles = privateFollows.toSet(),
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
                 FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = SetVisibility.Public,
-                    profiles = publicFollows.toSet(),
+                    publicProfiles = publicFollows.toSet(),
                 )
             } else {
-                // Follow set is empty, so assume public. Why? Nostr limitation.
-                // TODO: Could this be fixed at protocol level?
                 FollowSet(
                     identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
-                    visibility = SetVisibility.Public,
-                    profiles = publicFollows.toSet(),
+                    privateProfiles = privateFollows.toSet(),
+                    publicProfiles = publicFollows.toSet(),
                 )
             }
         }
