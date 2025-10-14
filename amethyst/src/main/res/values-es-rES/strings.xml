@@ -112,6 +112,7 @@
     <string name="post">Publicar</string>
     <string name="save">Guardar</string>
     <string name="create">Crear</string>
+    <string name="rename">Cambiar nombre</string>
     <string name="cancel">Cancelar</string>
     <string name="failed_to_upload_the_image">No se pudo cargar la imagen</string>
     <string name="relay_address">Dirección del relé</string>
@@ -445,6 +446,28 @@
     <string name="follow_list_aroundme">A mi alrededor</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista de silenciados</string>
+    <string name="follow_sets">Conjuntos de seguimiento</string>
+    <string name="labeled_bookmarks">Marcadores etiquetados</string>
+    <string name="general_bookmarks">Marcadores generales</string>
+    <string name="follow_set_type_public">Público</string>
+    <string name="follow_set_type_private">Privado</string>
+    <string name="follow_set_type_mixed">Mixto</string>
+    <string name="follow_set_empty_feed_msg">        Al parecer, aún no tienes ningún conjunto de seguimiento. 
+        \nPulsa abajo para actualizar o pulsa los botones de añadir para crear uno nuevo.
+    </string>
+    <string name="follow_set_add_author_from_note_action">Añadir autor a conjunto de seguimiento</string>
+    <string name="follow_set_profile_actions_menu_description">Añadir o eliminar usuario de las listas, o crear una nueva lista con este usuario.</string>
+    <string name="follow_set_absence_indicator">%1$s no se encuentra en esta lista</string>
+    <string name="follow_set_man_dialog_title">Tus conjuntos de seguimiento</string>
+    <string name="follow_set_empty_dialog_msg">No se han encontrado conjuntos de seguimiento, o no tienes ningún conjunto de seguimiento. Pulsa abajo para actualizar o utiliza el menú para crear uno.</string>
+    <string name="follow_set_error_dialog_msg">Ha habido un problema al recuperar: %1$s</string>
+    <string name="follow_set_creation_menu_title">Crear nueva lista</string>
+    <string name="follow_set_creation_name_label">Nombre del conjunto</string>
+    <string name="follow_set_creation_desc_label">Descripción del conjunto (opcional)</string>
+    <string name="follow_set_creation_action_btn_label">Crear conjunto</string>
+    <string name="follow_set_rename_btn_label">Cambiar nombre del conjunto</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Estás cambiando el nombre de </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> a..</string>
     <string name="connect_through_your_orbot_setup_short">El puerto predeterminado es 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Conéctate a través de Tor con Orbot
         \n\n1. Instala [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android).
@@ -832,6 +855,8 @@
     <string name="media_compression_quality_medium">Media</string>
     <string name="media_compression_quality_high">Alta</string>
     <string name="media_compression_quality_uncompressed">Sin comprimir</string>
+    <string name="video_codec_h265_label">Usa H.265/HEVC Codec</string>
+    <string name="video_codec_h265_description">Mejor calidad en tamaños de archivos más pequeños, pero no todos los dispositivos admiten la reproducción H.265.</string>
     <string name="edit_draft">Editar borrador</string>
     <string name="login_with_qr_code">Iniciar sesión con código QR</string>
     <string name="route">Ruta</string>
@@ -1014,6 +1039,8 @@
     <string name="torrent_download">Descargar</string>
     <string name="torrent_failure">Error al abrir el archivo</string>
     <string name="torrent_no_apps">No hay aplicaciones torrent instaladas para abrir y descargar el archivo.</string>
+    <string name="torrent_no_info">El evento no tiene suficiente información para crear un enlace magnético</string>
+    <string name="my_lists_and_sets">Mis listas/conjuntos</string>
     <string name="select_list_to_filter">Selecciona una lista para filtrar el tablón</string>
     <string name="temporary_account">Cerrar sesión al bloquear dispositivo</string>
     <string name="private_message">Mensaje privado</string>
@@ -1035,4 +1062,5 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">¿Te gustaría enviar el informe de error reciente a Amethyst en un mensaje directo? No se compartirá información personal</string>
     <string name="crashreport_found_send">Enviarlo</string>
     <string name="this_message_will_disappear_in_days">Este mensaje desaparecerá en %1$d días</string>
+    <string name="select_signer">Seleccionar firmante</string>
 </resources>
