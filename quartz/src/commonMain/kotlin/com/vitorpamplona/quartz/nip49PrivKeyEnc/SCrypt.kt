@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.utils.mac.MacInstance
  * [http://www.tarsnap.com/scrypt.html<a> and
  * fall back to the pure Java version if that fails.
  *
- * @author  Will Glozer
+ * @author Will Glozer
 </a>](http://www.tarsnap.com/scrypt.html) */
 object SCrypt {
     /**
