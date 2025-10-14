@@ -1063,4 +1063,24 @@
     <string name="crashreport_found_send">Enviar</string>
     <string name="this_message_will_disappear_in_days">Esta mensagem desaparecerá em %1$d dias</string>
     <string name="select_signer">Selecionar assinador</string>
+
+    <string name="follow_set_create_btn_label">Novo</string>
+    <string name="follow_set_public_presence_indicator">%1$s é um membro público</string>
+    <string name="follow_set_private_presence_indicator">%1$s é um membro privado</string>
+    <string name="follow_set_public_member_add_label">Adicionar como membro público</string>
+    <string name="follow_set_private_member_add_label">Adicionar como membro privado</string>
+    <string name="follow_set_public_members_header_label">Perfis públicos</string>
+    <string name="follow_set_private_members_header_label">Perfis privados</string>
+    <string name="follow_set_single_member_label">membro</string>
+    <string name="follow_set_multiple_member_label">membros</string>
+    <string name="follow_set_empty_label">Nenhum membro</string>
+    <string name="follow_set_copy_dialog_title">Copiar/Clonar conjunto de seguidores</string>
+    <string name="follow_set_desc_modify_label">Modificar descrição</string>
+    <string name="follow_set_empty_desc_label">Esta lista não tem descrição</string>
+    <string name="follow_set_current_desc_label">Descrição atual:</string>
+    <string name="follow_set_copy_indicator_description">Você pode definir um nome/descrição personalizada para este conjunto clonado abaixo.</string>
+    <string name="follow_set_copy_name_label">(Nome original do conjunto)</string>
+    <string name="follow_set_copy_desc_label">(Descrição original do conjunto)</string>
+    <string name="follow_set_copy_action_btn_label">Copiar/Clonar conjunto</string>
+    <string name="follow_set_desc_modify_btn_label">Modificar</string>
 </resources>
