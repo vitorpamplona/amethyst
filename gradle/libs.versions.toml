@@ -33,7 +33,7 @@ languageId = "17.0.6"
 lazysodiumAndroid = "5.2.0"
 lazysodiumJava = "5.2.0"
 lifecycleRuntimeKtx = "2.9.4"
-lightcompressor = "1.5.0"
+lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
 media3 = "1.8.0"
 mockk = "1.14.5"
@@ -63,7 +63,7 @@ core = "1.7.0"
 mavenPublish = "0.34.0"
 
 [libraries]
-abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor" }
+abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
