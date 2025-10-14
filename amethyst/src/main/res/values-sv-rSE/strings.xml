@@ -454,7 +454,7 @@
     <string name="follow_set_add_author_from_note_action">Lägg till författare i följ-set</string>
     <string name="follow_set_profile_actions_menu_description">Lägg till eller ta bort användare från listor, eller skapa en ny lista med denna användare.</string>
     <string name="follow_set_icon_description">Ikon för %1$s-lista</string>
-    <string name="follow_set_absence_indicator">"%1$s finns inte i denna lista"</string>
+    <string name="follow_set_absence_indicator">%1$s finns inte i denna lista</string>
     <string name="follow_set_man_dialog_title">Dina följ-set</string>
     <string name="follow_set_empty_dialog_msg">Inga följ-set hittades, eller så har du inga. Tryck nedan för att uppdatera eller använd menyn för att skapa ett.</string>
     <string name="follow_set_error_dialog_msg">Ett problem uppstod vid hämtning: %1$s</string>

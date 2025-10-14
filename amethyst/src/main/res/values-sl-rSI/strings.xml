@@ -123,6 +123,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="post">Pošlji</string>
     <string name="save">Shrani</string>
     <string name="create">Ustvari</string>
+    <string name="rename">Preimenuj</string>
     <string name="cancel">Prekliči</string>
     <string name="failed_to_upload_the_image">Neuspelo nalaganje slike</string>
     <string name="relay_address">Naslov releja</string>
@@ -456,8 +457,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_list_aroundme">V moji okolici</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
+    <string name="labeled_bookmarks">Označeni zaznamki</string>
+    <string name="general_bookmarks">Splošni zaznamki</string>
+    <string name="follow_set_type_public">Javno</string>
     <string name="follow_set_type_private">Zasebno</string>
     <string name="follow_set_type_mixed">Mešano</string>
+    <string name="follow_set_profile_actions_menu_description">Dodaj ali odstrani uprabnika iz seznama, ali pa ustvari nov seznam s tem uporabnikom.</string>
+    <string name="follow_set_creation_menu_title">Ustvari nov seznam</string>
     <string name="connect_through_your_orbot_setup_short">Prevzeta vrata so 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot aplikacijo
         \n\n1. Namesti [Orbot aplikacijo](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -845,6 +851,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="media_compression_quality_medium">Srednja</string>
     <string name="media_compression_quality_high">Visoka</string>
     <string name="media_compression_quality_uncompressed">Nestisnjeno</string>
+    <string name="video_codec_h265_label">Uporabi H.265/HEVC Codec</string>
     <string name="edit_draft">Uredi osnutek</string>
     <string name="login_with_qr_code">Vpiši se z QR kodo</string>
     <string name="route">Pot</string>
@@ -1049,4 +1056,5 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Želite poslati poročilo o napaki Amethyst-u preko zasebnega sporočila? Vaši osebni podatki NE bojo posredovani.</string>
     <string name="crashreport_found_send">Pošlji</string>
     <string name="this_message_will_disappear_in_days">To sporočilo bo izginilo čez %1$d dni</string>
+    <string name="select_signer">Izberi podpisnika</string>
 </resources>
