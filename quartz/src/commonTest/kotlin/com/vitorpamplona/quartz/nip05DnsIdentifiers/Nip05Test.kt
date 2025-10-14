@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -36,7 +36,7 @@ class Nip05Test {
 
     @Test
     fun `test with matching case on user name`() =
-        runBlocking {
+        runTest {
             // Set-up
             val userNameToTest = ALL_UPPER_CASE_USER_NAME
             val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
@@ -51,7 +51,7 @@ class Nip05Test {
 
     @Test
     fun `test with NOT matching case on user name`() =
-        runBlocking {
+        runTest {
             // Set-up
             val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
             val nostrJson = "{ \"names\": { \"$ALL_UPPER_CASE_USER_NAME\": \"$expectedPubKey\" }}"

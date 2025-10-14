@@ -28,7 +28,7 @@ import io.mockk.impl.annotations.SpyK
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -54,7 +54,7 @@ class SplitterTest {
 
     @Test
     fun testSplit() =
-        runBlocking {
+        runTest {
             val vitor = mySplitBuilder.addItem("Vitor")
 
             assertEquals(1f, mySplitBuilder.items[vitor].percentage, 0.01f)
