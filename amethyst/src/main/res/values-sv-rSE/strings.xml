@@ -453,9 +453,8 @@
     <string name="follow_set_empty_feed_msg">Det verkar som att du inte har några följ-set ännu.\nTryck nedan för att uppdatera eller använd plusknappen för att skapa ett nytt.</string>
     <string name="follow_set_add_author_from_note_action">Lägg till författare i följ-set</string>
     <string name="follow_set_profile_actions_menu_description">Lägg till eller ta bort användare från listor, eller skapa en ny lista med denna användare.</string>
-    <string name="follow_set_type_description">Ikon för %1$s-lista</string>
-    <string name="follow_set_presence_indicator">"%1$s finns i denna lista"</string>
-    <string name="follow_set_absence_indicator">"%1$s finns inte i denna lista"</string>
+    <string name="follow_set_icon_description">Ikon för %1$s-lista</string>
+    <string name="follow_set_absence_indicator">%1$s finns inte i denna lista</string>
     <string name="follow_set_man_dialog_title">Dina följ-set</string>
     <string name="follow_set_empty_dialog_msg">Inga följ-set hittades, eller så har du inga. Tryck nedan för att uppdatera eller använd menyn för att skapa ett.</string>
     <string name="follow_set_error_dialog_msg">Ett problem uppstod vid hämtning: %1$s</string>
@@ -1063,4 +1062,24 @@
     <string name="crashreport_found_send">Skicka</string>
     <string name="this_message_will_disappear_in_days">Detta meddelande försvinner om %1$d dagar</string>
     <string name="select_signer">Välj signatör</string>
+    <string name="follow_set_create_btn_label">Ny</string>
+    <string name="follow_set_public_presence_indicator">%1$s är en offentlig medlem</string>
+    <string name="follow_set_private_presence_indicator">%1$s är en privat medlem</string>
+    <string name="follow_set_public_member_add_label">Lägg till som offentlig medlem</string>
+    <string name="follow_set_private_member_add_label">Lägg till som privat medlem</string>
+    <string name="follow_set_public_members_header_label">Offentliga profiler</string>
+    <string name="follow_set_private_members_header_label">Privata profiler</string>
+    <string name="follow_set_single_member_label">medlem</string>
+    <string name="follow_set_multiple_member_label">medlemmar</string>
+    <string name="follow_set_empty_label">Inga medlemmar</string>
+    <string name="follow_set_copy_dialog_title">Kopiera/Klona följlista</string>
+    <string name="follow_set_desc_modify_label">Ändra beskrivning</string>
+    <string name="follow_set_empty_desc_label">Den här listan har ingen beskrivning</string>
+    <string name="follow_set_current_desc_label">Nuvarande beskrivning:</string>
+    <string name="follow_set_copy_indicator_description">Du kan ange ett anpassat namn/beskrivning för denna klonlista nedan.</string>
+    <string name="follow_set_copy_name_label">(Ursprungligt listnamn)</string>
+    <string name="follow_set_copy_desc_label">(Ursprunglig beskrivning)</string>
+    <string name="follow_set_copy_action_btn_label">Kopiera/Klona lista</string>
+    <string name="follow_set_desc_modify_btn_label">Ändra</string>
+
 </resources>

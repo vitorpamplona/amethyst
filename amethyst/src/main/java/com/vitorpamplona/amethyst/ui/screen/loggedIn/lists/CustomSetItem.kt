@@ -37,13 +37,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -56,15 +53,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import kotlin.let
 
 @Composable
 fun CustomSetItem(
@@ -72,6 +68,8 @@ fun CustomSetItem(
     followSet: FollowSet,
     onFollowSetClick: () -> Unit,
     onFollowSetRename: (String) -> Unit,
+    onFollowSetDescriptionChange: (String?) -> Unit,
+    onFollowSetClone: (customName: String?, customDescription: String?) -> Unit,
     onFollowSetDelete: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -96,20 +94,75 @@ fun CustomSetItem(
                 ) {
                     Text(followSet.title, fontWeight = FontWeight.Bold)
                     Spacer(modifier = StdHorzSpacer)
-                    FilterChip(
-                        selected = true,
-                        onClick = {},
-                        label = {
-                            Text(text = "${followSet.profiles.size}")
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.People,
-                                contentDescription = null,
+                    if (followSet.publicProfiles.isEmpty() && followSet.privateProfiles.isEmpty()) {
+                        FilterChip(
+                            selected = true,
+                            onClick = {},
+                            label = {
+                                Text(text = stringRes(R.string.follow_set_empty_label))
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.People,
+                                    contentDescription = null,
+                                )
+                            },
+                            shape = ButtonBorder,
+                        )
+                    }
+                    if (followSet.publicProfiles.isNotEmpty()) {
+                        val publicMemberSize = followSet.publicProfiles.size
+                        val membersLabel =
+                            stringRes(
+                                context,
+                                if (publicMemberSize == 1) {
+                                    R.string.follow_set_single_member_label
+                                } else {
+                                    R.string.follow_set_multiple_member_label
+                                },
                             )
-                        },
-                        shape = ButtonBorder,
-                    )
+                        FilterChip(
+                            selected = true,
+                            onClick = {},
+                            label = {
+                                Text(text = "$publicMemberSize")
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.ic_public),
+                                    contentDescription = null,
+                                )
+                            },
+                            shape = ButtonBorder,
+                        )
+                        Spacer(modifier = StdHorzSpacer)
+                    }
+                    if (followSet.privateProfiles.isNotEmpty()) {
+                        val privateMemberSize = followSet.privateProfiles.size
+                        val membersLabel =
+                            stringRes(
+                                context,
+                                if (privateMemberSize == 1) {
+                                    R.string.follow_set_single_member_label
+                                } else {
+                                    R.string.follow_set_multiple_member_label
+                                },
+                            )
+                        FilterChip(
+                            selected = true,
+                            onClick = {},
+                            label = {
+                                Text(text = "$privateMemberSize")
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painterResource(R.drawable.lock),
+                                    contentDescription = null,
+                                )
+                            },
+                            shape = ButtonBorder,
+                        )
+                    }
                 }
                 Spacer(modifier = StdVertSpacer)
                 Text(
@@ -118,34 +171,6 @@ fun CustomSetItem(
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                 )
-            }
-
-            followSet.visibility.let {
-                val text by derivedStateOf {
-                    when (it) {
-                        SetVisibility.Public -> stringRes(context, R.string.follow_set_type_public)
-                        SetVisibility.Private -> stringRes(context, R.string.follow_set_type_private)
-                        SetVisibility.Mixed -> stringRes(context, R.string.follow_set_type_mixed)
-                    }
-                }
-                Column(
-                    modifier = Modifier.padding(top = 15.dp),
-                    verticalArrangement = Arrangement.Bottom,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        painter =
-                            painterResource(
-                                when (it) {
-                                    SetVisibility.Public -> R.drawable.ic_public
-                                    SetVisibility.Private -> R.drawable.lock
-                                    SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                                },
-                            ),
-                        contentDescription = stringRes(R.string.follow_set_type_description, text),
-                    )
-                    Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
-                }
             }
         }
 
@@ -159,7 +184,10 @@ fun CustomSetItem(
         ) {
             SetOptionsButton(
                 followSetName = followSet.title,
-                onListRename = onFollowSetRename,
+                followSetDescription = followSet.description,
+                onSetRename = onFollowSetRename,
+                onSetDescriptionChange = onFollowSetDescriptionChange,
+                onSetCloneCreate = onFollowSetClone,
                 onListDelete = onFollowSetDelete,
             )
         }
@@ -167,10 +195,13 @@ fun CustomSetItem(
 }
 
 @Composable
-fun SetOptionsButton(
+private fun SetOptionsButton(
     modifier: Modifier = Modifier,
     followSetName: String,
-    onListRename: (String) -> Unit,
+    followSetDescription: String?,
+    onSetRename: (String) -> Unit,
+    onSetDescriptionChange: (String?) -> Unit,
+    onSetCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onListDelete: () -> Unit,
 ) {
     val isMenuOpen = remember { mutableStateOf(false) }
@@ -181,10 +212,13 @@ fun SetOptionsButton(
         VerticalDotsIcon()
 
         SetOptionsMenu(
-            listName = followSetName,
+            setName = followSetName,
+            setDescription = followSetDescription,
             isExpanded = isMenuOpen.value,
             onDismiss = { isMenuOpen.value = false },
-            onListRename = onListRename,
+            onSetRename = onSetRename,
+            onSetDescriptionChange = onSetDescriptionChange,
+            onSetClone = onSetCloneCreate,
             onDelete = onListDelete,
         )
     }
@@ -194,26 +228,27 @@ fun SetOptionsButton(
 private fun SetOptionsMenu(
     modifier: Modifier = Modifier,
     isExpanded: Boolean,
-    listName: String,
-    onListRename: (String) -> Unit,
+    setName: String,
+    setDescription: String?,
+    onSetRename: (String) -> Unit,
+    onSetDescriptionChange: (String?) -> Unit,
+    onSetClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val isRenameDialogOpen = remember { mutableStateOf(false) }
     val renameString = remember { mutableStateOf("") }
 
+    val isDescriptionModDialogOpen = remember { mutableStateOf(false) }
+
+    val isCopyDialogOpen = remember { mutableStateOf(false) }
+    val optionalCloneName = remember { mutableStateOf<String?>(null) }
+    val optionalCloneDescription = remember { mutableStateOf<String?>(null) }
+
     DropdownMenu(
         expanded = isExpanded,
         onDismissRequest = onDismiss,
     ) {
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.quick_action_delete))
-            },
-            onClick = {
-                onDelete()
-            },
-        )
         DropdownMenuItem(
             text = {
                 Text(text = stringRes(R.string.follow_set_rename_btn_label))
@@ -223,25 +258,76 @@ private fun SetOptionsMenu(
                 onDismiss()
             },
         )
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.follow_set_desc_modify_label))
+            },
+            onClick = {
+                isDescriptionModDialogOpen.value = true
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.follow_set_copy_action_btn_label))
+            },
+            onClick = {
+                isCopyDialogOpen.value = true
+                onDismiss()
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                Text(text = stringRes(R.string.quick_action_delete))
+            },
+            onClick = {
+                onDelete()
+            },
+        )
     }
 
     if (isRenameDialogOpen.value) {
-        RenameDialog(
-            currentName = listName,
+        SetRenameDialog(
+            currentName = setName,
             newName = renameString.value,
             onStringRenameChange = {
                 renameString.value = it
             },
             onDismissDialog = { isRenameDialogOpen.value = false },
             onListRename = {
-                onListRename(renameString.value)
+                onSetRename(renameString.value)
             },
+        )
+    }
+
+    if (isDescriptionModDialogOpen.value) {
+        SetModifyDescriptionDialog(
+            currentDescription = setDescription,
+            onDismissDialog = { isDescriptionModDialogOpen.value = false },
+            onModifyDescription = onSetDescriptionChange,
+        )
+    }
+
+    if (isCopyDialogOpen.value) {
+        SetCloneDialog(
+            optionalNewName = optionalCloneName.value,
+            optionalNewDesc = optionalCloneDescription.value,
+            onCloneNameChange = {
+                optionalCloneName.value = it
+            },
+            onCloneDescChange = {
+                optionalCloneDescription.value = it
+            },
+            onCloneCreate = { name, description ->
+                onSetClone(optionalCloneName.value, optionalCloneDescription.value)
+            },
+            onDismiss = { isCopyDialogOpen.value = false },
         )
     }
 }
 
 @Composable
-private fun RenameDialog(
+private fun SetRenameDialog(
     modifier: Modifier = Modifier,
     currentName: String,
     newName: String,
@@ -296,6 +382,140 @@ private fun RenameDialog(
         },
         dismissButton = {
             Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun SetModifyDescriptionDialog(
+    modifier: Modifier = Modifier,
+    currentDescription: String?,
+    onDismissDialog: () -> Unit,
+    onModifyDescription: (String?) -> Unit,
+) {
+    val updatedDescription = remember { mutableStateOf<String?>(null) }
+
+    val modifyIndicatorLabel =
+        if (currentDescription == null) {
+            stringRes(R.string.follow_set_empty_desc_label)
+        } else {
+            buildAnnotatedString {
+                append(stringRes(R.string.follow_set_current_desc_label) + " ")
+                withStyle(
+                    SpanStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontStyle = FontStyle.Normal,
+                        fontSize = 15.sp,
+                    ),
+                ) {
+                    append("\"" + currentDescription + "\"")
+                }
+            }.text
+        }
+
+    AlertDialog(
+        onDismissRequest = onDismissDialog,
+        title = {
+            Text(text = stringRes(R.string.follow_set_desc_modify_label))
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = modifyIndicatorLabel,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Light,
+                    fontStyle = FontStyle.Italic,
+                )
+                TextField(
+                    value = updatedDescription.value ?: "",
+                    onValueChange = { updatedDescription.value = it },
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onModifyDescription(updatedDescription.value)
+                    onDismissDialog()
+                },
+            ) { Text(text = stringRes(R.string.follow_set_desc_modify_btn_label)) }
+        },
+        dismissButton = {
+            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun SetCloneDialog(
+    modifier: Modifier = Modifier,
+    optionalNewName: String?,
+    optionalNewDesc: String?,
+    onCloneNameChange: (String?) -> Unit,
+    onCloneDescChange: (String?) -> Unit,
+    onCloneCreate: (customName: String?, customDescription: String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringRes(R.string.follow_set_copy_dialog_title),
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Size5dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.follow_set_copy_indicator_description),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Light,
+                    fontStyle = FontStyle.Italic,
+                )
+                // For the set clone name
+                TextField(
+                    value = optionalNewName ?: "",
+                    onValueChange = onCloneNameChange,
+                    label = {
+                        Text(text = stringRes(R.string.follow_set_copy_name_label))
+                    },
+                )
+                Spacer(modifier = DoubleVertSpacer)
+                // For the set clone description
+                TextField(
+                    value = optionalNewDesc ?: "",
+                    onValueChange = onCloneDescChange,
+                    label = {
+                        Text(text = stringRes(R.string.follow_set_copy_desc_label))
+                    },
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onCloneCreate(optionalNewName, optionalNewDesc)
+                    onDismiss()
+                },
+            ) {
+                Text(stringRes(R.string.follow_set_copy_action_btn_label))
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+            ) {
+                Text(stringRes(R.string.cancel))
+            }
         },
     )
 }

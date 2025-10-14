@@ -257,16 +257,9 @@ object VideoCompressionHelper {
                                             "Compressed [$size] ($reductionPercent% reduction)",
                                     )
 
-                                    // Attempt to correct the path: if it contains "_temp" then remove it
-                                    val correctedPath =
-                                        if (path.contains("_temp")) {
-                                            path.replace("_temp", "")
-                                        } else {
-                                            path
-                                        }
                                     if (continuation.isActive) {
                                         continuation.resume(
-                                            MediaCompressorResult(Uri.fromFile(File(correctedPath)), contentType, size),
+                                            MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
                                         )
                                     }
                                 }

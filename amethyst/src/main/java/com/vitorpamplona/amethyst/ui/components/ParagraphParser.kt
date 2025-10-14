@@ -197,19 +197,26 @@ class ParagraphParser {
                     j++
                 }
 
-                if (imageSegments.size > 1) {
-                    val imageContents =
-                        imageSegments
-                            .mapNotNull { segment ->
-                                val imageUrl = segment.segmentText
-                                context.state.imagesForPager[imageUrl] as? MediaUrlImage
-                            }.toImmutableList()
-
-                    if (imageContents.isNotEmpty()) {
-                        renderGallery(imageContents, context.accountViewModel)
-                    }
-                } else {
+                if (imageSegments.size <= 1) {
                     renderSingleWord(imageSegments.firstOrNull() ?: word, context)
+                } else {
+                    val resolvedImages =
+                        imageSegments.mapNotNull { segment ->
+                            val imageUrl = segment.segmentText
+                            context.state.imagesForPager[imageUrl] as? MediaUrlImage
+                        }
+
+                    // Render gallery only if all segments are images
+                    if (resolvedImages.size == imageSegments.size) {
+                        renderGallery(
+                            resolvedImages.toImmutableList(),
+                            context.accountViewModel,
+                        )
+                    } else {
+                        imageSegments.forEach { segment ->
+                            renderSingleWord(segment, context)
+                        }
+                    }
                 }
 
                 i = j // jump past processed run

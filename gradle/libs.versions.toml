@@ -33,7 +33,7 @@ languageId = "17.0.6"
 lazysodiumAndroid = "5.2.0"
 lazysodiumJava = "5.2.0"
 lifecycleRuntimeKtx = "2.9.4"
-lightcompressor = "1.5.0"
+lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
 media3 = "1.8.0"
 mockk = "1.14.5"
@@ -63,7 +63,7 @@ core = "1.7.0"
 mavenPublish = "0.34.0"
 
 [libraries]
-abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor" }
+abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -102,6 +102,7 @@ androidx-security-crypto-ktx = { group = "androidx.security", name = "security-c
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 audiowaveform = { group = "com.github.lincollincol", name = "compose-audiowaveform", version.ref = "audiowaveform" }
@@ -128,6 +129,7 @@ markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", nam
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }

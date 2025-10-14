@@ -457,9 +457,8 @@
     </string>
     <string name="follow_set_add_author_from_note_action">लेखक जोडें अनुगम्य सूची में</string>
     <string name="follow_set_profile_actions_menu_description">प्रयोक्ता को सूचियों में जोडें अथवा हटाएँ अथवा इस प्रयोक्ता के साथ नई सूची बनाएँ।</string>
-    <string name="follow_set_type_description">सूची %1$s के लिए चिह्न</string>
-    <string name="follow_set_presence_indicator">"%1$s इस सूची में है"</string>
-    <string name="follow_set_absence_indicator">"%1$s इस सूची में नहीं है"</string>
+    <string name="follow_set_icon_description">सूची %1$s के लिए चिह्न</string>
+    <string name="follow_set_absence_indicator">%1$s इस सूची में नहीं है</string>
     <string name="follow_set_man_dialog_title">आपके अनुगम्य सूचियाँ</string>
     <string name="follow_set_empty_dialog_msg">कोई अनुगम्य सूचियाँ प्राप्त नहीं। अथवा आपका कोई अनुगम्य सूचियाँ हैं नहीं। नवीकरण के लिए नीचे दबाएँ अथवा विकल्पसूची द्वारा एक नया बनाएँ।</string>
     <string name="follow_set_error_dialog_msg">लाने में अपक्रम : %1$s</string>
@@ -860,6 +859,8 @@
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
     <string name="media_compression_quality_uncompressed">असंकुचित</string>
+    <string name="video_codec_h265_label">उच्च कार्यक्षमता चलचित्र संकुचनविस्तारण अथवा एच॰२६५ क्रमलेख का प्रयोग करें</string>
+    <string name="video_codec_h265_description">अधिक गुणवत्ता के साथ सूक्ष्मतर अभिलेख आकार परन्तु एच॰२६५ चालन सभी यन्त्रों द्वारा अवलम्बित नहीं।</string>
     <string name="edit_draft">पाण्डुलिपि का सम्पादन करें</string>
     <string name="login_with_qr_code">क्यूआर॰ क्रमचित्र के साथ प्रवेशांकन करें</string>
     <string name="route">मार्ग</string>

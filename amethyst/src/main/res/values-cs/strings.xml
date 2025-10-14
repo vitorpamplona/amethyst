@@ -961,8 +961,7 @@
     <string name="follow_set_empty_feed_msg">Zdá se, že zatím nemáte žádné sady sledování.\nKlepněte níže pro obnovení nebo použijte tlačítko přidat k vytvoření nové.</string>
     <string name="follow_set_add_author_from_note_action">Přidat autora do sady sledování</string>
     <string name="follow_set_profile_actions_menu_description">Přidat nebo odebrat uživatele ze seznamů, nebo vytvořit nový seznam s tímto uživatelem.</string>
-    <string name="follow_set_type_description">Ikona pro seznam %1$s</string>
-    <string name="follow_set_presence_indicator">%1$s je v tomto seznamu</string>
+    <string name="follow_set_icon_description">Ikona pro seznam %1$s</string>
     <string name="follow_set_absence_indicator">%1$s není v tomto seznamu</string>
     <string name="follow_set_man_dialog_title">Vaše sady sledování</string>
     <string name="follow_set_empty_dialog_msg">Nebyly nalezeny žádné sady sledování, nebo žádné nemáte. Klepněte níže pro obnovení nebo použijte menu pro vytvoření nové.</string>

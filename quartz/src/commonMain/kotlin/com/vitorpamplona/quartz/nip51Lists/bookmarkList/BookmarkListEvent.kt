@@ -134,7 +134,7 @@ class BookmarkListEvent(
                 val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
                 resign(
                     privateTags = privateTags.remove(bookmarkIdTag.toTagIdOnly()),
-                    tags = earlierVersion.tags.remove(bookmarkIdTag.toTagIdOnly()),
+                    tags = earlierVersion.tags,
                     signer = signer,
                     createdAt = createdAt,
                 )

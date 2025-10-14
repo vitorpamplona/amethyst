@@ -453,9 +453,8 @@
     <string name="follow_set_empty_feed_msg">Zdá se, že zatím nemáte žádné sady sledování.\nKlepněte níže pro obnovení nebo použijte tlačítko přidat k vytvoření nové.</string>
     <string name="follow_set_add_author_from_note_action">Přidat autora do sady sledování</string>
     <string name="follow_set_profile_actions_menu_description">Přidat nebo odebrat uživatele ze seznamů, nebo vytvořit nový seznam s tímto uživatelem.</string>
-    <string name="follow_set_type_description">Ikona pro seznam %1$s</string>
-    <string name="follow_set_presence_indicator">"%1$s je v tomto seznamu"</string>
-    <string name="follow_set_absence_indicator">"%1$s není v tomto seznamu"</string>
+    <string name="follow_set_icon_description">Ikona pro seznam %1$s</string>
+    <string name="follow_set_absence_indicator">%1$s není v tomto seznamu</string>
     <string name="follow_set_man_dialog_title">Vaše sady sledování</string>
     <string name="follow_set_empty_dialog_msg">Nebyly nalezeny žádné sady sledování, nebo žádné nemáte. Klepněte níže pro obnovení nebo použijte menu pro vytvoření nové.</string>
     <string name="follow_set_error_dialog_msg">Došlo k problému při načítání: %1$s</string>
@@ -1064,4 +1063,24 @@
     <string name="crashreport_found_send">Odeslat</string>
     <string name="this_message_will_disappear_in_days">Tato zpráva zmizí za %1$d dní</string>
     <string name="select_signer">Vybrat podepisovatele</string>
+
+    <string name="follow_set_create_btn_label">Nový</string>
+    <string name="follow_set_public_presence_indicator">%1$s je veřejný člen</string>
+    <string name="follow_set_private_presence_indicator">%1$s je soukromý člen</string>
+    <string name="follow_set_public_member_add_label">Přidat jako veřejného člena</string>
+    <string name="follow_set_private_member_add_label">Přidat jako soukromého člena</string>
+    <string name="follow_set_public_members_header_label">Veřejné profily</string>
+    <string name="follow_set_private_members_header_label">Soukromé profily</string>
+    <string name="follow_set_single_member_label">člen</string>
+    <string name="follow_set_multiple_member_label">členové</string>
+    <string name="follow_set_empty_label">Žádní členové</string>
+    <string name="follow_set_copy_dialog_title">Kopírovat/Klonovat sadu sledování</string>
+    <string name="follow_set_desc_modify_label">Upravit popis</string>
+    <string name="follow_set_empty_desc_label">Tento seznam nemá žádný popis</string>
+    <string name="follow_set_current_desc_label">Aktuální popis:</string>
+    <string name="follow_set_copy_indicator_description">Níže můžete nastavit vlastní název/popisek pro tuto klonovanou sadu.</string>
+    <string name="follow_set_copy_name_label">(Původní název sady)</string>
+    <string name="follow_set_copy_desc_label">(Původní popis sady)</string>
+    <string name="follow_set_copy_action_btn_label">Kopírovat/Klonovat sadu</string>
+    <string name="follow_set_desc_modify_btn_label">Upravit</string>
 </resources>

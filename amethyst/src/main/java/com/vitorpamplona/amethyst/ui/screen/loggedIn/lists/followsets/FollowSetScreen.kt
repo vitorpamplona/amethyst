@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -68,7 +70,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
@@ -76,11 +77,13 @@ import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.VertPadding
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -144,7 +147,8 @@ fun FollowSetScreen(
     when {
         selectedSetState.value != null -> {
             val selectedSet = selectedSetState.value
-            val users = selectedSet!!.profiles.mapToUsers(accountViewModel).filterNotNull()
+            val publicMembers = selectedSet!!.publicProfiles.mapToUsers(accountViewModel).filterNotNull()
+            val privateMembers = selectedSet.privateProfiles.mapToUsers(accountViewModel).filterNotNull()
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -171,6 +175,7 @@ fun FollowSetScreen(
                                         selectedSet,
                                         accountViewModel.account,
                                     )
+                                    navigator.popBack()
                                 },
                             )
                         },
@@ -190,10 +195,12 @@ fun FollowSetScreen(
                                 bottom = padding.calculateBottomPadding(),
                             ).consumeWindowInsets(padding)
                             .imePadding(),
-                    followSetList = users,
+                    publicMemberList = publicMembers,
+                    privateMemberList = privateMembers,
                     onDeleteUser = {
                         followSetViewModel.removeUserFromSet(
                             it,
+                            userIsPrivate = selectedSet.privateProfiles.contains(it),
                             selectedSet,
                             accountViewModel.account,
                         )
@@ -233,14 +240,7 @@ fun TitleAndDescription(
             )
             Spacer(modifier = StdHorzSpacer)
             Icon(
-                painter =
-                    painterResource(
-                        when (followSet.setVisibility) {
-                            SetVisibility.Public -> R.drawable.ic_public
-                            SetVisibility.Private -> R.drawable.lock
-                            SetVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                        },
-                    ),
+                painter = painterResource(R.drawable.format_list_bulleted_type),
                 contentDescription = null,
             )
         }
@@ -260,7 +260,8 @@ fun TitleAndDescription(
 @Composable
 private fun FollowSetListView(
     modifier: Modifier = Modifier,
-    followSetList: List<User>,
+    publicMemberList: List<User>,
+    privateMemberList: List<User>,
     onDeleteUser: (String) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -272,14 +273,61 @@ private fun FollowSetListView(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(followSetList, key = { _, item -> item.pubkeyHex }) { _, item ->
-            FollowSetListItem(
-                modifier = Modifier.animateItem(),
-                user = item,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onDeleteUser = onDeleteUser,
-            )
+        if (publicMemberList.isNotEmpty()) {
+            stickyHeader {
+                Column(
+                    modifier = VertPadding,
+                ) {
+                    Text(
+                        text = stringRes(R.string.follow_set_public_members_header_label),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 2.dp,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+            itemsIndexed(publicMemberList, key = { _, item -> item.pubkeyHex }) { _, item ->
+                FollowSetListItem(
+                    modifier = Modifier.animateItem(),
+                    user = item,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onDeleteUser = onDeleteUser,
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(30.dp))
+            }
+        }
+        if (privateMemberList.isNotEmpty()) {
+            stickyHeader {
+                Text(
+                    text = stringRes(R.string.follow_set_private_members_header_label),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(),
+                    thickness = 2.dp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            itemsIndexed(privateMemberList, key = { _, item -> item.pubkeyHex }) { _, item ->
+                FollowSetListItem(
+                    modifier = Modifier.animateItem(),
+                    user = item,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onDeleteUser = onDeleteUser,
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(30.dp))
+            }
         }
     }
 }
