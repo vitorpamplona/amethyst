@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.model.nip51Lists.followSets
 
 sealed class NostrSet(
     val setVisibility: SetVisibility,
-    val content: Collection<String>,
+    val privateContent: Collection<String>,
+    val publicContent: Collection<String>,
 )
 
 class CuratedBookmarkSet(
     val name: String,
     val visibility: SetVisibility,
-    val setItems: List<String>,
-) : NostrSet(visibility, setItems)
+    val privateSetItems: List<String>,
+    val publicSetItems: List<String>,
+) : NostrSet(visibility, privateSetItems, publicSetItems)

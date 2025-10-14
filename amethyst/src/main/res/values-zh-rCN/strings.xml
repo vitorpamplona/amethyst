@@ -457,8 +457,7 @@
     </string>
     <string name="follow_set_add_author_from_note_action">添加作者到关注集</string>
     <string name="follow_set_profile_actions_menu_description">从列表中添加或删除用户，或用此用户创建一个新列表。</string>
-    <string name="follow_set_type_description">%1$s 列表的图标</string>
-    <string name="follow_set_presence_indicator">"此列表中有 %1$s"</string>
+    <string name="follow_set_icon_description">%1$s 列表的图标</string>
     <string name="follow_set_absence_indicator">"此列表中没有 %1$s"</string>
     <string name="follow_set_man_dialog_title">您的关注集</string>
     <string name="follow_set_empty_dialog_msg">未找到关注集，或者你还没有任何关注集。轻按下方刷新，或使用按钮新建。</string>

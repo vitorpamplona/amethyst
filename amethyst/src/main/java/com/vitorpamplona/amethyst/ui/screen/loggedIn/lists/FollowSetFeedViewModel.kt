@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
@@ -117,8 +116,8 @@ class FollowSetFeedViewModel(
     fun addFollowSet(
         setName: String,
         setDescription: String?,
-        isListPrivate: Boolean,
         optionalFirstMemberHex: String? = null,
+        firstMemberShouldBePrivate: Boolean = false,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
@@ -129,8 +128,9 @@ class FollowSetFeedViewModel(
                     dTag = UUID.randomUUID().toString(),
                     title = setName,
                     description = setDescription,
-                    isPrivate = isListPrivate,
-                    firstMemberHex = optionalFirstMemberHex,
+                    isPrivate = firstMemberShouldBePrivate,
+                    firstPublicMembers = if (optionalFirstMemberHex != null) listOf(optionalFirstMemberHex) else emptyList(),
+                    firstPrivateMembers = if (optionalFirstMemberHex != null) listOf(optionalFirstMemberHex) else emptyList(),
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)
@@ -160,6 +160,51 @@ class FollowSetFeedViewModel(
         }
     }
 
+    fun modifyFollowSetDescription(
+        newDescription: String?,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.modifyDescription(
+                    earlierVersion = setEvent,
+                    newDescription = newDescription,
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
+    fun cloneFollowSet(
+        currentFollowSet: FollowSet,
+        customCloneName: String?,
+        customCloneDescription: String?,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            viewModelScope.launch(Dispatchers.IO) {
+                PeopleListEvent.copy(
+                    dTag = UUID.randomUUID().toString(),
+                    title = customCloneName ?: currentFollowSet.title,
+                    description = customCloneDescription ?: currentFollowSet.description,
+                    firstPublicMembers = currentFollowSet.publicProfiles.toList(),
+                    firstPrivateMembers = currentFollowSet.privateProfiles.toList(),
+                    signer = account.signer,
+                ) {
+                    account.sendMyPublicAndPrivateOutbox(it)
+                }
+            }
+        }
+    }
+
     fun deleteFollowSet(
         followSet: FollowSet,
         account: Account,
@@ -179,6 +224,7 @@ class FollowSetFeedViewModel(
     fun addUserToSet(
         userProfileHex: String,
         followSet: FollowSet,
+        shouldBePrivateMember: Boolean,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
@@ -190,7 +236,7 @@ class FollowSetFeedViewModel(
                 PeopleListEvent.addUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
-                    isPrivate = followSet.visibility == SetVisibility.Private,
+                    isPrivate = shouldBePrivateMember,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)
@@ -201,6 +247,7 @@ class FollowSetFeedViewModel(
 
     fun removeUserFromSet(
         userProfileHex: String,
+        userIsPrivate: Boolean,
         followSet: FollowSet,
         account: Account,
     ) {
@@ -213,6 +260,7 @@ class FollowSetFeedViewModel(
                 PeopleListEvent.removeUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
+                    isUserPrivate = userIsPrivate,
                     signer = account.signer,
                 ) {
                     account.sendMyPublicAndPrivateOutbox(it)

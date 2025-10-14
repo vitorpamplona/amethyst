@@ -457,8 +457,7 @@
     </string>
     <string name="follow_set_add_author_from_note_action">लेखक जोडें अनुगम्य सूची में</string>
     <string name="follow_set_profile_actions_menu_description">प्रयोक्ता को सूचियों में जोडें अथवा हटाएँ अथवा इस प्रयोक्ता के साथ नई सूची बनाएँ।</string>
-    <string name="follow_set_type_description">सूची %1$s के लिए चिह्न</string>
-    <string name="follow_set_presence_indicator">"%1$s इस सूची में है"</string>
+    <string name="follow_set_icon_description">सूची %1$s के लिए चिह्न</string>
     <string name="follow_set_absence_indicator">"%1$s इस सूची में नहीं है"</string>
     <string name="follow_set_man_dialog_title">आपके अनुगम्य सूचियाँ</string>
     <string name="follow_set_empty_dialog_msg">कोई अनुगम्य सूचियाँ प्राप्त नहीं। अथवा आपका कोई अनुगम्य सूचियाँ हैं नहीं। नवीकरण के लिए नीचे दबाएँ अथवा विकल्पसूची द्वारा एक नया बनाएँ।</string>

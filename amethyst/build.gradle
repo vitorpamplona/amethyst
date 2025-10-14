@@ -151,6 +151,7 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+    
     // TODO: remove this when lightcompressor uses one MP4 parser only
     packaging {
         resources {

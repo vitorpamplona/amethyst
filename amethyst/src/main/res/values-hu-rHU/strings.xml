@@ -457,8 +457,7 @@
     </string>
     <string name="follow_set_add_author_from_note_action">Szerző hozzáadása a követési gyűjteményhez</string>
     <string name="follow_set_profile_actions_menu_description">Felhasználó hozzáadása vagy eltávolítása a listákból, vagy új lista létrehozása ezzel a felhasználóval.</string>
-    <string name="follow_set_type_description">Ikon a(z) %1$s nevű listához</string>
-    <string name="follow_set_presence_indicator">"A(z) %1$s már a létezik a listában"</string>
+    <string name="follow_set_icon_description">Ikon a(z) %1$s nevű listához</string>
     <string name="follow_set_absence_indicator">"A(z) %1$s nincs a listában"</string>
     <string name="follow_set_man_dialog_title">Saját követési gyüjtemények</string>
     <string name="follow_set_empty_dialog_msg">Nem találhatók követési gyüjtemények, vagy nincs követési gyüjteménye. Érintse meg az alábbi gombot a frissítéshez vagy használja a menüt egy gyüjtemény létrehozásához.</string>
