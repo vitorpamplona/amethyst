@@ -455,7 +455,7 @@
     <string name="follow_set_add_author_from_note_action">Dodaj autora do zbioru obserwowanych</string>
     <string name="follow_set_profile_actions_menu_description">Dodaj lub usuń użytkownika z list, lub utwórz nową listę z tym użytkownikiem.</string>
     <string name="follow_set_icon_description">Ikona dla listy %1$s</string>
-    <string name="follow_set_absence_indicator">"%1$s nie jest na liście"</string>
+    <string name="follow_set_absence_indicator">%1$s nie jest na liście</string>
     <string name="follow_set_man_dialog_title">Twój zbiór obserwowanych</string>
     <string name="follow_set_empty_dialog_msg">Nie znaleziono zbiorów obserwowanych lub nie masz żadnych zbiorów obserwowanych. Dotknij poniżej, aby odświeżyć lub użyj menu, aby go utworzyć.</string>
     <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>
