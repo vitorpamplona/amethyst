@@ -151,6 +151,15 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+    
+    // TODO: remove this when lightcompressor uses one MP4 parser only
+    packaging {
+        resources {
+            resources.pickFirsts.add('builddef.lst')
+            resources.pickFirsts.add('META-INF/LICENSE.md')
+            resources.pickFirsts.add('META-INF/LICENSE-notice.md')
+        }
+    }
 
     flavorDimensions = ["channel"]
 
@@ -355,6 +364,8 @@ dependencies {
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.junit.ktx
     androidTestImplementation libs.androidx.espresso.core
+    androidTestImplementation libs.androidx.ui.test.junit4
+    androidTestImplementation libs.mockk.android
 
     debugImplementation platform(libs.androidx.compose.bom)
     debugImplementation libs.androidx.ui.tooling
