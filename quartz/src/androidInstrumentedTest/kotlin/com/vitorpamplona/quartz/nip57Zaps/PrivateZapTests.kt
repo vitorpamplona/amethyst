@@ -31,17 +31,18 @@ import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEncryption.Companion.createE
 import com.vitorpamplona.quartz.utils.Hex
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PrivateZapTests {
     @Test
-    fun testPollZap() {
-        val poll =
-            OptimizedJsonMapper.fromJson(
-                """{
+    fun testPollZap() =
+        runTest {
+            val poll =
+                OptimizedJsonMapper.fromJson(
+                    """{
   "content": "New poll \n\n #zappoll",
   "created_at": 1682440713,
   "id": "16291ba452bb0786a4bf5c278d38de73c96b58c056ed75c5ea466b0795197288",
@@ -81,17 +82,16 @@ class PrivateZapTests {
   ]
 }
 """,
-            )
+                )
 
-        val loggedIn =
-            NostrSignerInternal(
-                KeyPair(
-                    Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598"),
-                ),
-            )
+            val loggedIn =
+                NostrSignerInternal(
+                    KeyPair(
+                        Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598"),
+                    ),
+                )
 
-        val privateZapRequest =
-            runBlocking {
+            val privateZapRequest =
                 LnZapRequestEvent.create(
                     zappedEvent = poll,
                     relays = setOf(RelayUrlNormalizer.normalize("wss://relay.damus.io/")),
@@ -101,31 +101,31 @@ class PrivateZapTests {
                     zapType = LnZapEvent.ZapType.PRIVATE,
                     toUserPubHex = null,
                 )
+
+            val recepientPK = privateZapRequest.zappedAuthor().firstOrNull()
+            val recepientPost = privateZapRequest.zappedPost().firstOrNull()
+
+            if (recepientPK != null && recepientPost != null) {
+                val privateKey =
+                    createEncryptionPrivateKey(
+                        loggedIn.keyPair.privKey!!.toHexKey(),
+                        recepientPost,
+                        privateZapRequest.createdAt,
+                    )
+                val decodedPrivateZap = PrivateZapRequestBuilder().decryptAnonTag(privateZapRequest.getAnonTag(), privateKey, recepientPK)
+
+                assertNotNull(decodedPrivateZap)
+            } else {
+                fail("Should not be null")
             }
-
-        val recepientPK = privateZapRequest.zappedAuthor().firstOrNull()
-        val recepientPost = privateZapRequest.zappedPost().firstOrNull()
-
-        if (recepientPK != null && recepientPost != null) {
-            val privateKey =
-                createEncryptionPrivateKey(
-                    loggedIn.keyPair.privKey!!.toHexKey(),
-                    recepientPost,
-                    privateZapRequest.createdAt,
-                )
-            val decodedPrivateZap = PrivateZapRequestBuilder().decryptAnonTag(privateZapRequest.getAnonTag(), privateKey, recepientPK)
-
-            assertNotNull(decodedPrivateZap)
-        } else {
-            fail("Should not be null")
         }
-    }
 
     @Test
-    fun testKind1PrivateZap() {
-        val textNote =
-            Event.fromJson(
-                """{
+    fun testKind1PrivateZap() =
+        runTest {
+            val textNote =
+                Event.fromJson(
+                    """{
     "content": "Testing copied author. \n\nnostr:npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z",
     "created_at": 1682369982,
     "id": "c757e1371d715c711ec9ef9740a3df6475d64b3d0af45ffcbfca08d273baf1c1",
@@ -143,15 +143,14 @@ class PrivateZapTests {
     ]
 }
 """,
-            )
+                )
 
-        val loggedIn =
-            NostrSignerInternal(
-                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
-            )
+            val loggedIn =
+                NostrSignerInternal(
+                    KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+                )
 
-        val privateZapRequest =
-            runBlocking {
+            val privateZapRequest =
                 LnZapRequestEvent.create(
                     zappedEvent = textNote,
                     relays =
@@ -166,23 +165,22 @@ class PrivateZapTests {
                     zapType = LnZapEvent.ZapType.PRIVATE,
                     toUserPubHex = null,
                 )
+
+            val recepientPK = privateZapRequest.zappedAuthor().firstOrNull()
+            val recepientPost = privateZapRequest.zappedPost().firstOrNull()
+
+            if (recepientPK != null && recepientPost != null) {
+                val privateKey =
+                    createEncryptionPrivateKey(
+                        loggedIn.keyPair.privKey!!.toHexKey(),
+                        recepientPost,
+                        privateZapRequest.createdAt,
+                    )
+                val decodedPrivateZap = PrivateZapRequestBuilder().decryptAnonTag(privateZapRequest.getAnonTag(), privateKey, recepientPK)
+
+                assertNotNull(decodedPrivateZap)
+            } else {
+                fail("Should not be null")
             }
-
-        val recepientPK = privateZapRequest.zappedAuthor().firstOrNull()
-        val recepientPost = privateZapRequest.zappedPost().firstOrNull()
-
-        if (recepientPK != null && recepientPost != null) {
-            val privateKey =
-                createEncryptionPrivateKey(
-                    loggedIn.keyPair.privKey!!.toHexKey(),
-                    recepientPost,
-                    privateZapRequest.createdAt,
-                )
-            val decodedPrivateZap = PrivateZapRequestBuilder().decryptAnonTag(privateZapRequest.getAnonTag(), privateKey, recepientPK)
-
-            assertNotNull(decodedPrivateZap)
-        } else {
-            fail("Should not be null")
         }
-    }
 }

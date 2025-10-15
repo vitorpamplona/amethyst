@@ -117,6 +117,7 @@ kotlin {
         commonTest {
             dependencies {
                 implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -148,6 +149,7 @@ kotlin {
             dependsOn(commonTest.get())
             dependencies {
                 implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -201,6 +203,7 @@ kotlin {
                 implementation(libs.androidx.core)
                 implementation(libs.androidx.junit)
                 implementation(libs.androidx.espresso.core)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 

@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
 import org.junit.Test
@@ -65,7 +65,7 @@ internal class Nip46Test {
 
     @Test
     fun signEncoder() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestSign(event = dummyEvent)
             val actual = encodeDecodeEvent(expected)
 
@@ -76,7 +76,7 @@ internal class Nip46Test {
 
     @Test
     fun connectEncoder() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestConnect(remoteKey = remoteKey.pubKey)
             val actual = encodeDecodeEvent(expected)
 
@@ -86,7 +86,7 @@ internal class Nip46Test {
 
     @Test
     fun pingEncoder() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestPing()
             val actual = encodeDecodeEvent(expected)
 
@@ -96,7 +96,7 @@ internal class Nip46Test {
 
     @Test
     fun getPubkeyEncoder() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestGetPublicKey()
             val actual = encodeDecodeEvent(expected)
 
@@ -106,7 +106,7 @@ internal class Nip46Test {
 
     @Test
     fun getRelaysEncoder() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestGetRelays()
             val actual = encodeDecodeEvent(expected)
 
@@ -116,7 +116,7 @@ internal class Nip46Test {
 
     @Test
     fun testNip04Encrypt() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestNip04Encrypt(pubKey = peer.pubKey, message = "Test")
             val actual = encodeDecodeEvent(expected)
 
@@ -128,7 +128,7 @@ internal class Nip46Test {
 
     @Test
     fun testNip44Encrypt() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestNip44Encrypt(pubKey = peer.pubKey, message = "Test")
             val actual = encodeDecodeEvent(expected)
 
@@ -140,7 +140,7 @@ internal class Nip46Test {
 
     @Test
     fun testNip04Decrypt() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestNip04Decrypt(pubKey = peer.pubKey, ciphertext = "Test")
             val actual = encodeDecodeEvent(expected)
 
@@ -152,7 +152,7 @@ internal class Nip46Test {
 
     @Test
     fun testNip44Decrypt() =
-        runBlocking {
+        runTest {
             val expected = BunkerRequestNip44Decrypt(pubKey = peer.pubKey, ciphertext = "Test")
             val actual = encodeDecodeEvent(expected)
 
@@ -166,7 +166,7 @@ internal class Nip46Test {
 
     @Test
     fun testAckResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponseAck()
             val actual = encodeDecodeEvent(expected)
 
@@ -177,7 +177,7 @@ internal class Nip46Test {
 
     @Test
     fun testPongResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponsePong()
             val actual = encodeDecodeEvent(expected)
 
@@ -188,7 +188,7 @@ internal class Nip46Test {
 
     @Test
     fun testErrorResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponseError(error = "Error")
             val actual = encodeDecodeEvent(expected)
 
@@ -199,7 +199,7 @@ internal class Nip46Test {
 
     @Test
     fun testEventResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponseEvent(event = dummyEventSigned)
             val actual = encodeDecodeEvent(expected)
 
@@ -211,7 +211,7 @@ internal class Nip46Test {
 
     @Test
     fun testPubkeyResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponsePublicKey(pubkey = peer.pubKey)
             val actual = encodeDecodeEvent(expected)
 
@@ -223,7 +223,7 @@ internal class Nip46Test {
 
     @Test
     fun testRelaysResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponseGetRelays(relays = mapOf("url" to ReadWrite(true, false)))
             val actual = encodeDecodeEvent(expected)
 
@@ -236,7 +236,7 @@ internal class Nip46Test {
     @Test
     @Ignore("Impossible to recreate the class since there are no hints on the json")
     fun testDecryptResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponseDecrypt(plaintext = "Test")
             val actual = encodeDecodeEvent(expected)
 
@@ -249,7 +249,7 @@ internal class Nip46Test {
     @Test
     @Ignore("Impossible to recreate the class since there are no hints on the json")
     fun testEncryptResponse() =
-        runBlocking {
+        runTest {
             val expected = BunkerResponseEncrypt(ciphertext = "Test")
             val actual = encodeDecodeEvent(expected)
 
