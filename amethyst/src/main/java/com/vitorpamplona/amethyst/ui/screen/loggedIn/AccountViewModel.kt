@@ -104,12 +104,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
-import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
-import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
-import com.vitorpamplona.quartz.nip03Timestamp.ots.RemoteCalendar
-import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
+import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -1735,36 +1730,3 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         vitorCache = it
     }
 }
-
-val EmptyOtsResolverBuilder =
-    object : OtsResolverBuilder {
-        override fun build(): OtsResolver =
-            OtsResolver(
-                explorer =
-                    object : BitcoinExplorer {
-                        override suspend fun block(hash: String): BlockHeader {
-                            TODO("Not yet implemented")
-                        }
-
-                        override suspend fun blockHash(height: Int): String {
-                            TODO("Not yet implemented")
-                        }
-                    },
-                calendar =
-                    object : RemoteCalendar {
-                        override suspend fun submit(
-                            url: String,
-                            digest: ByteArray,
-                        ): Timestamp {
-                            TODO("Not yet implemented")
-                        }
-
-                        override suspend fun getTimestamp(
-                            url: String,
-                            commitment: ByteArray,
-                        ): Timestamp {
-                            TODO("Not yet implemented")
-                        }
-                    },
-            )
-    }

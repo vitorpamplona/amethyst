@@ -39,3 +39,9 @@ interface BitcoinExplorer {
      */
     suspend fun blockHash(height: Int): String
 }
+
+object EmptyBitcoinExplorer : BitcoinExplorer {
+    override suspend fun block(hash: String) = TODO("Not yet implemented")
+
+    override suspend fun blockHash(height: Int) = TODO("Not yet implemented")
+}

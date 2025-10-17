@@ -20,6 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip03Timestamp
 
+import com.vitorpamplona.quartz.nip03Timestamp.ots.EmptyBitcoinExplorer
+import com.vitorpamplona.quartz.nip03Timestamp.ots.EmptyRemoteCalendar
+
 interface OtsResolverBuilder {
     fun build(): OtsResolver
 }
+
+val EmptyOtsResolverBuilder =
+    object : OtsResolverBuilder {
+        override fun build(): OtsResolver =
+            OtsResolver(
+                explorer = EmptyBitcoinExplorer,
+                calendar = EmptyRemoteCalendar,
+            )
+    }

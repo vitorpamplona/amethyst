@@ -55,3 +55,15 @@ interface RemoteCalendar {
         commitment: ByteArray,
     ): Timestamp
 }
+
+object EmptyRemoteCalendar : RemoteCalendar {
+    override suspend fun submit(
+        url: String,
+        digest: ByteArray,
+    ) = TODO("Not yet implemented")
+
+    override suspend fun getTimestamp(
+        url: String,
+        commitment: ByteArray,
+    ) = TODO("Not yet implemented")
+}
