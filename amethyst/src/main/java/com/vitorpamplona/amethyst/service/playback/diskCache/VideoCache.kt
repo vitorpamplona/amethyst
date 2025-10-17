@@ -34,7 +34,7 @@ import java.io.File
 
 @SuppressLint("UnsafeOptInUsageError")
 class VideoCache {
-    var exoPlayerCacheSize: Long = 150 * 1024 * 1024 // 150MB
+    var exoPlayerCacheSize: Long = 1000 * 1024 * 1024 // 1GB
 
     var leastRecentlyUsedCacheEvictor = LeastRecentlyUsedCacheEvictor(exoPlayerCacheSize)
 
