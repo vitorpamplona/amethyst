@@ -142,6 +142,14 @@ class EOSEAccountFast<T : Any>(
         }
     }
 
+    fun removeEveryoneBut(list: Set<T>) {
+        users.snapshot().forEach {
+            if (it.key !in list) {
+                users.remove(it.key)
+            }
+        }
+    }
+
     fun removeDataFor(user: T) {
         users.remove(user)
     }
