@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip51Lists.bookmarkList
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.utils.nsecToKeyPair
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -33,7 +33,7 @@ class BookmarkListEventTest {
 
     @Test
     fun publicTagsPreservedWhenRemovingFromPrivateBookmarks() =
-        runBlocking {
+        runTest {
             // Create a test event bookmark
             val testEventId = "a".repeat(64)
             val testBookmark = EventBookmark(testEventId)
@@ -84,7 +84,7 @@ class BookmarkListEventTest {
 
     @Test
     fun publicTagsRemovedWhenRemovingFromPublicBookmarks() =
-        runBlocking {
+        runTest {
             // Create a test event bookmark
             val testEventId = "b".repeat(64)
             val testBookmark = EventBookmark(testEventId)
