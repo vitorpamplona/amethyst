@@ -59,7 +59,7 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
             }
 
             is CountCmd -> {
-                gen.writeString(cmd.subId)
+                gen.writeString(cmd.queryId)
                 cmd.filters.forEach {
                     filterSerializer.serialize(it, gen, provider)
                 }

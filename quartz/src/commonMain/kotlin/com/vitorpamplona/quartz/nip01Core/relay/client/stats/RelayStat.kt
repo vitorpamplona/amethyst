@@ -29,6 +29,7 @@ class RelayStat(
     var spamCounter: Int = 0,
     var errorCounter: Int = 0,
     var pingInMs: Int = 0,
+    var compression: Boolean = false,
 ) {
     val messages = LruCache<RelayDebugMessage, RelayDebugMessage>(100)
 

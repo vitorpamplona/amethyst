@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 
@@ -50,7 +50,7 @@ abstract class BaseEoseManager<T>(
 
     fun getSubscription(subId: String) = orchestrator.getSub(subId)
 
-    fun requestNewSubscription(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null) = orchestrator.requestNewSubscription(newSubscriptionId(), onEOSE)
+    fun requestNewSubscription(listener: IRequestListener) = orchestrator.requestNewSubscription(newSubscriptionId(), listener)
 
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
@@ -68,7 +68,6 @@ abstract class BaseEoseManager<T>(
 
     override fun destroy() {
         bundler.cancel()
-        orchestrator.destroy()
         if (isDebug) {
             Log.d(logTag, "Destroy, Unsubscribe")
         }

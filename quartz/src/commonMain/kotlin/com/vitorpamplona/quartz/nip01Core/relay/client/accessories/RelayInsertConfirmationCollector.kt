@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -35,14 +37,13 @@ class RelayInsertConfirmationCollector(
 ) {
     private val clientListener =
         object : IRelayClientListener {
-            override fun onSendResponse(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                eventId: String,
-                success: Boolean,
-                message: String,
+                msgStr: String,
+                msg: Message,
             ) {
-                if (success) {
-                    onRelayReceived(eventId, relay)
+                if (msg is OkMessage && msg.success) {
+                    onRelayReceived(msg.eventId, relay)
                 }
             }
         }

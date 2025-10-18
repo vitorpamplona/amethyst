@@ -40,8 +40,7 @@ class CustomMediaSourceFactory(
 ) : MediaSource.Factory {
     private var cachingFactory: MediaSource.Factory =
         DefaultMediaSourceFactory(
-            Amethyst.Companion.instance.videoCache
-                .get(okHttpClient),
+            Amethyst.instance.videoCache.get(okHttpClient),
         )
     private var nonCachingFactory: MediaSource.Factory =
         DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))

@@ -18,41 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
+package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
-import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.cache.LargeCache
-
-class SubscriptionStats {
-    data class Counter(
-        val subscriptionId: String,
-        val eventKind: Int,
-    ) {
-        var counter: Int = 0
-    }
-
-    private var eventCounter = LargeCache<Int, Counter>()
-
-    private fun eventCounterIndex(
-        str1: String,
-        str2: Int,
-    ): Int = 31 * str1.hashCode() + str2.hashCode()
-
-    fun add(
-        subscriptionId: String,
-        eventKind: Int,
-    ) {
-        val key = eventCounterIndex(subscriptionId, eventKind)
-        val stats = eventCounter.getOrCreate(key) { Counter(subscriptionId, eventKind) }
-        stats.counter++
-    }
-
-    fun printCounter(tag: String) {
-        eventCounter.forEach { _, stats ->
-            Log.d(
-                tag,
-                "Received Events ${stats.subscriptionId} ${stats.eventKind}: ${stats.counter}",
-            )
-        }
-    }
+enum class ReqSubStatus {
+    SENT,
+    QUERYING_PAST,
+    LIVE,
+    CLOSED,
 }

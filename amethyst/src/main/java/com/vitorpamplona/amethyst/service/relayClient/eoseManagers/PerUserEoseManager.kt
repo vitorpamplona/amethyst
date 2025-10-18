@@ -23,11 +23,15 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * This query type creates a new relay subscription for every distinct
@@ -48,19 +52,40 @@ abstract class PerUserEoseManager<T>(
 
     fun since(key: T) = latestEOSEs.since(user(key))
 
-    fun newEose(
+    open fun newEose(
         key: T,
         relay: NormalizedRelayUrl,
         time: Long,
-    ) = latestEOSEs.newEose(user(key), relay, time)
+        filters: List<Filter>? = null,
+    ) {
+        latestEOSEs.newEose(user(key), relay, time)
+        if (invalidateAfterEose) {
+            invalidateFilters()
+        }
+    }
 
     open fun newSub(key: T): Subscription =
-        requestNewSubscription { time, relayUrl ->
-            newEose(key, relayUrl, time)
-            if (invalidateAfterEose) {
-                invalidateFilters()
-            }
-        }
+        requestNewSubscription(
+            object : IRequestListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    newEose(key, relay, TimeUtils.now(), forFilters)
+                }
+
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (isLive) {
+                        newEose(key, relay, TimeUtils.now(), forFilters)
+                    }
+                }
+            },
+        )
 
     open fun endSub(
         key: User,

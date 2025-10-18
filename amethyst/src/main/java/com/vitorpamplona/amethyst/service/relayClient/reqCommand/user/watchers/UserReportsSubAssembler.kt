@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -46,11 +47,12 @@ class UserReportsSubAssembler(
     override fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
+        filters: List<Filter>?,
     ) {
         lastUsersOnFilter.forEach {
             latestEOSEs.newEose(it, relay, time)
         }
-        super.newEose(relay, time)
+        super.newEose(relay, time, filters)
     }
 
     override fun updateFilter(

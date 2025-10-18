@@ -23,12 +23,12 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 class CountCmd(
-    val subId: String,
+    val queryId: String,
     val filters: List<Filter>,
 ) : Command {
     override fun label(): String = LABEL
 
-    override fun isValid() = subId.isNotEmpty() && filters.isNotEmpty()
+    override fun isValid() = queryId.isNotEmpty() && filters.isNotEmpty()
 
     companion object {
         const val LABEL = "COUNT"

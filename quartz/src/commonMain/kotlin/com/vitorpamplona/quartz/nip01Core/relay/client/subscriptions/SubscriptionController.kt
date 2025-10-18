@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -51,47 +49,12 @@ class SubscriptionController(
 ) {
     private val subscriptions = LargeCache<String, Subscription>()
 
-    private val clientListener =
-        object : IRelayClientListener {
-            override fun onEvent(
-                relay: IRelayClient,
-                subId: String,
-                event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
-            ) {
-                if (subscriptions.containsKey(subId)) {
-                    if (afterEOSE) {
-                        subscriptions.get(subId)?.callEose(arrivalTime, relay.url)
-                    }
-                }
-            }
-
-            override fun onEOSE(
-                relay: IRelayClient,
-                subId: String,
-                arrivalTime: Long,
-            ) {
-                if (subscriptions.containsKey(subId)) {
-                    subscriptions.get(subId)?.callEose(arrivalTime, relay.url)
-                }
-            }
-        }
-
-    init {
-        client.subscribe(clientListener)
-    }
-
-    fun destroy() {
-        client.unsubscribe(clientListener)
-    }
-
     fun getSub(subId: String) = subscriptions.get(subId)
 
     fun requestNewSubscription(
         subId: String,
-        onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null,
-    ): Subscription = Subscription(subId, onEose = onEOSE).also { subscriptions.put(it.id, it) }
+        listener: IRequestListener,
+    ): Subscription = Subscription(subId, listener).also { subscriptions.put(it.id, it) }
 
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 
@@ -108,28 +71,29 @@ class SubscriptionController(
             }
 
         subscriptions.forEach { id, sub ->
-            updateRelaysIfNeeded(id, sub.filters(), currentFilters[id])
+            updateRelaysIfNeeded(id, sub.listener, sub.filters(), currentFilters[id])
         }
     }
 
     fun updateRelaysIfNeeded(
         subId: String,
-        updatedFilters: Map<NormalizedRelayUrl, List<Filter>>?,
-        currentFilters: Map<NormalizedRelayUrl, List<Filter>>?,
+        listener: IRequestListener,
+        newFilters: Map<NormalizedRelayUrl, List<Filter>>?,
+        oldFilters: Map<NormalizedRelayUrl, List<Filter>>?,
     ) {
-        if (currentFilters != null) {
-            if (updatedFilters == null) {
+        if (oldFilters != null) {
+            if (newFilters == null) {
                 // was active and is not active anymore, just close.
                 client.close(subId)
             } else {
-                client.openReqSubscription(subId, updatedFilters)
+                client.openReqSubscription(subId, newFilters, listener)
             }
         } else {
-            if (updatedFilters == null) {
+            if (newFilters == null) {
                 // was not active and is still not active, does nothing
             } else {
                 // was not active and becomes active, sends the entire filter.
-                client.openReqSubscription(subId, updatedFilters)
+                client.openReqSubscription(subId, newFilters, listener)
             }
         }
     }

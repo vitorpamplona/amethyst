@@ -61,7 +61,7 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                 }
 
                 CountCmd.LABEL -> {
-                    val subId = jp.nextTextValue()
+                    val queryId = jp.nextTextValue()
                     val filters = mutableListOf<Filter>()
 
                     while (jp.nextToken() != JsonToken.END_ARRAY) {
@@ -71,7 +71,7 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     }
 
                     CountCmd(
-                        subId = subId,
+                        queryId = queryId,
                         filters = filters,
                     )
                 }

@@ -25,7 +25,6 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
@@ -60,6 +59,8 @@ import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -199,10 +200,12 @@ class AppModules(
 
     val relayStats = RelayStats(client)
 
+    val detailedLogger = if (isDebug) RelayLogger(client, true, false) else null
+    val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
-    val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, applicationDefaultScope)
+    val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, authCoordinator.receiver, applicationDefaultScope)
 
     // keeps all accounts live
     val accountsCache =

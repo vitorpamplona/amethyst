@@ -21,8 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -31,35 +30,31 @@ class NostrClientSubscription(
     val client: INostrClient,
     val filter: () -> Map<NormalizedRelayUrl, List<Filter>> = { emptyMap() },
     val onEvent: (event: Event) -> Unit = {},
-) : IRelayClientListener {
+) : IRequestListener {
     private val subId = RandomInstance.randomChars(10)
 
     override fun onEvent(
-        relay: IRelayClient,
-        subId: String,
         event: Event,
-        arrivalTime: Long,
-        afterEOSE: Boolean,
+        isLive: Boolean,
+        relay: NormalizedRelayUrl,
+        forFilters: List<Filter>?,
     ) {
-        if (this.subId == subId) {
-            onEvent(event)
-        }
+        onEvent(event)
     }
 
     /**
      * Creates or Updates the filter with relays. This method should be called
      * everytime the filter changes.
      */
-    fun updateFilter() = client.openReqSubscription(subId, filter())
+    fun updateFilter() = client.openReqSubscription(subId, filter(), this)
 
     fun closeSubscription() = client.close(subId)
 
     fun destroy() {
-        client.unsubscribe(this)
+        closeSubscription()
     }
 
     init {
-        client.subscribe(this)
         updateFilter()
     }
 }

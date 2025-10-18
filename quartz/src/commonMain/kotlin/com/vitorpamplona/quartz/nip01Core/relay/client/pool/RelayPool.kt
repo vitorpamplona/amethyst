@@ -21,21 +21,18 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-val UnsupportedRelayCreation: (url: NormalizedRelayUrl) -> IRelayClient = {
-    throw UnsupportedOperationException("Cannot create new relays")
-}
 
 /**
  * RelayPool manages a collection of Nostr relays, abstracting individual connections and providing
@@ -59,8 +56,8 @@ val UnsupportedRelayCreation: (url: NormalizedRelayUrl) -> IRelayClient = {
  * - Maintaining optimal relay connections (updatePool/addRelay/removeRelay methods)
  */
 class RelayPool(
+    val websocketBuilder: WebsocketBuilder,
     val listener: IRelayClientListener = EmptyClientListener,
-    val createNewRelay: (url: NormalizedRelayUrl) -> IRelayClient = UnsupportedRelayCreation,
 ) : IRelayClientListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
@@ -69,6 +66,13 @@ class RelayPool(
     val statusFlow: StateFlow<RelayPoolStatus> = _statusFlow.asStateFlow()
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
+
+    private fun createNewRelay(url: NormalizedRelayUrl) =
+        BasicRelayClient(
+            url = url,
+            socketBuilder = websocketBuilder,
+            listener = this,
+        )
 
     fun reconnectIfNeedsTo(ignoreRetryDelays: Boolean = false) {
         relays.forEach { url, relay ->
@@ -109,71 +113,40 @@ class RelayPool(
         updateStatus()
     }
 
-    fun sendRequest(
+    fun sendOrConnectAndSync(
         relay: NormalizedRelayUrl,
-        subId: String,
-        filters: List<Filter>,
-    ) {
-        getOrCreateRelay(relay).sendRequest(subId, filters)
-    }
+        cmd: Command,
+    ) = getOrCreateRelay(relay).sendOrConnectAndSync(cmd)
 
-    fun sendRequest(
-        subId: String,
-        filters: Map<NormalizedRelayUrl, List<Filter>>,
-    ) {
-        relays.forEach { url, relay ->
-            val filters = filters[relay.url]
-            if (!filters.isNullOrEmpty()) {
-                relay.sendRequest(subId, filters)
-            }
-        }
-    }
-
-    fun sendCount(
+    fun sendIfConnected(
         relay: NormalizedRelayUrl,
-        subId: String,
-        filters: List<Filter>,
-    ) {
-        getOrCreateRelay(relay).sendCount(subId, filters)
-    }
+        cmd: Command,
+    ) = getOrCreateRelay(relay).sendIfConnected(cmd)
 
-    fun sendCount(
-        subId: String,
-        filters: Map<NormalizedRelayUrl, List<Filter>>,
-    ) {
-        relays.forEach { url, relay ->
-            val filters = filters[relay.url]
-            if (!filters.isNullOrEmpty()) {
-                relay.sendCount(subId, filters)
-            }
-        }
-    }
-
-    fun close(subscriptionId: String) =
-        relays.forEach { url, relay ->
-            relay.close(subscriptionId)
-        }
-
-    fun close(
-        relay: NormalizedRelayUrl,
-        subscriptionId: String,
-    ) = relays.get(relay)?.close(subscriptionId)
-
-    fun send(
-        signedEvent: Event,
+    fun sendOrConnectAndSync(
         list: Set<NormalizedRelayUrl>,
+        cmd: Command,
     ) {
         list.forEach {
-            getOrCreateRelay(it).send(signedEvent)
+            getOrCreateRelay(it).sendOrConnectAndSync(cmd)
+        }
+    }
+
+    fun sendIfConnected(
+        list: Set<NormalizedRelayUrl>,
+        cmd: Command,
+    ) {
+        list.forEach {
+            getOrCreateRelay(it).sendIfConnected(cmd)
         }
     }
 
     // --------------------
     // Pool Maintenance
     // --------------------
-    fun getOrCreateRelay(relay: NormalizedRelayUrl) = relays.getOrCreate(relay, createNewRelay)
+    fun getOrCreateRelay(relay: NormalizedRelayUrl) = relays.getOrCreate(relay, ::createNewRelay)
 
-    fun createRelayIfAbsent(relay: NormalizedRelayUrl): Boolean = relays.createIfAbsent(relay, createNewRelay)
+    fun createRelayIfAbsent(relay: NormalizedRelayUrl): Boolean = relays.createIfAbsent(relay, ::createNewRelay)
 
     /**
      * Updates the pool of relays without disconnecting the existing ones.
@@ -244,75 +217,39 @@ class RelayPool(
     // --------------------
     // Listener Interceptor
     // --------------------
+    override fun onConnecting(relay: IRelayClient) = listener.onConnecting(relay)
 
-    override fun onEvent(
+    override fun onConnected(
         relay: IRelayClient,
-        subId: String,
-        event: Event,
-        arrivalTime: Long,
-        afterEOSE: Boolean,
+        pingMillis: Int,
+        compressed: Boolean,
     ) {
-        listener.onEvent(relay, subId, event, arrivalTime, afterEOSE)
-    }
-
-    override fun onError(
-        relay: IRelayClient,
-        subId: String,
-        error: Error,
-    ) {
-        listener.onError(relay, subId, error)
         updateStatus()
+        listener.onConnected(relay, pingMillis, compressed)
     }
 
-    override fun onEOSE(
-        relay: IRelayClient,
-        subId: String,
-        arrivalTime: Long,
-    ) {
-        listener.onEOSE(relay, subId, arrivalTime)
-    }
-
-    override fun onRelayStateChange(
-        relay: IRelayClient,
-        type: RelayState,
-    ) {
-        listener.onRelayStateChange(relay, type)
+    override fun onDisconnected(relay: IRelayClient) {
         updateStatus()
+        listener.onDisconnected(relay)
     }
 
-    override fun onSendResponse(
+    override fun onIncomingMessage(
         relay: IRelayClient,
-        eventId: String,
+        msgStr: String,
+        msg: Message,
+    ) = listener.onIncomingMessage(relay, msgStr, msg)
+
+    override fun onCannotConnect(
+        relay: IRelayClient,
+        errorMessage: String,
+    ) = listener.onCannotConnect(relay, errorMessage)
+
+    override fun onSent(
+        relay: IRelayClient,
+        cmdStr: String,
+        cmd: Command,
         success: Boolean,
-        message: String,
-    ) = listener.onSendResponse(relay, eventId, success, message)
-
-    override fun onAuth(
-        relay: IRelayClient,
-        challenge: String,
-    ) = listener.onAuth(relay, challenge)
-
-    override fun onNotify(
-        relay: IRelayClient,
-        description: String,
-    ) = listener.onNotify(relay, description)
-
-    override fun onClosed(
-        relay: IRelayClient,
-        subId: String,
-        message: String,
-    ) = listener.onClosed(relay, subId, message)
-
-    override fun onSend(
-        relay: IRelayClient,
-        msg: String,
-        success: Boolean,
-    ) = listener.onSend(relay, msg, success)
-
-    override fun onBeforeSend(
-        relay: IRelayClient,
-        event: Event,
-    ) = listener.onBeforeSend(relay, event)
+    ) = listener.onSent(relay, cmdStr, cmd, success)
 
     // ---------------
     // STATUS Reports

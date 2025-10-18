@@ -20,10 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -31,27 +41,68 @@ import com.vitorpamplona.quartz.utils.Log
  */
 class RelayLogger(
     val client: INostrClient,
-    val notify: (message: String, relay: IRelayClient) -> Unit,
+    val debugSending: Boolean = false,
+    val debugReceiving: Boolean = false,
 ) {
+    fun logTag(url: NormalizedRelayUrl) = "Relay ${url.displayUrl()}"
+
     private val clientListener =
         object : IRelayClientListener {
-            /** A new message was received */
-            override fun onEvent(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                subId: String,
-                event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
+                msgStr: String,
+                msg: Message,
             ) {
-                Log.d("Relay", "Relay onEVENT ${relay.url} ($subId - $afterEOSE) ${event.toJson()}")
+                val logTag = logTag(relay.url)
+
+                when (msg) {
+                    is EventMessage -> if (debugReceiving) Log.d(logTag, "Received: $msgStr")
+                    is EoseMessage -> if (debugReceiving) Log.d(logTag, "EOSE: ${msg.subId}")
+                    is NoticeMessage -> Log.w(logTag, "Notice: ${msg.message}")
+                    is OkMessage -> if (debugReceiving) Log.d(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
+                    is AuthMessage -> if (debugReceiving) Log.d(logTag, "Auth: ${msg.challenge}")
+                    is NotifyMessage -> if (debugReceiving) Log.d(logTag, "Notify: ${msg.message}")
+                    is ClosedMessage -> Log.w(logTag, "Closed: ${msg.subId} ${msg.message}")
+                }
             }
 
-            override fun onSend(
+            override fun onSent(
                 relay: IRelayClient,
-                msg: String,
+                cmdStr: String,
+                cmd: Command,
                 success: Boolean,
             ) {
-                Log.d("Relay", "Relay send ${relay.url} (${msg.length} chars) $msg")
+                if (success) {
+                    if (debugSending) {
+                        Log.d(logTag(relay.url), "Sent (${cmdStr.length} chars): $cmdStr")
+                    }
+                } else {
+                    Log.e(logTag(relay.url), "Failure sending (${cmdStr.length} chars): $cmdStr")
+                }
+            }
+
+            override fun onConnecting(relay: IRelayClient) {
+                Log.d(logTag(relay.url), "Connecting...")
+            }
+
+            override fun onConnected(
+                relay: IRelayClient,
+                pingMillis: Int,
+                compressed: Boolean,
+            ) {
+                Log.d(logTag(relay.url), "OnOpen (ping: ${pingMillis}ms${if (compressed) ", using compression" else ""})")
+            }
+
+            override fun onDisconnected(relay: IRelayClient) {
+                Log.d(logTag(relay.url), "Disconnected")
+            }
+
+            override fun onCannotConnect(
+                relay: IRelayClient,
+                errorMessage: String,
+            ) {
+                super.onCannotConnect(relay, errorMessage)
+                Log.e(logTag(relay.url), errorMessage)
             }
         }
 

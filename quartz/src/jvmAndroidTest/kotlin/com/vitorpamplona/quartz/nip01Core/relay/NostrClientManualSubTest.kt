@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,31 +50,23 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
             val mySubId = "test-sub-id-1"
 
             val listener =
-                object : IRelayClientListener {
+                object : IRequestListener {
                     override fun onEvent(
-                        relay: IRelayClient,
-                        subId: String,
                         event: Event,
-                        arrivalTime: Long,
-                        afterEOSE: Boolean,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
                     ) {
-                        if (mySubId == subId) {
-                            resultChannel.trySend(event.id)
-                        }
+                        resultChannel.trySend(event.id)
                     }
 
-                    override fun onEOSE(
-                        relay: IRelayClient,
-                        subId: String,
-                        arrivalTime: Long,
+                    override fun onEose(
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
                     ) {
-                        if (mySubId == subId) {
-                            resultChannel.trySend("EOSE")
-                        }
+                        resultChannel.trySend("EOSE")
                     }
                 }
-
-            client.subscribe(listener)
 
             val filters =
                 mapOf(
@@ -87,7 +79,7 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
                         ),
                 )
 
-            client.openReqSubscription(mySubId, filters)
+            client.openReqSubscription(mySubId, filters, listener)
 
             withTimeoutOrNull(30000) {
                 while (events.size < 101) {
@@ -99,7 +91,6 @@ class NostrClientManualSubTest : BaseNostrClientTest() {
             resultChannel.close()
 
             client.close(mySubId)
-            client.unsubscribe(listener)
             client.disconnect()
 
             appScope.cancel()

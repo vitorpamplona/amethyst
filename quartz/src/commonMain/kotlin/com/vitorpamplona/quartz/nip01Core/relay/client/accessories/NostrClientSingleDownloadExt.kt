@@ -22,8 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -71,23 +70,18 @@ suspend fun INostrClient.downloadFirstEvent(
     val resultChannel = Channel<Event>(UNLIMITED)
 
     val listener =
-        object : IRelayClientListener {
+        object : IRequestListener {
             override fun onEvent(
-                relay: IRelayClient,
-                subId: String,
                 event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
+                isLive: Boolean,
+                relay: NormalizedRelayUrl,
+                forFilters: List<Filter>?,
             ) {
-                if (subId == subscriptionId) {
-                    resultChannel.trySend(event)
-                }
+                resultChannel.trySend(event)
             }
         }
 
-    subscribe(listener)
-
-    openReqSubscription(subscriptionId, filters)
+    openReqSubscription(subscriptionId, filters, listener)
 
     val result =
         withTimeoutOrNull(30000) {
@@ -95,7 +89,7 @@ suspend fun INostrClient.downloadFirstEvent(
         }
 
     close(subscriptionId)
-    unsubscribe(listener)
+
     resultChannel.close()
 
     return result

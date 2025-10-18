@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.speedLogger
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -40,15 +41,14 @@ class RelaySpeedLogger(
 
     private val clientListener =
         object : IRelayClientListener {
-            /** A new message was received */
-            override fun onEvent(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                subId: String,
-                event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
+                msgStr: String,
+                msg: Message,
             ) {
-                current.increment(event.kind, subId, relay.url, event.countMemory())
+                if (msg is EventMessage) {
+                    current.increment(msg.event.kind, msg.subId, relay.url, msg.event.countMemory())
+                }
             }
         }
 

@@ -20,75 +20,50 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.listeners
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 
 open class RedirectRelayClientListener(
     val listener: IRelayClientListener,
 ) : IRelayClientListener {
-    override fun onEvent(
-        relay: IRelayClient,
-        subId: String,
-        event: Event,
-        arrivalTime: Long,
-        afterEOSE: Boolean,
-    ) = listener.onEvent(relay, subId, event, arrivalTime, afterEOSE)
+    override fun onConnecting(relay: IRelayClient) {
+        listener.onConnecting(relay)
+    }
 
-    override fun onEOSE(
+    override fun onConnected(
         relay: IRelayClient,
-        subId: String,
-        arrivalTime: Long,
-    ) = listener.onEOSE(relay, subId, arrivalTime)
+        pingMillis: Int,
+        compressed: Boolean,
+    ) {
+        listener.onConnected(relay, pingMillis, compressed)
+    }
 
-    override fun onError(
+    override fun onSent(
         relay: IRelayClient,
-        subId: String,
-        error: Error,
-    ) = listener.onError(relay, subId, error)
-
-    override fun onAuth(
-        relay: IRelayClient,
-        challenge: String,
-    ) = listener.onAuth(relay, challenge)
-
-    override fun onAuthed(
-        relay: IRelayClient,
-        eventId: String,
+        cmdStr: String,
+        cmd: Command,
         success: Boolean,
-        message: String,
-    ) = listener.onAuthed(relay, eventId, success, message)
+    ) {
+        listener.onSent(relay, cmdStr, cmd, success)
+    }
 
-    override fun onRelayStateChange(
+    override fun onIncomingMessage(
         relay: IRelayClient,
-        type: RelayState,
-    ) = listener.onRelayStateChange(relay, type)
+        msgStr: String,
+        msg: Message,
+    ) {
+        listener.onIncomingMessage(relay, msgStr, msg)
+    }
 
-    override fun onNotify(
-        relay: IRelayClient,
-        description: String,
-    ) = listener.onNotify(relay, description)
+    override fun onDisconnected(relay: IRelayClient) {
+        listener.onDisconnected(relay)
+    }
 
-    override fun onClosed(
+    override fun onCannotConnect(
         relay: IRelayClient,
-        subId: String,
-        message: String,
-    ) = listener.onClosed(relay, subId, message)
-
-    override fun onBeforeSend(
-        relay: IRelayClient,
-        event: Event,
-    ) = listener.onBeforeSend(relay, event)
-
-    override fun onSend(
-        relay: IRelayClient,
-        msg: String,
-        success: Boolean,
-    ) = listener.onSend(relay, msg, success)
-
-    override fun onSendResponse(
-        relay: IRelayClient,
-        eventId: String,
-        success: Boolean,
-        message: String,
-    ) = listener.onSendResponse(relay, eventId, success, message)
+        errorMessage: String,
+    ) {
+        listener.onCannotConnect(relay, errorMessage)
+    }
 }

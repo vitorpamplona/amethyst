@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -43,22 +45,25 @@ interface INostrClient {
 
     fun isActive(): Boolean
 
+    /**
+     * Sends all current filters, events, etc to the relay.
+     * This is called every time the relay connects
+     * and when auth is successful
+     */
+    fun renewFilters(relay: IRelayClient)
+
     fun openReqSubscription(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
+        listener: IRequestListener? = null,
     )
 
-    fun openCountSubscription(
+    fun queryCount(
         subId: String = newSubId(),
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     )
 
-    fun close(subscriptionId: String)
-
-    fun sendIfExists(
-        event: Event,
-        connectedRelay: NormalizedRelayUrl,
-    )
+    fun close(subId: String)
 
     fun send(
         event: Event,
@@ -88,22 +93,20 @@ object EmptyNostrClient : INostrClient {
 
     override fun isActive() = false
 
+    override fun renewFilters(relay: IRelayClient) { }
+
     override fun openReqSubscription(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
+        listener: IRequestListener?,
     ) { }
 
-    override fun openCountSubscription(
+    override fun queryCount(
         subId: String,
         filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) { }
 
-    override fun close(subscriptionId: String) { }
-
-    override fun sendIfExists(
-        event: Event,
-        connectedRelay: NormalizedRelayUrl,
-    ) { }
+    override fun close(subId: String) { }
 
     override fun send(
         event: Event,

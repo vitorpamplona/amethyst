@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
@@ -99,6 +98,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -130,7 +130,6 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -204,20 +203,20 @@ class AccountViewModel(
                 } else {
                     MutableStateFlow(null)
                 }
-            }.flatMapLatest {
+            }.flatMapLatest { loadedFeedState ->
                 val flows =
-                    it?.list?.mapNotNull { chat ->
+                    loadedFeedState?.list?.mapNotNull { chat ->
                         (chat.event as? ChatroomKeyable)?.let { event ->
                             val room = event.chatroomKey(account.signer.pubKey)
-                            account.settings.getLastReadFlow("Room/${room.hashCode()}").map {
-                                (chat.event?.createdAt ?: 0) > it
+                            account.settings.getLastReadFlow("Room/${room.hashCode()}").map { lastReadAt ->
+                                (chat.event?.createdAt ?: 0) > lastReadAt
                             }
                         }
                     }
 
                 if (!flows.isNullOrEmpty()) {
-                    combine(flows) {
-                        it.any { it }
+                    combine(flows) { newItems ->
+                        newItems.any { it }
                     }
                 } else {
                     MutableStateFlow(false)
@@ -240,8 +239,8 @@ class AccountViewModel(
                     } else {
                         MutableStateFlow(null)
                     }
-                }.map {
-                    it?.list?.firstOrNull { it.event != null && it.event !is GenericRepostEvent && it.event !is RepostEvent }?.createdAt()
+                }.map { loadedFeedState ->
+                    loadedFeedState?.list?.firstOrNull { it.event != null && it.event !is GenericRepostEvent && it.event !is RepostEvent }?.createdAt()
                 },
         ) { lastRead, newestItemCreatedAt ->
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
@@ -712,8 +711,6 @@ class AccountViewModel(
 
     fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
-    fun cachedDecrypt(event: Event?): String? = account.cachedDecryptContent(event)
-
     fun decrypt(
         note: Note,
         onReady: (String) -> Unit,
@@ -725,17 +722,17 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 action()
-            } catch (e: SignerExceptions.ReadOnlyException) {
+            } catch (_: SignerExceptions.ReadOnlyException) {
                 toastManager.toast(
                     R.string.read_only_user,
                     R.string.login_with_a_private_key_to_be_able_to_sign_events,
                 )
-            } catch (e: SignerExceptions.UnauthorizedDecryptionException) {
+            } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
                 toastManager.toast(
                     R.string.unauthorized_exception,
                     R.string.unauthorized_exception_description,
                 )
-            } catch (e: SignerExceptions.SignerNotFoundException) {
+            } catch (_: SignerExceptions.SignerNotFoundException) {
                 toastManager.toast(
                     R.string.signer_not_found_exception,
                     R.string.signer_not_found_exception_description,
@@ -938,7 +935,7 @@ class AccountViewModel(
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
-    override suspend fun getOrCreateUser(key: HexKey): User = LocalCache.getOrCreateUser(key)
+    override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
     fun checkGetOrCreateUser(
         key: HexKey,
@@ -951,7 +948,7 @@ class AccountViewModel(
 
     fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
-    override suspend fun getOrCreateNote(key: HexKey): Note = LocalCache.getOrCreateNote(key)
+    override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
     fun checkGetOrCreateNote(
         key: HexKey,
@@ -1003,13 +1000,6 @@ class AccountViewModel(
     fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel? = LocalCache.getOrCreateLiveChannel(key)
 
     fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel? = LocalCache.getOrCreateEphemeralChannel(key)
-
-    fun checkGetOrCreateChannel(
-        key: HexKey,
-        onResult: (Channel?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreatePublicChatChannel(key)) }
-    }
 
     fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
@@ -1444,13 +1434,6 @@ class AccountViewModel(
         onSent()
     }
 
-    fun getRelayListFor(user: User): AdvertisedRelayListEvent? = (getRelayListNoteFor(user)?.event as? AdvertisedRelayListEvent?)
-
-    fun getRelayListNoteFor(user: User): AddressableNote? =
-        LocalCache.getAddressableNoteIfExists(
-            AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
-        )
-
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
 
     fun updateInteractiveStoryReadingState(
@@ -1657,6 +1640,7 @@ fun mockAccountViewModel(): AccountViewModel {
         )
 
     val client = EmptyNostrClient
+    val authenticator = EmptyIAuthStatus
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
 
@@ -1677,7 +1661,7 @@ fun mockAccountViewModel(): AccountViewModel {
         settings = uiState,
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, scope),
     ).also {
         mockedCache = it
     }
@@ -1705,6 +1689,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         )
 
     val client = EmptyNostrClient
+    val authenticator = EmptyIAuthStatus
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
 
@@ -1725,7 +1710,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         settings = uiState,
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, scope),
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, scope),
     ).also {
         vitorCache = it
     }

@@ -20,59 +20,33 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.pickRelaysToLoadUsers
+import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.utils.mapOfSet
 
-val MetadataAndRelayListKinds =
-    listOf(
-        MetadataEvent.KIND,
-        AdvertisedRelayListEvent.KIND,
-    )
+val RelayListKinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND)
 
-fun filterFindUserMetadataForKey(
-    author: HexKey,
-    indexRelays: Set<NormalizedRelayUrl>,
-    defaultRelays: Set<NormalizedRelayUrl>,
-): List<RelayBasedFilter> =
-    LocalCache.checkGetOrCreateUser(author)?.let {
-        filterFindUserMetadataForKey(setOf(it), indexRelays, defaultRelays)
-    } ?: emptyList()
-
-fun filterFindUserMetadataForKey(
+fun findFindUserOutBox(
     authors: Set<User>,
+    connectedRelays: Set<NormalizedRelayUrl>,
     indexRelays: Set<NormalizedRelayUrl>,
-    defaultRelays: Set<NormalizedRelayUrl>,
+    searchRelays: Set<NormalizedRelayUrl>,
+    allRelays: Set<NormalizedRelayUrl>,
+    hasTried: EOSEAccountFast<User>,
 ): List<RelayBasedFilter> {
-    val perRelayKeys =
-        mapOfSet {
-            authors.forEach { key ->
-                val relays =
-                    key.authorRelayList()?.writeRelaysNorm()
-                        ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
-                        ?: defaultRelays.toList()
+    val perRelayKeysBoth = pickRelaysToLoadUsers(authors, connectedRelays, indexRelays, searchRelays, allRelays, hasTried)
 
-                relays.forEach {
-                    add(it, key.pubkeyHex)
-                }
-            }
-        }
-
-    return perRelayKeys.mapNotNull {
-        if (it.value.isNotEmpty()) {
+    return perRelayKeysBoth.mapNotNull {
+        val sortedUsers = it.value.sorted()
+        if (sortedUsers.isNotEmpty()) {
             RelayBasedFilter(
                 relay = it.key,
-                filter =
-                    Filter(
-                        kinds = MetadataAndRelayListKinds,
-                        authors = it.value.sorted(),
-                    ),
+                filter = Filter(kinds = RelayListKinds, authors = sortedUsers),
             )
         } else {
             null

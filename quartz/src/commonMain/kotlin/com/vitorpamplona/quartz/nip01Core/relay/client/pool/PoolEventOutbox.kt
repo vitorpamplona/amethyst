@@ -21,70 +21,131 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.MutableStateFlow
 
-class PoolEventOutbox(
-    val event: Event,
-    var relays: Set<NormalizedRelayUrl>,
-) {
-    private val tries = mutableMapOf<NormalizedRelayUrl, Tries>()
+class PoolEventOutbox {
+    private var eventOutbox = mapOf<HexKey, PoolEventOutboxState>()
+    val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
-    fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
-        relays = newRelays
-    }
+    fun updateRelays() {
+        val myRelays = mutableSetOf<NormalizedRelayUrl>()
+        eventOutbox.values.forEach {
+            myRelays.addAll(it.relaysLeft())
+        }
 
-    fun isDone(url: NormalizedRelayUrl) = tries[url]?.let { it.isDone() } ?: false
-
-    fun isDone() = relays.all { isDone(it) }
-
-    fun relaysLeft(): Set<NormalizedRelayUrl> = relays.filterTo(mutableSetOf()) { !isDone(it) }
-
-    fun isSupposedToGo(url: NormalizedRelayUrl) = url in relays && !isDone(url)
-
-    fun forEachUnsentEvent(
-        url: NormalizedRelayUrl,
-        run: (url: Event) -> Unit,
-    ) = if (isSupposedToGo(url)) run(event) else null
-
-    fun newTry(url: NormalizedRelayUrl) {
-        val currentTries = tries[url]
-        if (currentTries != null) {
-            currentTries.tries.add(TimeUtils.now())
-        } else {
-            tries.put(url, Tries(mutableListOf(TimeUtils.now())))
+        if (relays.value != myRelays) {
+            relays.tryEmit(myRelays)
         }
     }
 
+    fun activeOutboxCacheFor(url: NormalizedRelayUrl): Set<HexKey> {
+        val myEvents = mutableSetOf<HexKey>()
+        eventOutbox.forEach { (eventId, outboxCache) ->
+            if (url in outboxCache.relays) {
+                myEvents.add(eventId)
+            }
+        }
+        return myEvents
+    }
+
+    fun markAsSending(
+        event: Event,
+        relays: Set<NormalizedRelayUrl>,
+    ): Set<NormalizedRelayUrl> {
+        val currentOutbox = eventOutbox[event.id]
+        if (currentOutbox == null) {
+            eventOutbox = eventOutbox + Pair(event.id, PoolEventOutboxState(event, relays))
+        } else {
+            currentOutbox.updateRelays(relays)
+        }
+        updateRelays()
+        return eventOutbox[event.id]?.remainingRelays() ?: emptySet()
+    }
+
+    fun newTry(
+        id: HexKey,
+        url: NormalizedRelayUrl,
+    ) {
+        eventOutbox[id]?.newTry(url)
+    }
+
     fun newResponse(
+        id: HexKey,
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,
     ) {
-        val currentTries = tries[url]
-        if (currentTries != null) {
-            currentTries.responses.add(Response(success, message))
-        } else {
-            tries.put(
-                url,
-                Tries(
-                    mutableListOf(TimeUtils.now() - 1),
-                    mutableListOf(Response(success, message)),
-                ),
-            )
+        val waiting = eventOutbox[id]
+        if (waiting != null) {
+            waiting.newResponse(url, success, message)
+            clear()
         }
     }
 
-    // Tries 3 times
-    class Tries(
-        val tries: MutableList<Long> = mutableListOf(),
-        val responses: MutableList<Response> = mutableListOf(),
-    ) {
-        fun isDone() = responses.any { it.success == true } || responses.size > 2 || tries.size > 3
+    fun clear() {
+        eventOutbox = eventOutbox.filter { !it.value.isDone() }
+        updateRelays()
     }
 
-    class Response(
-        val success: Boolean,
-        val message: String,
-    )
+    // --------------------------
+    // State management functions
+    // --------------------------
+    suspend fun syncState(
+        relay: NormalizedRelayUrl,
+        sync: (Command) -> Unit,
+    ) {
+        eventOutbox.forEach {
+            it.value.forEachUnsentEvent(relay) {
+                sync(EventCmd(it))
+            }
+        }
+    }
+
+    fun onIncomingMessage(
+        relay: NormalizedRelayUrl,
+        msg: Message,
+    ) {
+        when (msg) {
+            is OkMessage -> newResponse(msg.eventId, relay, msg.success, msg.message)
+        }
+    }
+
+    fun onSent(
+        relay: NormalizedRelayUrl,
+        cmd: Command,
+    ) {
+        if (cmd is EventCmd) {
+            newTry(cmd.event.id, relay)
+        }
+    }
+
+    fun sendToRelayIfChanged(
+        event: Event,
+        relaysToUpdate: Set<NormalizedRelayUrl>,
+        sync: (NormalizedRelayUrl, Command) -> Unit,
+    ) {
+        relaysToUpdate.forEach { relay ->
+            sync(relay, EventCmd(event))
+        }
+    }
+
+    /**
+     * If cannot connect, closes subs
+     */
+    fun onCannotConnect(
+        relay: NormalizedRelayUrl,
+        errorMessage: String,
+    ) {
+        eventOutbox.forEach {
+            if (relay in it.value.relays) {
+                newResponse(it.key, relay, false, errorMessage)
+            }
+        }
+    }
 }

@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserLoaderSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.IEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserOutboxFinderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserReportsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -36,11 +38,12 @@ class UserFinderQueryState(
 
 class UserFinderFilterAssembler(
     client: INostrClient,
+    cache: LocalCache,
 ) : ComposeSubscriptionManager<UserFinderQueryState>() {
     val group =
         listOf(
-            UserLoaderSubAssembler(client, ::allKeys),
-            UserWatcherSubAssembler(client, ::allKeys),
+            UserOutboxFinderSubAssembler(client, cache, ::allKeys),
+            UserWatcherSubAssembler(client, cache, ::allKeys),
             UserReportsSubAssembler(client, ::allKeys),
         )
 

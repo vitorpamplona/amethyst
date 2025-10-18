@@ -20,30 +20,24 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 data class Subscription(
     val id: String = newSubId(),
-    val onEose: ((time: Long, relayUrl: NormalizedRelayUrl) -> Unit)? = null,
+    val listener: IRequestListener,
 ) {
-    private var filters: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
+    private var currentVersion: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
 
     fun reset() {
-        filters = null
+        currentVersion = null
     }
 
     fun updateFilters(newFilters: Map<NormalizedRelayUrl, List<Filter>>?) {
-        filters = newFilters
+        currentVersion = newFilters
     }
 
-    fun filters() = filters
-
-    fun callEose(
-        time: Long,
-        relay: NormalizedRelayUrl,
-    ) {
-        onEose?.let { it(time, relay) }
-    }
+    fun filters() = currentVersion
 }

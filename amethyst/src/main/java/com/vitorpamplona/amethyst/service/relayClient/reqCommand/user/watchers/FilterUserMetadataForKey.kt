@@ -21,15 +21,20 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
+import kotlin.collections.forEach
+import kotlin.collections.plus
 
 val UserMetadataForKeyKinds =
     listOf(
@@ -41,30 +46,60 @@ val UserMetadataForKeyKinds =
     )
 
 fun filterUserMetadataForKey(
-    authors: Set<HexKey>,
-    since: SincePerRelayMap?,
+    authors: Set<User>,
+    indexRelays: Set<NormalizedRelayUrl>,
+    since: EOSEAccountFast<User>,
 ): List<RelayBasedFilter> {
-    val relays =
-        authors
-            .map {
-                val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
-                val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
+    val perRelayUsers =
+        mapOfSet {
+            authors.forEach { key ->
+                val relays =
+                    key.outboxRelays()
+                        ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
 
-                authorHomeRelayEvent?.writeRelaysNorm()
-                    ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                    ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
-            }.flatten()
-            .toSet()
+                relays.forEach {
+                    add(it, key)
+                }
+            }
+        }
 
-    return relays.map {
-        RelayBasedFilter(
-            relay = it,
-            filter =
-                Filter(
-                    kinds = UserMetadataForKeyKinds,
-                    authors = authors.toList(),
-                    since = since?.get(it)?.time,
+    return perRelayUsers
+        .map { (relay, users) ->
+            val firstTimers = mutableSetOf<HexKey>()
+            val updates = mutableSetOf<HexKey>()
+
+            var minimumTime: Long = Long.MAX_VALUE
+
+            users.forEach { user ->
+                val time = since.since(user)?.get(relay)?.time
+                if (time == null) {
+                    firstTimers.add(user.pubkeyHex)
+                } else {
+                    updates.add(user.pubkeyHex)
+                    if (time < minimumTime) {
+                        minimumTime = time
+                    }
+                }
+            }
+
+            listOf(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = UserMetadataForKeyKinds,
+                            authors = firstTimers.sorted(),
+                        ),
                 ),
-        )
-    }
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = UserMetadataForKeyKinds,
+                            authors = updates.sorted(),
+                            since = minimumTime,
+                        ),
+                ),
+            )
+        }.flatten()
 }

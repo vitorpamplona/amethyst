@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -33,16 +35,20 @@ class RelayNotifier(
     val notify: (message: String, relay: IRelayClient) -> Unit,
 ) {
     companion object {
-        val TAG = "RelayNotifier"
+        const val TAG = "RelayNotifier"
     }
 
     private val clientListener =
         object : IRelayClientListener {
-            override fun onNotify(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                message: String,
+                msgStr: String,
+                msg: Message,
             ) {
-                notify(message, relay)
+                super.onIncomingMessage(relay, msgStr, msg)
+                if (msg is NotifyMessage) {
+                    notify(msg.message, relay)
+                }
             }
         }
 

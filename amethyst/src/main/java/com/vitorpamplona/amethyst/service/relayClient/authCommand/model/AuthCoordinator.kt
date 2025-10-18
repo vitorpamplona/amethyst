@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayAuthenticator
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 
@@ -36,15 +37,35 @@ class AuthCoordinator(
     scope: CoroutineScope,
 ) {
     private val authWithAccounts = ListWithUniqueSetCache<ScreenAuthAccount, Account> { it.account }
+    private val tempAccount = NostrSignerSync()
 
     val receiver =
-        RelayAuthenticator(client, scope) { challenge, relay ->
-            authWithAccounts.distinct().forEach {
-                if (it.isWriteable()) {
-                    it.sendAuthEvent(relay, challenge)
+        RelayAuthenticator(
+            client,
+            scope,
+            signWithAllLoggedInUsers = { authTemplate ->
+                val results =
+                    authWithAccounts.distinct().mapNotNull {
+                        if (it.signer.isWriteable()) {
+                            try {
+                                it.signer.sign(authTemplate)
+                            } catch (e: Exception) {
+                                Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+
+                // Always auth, even with random keys
+                if (!results.isEmpty()) {
+                    results
+                } else {
+                    listOf(tempAccount.sign(authTemplate))
                 }
-            }
-        }
+            },
+        )
 
     fun destroy() {
         receiver.destroy()

@@ -23,8 +23,9 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -53,36 +54,37 @@ suspend fun INostrClient.sendAndWaitForResponse(
 
     val subscription =
         object : IRelayClientListener {
-            override fun onError(
+            override fun onCannotConnect(
                 relay: IRelayClient,
-                subId: String,
-                error: Error,
+                errorMessage: String,
             ) {
                 if (relay.url in relayList) {
                     resultChannel.trySend(Result(relay.url, false))
-                    Log.d("sendAndWaitForResponse", "onError Error from relay ${relay.url} error: $error")
+                    Log.d("sendAndWaitForResponse", "Error from relay ${relay.url}: $errorMessage")
                 }
             }
 
-            override fun onRelayStateChange(
-                relay: IRelayClient,
-                type: RelayState,
-            ) {
-                if (type == RelayState.DISCONNECTED && relay.url in relayList) {
+            override fun onDisconnected(relay: IRelayClient) {
+                if (relay.url in relayList) {
                     resultChannel.trySend(Result(relay.url, false))
-                    Log.d("sendAndWaitForResponse", "onRelayStateChange ${type.name} from relay ${relay.url}")
+                    Log.d("sendAndWaitForResponse", "Disconnected from relay ${relay.url}")
                 }
             }
 
-            override fun onSendResponse(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                eventId: String,
-                success: Boolean,
-                message: String,
+                msgStr: String,
+                msg: Message,
             ) {
-                if (eventId == event.id) {
-                    resultChannel.trySend(Result(relay.url, success))
-                    Log.d("sendAndWaitForResponse", "onSendResponse Received response for $eventId from relay ${relay.url} message $message success $success")
+                super.onIncomingMessage(relay, msgStr, msg)
+
+                when (msg) {
+                    is OkMessage -> {
+                        if (msg.eventId == event.id) {
+                            resultChannel.trySend(Result(relay.url, msg.success))
+                            Log.d("sendAndWaitForResponse", "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}")
+                        }
+                    }
                 }
             }
         }

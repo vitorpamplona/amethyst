@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -35,14 +37,14 @@ class EventCollector(
 ) {
     private val clientListener =
         object : IRelayClientListener {
-            override fun onEvent(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                subId: String,
-                event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
+                msgStr: String,
+                msg: Message,
             ) {
-                onEvent(event, relay)
+                if (msg is EventMessage) {
+                    onEvent(msg.event, relay)
+                }
             }
         }
 

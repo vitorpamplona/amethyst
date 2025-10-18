@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -55,25 +57,21 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             val listener =
                 object : IRelayClientListener {
-                    override fun onEvent(
+                    override fun onIncomingMessage(
                         relay: IRelayClient,
-                        subId: String,
-                        event: Event,
-                        arrivalTime: Long,
-                        afterEOSE: Boolean,
+                        msgStr: String,
+                        msg: Message,
                     ) {
-                        if (mySubId == subId) {
-                            resultChannel.trySend(event.id)
-                        }
-                    }
-
-                    override fun onEOSE(
-                        relay: IRelayClient,
-                        subId: String,
-                        arrivalTime: Long,
-                    ) {
-                        if (mySubId == subId) {
-                            resultChannel.trySend("EOSE")
+                        Log.d("Test", "Receiving message: $msgStr")
+                        when (msg) {
+                            is EventMessage ->
+                                if (mySubId == msg.subId) {
+                                    resultChannel.trySend(msg.event.id)
+                                }
+                            is EoseMessage ->
+                                if (mySubId == msg.subId) {
+                                    resultChannel.trySend("EOSE")
+                                }
                         }
                     }
                 }
@@ -91,13 +89,24 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                         ),
                 )
 
-            val filters2 =
+            val filtersShouldIgnore =
                 mapOf(
                     RelayUrlNormalizer.normalize("wss://relay.damus.io") to
                         listOf(
                             Filter(
                                 kinds = listOf(AdvertisedRelayListEvent.KIND),
-                                limit = 100,
+                                limit = 500,
+                            ),
+                        ),
+                )
+
+            val filtersShouldSendAfterEOSE =
+                mapOf(
+                    RelayUrlNormalizer.normalize("wss://relay.damus.io") to
+                        listOf(
+                            Filter(
+                                kinds = listOf(AdvertisedRelayListEvent.KIND),
+                                limit = 10,
                             ),
                         ),
                 )
@@ -105,14 +114,16 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
             coroutineScope {
                 launch {
                     withTimeoutOrNull(30000) {
-                        while (events.size < 202) {
+                        while (events.size < 112) {
+                            Log.d("Test", "Processing message ${events.size}")
                             // simulates an update in the middle of the sub
                             if (events.size == 1) {
-                                client.openReqSubscription(mySubId, filters2)
+                                client.openReqSubscription(mySubId, filtersShouldIgnore)
                             }
-                            val event = resultChannel.receive()
-                            Log.d("OkHttpWebsocketListener", "Processing: ${events.size} $event")
-                            events.add(event)
+                            if (events.size == 5) {
+                                client.openReqSubscription(mySubId, filtersShouldSendAfterEOSE)
+                            }
+                            events.add(resultChannel.receive())
                         }
                     }
                 }
@@ -128,10 +139,15 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
 
             appScope.cancel()
 
-            assertEquals(202, events.size)
+            // gets all 113 messages (100 events + 1 EOSE + 10 events + 1 EOSE)
+            assertEquals(112, events.size)
+            // checks if first 100 have Ids
             assertEquals(true, events.take(100).all { it.length == 64 })
+            // checks if EOSE is after the first 100
             assertEquals("EOSE", events[100])
-            assertEquals(true, events.drop(101).take(100).all { it.length == 64 })
-            assertEquals("EOSE", events[201])
+            // checks if next 10 have Ids
+            assertEquals(true, events.drop(101).take(10).all { it.length == 64 })
+            // checks if EOSE is after the next 10
+            assertEquals("EOSE", events[111])
         }
 }

@@ -20,12 +20,45 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.filterFindUserMetadataForKey
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.mapOfSet
+import kotlin.collections.ifEmpty
+import kotlin.collections.plus
+
+val MetadataKindList = listOf(MetadataEvent.KIND)
 
 fun filterByAuthor(
     pubKey: HexKey,
     indexRelays: Set<NormalizedRelayUrl>,
     defaultRelays: Set<NormalizedRelayUrl>,
-) = filterFindUserMetadataForKey(pubKey, indexRelays, defaultRelays)
+) = LocalCache.checkGetOrCreateUser(pubKey)?.let { key ->
+    val perRelay =
+        mapOfSet {
+            val relays =
+                key.authorRelayList()?.writeRelaysNorm()
+                    ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
+                    ?: defaultRelays.toList()
+
+            relays.forEach {
+                add(it, key.pubkeyHex)
+            }
+        }
+
+    val myUser = listOf(pubKey)
+
+    perRelay.map {
+        RelayBasedFilter(
+            relay = it.key,
+            filter =
+                Filter(
+                    kinds = MetadataKindList,
+                    authors = myUser,
+                ),
+        )
+    }
+} ?: emptyList()

@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.single
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 interface IRelayClient {
     val url: NormalizedRelayUrl
@@ -32,29 +30,13 @@ interface IRelayClient {
 
     fun needsToReconnect(): Boolean
 
-    fun connectAndRunAfterSync(onConnected: () -> Unit)
-
     fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean = false)
 
     fun isConnected(): Boolean
 
-    fun sendRequest(
-        subId: String,
-        filters: List<Filter>,
-    )
+    fun sendOrConnectAndSync(cmd: Command)
 
-    fun sendCount(
-        subId: String,
-        filters: List<Filter>,
-    )
-
-    fun send(event: Event)
-
-    fun sendAuth(signedEvent: RelayAuthEvent)
-
-    fun sendEvent(event: Event)
-
-    fun close(subscriptionId: String)
+    fun sendIfConnected(cmd: Command)
 
     fun disconnect()
 }

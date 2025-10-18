@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * This query type creates only ONE relay subscription and does not
@@ -35,11 +39,31 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
     val sub =
-        requestNewSubscription { time, relayUrl ->
-            if (invalidateAfterEose) {
-                invalidateFilters()
-            }
-        }
+        requestNewSubscription(
+            object : IRequestListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (invalidateAfterEose) {
+                        invalidateFilters()
+                    }
+                }
+
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (isLive) {
+                        if (invalidateAfterEose) {
+                            invalidateFilters()
+                        }
+                    }
+                }
+            },
+        )
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }

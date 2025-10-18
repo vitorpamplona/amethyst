@@ -20,118 +20,55 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.listeners
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-
-enum class RelayState {
-    // Websocket connected
-    CONNECTED,
-
-    // Websocket disconnecting
-    DISCONNECTING,
-
-    // Websocket disconnected
-    DISCONNECTED,
-}
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 
 interface IRelayClientListener {
+    fun onConnecting(relay: IRelayClient) {}
+
     /**
-     * New Event arrives from the relay.
+     * Relay just connected. Use this to send all
+     * filters and events you need.
      */
-    fun onEvent(
+    fun onConnected(
         relay: IRelayClient,
-        subId: String,
-        event: Event,
-        arrivalTime: Long,
-        afterEOSE: Boolean,
+        pingMillis: Int,
+        compressed: Boolean,
     ) {}
 
     /**
-     * New EOSE command arrives for a subscription
+     * Triggers after the event has been sent.
+     * Success means that the event was successfully sent, not
+     * that it received receipt confirmation from the relay
      */
-    fun onEOSE(
+    fun onSent(
         relay: IRelayClient,
-        subId: String,
-        arrivalTime: Long,
+        cmdStr: String,
+        cmd: Command,
+        success: Boolean,
     ) {}
 
     /**
      * New error
      */
-    fun onError(
+    fun onIncomingMessage(
         relay: IRelayClient,
-        subId: String,
-        error: Error,
+        msgStr: String,
+        msg: Message,
     ) {}
 
     /**
-     * Relay is requesting authentication with the given challenge.
+     * Relay just diconnected.
      */
-    fun onAuth(
-        relay: IRelayClient,
-        challenge: String,
-    ) {}
+    fun onDisconnected(relay: IRelayClient) {}
 
     /**
-     * called after the relay receives the OK from an Auth message
+     * The url is invalid or the server is unreachable.
      */
-    fun onAuthed(
+    fun onCannotConnect(
         relay: IRelayClient,
-        eventId: String,
-        success: Boolean,
-        message: String,
-    ) {}
-
-    /**
-     * RelayState changes
-     */
-    fun onRelayStateChange(
-        relay: IRelayClient,
-        type: RelayState,
-    ) {}
-
-    /**
-     * NOTIFY command has arrived.
-     */
-    fun onNotify(
-        relay: IRelayClient,
-        description: String,
-    ) {}
-
-    /**
-     * Relay closed the subscription
-     */
-    fun onClosed(
-        relay: IRelayClient,
-        subId: String,
-        message: String,
-    ) {}
-
-    /**
-     * Triggers this before sending the event.
-     */
-    fun onBeforeSend(
-        relay: IRelayClient,
-        event: Event,
-    ) {}
-
-    /**
-     * Triggers after the event has been sent.
-     */
-    fun onSend(
-        relay: IRelayClient,
-        msg: String,
-        success: Boolean,
-    ) {}
-
-    /**
-     * Relay accepted or rejected the event
-     */
-    fun onSendResponse(
-        relay: IRelayClient,
-        eventId: String,
-        success: Boolean,
-        message: String,
+        errorMessage: String,
     ) {}
 }
 

@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayStat
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
+import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListReusedOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowsPerOutboxRelay
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
@@ -126,7 +127,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirstEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -309,6 +309,10 @@ class Account(
 
     // Follows Relays
     val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
+
+    // only follow relays that are declared in more than one user.
+    val followSharedOutboxesOrProxy = FollowListReusedOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
+
     val followPlusAllMineWithIndex = MergedFollowPlusMineWithIndexRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, indexerRelayList, scope)
     val followPlusAllMineWithSearch = MergedFollowPlusMineWithSearchRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, searchRelayList, scope)
     val defaultGlobalRelays = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, scope)
@@ -1547,13 +1551,10 @@ class Account(
         }
     }
 
-    suspend fun sendAuthEvent(
-        relay: IRelayClient,
+    suspend fun createAuthEvent(
+        relay: NormalizedRelayUrl,
         challenge: String,
-    ) {
-        val auth = RelayAuthEvent.create(relay.url, challenge, signer)
-        client.sendIfExists(auth, relay.url)
-    }
+    ): RelayAuthEvent = RelayAuthEvent.create(relay, challenge, signer)
 
     suspend fun hideWord(word: String) {
         sendMyPublicAndPrivateOutbox(muteList.hideWord(word))

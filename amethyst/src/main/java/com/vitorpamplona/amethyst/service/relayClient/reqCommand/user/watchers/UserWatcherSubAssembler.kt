@@ -20,94 +20,87 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.ammolite.relays.filters.MutableTime
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 class UserWatcherSubAssembler(
     client: INostrClient,
+    val cache: LocalCache,
     allKeys: () -> Set<UserFinderQueryState>,
-) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys) {
-    var lastUsersOnFilter: Set<User> = emptySet()
-
+) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
      */
-    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast<User>(2000)
+    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast(200)
 
-    override fun newEose(
+    fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
-    ) {
-        lastUsersOnFilter.forEach {
-            latestEOSEs.newEose(it, relay, time)
-        }
-        super.newEose(relay, time)
-    }
-
-    override fun updateFilter(
-        keys: List<UserFinderQueryState>,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? {
-        if (keys.isEmpty()) return null
-
-        lastUsersOnFilter =
-            keys.mapNotNullTo(mutableSetOf()) {
-                if (it.user.latestMetadata != null) it.user else null
-            }
-
-        if (lastUsersOnFilter.isEmpty()) return null
-
-        return groupByRelayPresence(lastUsersOnFilter, latestEOSEs)
-            .map { group ->
-                val groupIds = group.map { it.pubkeyHex }.toSet()
-                if (groupIds.isNotEmpty()) {
-                    val minEOSEs = findMinimumEOSEsForUsers(group, latestEOSEs)
-                    filterUserMetadataForKey(groupIds, minEOSEs)
-                } else {
-                    emptyList()
-                }
-            }.flatten()
-    }
-
-    fun groupByRelayPresence(
-        users: Iterable<User>,
-        eoseCache: EOSEAccountFast<User>,
-    ): Collection<List<User>> =
-        users
-            .groupBy { eoseCache.since(it)?.keys?.hashCode() }
-            .values
-            .map {
-                // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
-                it.sortedBy { it.pubkeyHex }
-            }
-
-    fun findMinimumEOSEsForUsers(
-        users: List<User>,
-        eoseCache: EOSEAccountFast<User>,
-    ): SincePerRelayMap {
-        val minLatestEOSEs = mutableMapOf<NormalizedRelayUrl, MutableTime>()
-
-        users.forEach {
-            eoseCache.since(it)?.forEach {
-                val minEose = minLatestEOSEs[it.key]
-                if (minEose == null) {
-                    minLatestEOSEs.put(it.key, it.value.copy())
-                } else {
-                    minEose.updateIfOlder(it.value.time)
+        filters: List<Filter>? = null,
+    ) = {
+        filters?.forEach {
+            it.authors?.forEach {
+                cache.getUserIfExists(it)?.let { user ->
+                    latestEOSEs.newEose(user, relay, time)
                 }
             }
         }
-
-        return minLatestEOSEs
     }
 
-    override fun distinct(key: UserFinderQueryState) = key.user
+    val sub =
+        requestNewSubscription(
+            object : IRequestListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    newEose(relay, TimeUtils.now(), forFilters)
+                }
+
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (isLive) {
+                        newEose(relay, TimeUtils.now(), forFilters)
+                    }
+                }
+            },
+        )
+
+    override fun updateSubscriptions(keys: Set<UserFinderQueryState>) {
+        val users = keys.mapTo(mutableSetOf()) { it.user }
+
+        if (users.isEmpty()) {
+            sub.updateFilters(null)
+            return
+        }
+
+        // assembles all index relays from all accounts
+        val indexRelays = mutableSetOf<NormalizedRelayUrl>()
+        keys.mapTo(mutableSetOf()) { it.account }.forEach {
+            indexRelays.addAll(
+                it.indexerRelayList.flow.value
+                    .ifEmpty { DefaultIndexerRelayList },
+            )
+        }
+
+        val newFilters = filterUserMetadataForKey(users, indexRelays, latestEOSEs).ifEmpty { null }
+
+        sub.updateFilters(newFilters?.groupByRelay())
+    }
 }

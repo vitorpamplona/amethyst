@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -2638,7 +2639,7 @@ object LocalCache : ILocalCache {
                             if (isDebug) {
                                 Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}")
                             }
-                            relay.send(deletionEvent)
+                            relay.sendIfConnected(EventCmd(deletionEvent))
                             note.addRelay(relay.url)
                         }
                     }
@@ -2656,7 +2657,7 @@ object LocalCache : ILocalCache {
                             Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
                         }
 
-                        relay.send(existingEvent)
+                        relay.sendIfConnected(EventCmd(existingEvent))
                         // only send once.
                         note.addRelay(relay.url)
                     }

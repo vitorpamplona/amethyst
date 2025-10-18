@@ -22,10 +22,14 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.service.relays.EOSERelayList
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * This query type creates only ONE relay subscription. It filters duplicates
@@ -52,15 +56,36 @@ abstract class SingleSubEoseManager<T>(
     open fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
-    ) = latestEOSEs.newEose(relay, time)
+        filters: List<Filter>? = null,
+    ) {
+        latestEOSEs.newEose(relay, time)
+        if (invalidateAfterEose) {
+            invalidateFilters()
+        }
+    }
 
     val sub =
-        requestNewSubscription { time, relayUrl ->
-            newEose(relayUrl, time)
-            if (invalidateAfterEose) {
-                invalidateFilters()
-            }
-        }
+        requestNewSubscription(
+            object : IRequestListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    newEose(relay, TimeUtils.now(), forFilters)
+                }
+
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (isLive) {
+                        newEose(relay, TimeUtils.now(), forFilters)
+                    }
+                }
+            },
+        )
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }

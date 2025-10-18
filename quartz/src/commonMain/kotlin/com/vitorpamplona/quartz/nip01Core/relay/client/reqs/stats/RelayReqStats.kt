@@ -18,54 +18,50 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Listens to NostrClient's onNotify messages from the relay
  */
-class RelayLogger(
+class RelayReqStats(
     val client: INostrClient,
 ) {
-    companion object {
-        val TAG = RelayLogger::class.java.simpleName
-    }
+    private val stats = ReqStatsRepository()
 
     private val clientListener =
         object : IRelayClientListener {
-            /** A new message was received */
-            override fun onEvent(
+            override fun onIncomingMessage(
                 relay: IRelayClient,
-                subId: String,
-                event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
+                msgStr: String,
+                msg: Message,
             ) {
-                Log.d(TAG, "Relay onEVENT ${relay.url} ($subId - $afterEOSE) ${event.toJson()}")
-            }
-
-            override fun onSend(
-                relay: IRelayClient,
-                msg: String,
-                success: Boolean,
-            ) {
-                Log.d(TAG, "Relay send ${relay.url} (${msg.length} chars) $msg")
+                super.onIncomingMessage(relay, msgStr, msg)
+                if (msg is EventMessage) {
+                    stats.add(msg.subId, msg.event.kind)
+                }
             }
         }
 
+    fun printStats() =
+        stats.printCounter { subId, kind, counter ->
+            Log.d("RelaySubStats", "$subId, kind $kind: $counter")
+        }
+
     init {
-        Log.d(TAG, "Init, Subscribe")
+        Log.d("RelaySubStats", "Init, Subscribe")
         client.subscribe(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
-        Log.d(TAG, "Destroy, Unsubscribe")
+        Log.d("RelaySubStats", "Destroy, Unsubscribe")
         client.unsubscribe(clientListener)
     }
 }
