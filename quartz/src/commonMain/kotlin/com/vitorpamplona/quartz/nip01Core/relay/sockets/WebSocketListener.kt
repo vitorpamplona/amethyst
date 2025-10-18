@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
+/**
+ * Interface to abstract the socket implementation.
+ * Make sure onMessage appears in order of the receipt.
+ */
 interface WebSocketListener {
     fun onOpen(
         pingMillis: Int,
@@ -27,11 +31,6 @@ interface WebSocketListener {
     )
 
     fun onMessage(text: String)
-
-    fun onClosing(
-        code: Int,
-        reason: String,
-    )
 
     fun onClosed(
         code: Int,

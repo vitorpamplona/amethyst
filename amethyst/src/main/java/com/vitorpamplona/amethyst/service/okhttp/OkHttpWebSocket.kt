@@ -103,12 +103,6 @@ class OkHttpWebSocket(
             incomingMessages.trySendBlocking(text)
         }
 
-        override fun onClosing(
-            webSocket: okhttp3.WebSocket,
-            code: Int,
-            reason: String,
-        ) = out.onClosing(code, reason)
-
         override fun onClosed(
             webSocket: okhttp3.WebSocket,
             code: Int,

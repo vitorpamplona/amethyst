@@ -170,15 +170,6 @@ open class BasicRelayClient(
             consumeIncomingMessage(text, onConnected)
         }
 
-        override fun onClosing(
-            code: Int,
-            reason: String,
-        ) {
-            Log.w(logTag, "OnClosing $code $reason")
-
-            listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTING)
-        }
-
         override fun onClosed(
             code: Int,
             reason: String,
