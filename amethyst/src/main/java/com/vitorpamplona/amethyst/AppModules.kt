@@ -248,7 +248,7 @@ class AppModules(
     fun contentResolverFn(): ContentResolver = appContext.contentResolver
 
     fun setImageLoader() {
-        ImageLoaderSetup.setup(appContext, diskCache, memoryCache) { url ->
+        ImageLoaderSetup.setup(appContext, { diskCache }, { memoryCache }) { url ->
             okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(url))
         }
     }
@@ -270,15 +270,12 @@ class AppModules(
         applicationIOScope.launch {
             // preloads tor preferences
             torPrefs
+        }
 
+        // initializes diskcache on an IO thread.
+        applicationIOScope.launch {
             // Sets Coil - Tor - OkHttp link
             setImageLoader()
-
-            // prepares coil's disk cache
-            diskCache
-
-            // prepares exoplayer's disk cache
-            videoCache
         }
 
         // registers to receive events

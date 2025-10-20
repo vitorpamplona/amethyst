@@ -59,15 +59,15 @@ class ImageLoaderSetup {
         @OptIn(DelicateCoilApi::class)
         fun setup(
             app: Context,
-            diskCache: DiskCache,
-            memoryCache: MemoryCache,
+            diskCache: () -> DiskCache,
+            memoryCache: () -> MemoryCache,
             callFactory: (url: String) -> Call.Factory,
         ) {
             SingletonImageLoader.setUnsafe(
                 ImageLoader
                     .Builder(app)
-                    .diskCache { diskCache }
-                    .memoryCache { memoryCache }
+                    .diskCache(diskCache)
+                    .memoryCache(memoryCache)
                     .precision(Precision.INEXACT)
                     .logger(debugLogger)
                     .components {
