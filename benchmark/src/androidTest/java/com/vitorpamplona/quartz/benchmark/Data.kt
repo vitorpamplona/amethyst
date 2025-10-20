@@ -43,6 +43,8 @@ val reqResponseEvent =
         "\"tags\":[],\"sig\":\"dcaf8ab98bb9179017b35bd814092850d1062b26c263dff89fb1ae8c019a324139d1729012d" +
         "9d05ff0a517f76b1117d869b2cc7d36bea8aa5f4b94c5e2548aa8\"}]"
 
+val reqResponseEvent2 = "[\"EVENT\",\"AccountFollowsLoaderSubAssemblerlwqF2N\",{\"content\":\"\",\"created_at\":1755624512,\"id\":\"f9a41bb1486bd51f3b64e9d80f3460a1a30895b8fe58398e7a6e8e3ef1c48462\",\"kind\":10002,\"pubkey\":\"6e1bee4bdfc34056ffcde2c0685ae6468867aedd0843ed5d0cfcde41f64bfda8\",\"sig\":\"c9e1002442a7d8ef9cfba681b848b75d217ea760862bf077881f25152b49c05b3cb4d53acaf80b6d99bab858fe5d12c62ffa2e8d1906930f76be3470600d8728\",\"tags\":[[\"r\",\"wss://relay.damus.io/\"],[\"r\",\"wss://relay.primal.net/\"],[\"r\",\"wss://purplerelay.com/\"],[\"r\",\"wss://relay.stewlab.win/\"],[\"r\",\"wss://relay.livefreebtc.dev/\"],[\"r\",\"wss://cache2.primal.net/v1\"],[\"r\",\"wss://lightningrelay.com\\t\"],[\"r\",\"wss://at.nostrworks.com\\t\"],[\"r\",\"wss://nos.lol\\t\"],[\"r\",\"wss://nostr-1.nbo.angani.co\\t\"]]}]"
+
 val largeKind1Event =
     """
     {

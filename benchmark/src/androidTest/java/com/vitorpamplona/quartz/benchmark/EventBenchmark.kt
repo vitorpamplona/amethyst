@@ -62,6 +62,21 @@ class EventBenchmark {
     }
 
     @Test
+    fun parseREQString2() {
+        benchmarkRule.measureRepeated { JacksonMapper.mapper.readTree(reqResponseEvent2) }
+    }
+
+    @Test
+    fun parseREQStringComplete() {
+        benchmarkRule.measureRepeated { OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent) }
+    }
+
+    @Test
+    fun parseREQStringComplete2() {
+        benchmarkRule.measureRepeated { OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent2) }
+    }
+
+    @Test
     fun parseEvent() {
         val msg = JacksonMapper.mapper.readTree(reqResponseEvent)
 
