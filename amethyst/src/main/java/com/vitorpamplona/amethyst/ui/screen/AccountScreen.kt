@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.utils.Log
 fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
     // Pauses relay services when the app pauses
     ManageRelayServices()
+    ManageWebOkHttp()
 
     val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
@@ -64,6 +65,14 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
 @Composable
 fun ManageRelayServices() {
     val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun ManageWebOkHttp() {
+    val torWebServices by Amethyst.instance.okHttpClients.defaultHttpClient
+        .collectAsStateWithLifecycle()
+    val openWebServices by Amethyst.instance.okHttpClients.defaultHttpClientWithoutProxy
         .collectAsStateWithLifecycle()
 }
 
