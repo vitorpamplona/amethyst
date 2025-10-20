@@ -111,8 +111,8 @@ class PoolEventOutbox {
         relay: NormalizedRelayUrl,
         msg: Message,
     ) {
-        when (msg) {
-            is OkMessage -> newResponse(msg.eventId, relay, msg.success, msg.message)
+        if (msg is OkMessage) {
+            newResponse(msg.eventId, relay, msg.success, msg.message)
         }
     }
 
