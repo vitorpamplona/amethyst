@@ -64,11 +64,11 @@ class ChannelCreateEvent(
                 if (content.isEmpty() || !content.startsWith("{") || isEncrypted()) {
                     ChannelDataNorm()
                 } else {
-                    ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
+                    ChannelData.parse(content).normalize()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
+                Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}")
                 ChannelDataNorm()
             }
 
