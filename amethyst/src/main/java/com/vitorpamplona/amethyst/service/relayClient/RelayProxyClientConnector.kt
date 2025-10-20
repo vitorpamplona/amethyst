@@ -47,8 +47,8 @@ class RelayProxyClientConnector(
     val torEvaluator: StateFlow<TorRelayEvaluation>,
     val okHttpClients: DualHttpClientManager,
     val connManager: ConnectivityManager,
-    val client: INostrClient,
     val torManager: TorManager,
+    val client: INostrClient,
     val scope: CoroutineScope,
 ) {
     data class RelayServiceInfra(
@@ -56,6 +56,7 @@ class RelayProxyClientConnector(
         val torConnection: OkHttpClient,
         val clearConnection: OkHttpClient,
         val connectivity: ConnectivityStatus,
+        val torStatus: TorServiceStatus,
     )
 
     @OptIn(FlowPreview::class)
@@ -65,8 +66,9 @@ class RelayProxyClientConnector(
             okHttpClients.defaultHttpClient,
             okHttpClients.defaultHttpClientWithoutProxy,
             connManager.status,
-        ) { torSettings, torConnection, clearConnection, connectivity ->
-            RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity)
+            torManager.status,
+        ) { torSettings, torConnection, clearConnection, connectivity, torStatus ->
+            RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity, torStatus)
         }.debounce(100)
             .onEach {
                 if (it.connectivity is ConnectivityStatus.StartingService) {
@@ -76,18 +78,16 @@ class RelayProxyClientConnector(
                     if (client.isActive()) {
                         client.disconnect()
                     }
-                    val torStatus = torManager.status.value
-                    if (torStatus is TorServiceStatus.Active) {
-                        torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_DORMANT)
+                    if (it.torStatus is TorServiceStatus.Active) {
+                        it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_DORMANT)
                         Log.d("ManageRelayServices", "Pausing Tor Activity")
                     }
                 } else if (it.connectivity is ConnectivityStatus.Active && !client.isActive()) {
                     Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
 
-                    val torStatus = torManager.status.value
-                    if (torStatus is TorServiceStatus.Active) {
-                        torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_ACTIVE)
-                        torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_NEWNYM)
+                    if (it.torStatus is TorServiceStatus.Active) {
+                        it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_ACTIVE)
+                        it.torStatus.torControlConnection?.signal(TorControlCommands.SIGNAL_NEWNYM)
                         Log.d("ManageRelayServices", "Resuming Tor Activity with new nym")
                     }
 
