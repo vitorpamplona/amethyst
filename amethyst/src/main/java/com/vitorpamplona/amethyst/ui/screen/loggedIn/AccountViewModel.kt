@@ -187,12 +187,22 @@ class AccountViewModel(
                 }.map { it?.list?.firstOrNull()?.createdAt() },
         ) { lastRead, newestItemCreatedAt ->
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+        }.onStart {
+            val lastRead = account.loadLastReadFlow("Notification").value
+            val cards = feedStates.notifications.feedContent.value
+            if (cards is CardFeedState.Loaded) {
+                val newestItemCreatedAt =
+                    cards.feed.value.list
+                        .firstOrNull()
+                        ?.createdAt()
+                emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+            }
         }
 
     val notificationHasNewItemsFlow =
         notificationHasNewItems
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val messagesHasNewItems =
@@ -221,12 +231,27 @@ class AccountViewModel(
                 } else {
                     MutableStateFlow(false)
                 }
+            }.onStart {
+                val feed = feedStates.dmKnown.feedContent.value
+                if (feed is FeedState.Loaded) {
+                    val newItems =
+                        feed.feed.value.list.any { chat ->
+                            (chat.event as? ChatroomKeyable)?.let { event ->
+                                val room = event.chatroomKey(account.signer.pubKey)
+                                val lastReadAt =
+                                    account.settings.lastReadPerRoute.value["Room/${room.hashCode()}"]
+                                        ?.value ?: 0L
+                                (chat.event?.createdAt ?: 0) > lastReadAt
+                            } == true
+                        }
+                    emit(newItems)
+                }
             }
 
     val messagesHasNewItemsFlow =
         messagesHasNewItems
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val homeHasNewItems =
@@ -244,12 +269,22 @@ class AccountViewModel(
                 },
         ) { lastRead, newestItemCreatedAt ->
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+        }.onStart {
+            val lastRead = account.loadLastReadFlow("HomeFollows").value
+            val feed = feedStates.homeNewThreads.feedContent.value
+            if (feed is FeedState.Loaded) {
+                val newestItemCreatedAt =
+                    feed.feed.value.list
+                        .firstOrNull { it.event != null && it.event !is GenericRepostEvent && it.event !is RepostEvent }
+                        ?.createdAt()
+                emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
+            }
         }
 
     val homeHasNewItemsFlow =
         homeHasNewItems
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     val hasNewItems =
         mapOf(
