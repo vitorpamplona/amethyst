@@ -3,7 +3,7 @@
     <string name="point_to_the_qr_code">Fókuszálás a QR-kódra</string>
     <string name="show_qr">QR-kód megjelenítése</string>
     <string name="profile_image">Profilkép</string>
-    <string name="your_profile_image">Az Ön profilképe</string>
+    <string name="your_profile_image">Saját profilkép</string>
     <string name="scan_qr">QR-kód beolvasása</string>
     <string name="show_anyway">Megjelenítés mindenképp</string>
     <string name="post_was_hidden">Ez a bejegyzés el lett rejtve, mert az Ön rejtett felhasználóit vagy szavait említi</string>
@@ -32,7 +32,7 @@
     <string name="timestamp_pending">Időbélyeg: függőben lévő megerősítések</string>
     <string name="timestamp_pending_short">OTS: függőben</string>
     <string name="request_deletion">Törlés kérése</string>
-    <string name="block_report">Tiltás / jelentés</string>
+    <string name="block_report">Letiltás / Bejelentés</string>
     <string name="block_hide_user"><![CDATA[Letiltás és a felhasználó elrejtése]]></string>
     <string name="report_spam_scam">Kéretlen tartalom vagy csalás bejelentése</string>
     <string name="report_impersonation">Profilutánzás bejelentése</string>
@@ -455,9 +455,19 @@
     <string name="follow_set_empty_feed_msg">        Úgy tűnik, hogy még egyetlen gyüjteményt sem követ.
         \nKoppintson a frissítéshez vagy érintse meg a hozzáadás gombot a gyüjtemény létrehozásához.
     </string>
+    <string name="follow_set_create_btn_label">Új</string>
     <string name="follow_set_add_author_from_note_action">Szerző hozzáadása a követési gyűjteményhez</string>
     <string name="follow_set_profile_actions_menu_description">Felhasználó hozzáadása vagy eltávolítása a listákból, vagy új lista létrehozása ezzel a felhasználóval.</string>
     <string name="follow_set_icon_description">Ikon a(z) %1$s nevű listához</string>
+    <string name="follow_set_public_presence_indicator">%1$s egy nyílvános tag</string>
+    <string name="follow_set_private_presence_indicator">%1$s egy privát tag</string>
+    <string name="follow_set_public_member_add_label">Hozzáadás mint nyílvános tag</string>
+    <string name="follow_set_private_member_add_label">Hozzáadás mint privát tag</string>
+    <string name="follow_set_public_members_header_label">Nyílvános profilok</string>
+    <string name="follow_set_private_members_header_label">Privát profilok</string>
+    <string name="follow_set_single_member_label">tag</string>
+    <string name="follow_set_multiple_member_label">tagok</string>
+    <string name="follow_set_empty_label">Nincsenek tagok</string>
     <string name="follow_set_absence_indicator">A(z) %1$s nincs a listában</string>
     <string name="follow_set_man_dialog_title">Saját követési gyüjtemények</string>
     <string name="follow_set_empty_dialog_msg">Nem találhatók követési gyüjtemények, vagy nincs követési gyüjteménye. Érintse meg az alábbi gombot a frissítéshez vagy használja a menüt egy gyüjtemény létrehozásához.</string>
@@ -466,10 +476,19 @@
     <string name="follow_set_creation_item_label">Új %1$s lista létrehozása felhasználóval</string>
     <string name="follow_set_creation_item_description">%1$s követési gyüjtemény létrehozása, és hozzáadás a következhöz: %2$s.</string>
     <string name="follow_set_creation_dialog_title">Új %1$s lista</string>
+    <string name="follow_set_copy_dialog_title">Követési gyüjtemény másolása/klónozása</string>
+    <string name="follow_set_desc_modify_label">Leírás módosítása</string>
+    <string name="follow_set_empty_desc_label">Ennek a listának nincs leírása</string>
+    <string name="follow_set_current_desc_label">Jelenlegi leírás:</string>
+    <string name="follow_set_copy_indicator_description">Az alábbiakban beállíthat egy egyéni nevet/leírást ehhez a klónozott követési gyűjteményhez.</string>
     <string name="follow_set_creation_name_label">Név megadása</string>
+    <string name="follow_set_copy_name_label">(Gyüjtemény eredeti neve)</string>
     <string name="follow_set_creation_desc_label">Leírás megadása (nem kötelező)</string>
+    <string name="follow_set_copy_desc_label">(Gyüjtemény eredeti leírása)</string>
     <string name="follow_set_creation_action_btn_label">Gyüjtemény létrehozása</string>
+    <string name="follow_set_copy_action_btn_label">Gyüjtemény másolása/klónozása</string>
     <string name="follow_set_rename_btn_label">Gyüjtemény átnevezése</string>
+    <string name="follow_set_desc_modify_btn_label">Módosítás</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Ön átnevezi a követési gyüjteményt erről: </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> erre:</string>
     <string name="connect_through_your_orbot_setup_short">Alapértelmezett port: 9050</string>
