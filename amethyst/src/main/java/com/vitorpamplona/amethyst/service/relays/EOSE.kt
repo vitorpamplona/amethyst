@@ -25,10 +25,10 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-typealias SincePerRelayMap = Map<NormalizedRelayUrl, MutableTime>
+typealias SincePerRelayMap = MutableMap<NormalizedRelayUrl, MutableTime>
 
 class EOSERelayList {
-    var relayList: SincePerRelayMap = emptyMap()
+    var relayList: SincePerRelayMap = mutableMapOf()
 
     fun addOrUpdate(
         relayUrl: NormalizedRelayUrl,
@@ -36,14 +36,14 @@ class EOSERelayList {
     ) {
         val eose = relayList[relayUrl]
         if (eose == null) {
-            relayList = relayList + Pair(relayUrl, MutableTime(time))
+            relayList.put(relayUrl, MutableTime(time))
         } else {
             eose.updateIfNewer(time)
         }
     }
 
     fun clear() {
-        relayList = emptyMap()
+        relayList = mutableMapOf()
     }
 
     fun since() = relayList
