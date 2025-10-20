@@ -4042,7 +4042,7 @@ class RichTextParserTest {
         org.junit.Assert.assertTrue(state.imageList.isEmpty())
         org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
         org.junit.Assert.assertEquals(
-            "Hi, how are you doing? ",
+            "Hi, how are you doing?",
             state.paragraphs
                 .firstOrNull()
                 ?.words
@@ -4060,7 +4060,7 @@ class RichTextParserTest {
         org.junit.Assert.assertTrue(state.imageList.isEmpty())
         org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
         org.junit.Assert.assertEquals(
-            "\nHi, \nhow\n\n\n are you doing? \n",
+            "\nHi,\nhow\n\n\n are you doing?\n",
             state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
     }
@@ -4231,7 +4231,6 @@ class RichTextParserTest {
             listOf<String>(
                 "RegularText(Goon Night everybody :sleep:)",
                 "Image(81ca16-b665-4f57-80cb-11a58461fb61.avif)",
-                "RegularText()",
                 "Image(https://bae.st/media/66b08dde784287ed8f92c455bc62076a04671ccb44097550626a532185a5d3ed.avif?name=81ca16-b665-4f57-80cb-11a58461fb61.avif)",
             )
 

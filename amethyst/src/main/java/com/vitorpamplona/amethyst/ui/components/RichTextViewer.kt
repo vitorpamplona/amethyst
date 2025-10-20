@@ -67,12 +67,15 @@ import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
+import com.vitorpamplona.amethyst.commons.richtext.GalleryParser
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
+import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
@@ -90,6 +93,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -107,10 +111,10 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.text.Typography.paragraph
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -149,15 +153,18 @@ fun RenderStrangeNamePreview() {
         RenderRegular(
             "If you want to stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm can you here",
             EmptyTagList,
-        ) { word, state ->
-            when (word) {
-                is BechSegment -> {
-                    Text(
-                        "FreeFrom Official \uD80C\uDD66",
-                        modifier = Modifier.border(1.dp, Color.Red),
-                    )
+        ) { paragraph, state, spaceWidth, modifier ->
+            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+                when (word) {
+                    is BechSegment -> {
+                        Text(
+                            "FreeFrom Official \uD80C\uDD66",
+                            modifier = Modifier.border(1.dp, Color.Red),
+                        )
+                    }
+
+                    is RegularTextSegment -> Text(word.segmentText)
                 }
-                is RegularTextSegment -> Text(word.segmentText)
             }
         }
     }
@@ -166,14 +173,51 @@ fun RenderStrangeNamePreview() {
 @Preview
 @Composable
 fun RenderRegularPreview() {
-    val nav = EmptyNav
-
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
             "nostr:npub1e0z776cpe0gllgktjk54fuzv8pdfxmq6smsmh8xd7t8s7n474n9smk0txy but i'm Monthly funding" +
                 " 7 other humans vitor@vitorpamplona.com at the moment so spread #test a bit thin, but won't always be the case.",
             EmptyTagList,
-        ) { word, state ->
+        ) { paragraph, state, spaceWidth, modifier ->
+            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+                when (word) {
+                    // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+                    // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
+                    is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+                    // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+                    // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+                    // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+                    is EmailSegment -> ClickableEmail(word.segmentText)
+                    is PhoneSegment -> ClickablePhone(word.segmentText)
+                    is BechSegment -> {
+                        CreateClickableText(
+                            word.segmentText.substring(0, 10),
+                            "",
+                            1,
+                            route = Route.EventRedirect(word.segmentText),
+                            nav = EmptyNav,
+                        )
+                    }
+
+                    is HashTagSegment -> HashTag(word, EmptyNav)
+                    // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+                    // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
+                    is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+                    is RegularTextSegment -> Text(word.segmentText)
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun RenderRegularPreview2() {
+    RenderRegular(
+        "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
+        EmptyTagList,
+    ) { paragraph, state, spaceWidth, modifier ->
+        RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
             when (word) {
                 // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                 // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
@@ -183,50 +227,13 @@ fun RenderRegularPreview() {
                 // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
                 is EmailSegment -> ClickableEmail(word.segmentText)
                 is PhoneSegment -> ClickablePhone(word.segmentText)
-                is BechSegment -> {
-                    CreateClickableText(
-                        word.segmentText.substring(0, 10),
-                        "",
-                        1,
-                        route = Route.EventRedirect(word.segmentText),
-                        nav = nav,
-                    )
-                }
-
-                is HashTagSegment -> HashTag(word, nav)
+                // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+                is HashTagSegment -> HashTag(word, EmptyNav)
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
                 is RegularTextSegment -> Text(word.segmentText)
             }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun RenderRegularPreview2() {
-    val nav = EmptyNav
-
-    RenderRegular(
-        "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
-        EmptyTagList,
-    ) { word, state ->
-        when (word) {
-            // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-            // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
-            is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-            // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-            // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
-            // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-            is EmailSegment -> ClickableEmail(word.segmentText)
-            is PhoneSegment -> ClickablePhone(word.segmentText)
-            // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-            is HashTagSegment -> HashTag(word, nav)
-            // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-            // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-            is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-            is RegularTextSegment -> Text(word.segmentText)
         }
     }
 }
@@ -244,7 +251,6 @@ fun RenderRegularPreview3() {
                 arrayOf("proxy", "https://misskey.io/notes/9q0x6gtdysir03qh", "activitypub"),
             ),
         )
-    val nav = EmptyNav
     val accountViewModel = mockAccountViewModel()
 
     RenderRegular(
@@ -252,22 +258,24 @@ fun RenderRegularPreview3() {
             "#ioメシヨソイゲーム\n" +
             "https://misskey.io/play/9g3qza4jow",
         tags,
-    ) { word, state ->
-        when (word) {
-            // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
-            is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, null, accountViewModel)
-            is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
-            // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
-            // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
-            // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-            is EmailSegment -> ClickableEmail(word.segmentText)
-            is PhoneSegment -> ClickablePhone(word.segmentText)
-            // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-            is HashTagSegment -> HashTag(word, nav)
-            // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
-            // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-            is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-            is RegularTextSegment -> Text(word.segmentText)
+    ) { paragraph, state, spaceWidth, modifier ->
+        RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+            when (word) {
+                // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+                is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, null, accountViewModel)
+                is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+                // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
+                // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
+                // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+                is EmailSegment -> ClickableEmail(word.segmentText)
+                is PhoneSegment -> ClickablePhone(word.segmentText)
+                // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
+                is HashTagSegment -> HashTag(word, EmptyNav)
+                // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+                // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
+                is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+                is RegularTextSegment -> Text(word.segmentText)
+            }
         }
     }
 }
@@ -284,62 +292,58 @@ private fun RenderRegular(
     nav: INav,
 ) {
     if (canPreview) {
-        RenderRegularWithGallery(content, tags, backgroundColor, quotesLeft, callbackUri, accountViewModel, nav)
+        RenderRegular(content, tags, callbackUri) { paragraph, state, spaceWidth, modifier ->
+            if (paragraph is ImageGalleryParagraph) {
+                ImageGallery(
+                    images = paragraph,
+                    state = state,
+                    accountViewModel = accountViewModel,
+                    modifier = modifier,
+                    roundedCorner = true,
+                )
+            } else {
+                RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+                    RenderWordWithPreview(
+                        word,
+                        state,
+                        backgroundColor,
+                        quotesLeft,
+                        callbackUri,
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            }
+        }
     } else {
-        RenderRegular(content, tags, callbackUri) { word, state ->
-            RenderWordWithoutPreview(
-                word,
-                state,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
+        RenderRegular(content, tags, callbackUri) { paragraph, state, spaceWidth, modifier ->
+            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+                RenderWordWithoutPreview(
+                    word,
+                    state,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun RenderRegularWithGallery(
-    content: String,
-    tags: ImmutableListOfLists<String>,
-    backgroundColor: MutableState<Color>,
-    quotesLeft: Int,
-    callbackUri: String? = null,
-    accountViewModel: AccountViewModel,
-    nav: INav,
+fun RenderTextParagraph(
+    paragraph: ParagraphState,
+    spaceWidth: Dp,
+    modifier: Modifier,
+    renderWord: @Composable (word: Segment) -> Unit,
 ) {
-    val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri)) }
-
-    val context =
-        RenderContext(
-            state = state,
-            backgroundColor = backgroundColor,
-            quotesLeft = quotesLeft,
-            callbackUri = callbackUri,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-
-    val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
-    val paragraphParser = remember { ParagraphParser() }
-
-    Column {
-        paragraphParser.ProcessAllParagraphs(
-            paragraphs = state.paragraphs,
-            spaceWidth = spaceWidth,
-            context = context,
-            renderSingleParagraph = { paragraph, words, width, ctx ->
-                paragraphParser.RenderSingleParagraphWithFlowRow(
-                    paragraph = paragraph,
-                    words = words,
-                    spaceWidth = width,
-                    context = ctx,
-                    renderWord = { word, renderContext -> RenderWordWithPreview(word, renderContext) },
-                )
-            },
-            renderImageGallery = { words, ctx -> RenderWordsWithImageGallery(words, ctx) },
-        )
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+    ) {
+        paragraph.words.forEach { word ->
+            renderWord(word)
+        }
     }
 }
 
@@ -349,7 +353,7 @@ fun RenderRegular(
     content: String,
     tags: ImmutableListOfLists<String>,
     callbackUri: String? = null,
-    wordRenderer: @Composable (Segment, RichTextViewerState) -> Unit,
+    renderParagraph: @Composable (ParagraphState, state: RichTextViewerState, Dp, modifier: Modifier) -> Unit,
 ) {
     val state by remember(content, tags) { mutableStateOf(CachedRichTextParser.parseText(content, tags, callbackUri)) }
 
@@ -376,14 +380,12 @@ fun RenderRegular(
                     },
                 LocalTextStyle provides textStyle,
             ) {
-                FlowRow(
-                    modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                    horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                ) {
-                    paragraph.words.forEach { word ->
-                        wordRenderer(word, state)
-                    }
-                }
+                renderParagraph(
+                    paragraph,
+                    state,
+                    spaceWidth,
+                    Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                )
             }
         }
     }
@@ -436,48 +438,32 @@ private fun RenderWordWithoutPreview(
 }
 
 @Composable
-private fun RenderWordsWithImageGallery(
-    words: ImmutableList<Segment>,
-    context: RenderContext,
-) {
-    val paragraphParser = remember { ParagraphParser() }
-
-    paragraphParser.ProcessWordsWithImageGrouping(
-        words = words,
-        context = context,
-        renderSingleWord = { word, ctx -> RenderWordWithPreview(word, ctx) },
-        renderGallery = { imageContents, accountViewModel ->
-            ImageGallery(
-                images = imageContents,
-                accountViewModel = accountViewModel,
-                roundedCorner = true,
-            )
-        },
-    )
-}
-
-@Composable
 private fun RenderWordWithPreview(
     word: Segment,
-    context: RenderContext,
+    state: RichTextViewerState,
+    backgroundColor: MutableState<Color>,
+    quotesLeft: Int,
+    callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     when (word) {
-        is ImageSegment -> ZoomableContentView(word.segmentText, context.state, context.accountViewModel)
-        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, context.callbackUri, context.accountViewModel)
-        is EmojiSegment -> RenderCustomEmoji(word.segmentText, context.state)
-        is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, context.accountViewModel)
-        is WithdrawSegment -> MayBeWithdrawal(word.segmentText, context.accountViewModel)
-        is CashuSegment -> CashuPreview(word.segmentText, context.accountViewModel)
+        is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
+        is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+        is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
+        is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
+        is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
-        is SecretEmoji -> DisplaySecretEmoji(word, context.state, context.callbackUri, true, context.quotesLeft, context.backgroundColor, context.accountViewModel, context.nav)
+        is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is PhoneSegment -> ClickablePhone(word.segmentText)
-        is BechSegment -> BechLink(word.segmentText, true, context.quotesLeft, context.backgroundColor, context.accountViewModel, context.nav)
-        is HashTagSegment -> HashTag(word, context.nav)
-        is HashIndexUserSegment -> TagLink(word, context.accountViewModel, context.nav)
-        is HashIndexEventSegment -> TagLink(word, true, context.quotesLeft, context.backgroundColor, context.accountViewModel, context.nav)
+        is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
+        is HashTagSegment -> HashTag(word, nav)
+        is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+        is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
-        is Base64Segment -> ZoomableContentView(word.segmentText, context.state, context.accountViewModel)
+        is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
     }
 }
 
@@ -636,36 +622,36 @@ fun CoreSecretMessage(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context =
-        RenderContext(
-            state = localSecretContent,
-            backgroundColor = backgroundColor,
-            quotesLeft = quotesLeft,
-            callbackUri = callbackUri,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-
     if (localSecretContent.paragraphs.size == 1) {
         localSecretContent.paragraphs[0].words.forEach { word ->
             RenderWordWithPreview(
-                word,
-                context,
+                word = word,
+                state = localSecretContent,
+                backgroundColor = backgroundColor,
+                quotesLeft = quotesLeft,
+                callbackUri = callbackUri,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
     } else if (localSecretContent.paragraphs.size > 1) {
         val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
-        val paragraphParser = remember { ParagraphParser() }
 
         Column(CashuCardBorders) {
             localSecretContent.paragraphs.forEach { paragraph ->
-                paragraphParser.RenderSingleParagraphWithFlowRow(
-                    paragraph = paragraph,
-                    words = paragraph.words.toImmutableList(),
-                    spaceWidth = spaceWidth,
-                    context = context,
-                    renderWord = { word, ctx -> RenderWordWithPreview(word, ctx) },
-                )
+                val modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start)
+
+                RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+                    RenderWordWithPreview(
+                        word,
+                        localSecretContent,
+                        backgroundColor,
+                        quotesLeft,
+                        callbackUri,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
         }
     }

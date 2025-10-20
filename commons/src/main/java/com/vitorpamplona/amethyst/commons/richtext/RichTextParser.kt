@@ -172,30 +172,30 @@ class RichTextParser {
         val paragraphSegments = ArrayList<ParagraphState>(lines.size)
 
         lines.forEach { paragraph ->
-            var isDirty = false
             val isRTL = isArabic(paragraph)
 
             val wordList = paragraph.trimEnd().split(' ')
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
-                val wordSegment = wordIdentifier(word, images, urls, emojis, tags)
-                if (wordSegment !is RegularTextSegment) {
-                    isDirty = true
-                }
-                segments.add(wordSegment)
+                segments.add(wordIdentifier(word, images, urls, emojis, tags))
             }
 
-            val newSegments =
-                if (isDirty) {
-                    ParagraphState(segments.toPersistentList(), isRTL)
-                } else {
-                    ParagraphState(persistentListOf<Segment>(RegularTextSegment(paragraph)), isRTL)
-                }
-
-            paragraphSegments.add(newSegments)
+            paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
         }
 
-        return paragraphSegments.toImmutableList()
+        val segmentsWithGalleries = GalleryParser().processParagraphs(paragraphSegments)
+
+        return segmentsWithGalleries
+            .map { paragraph ->
+                if (paragraph.words.isEmpty() || paragraph.words.any { it !is RegularTextSegment }) {
+                    paragraph
+                } else {
+                    ParagraphState(
+                        persistentListOf<Segment>(RegularTextSegment(paragraph.words.joinToString(" ") { it.segmentText })),
+                        paragraph.isRTL,
+                    )
+                }
+            }.toImmutableList()
     }
 
     private fun isNumber(word: String) = numberPattern.matcher(word).matches()

@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.ui.components.HashTag
 import com.vitorpamplona.amethyst.ui.components.RenderRegular
+import com.vitorpamplona.amethyst.ui.components.RenderTextParagraph
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
@@ -60,10 +61,12 @@ fun RenderHashTagIconsPreview() {
         RenderRegular(
             "Testing rendering of hashtags: #flowerstr #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
             EmptyTagList,
-        ) { word, state ->
-            when (word) {
-                is HashTagSegment -> HashTag(word, EmptyNav)
-                is RegularTextSegment -> Text(word.segmentText)
+        ) { paragraph, state, spaceWidth, modifier ->
+            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
+                when (word) {
+                    is HashTagSegment -> HashTag(word, EmptyNav)
+                    is RegularTextSegment -> Text(word.segmentText)
+                }
             }
         }
     }

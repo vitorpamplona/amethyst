@@ -33,11 +33,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
+import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 
 private const val ASPECT_RATIO = 4f / 3f
 private val IMAGE_SPACING: Dp = Size5dp
@@ -64,20 +69,28 @@ private fun GalleryImage(
 
 @Composable
 fun ImageGallery(
-    images: ImmutableList<MediaUrlImage>,
+    images: ImageGalleryParagraph,
+    state: RichTextViewerState,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     roundedCorner: Boolean = true,
 ) {
-    if (images.isEmpty()) return
+    if (images.words.isEmpty()) return
+
+    val resolvedImages =
+        images.words
+            .mapNotNull { segment ->
+                val imageUrl = segment.segmentText
+                state.imagesForPager[imageUrl] as? MediaUrlImage
+            }.toImmutableList()
 
     Column(modifier = modifier.padding(vertical = Size10dp)) {
-        when (images.size) {
-            1 -> SingleImageGallery(images, accountViewModel, roundedCorner)
-            2 -> TwoImageGallery(images, accountViewModel, roundedCorner)
-            3 -> ThreeImageGallery(images, accountViewModel, roundedCorner)
-            4 -> FourImageGallery(images, accountViewModel, roundedCorner)
-            else -> ManyImageGallery(images, accountViewModel, roundedCorner)
+        when (resolvedImages.size) {
+            1 -> SingleImageGallery(resolvedImages, accountViewModel, roundedCorner)
+            2 -> TwoImageGallery(resolvedImages, accountViewModel, roundedCorner)
+            3 -> ThreeImageGallery(resolvedImages, accountViewModel, roundedCorner)
+            4 -> FourImageGallery(resolvedImages, accountViewModel, roundedCorner)
+            else -> ManyImageGallery(resolvedImages, accountViewModel, roundedCorner)
         }
     }
 }

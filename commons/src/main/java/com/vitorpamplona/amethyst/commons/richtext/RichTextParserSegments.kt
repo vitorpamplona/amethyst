@@ -37,10 +37,16 @@ class RichTextViewerState(
 )
 
 @Immutable
-data class ParagraphState(
+open class ParagraphState(
     val words: ImmutableList<Segment>,
     val isRTL: Boolean,
 )
+
+@Immutable
+class ImageGalleryParagraph(
+    words: ImmutableList<Segment>,
+    isRTL: Boolean,
+) : ParagraphState(words, isRTL)
 
 @Immutable
 open class Segment(
