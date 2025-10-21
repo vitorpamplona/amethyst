@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class IndexerRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun getRelayList(): List<NormalizedRelayUrl>? =
-        account.indexerRelayList.flow.value
+        account.indexerRelayList.flowNoDefaults.value
             .toList()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {

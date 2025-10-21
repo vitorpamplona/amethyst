@@ -21,20 +21,27 @@
 package com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays
 
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class IndexerRelayListState(
     val signer: NostrSigner,
@@ -52,15 +59,27 @@ class IndexerRelayListState(
 
     fun getIndexerRelayList(): IndexerRelayListEvent? = indexerListNote.event as? IndexerRelayListEvent
 
-    suspend fun normalizeIndexerRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
-        val event = note.event as? IndexerRelayListEvent
-        return event?.let { decryptionCache.relays(it) } ?: emptySet()
-    }
+    fun indexListEvent(note: Note) = note.event as? IndexerRelayListEvent ?: settings.backupIndexRelayList
+
+    suspend fun normalizeIndexerRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.relays(it) }?.ifEmpty { null } ?: DefaultIndexerRelayList
+
+    suspend fun normalizeIndexerRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
     val flow =
         getIndexerRelayListFlow()
             .map { normalizeIndexerRelayListWithBackup(it.note) }
             .onStart { emit(normalizeIndexerRelayListWithBackup(indexerListNote)) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptySet(),
+            )
+
+    val flowNoDefaults =
+        getIndexerRelayListFlow()
+            .map { normalizeIndexerRelayListWithBackupNoDefaults(it.note) }
+            .onStart { emit(normalizeIndexerRelayListWithBackupNoDefaults(indexerListNote)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -82,6 +101,24 @@ class IndexerRelayListState(
                 relays = indexerRelays,
                 signer = signer,
             )
+        }
+    }
+
+    init {
+        settings.backupIndexRelayList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved index relay list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Index Relay List Collector Start")
+            getIndexerRelayListFlow().collect {
+                Log.d("AccountRegisterObservers", "Updating Index Relay List for ${signer.pubKey}")
+                (it.note.event as? IndexerRelayListEvent)?.let {
+                    settings.updateIndexRelayList(it)
+                }
+            }
         }
     }
 }

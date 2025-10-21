@@ -91,7 +91,7 @@ class IndexerRelayListEvent(
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
 
-        suspend fun create(
+        fun create(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
@@ -57,6 +58,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -288,6 +290,7 @@ class AccountStateViewModel : ViewModel() {
                 accountSettings.backupNIP65RelayList?.let { Amethyst.instance.client.send(it, toPost) }
                 accountSettings.backupDMRelayList?.let { Amethyst.instance.client.send(it, toPost) }
                 accountSettings.backupSearchRelayList?.let { Amethyst.instance.client.send(it, toPost) }
+                accountSettings.backupIndexRelayList?.let { Amethyst.instance.client.send(it, toPost) }
             }
         }
     }
@@ -309,6 +312,7 @@ class AccountStateViewModel : ViewModel() {
             backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
             backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
             backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
+            backupIndexRelayList = IndexerRelayListEvent.create(DefaultIndexerRelayList.toList(), tempSigner),
             backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
         )
     }

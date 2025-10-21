@@ -52,6 +52,7 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
@@ -99,6 +100,7 @@ private object PrefKeys {
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
     const val LATEST_NIP65_RELAY_LIST = "latestNIP65RelayList"
     const val LATEST_SEARCH_RELAY_LIST = "latestSearchRelayList"
+    const val LATEST_INDEX_RELAY_LIST = "latestIndexRelayList"
     const val LATEST_BLOCKED_RELAY_LIST = "latestBlockedRelayList"
     const val LATEST_TRUSTED_RELAY_LIST = "latestTrustedRelayList"
     const val LATEST_MUTE_LIST = "latestMuteList"
@@ -334,6 +336,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_DM_RELAY_LIST, settings.backupDMRelayList)
                     putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
                     putOrRemove(PrefKeys.LATEST_SEARCH_RELAY_LIST, settings.backupSearchRelayList)
+                    putOrRemove(PrefKeys.LATEST_INDEX_RELAY_LIST, settings.backupIndexRelayList)
                     putOrRemove(PrefKeys.LATEST_BLOCKED_RELAY_LIST, settings.backupBlockedRelayList)
                     putOrRemove(PrefKeys.LATEST_TRUSTED_RELAY_LIST, settings.backupTrustedRelayList)
 
@@ -469,6 +472,7 @@ object LocalPreferences {
                     val latestDmRelayList = parseEventOrNull<ChatMessageRelayListEvent>(PrefKeys.LATEST_DM_RELAY_LIST)
                     val latestNip65RelayList = parseEventOrNull<AdvertisedRelayListEvent>(PrefKeys.LATEST_NIP65_RELAY_LIST)
                     val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
+                    val latestIndexRelayList = parseEventOrNull<IndexerRelayListEvent>(PrefKeys.LATEST_INDEX_RELAY_LIST)
                     val latestBlockedRelayList = parseEventOrNull<BlockedRelayListEvent>(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
                     val latestTrustedRelayList = parseEventOrNull<TrustedRelayListEvent>(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
                     val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
@@ -511,6 +515,7 @@ object LocalPreferences {
                         backupNIP65RelayList = latestNip65RelayList,
                         backupDMRelayList = latestDmRelayList,
                         backupSearchRelayList = latestSearchRelayList,
+                        backupIndexRelayList = latestIndexRelayList,
                         backupBlockedRelayList = latestBlockedRelayList,
                         backupTrustedRelayList = latestTrustedRelayList,
                         backupPrivateHomeRelayList = latestPrivateHomeRelayList,
