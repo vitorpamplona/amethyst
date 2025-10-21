@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import android.widget.Toast
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -43,6 +45,9 @@ import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
@@ -51,135 +56,145 @@ import kotlinx.coroutines.launch
 @Composable
 fun RelayStatusRow(
     item: BasicRelaySetupInfo,
+    onClick: () -> Unit,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
-    Icon(
-        imageVector = Icons.Default.Download,
-        contentDescription = stringRes(R.string.read_from_relay),
+    Row(
         modifier =
-            Modifier
-                .size(15.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            accountViewModel.toastManager.toast(
-                                R.string.read_from_relay,
-                                R.string.read_from_relay_description,
-                            )
-                        },
-                    )
-                },
-        tint = MaterialTheme.colorScheme.allGoodColor,
-    )
-
-    Text(
-        text = countToHumanReadableBytes(item.relayStat.receivedBytes),
-        maxLines = 1,
-        fontSize = 12.sp,
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.placeholderText,
-    )
-
-    Icon(
-        imageVector = Icons.Default.Upload,
-        stringRes(R.string.write_to_relay),
-        modifier =
-            Modifier
-                .size(15.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            accountViewModel.toastManager.toast(
-                                R.string.write_to_relay,
-                                R.string.write_to_relay_description,
-                            )
-                        },
-                    )
-                },
-        tint = MaterialTheme.colorScheme.allGoodColor,
-    )
-
-    Text(
-        text = countToHumanReadableBytes(item.relayStat.sentBytes),
-        maxLines = 1,
-        fontSize = 12.sp,
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.placeholderText,
-    )
-
-    Icon(
-        imageVector = Icons.Default.SyncProblem,
-        stringRes(R.string.errors),
-        modifier =
-            Modifier
-                .size(15.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            accountViewModel.toastManager.toast(
-                                R.string.errors,
-                                R.string.errors_description,
-                            )
-                        },
-                    )
-                },
-        tint =
-            if (item.relayStat.errorCounter > 0) {
-                MaterialTheme.colorScheme.warningColor
-            } else {
-                MaterialTheme.colorScheme.allGoodColor
+            modifier.pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        onClick()
+                    },
+                    onLongPress = {
+                        accountViewModel.toastManager.toast(
+                            R.string.read_from_relay,
+                            R.string.read_from_relay_description,
+                        )
+                    },
+                )
             },
-    )
+    ) {
+        Icon(
+            imageVector = Icons.Default.Download,
+            contentDescription = stringRes(R.string.read_from_relay),
+            modifier = Size15Modifier,
+            tint = MaterialTheme.colorScheme.allGoodColor,
+        )
 
-    Text(
-        text = countToHumanReadable(item.relayStat.errorCounter, "errors"),
-        maxLines = 1,
-        fontSize = 12.sp,
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.placeholderText,
-    )
+        Text(
+            text = countToHumanReadableBytes(item.relayStat.receivedBytes),
+            maxLines = 1,
+            fontSize = Font12SP,
+            modifier = HalfStartPadding,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 
-    Icon(
-        imageVector = Icons.Default.DeleteSweep,
-        stringRes(R.string.spam),
+    Row(
         modifier =
-            Modifier
-                .size(15.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            accountViewModel.toastManager.toast(
-                                R.string.spam,
-                                R.string.spam_description,
-                            )
-                            scope.launch {
-                                Toast
-                                    .makeText(
-                                        context,
-                                        stringRes(context, R.string.spam),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                            }
-                        },
-                    )
-                },
-        tint =
-            if (item.relayStat.spamCounter > 0) {
-                MaterialTheme.colorScheme.warningColor
-            } else {
-                MaterialTheme.colorScheme.allGoodColor
+            modifier.pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        onClick()
+                    },
+                    onLongPress = {
+                        accountViewModel.toastManager.toast(
+                            R.string.write_to_relay,
+                            R.string.write_to_relay_description,
+                        )
+                    },
+                )
             },
-    )
+    ) {
+        Icon(
+            imageVector = Icons.Default.Upload,
+            stringRes(R.string.write_to_relay),
+            modifier = Size15Modifier,
+            tint = MaterialTheme.colorScheme.allGoodColor,
+        )
 
-    Text(
-        text = countToHumanReadable(item.relayStat.spamCounter, "spam"),
-        maxLines = 1,
-        fontSize = 12.sp,
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.placeholderText,
-    )
+        Text(
+            text = countToHumanReadableBytes(item.relayStat.sentBytes),
+            maxLines = 1,
+            fontSize = Font12SP,
+            modifier = HalfStartPadding,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
+
+    Row(
+        modifier =
+            modifier.pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        onClick()
+                    },
+                    onLongPress = {
+                        accountViewModel.toastManager.toast(
+                            R.string.errors,
+                            R.string.errors_description,
+                        )
+                    },
+                )
+            },
+    ) {
+        Icon(
+            imageVector = Icons.Default.SyncProblem,
+            stringRes(R.string.errors),
+            modifier = Size15Modifier,
+            tint =
+                if (item.relayStat.errorCounter > 0) {
+                    MaterialTheme.colorScheme.warningColor
+                } else {
+                    MaterialTheme.colorScheme.allGoodColor
+                },
+        )
+
+        Text(
+            text = countToHumanReadable(item.relayStat.errorCounter, "errors"),
+            maxLines = 1,
+            fontSize = Font12SP,
+            modifier = HalfStartPadding,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
+
+    Row(
+        modifier =
+            modifier.pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        onClick()
+                    },
+                    onLongPress = {
+                        accountViewModel.toastManager.toast(
+                            R.string.spam,
+                            R.string.spam_description,
+                        )
+                    },
+                )
+            },
+    ) {
+        Icon(
+            imageVector = Icons.Default.DeleteSweep,
+            stringRes(R.string.spam),
+            modifier = Size15Modifier,
+            tint =
+                if (item.relayStat.spamCounter > 0) {
+                    MaterialTheme.colorScheme.warningColor
+                } else {
+                    MaterialTheme.colorScheme.allGoodColor
+                },
+        )
+
+        Text(
+            text = countToHumanReadable(item.relayStat.spamCounter, "spam"),
+            maxLines = 1,
+            fontSize = Font12SP,
+            modifier = HalfStartPadding,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
 }

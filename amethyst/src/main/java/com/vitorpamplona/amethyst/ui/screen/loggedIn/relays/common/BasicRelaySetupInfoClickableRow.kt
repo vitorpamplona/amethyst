@@ -109,7 +109,8 @@ fun BasicRelaySetupInfoClickableRow(
                 ) {
                     RelayStatusRow(
                         item = item,
-                        modifier = HalfStartPadding.weight(1f),
+                        onClick = onClick,
+                        modifier = Modifier.weight(1f),
                         accountViewModel = accountViewModel,
                     )
                 }
