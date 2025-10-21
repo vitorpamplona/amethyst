@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59Gi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import kotlinx.coroutines.CoroutineScope
 
@@ -49,12 +50,13 @@ class AccountFilterAssembler(
     client: INostrClient,
     cache: LocalCache,
     authenticator: IAuthStatus,
+    failureTracker: RelayOfflineTracker,
     scope: CoroutineScope,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
-            AccountFollowsLoaderSubAssembler(client, cache, scope, authenticator, ::allKeys),
+            AccountFollowsLoaderSubAssembler(client, cache, scope, authenticator, failureTracker, ::allKeys),
             AccountGiftWrapsEoseManager(client, ::allKeys),
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),

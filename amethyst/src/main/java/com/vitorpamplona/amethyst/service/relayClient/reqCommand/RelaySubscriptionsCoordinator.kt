@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import kotlinx.coroutines.CoroutineScope
 
@@ -47,10 +48,11 @@ class RelaySubscriptionsCoordinator(
     cache: LocalCache,
     client: INostrClient,
     authenticator: IAuthStatus,
+    failureTracker: RelayOfflineTracker,
     scope: CoroutineScope,
 ) {
     // main one: notifications, dms and account settings
-    val account = AccountFilterAssembler(client, cache, authenticator, scope)
+    val account = AccountFilterAssembler(client, cache, authenticator, failureTracker, scope)
 
     // always running, feed assemblers.
     val home = HomeFilterAssembler(client)
@@ -62,7 +64,7 @@ class RelaySubscriptionsCoordinator(
     // they are active when looking at events, users, channels.
     val channelFinder = ChannelFinderFilterAssemblyGroup(client)
     val eventFinder = EventFinderFilterAssembler(client)
-    val userFinder = UserFinderFilterAssembler(client, cache)
+    val userFinder = UserFinderFilterAssembler(client, cache, failureTracker)
 
     // active when searching or tagging users.
     val search = SearchFilterAssembler(client, scope, cache)
