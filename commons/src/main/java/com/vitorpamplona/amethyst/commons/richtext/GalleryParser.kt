@@ -21,10 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlin.collections.ArrayList
 
 data class ParagraphImageAnalysis(
     val imageCount: Int,

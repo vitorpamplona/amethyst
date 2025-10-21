@@ -21,13 +21,9 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import android.R.attr.text
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
-import kotlinx.collections.immutable.toImmutableList
 import org.junit.Assert
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 

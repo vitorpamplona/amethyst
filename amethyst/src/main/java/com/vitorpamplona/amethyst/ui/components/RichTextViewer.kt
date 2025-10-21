@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
-import com.vitorpamplona.amethyst.commons.richtext.GalleryParser
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
@@ -111,7 +110,6 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.text.Typography.paragraph
