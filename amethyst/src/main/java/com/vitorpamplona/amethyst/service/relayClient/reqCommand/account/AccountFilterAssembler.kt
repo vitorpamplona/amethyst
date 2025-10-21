@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to logged-in accounts.
