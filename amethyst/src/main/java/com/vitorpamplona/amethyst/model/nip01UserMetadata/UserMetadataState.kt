@@ -40,13 +40,14 @@ class UserMetadataState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val user = cache.getOrCreateUser(signer.pubKey)
+
     // fun getEphemeralChatListAddress() = cache.getOrCreateUser(signer.pubKey)
 
-    fun getUserMetadataUser(): User = cache.getOrCreateUser(signer.pubKey)
+    fun getUserMetadataFlow(): StateFlow<UserState> = user.flow().metadata.stateFlow
 
-    fun getUserMetadataFlow(): StateFlow<UserState> = getUserMetadataUser().flow().metadata.stateFlow
-
-    fun getUserMetadataEvent(): MetadataEvent? = getUserMetadataUser().latestMetadata
+    fun getUserMetadataEvent(): MetadataEvent? = user.latestMetadata
 
     suspend fun sendNewUserMetadata(
         name: String? = null,
