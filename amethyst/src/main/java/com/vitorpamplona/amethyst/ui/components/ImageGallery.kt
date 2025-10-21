@@ -22,17 +22,22 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
@@ -172,32 +177,85 @@ private fun ThreeImageGallery(
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
 ) {
-    Row(
-        modifier = Modifier.aspectRatio(ASPECT_RATIO),
-        horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
-    ) {
-        GalleryImage(
-            image = images[0],
-            allImages = images,
-            modifier = Modifier.weight(2f).fillMaxSize(),
-            roundedCorner = roundedCorner,
-            contentScale = ContentScale.Crop,
-            accountViewModel = accountViewModel,
-        )
+    val firstImage = images.first()
+    val firstImageAspectRatio =
+        firstImage
+            .dim
+            ?.takeIf { it.hasSize() }
+            ?.aspectRatio()
+            ?: MediaAspectRatioCache.get(firstImage.url)
 
+    val remainingImages = images.drop(1)
+    val isLandscape = firstImageAspectRatio?.let { it >= 1f } ?: false
+    val firstItemAspectRatio =
+        firstImageAspectRatio
+            ?.takeIf { it > 0f }
+            ?: if (isLandscape) ASPECT_RATIO else PORTRAIT_ASPECT_RATIO
+
+    if (isLandscape) {
         Column(
-            modifier = Modifier.weight(1f).fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
         ) {
-            images.drop(1).forEach { image ->
+            GalleryImage(
+                image = firstImage,
+                allImages = images,
+                modifier = Modifier.fillMaxWidth().aspectRatio(firstItemAspectRatio),
+                roundedCorner = roundedCorner,
+                contentScale = ContentScale.Crop,
+                accountViewModel = accountViewModel,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+            ) {
+                remainingImages.forEach { image ->
+                    GalleryImage(
+                        image = image,
+                        allImages = images,
+                        modifier = Modifier.weight(1f).aspectRatio(1f),
+                        roundedCorner = roundedCorner,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
+    } else {
+        BoxWithConstraints {
+            val horizontalSpacing = IMAGE_SPACING
+            val columnWidth = ((maxWidth - horizontalSpacing).coerceAtLeast(0.dp)) / 2
+            val rowHeight = (columnWidth * 2) + IMAGE_SPACING
+
+            Row(
+                modifier = Modifier.fillMaxWidth().height(rowHeight),
+                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+            ) {
                 GalleryImage(
-                    image = image,
+                    image = firstImage,
                     allImages = images,
-                    modifier = Modifier.weight(1f).fillMaxSize(),
+                    modifier = Modifier.width(columnWidth).fillMaxHeight(),
                     roundedCorner = roundedCorner,
                     contentScale = ContentScale.Crop,
                     accountViewModel = accountViewModel,
                 )
+
+                Column(
+                    modifier = Modifier.width(columnWidth).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+                ) {
+                    remainingImages.forEach { image ->
+                        GalleryImage(
+                            image = image,
+                            allImages = images,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                            roundedCorner = roundedCorner,
+                            contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
             }
         }
     }
