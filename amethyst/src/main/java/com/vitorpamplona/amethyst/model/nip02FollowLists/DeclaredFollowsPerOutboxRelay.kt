@@ -55,7 +55,7 @@ class DeclaredFollowsPerOutboxRelay(
                     calculator.authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it },
                 )
             }.distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

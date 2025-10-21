@@ -361,7 +361,7 @@ class ChatNewMessageViewModel :
         val version = draftTag.current
         innerSendPost(null)
         cancel()
-        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -594,7 +594,7 @@ class ChatNewMessageViewModel :
     }
 
     fun updateRoomFromUsersInput() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             delay(300)
             val toUsersTagger = NewMessageTagger(toUsers.text, null, null, accountViewModel)
             toUsersTagger.run()
@@ -717,7 +717,7 @@ class ChatNewMessageViewModel :
     }
 
     override fun updateZapFromText() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->

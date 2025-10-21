@@ -75,7 +75,7 @@ class SearchBarViewModel(
             invalidations.debounce(100),
         ) { term, version ->
             LocalCache.findUsersStartingWith(term, account)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsNotes =
@@ -86,7 +86,7 @@ class SearchBarViewModel(
             LocalCache
                 .findNotesStartingWith(term, account.hiddenUsers)
                 .sortedWith(DefaultFeedOrder)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsPublicChatChannels =
@@ -95,7 +95,7 @@ class SearchBarViewModel(
             invalidations,
         ) { term, version ->
             LocalCache.findPublicChatChannelsStartingWith(term)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsEphemeralChannels =
@@ -104,7 +104,7 @@ class SearchBarViewModel(
             invalidations,
         ) { term, version ->
             LocalCache.findEphemeralChatChannelsStartingWith(term)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsLiveActivityChannels =
@@ -113,7 +113,7 @@ class SearchBarViewModel(
             invalidations,
         ) { term, version ->
             LocalCache.findLiveActivityChannelsStartingWith(term)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val hashtagResults =
@@ -122,7 +122,7 @@ class SearchBarViewModel(
             invalidations,
         ) { term, version ->
             findHashtags(term)
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     override val isRefreshing = derivedStateOf { searchValue.isNotBlank() }

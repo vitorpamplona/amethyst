@@ -100,7 +100,7 @@ class PollNoteViewModel : ViewModel() {
     }
 
     fun refreshTallies() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             totalZapped = totalZapped()
             wasZappedByLoggedInAccount = false
             wasZappedByLoggedInAccount = account.calculateIfNoteWasZappedByAccount(pollNote, 0)

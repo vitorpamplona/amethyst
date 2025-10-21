@@ -68,7 +68,7 @@ class HashtagListState(
                 emit(hashtagListWithBackup(noteState.note))
             }.onStart {
                 emit(hashtagListWithBackup(hashtagListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,
@@ -114,7 +114,7 @@ class HashtagListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Hashtag List Collector Start")
             getHashtagListFlow().collect {
                 Log.d("AccountRegisterObservers", "Hashtag List for ${signer.pubKey}")

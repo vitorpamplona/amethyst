@@ -97,7 +97,7 @@ fun <T> observeNoteAndMap(
                 .metadata.stateFlow
                 .mapLatest { map(it.note) }
                 .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
@@ -123,7 +123,7 @@ fun <T, U> observeNoteEventAndMap(
                 .metadata.stateFlow
                 .mapLatest { (it.note.event as? T)?.let { map(it) } }
                 .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
@@ -223,7 +223,7 @@ fun observeNoteReactionCount(
                 .sample(200)
                 .mapLatest { it.note.countReactions() }
                 .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
@@ -278,7 +278,7 @@ fun observeNoteRepostsBy(
                 .boosts.stateFlow
                 .mapLatest { it.note.isBoostedBy(user) }
                 .distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(note.isBoostedBy(user))
@@ -401,7 +401,7 @@ fun observeCommunityApprovalNeedStatus(
                     }
                 }
             }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device

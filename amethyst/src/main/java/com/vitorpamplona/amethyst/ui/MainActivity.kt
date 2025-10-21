@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity() {
 
         // Graph doesn't completely clear.
         // @OptIn(DelicateCoroutinesApi::class)
-        // GlobalScope.launch(Dispatchers.Default) {
+        // GlobalScope.launch(Dispatchers.IO) {
         //    serviceManager.trimMemory()
         // }
 

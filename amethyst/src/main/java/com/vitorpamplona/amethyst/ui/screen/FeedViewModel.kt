@@ -49,14 +49,14 @@ abstract class FeedViewModel(
 
     init {
         Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 feedState.updateFeedWith(newNotes)
             }
         }
 
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Delete from feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 feedState.deleteFromFeed(newNotes)

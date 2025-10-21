@@ -72,7 +72,7 @@ class CommunityListState(
                 emit(communityListWithBackup(noteState.note))
             }.onStart {
                 emit(communityListWithBackup(communityListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -86,7 +86,7 @@ class CommunityListState(
                 hint.mapTo(mutableSetOf()) { it.address.toValue() }
             }.onStart {
                 emit(flow.value.mapTo(mutableSetOf()) { it.address.toValue() })
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -147,7 +147,7 @@ class CommunityListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Community List Collector Start")
             getCommunityListFlow().collect {
                 Log.d("AccountRegisterObservers", "Community List for ${signer.pubKey}")

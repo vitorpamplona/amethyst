@@ -60,7 +60,7 @@ class BasicOkHttpWebSocket(
 
         val listener =
             object : OkHttpWebSocketListener() {
-                val scope = CoroutineScope(Dispatchers.Default + exceptionHandler)
+                val scope = CoroutineScope(Dispatchers.IO + exceptionHandler)
                 val incomingMessages: Channel<String> = Channel(Channel.UNLIMITED)
                 val job = // Launch a coroutine to process messages from the channel.
                     scope.launch {

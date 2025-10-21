@@ -64,7 +64,7 @@ class MergedServerListState(
             mergeServerList(nip96s, blossoms)
         }.onStart {
             emit(mergeServerList(fileServers.flow.value, blossomServers.flow.value))
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -260,7 +260,7 @@ fun DisplaySecretEmojiAsReaction(
 
     if (secretContent == null) {
         LaunchedEffect(reaction) {
-            launch(Dispatchers.Default) {
+            launch(Dispatchers.IO) {
                 secretContent =
                     CachedRichTextParser.parseText(
                         EmojiCoder.decode(reaction),

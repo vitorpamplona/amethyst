@@ -88,7 +88,7 @@ fun RenderAppDefinition(
     var metadata by remember { mutableStateOf<AppMetadata?>(null) }
 
     LaunchedEffect(key1 = noteEvent) {
-        withContext(Dispatchers.Default) { metadata = noteEvent.appMetaData() }
+        withContext(Dispatchers.IO) { metadata = noteEvent.appMetaData() }
     }
 
     metadata?.let { theAppMetadata ->

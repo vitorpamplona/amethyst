@@ -45,7 +45,7 @@ class OutboxLoaderState(
                 emitAll(filterSettings.toPerRelayFlow(cache))
             }.onStart {
                 emit(topNavFilter.value.startValue(cache))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,

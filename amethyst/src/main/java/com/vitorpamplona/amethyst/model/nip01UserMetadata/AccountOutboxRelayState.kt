@@ -46,7 +46,7 @@ class AccountOutboxRelayState(
             broadcast.flow,
         ) { nip65Outbox, privateOutBox, localRelays, broadcastRelays ->
             nip65Outbox + privateOutBox + localRelays + broadcastRelays
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

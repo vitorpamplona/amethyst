@@ -93,12 +93,12 @@ class VideoOutboxEventsFilterSubAssembler(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.followsPerRelayFlow().sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.feedState.videoFeed.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
                         invalidateFilters()
                     }

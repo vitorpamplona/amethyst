@@ -43,7 +43,7 @@ class LocalRelayListState(
     val flow =
         settings.localRelayServers
             .map { normalizeLocalRelayListWithBackup(it) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -66,7 +66,7 @@ class PrivateStorageRelayListState(
             .map { normalizePrivateOutboxRelayListWithBackup(it.note) }
             .onStart {
                 emit(normalizePrivateOutboxRelayListWithBackup(privateOutboxListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -99,7 +99,7 @@ class PrivateStorageRelayListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Private Home Relay List Collector Start")
             getPrivateOutboxRelayListFlow().collect { noteState ->
                 Log.d("AccountRegisterObservers", "Updating Private Home Relay List for ${signer.pubKey}")

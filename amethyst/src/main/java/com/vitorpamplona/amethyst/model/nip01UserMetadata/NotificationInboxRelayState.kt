@@ -40,7 +40,7 @@ class NotificationInboxRelayState(
             localRelayList.flow,
         ) { nip65Inbox, localRelays ->
             nip65Inbox + localRelays
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

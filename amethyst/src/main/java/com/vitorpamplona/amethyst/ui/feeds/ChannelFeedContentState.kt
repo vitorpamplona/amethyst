@@ -68,7 +68,7 @@ class ChannelFeedContentState(
     }
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
     fun refreshSuspended() {
@@ -135,8 +135,8 @@ class ChannelFeedContentState(
         }
     }
 
-    private val bundler = BundledUpdate(250, Dispatchers.Default)
-    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.Default)
+    private val bundler = BundledUpdate(250, Dispatchers.IO)
+    private val bundlerInsert = BundledInsert<Set<Note>>(250, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {

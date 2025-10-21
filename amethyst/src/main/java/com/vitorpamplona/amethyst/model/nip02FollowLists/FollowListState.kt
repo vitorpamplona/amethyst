@@ -66,7 +66,7 @@ class FollowListState(
 
     val flow =
         innerFlow
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -81,7 +81,7 @@ class FollowListState(
                 it.authors.mapNotNull {
                     cache.checkGetOrCreateUser(it)
                 }
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -166,7 +166,7 @@ class FollowListState(
         }
 
         // saves contact list for the next time.
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
             getFollowListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Kind 3 ${signer.pubKey}")

@@ -483,7 +483,7 @@ open class ShortNotePostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -643,7 +643,7 @@ open class ShortNotePostViewModel :
         context: Context,
         useH265: Boolean,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             isUploadingImage = true
@@ -899,7 +899,7 @@ open class ShortNotePostViewModel :
     }
 
     override fun updateZapFromText() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val tagger =
                 NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()

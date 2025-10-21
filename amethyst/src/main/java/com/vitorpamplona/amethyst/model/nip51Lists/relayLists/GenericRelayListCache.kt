@@ -72,5 +72,5 @@ open class GenericRelayListCache<T : PrivateTagArrayEvent>(
                     emit(EmptyRelayListCard)
                 }
             }.distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
 }

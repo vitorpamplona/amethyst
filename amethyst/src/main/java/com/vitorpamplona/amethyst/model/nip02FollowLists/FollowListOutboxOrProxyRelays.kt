@@ -60,7 +60,7 @@ class FollowListOutboxOrProxyRelays(
                     OutboxRelayLoader(true).authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it.keys },
                 )
             }.distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -72,7 +72,7 @@ class FollowListOutboxOrProxyRelays(
             followList.minus(blockedRelays)
         }.onStart {
             emit(outboxRelayFlow.value.minus(blockedRelayList.flow.value.toSet()))
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -94,7 +94,7 @@ class FollowListOutboxOrProxyRelays(
                         outboxRelayMinusBlockedFlow.value
                     },
                 )
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -108,7 +108,7 @@ class FollowListOutboxOrProxyRelays(
                 relayList.mapTo(mutableSetOf()) { it.url }
             }.onStart {
                 emit(flow.value.mapTo(mutableSetOf()) { it.url })
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

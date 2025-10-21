@@ -50,7 +50,7 @@ open class StringFeedViewModel(
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
     private fun refreshSuspended() {
@@ -99,13 +99,13 @@ open class StringFeedViewModel(
 
     init {
         Log.d("Init", this.javaClass.simpleName)
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Update feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }
         }
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Delete feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()

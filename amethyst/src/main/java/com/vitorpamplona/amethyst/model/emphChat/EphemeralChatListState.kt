@@ -69,7 +69,7 @@ class EphemeralChatListState(
                 emit(ephemeralChatListWithBackup(noteState.note))
             }.onStart {
                 emit(ephemeralChatListWithBackup(ephemeralChatListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -117,7 +117,7 @@ class EphemeralChatListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "EphemeralChatList Collector Start")
             getEphemeralChatListFlow().collect { noteState ->
                 Log.d("AccountRegisterObservers", "EphemeralChatList List for ${signer.pubKey}")

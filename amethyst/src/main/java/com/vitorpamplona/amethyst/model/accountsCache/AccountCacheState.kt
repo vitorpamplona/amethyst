@@ -97,7 +97,7 @@ class AccountCacheState(
             client = client,
             scope =
                 CoroutineScope(
-                    Dispatchers.Default +
+                    Dispatchers.IO +
                         SupervisorJob() +
                         CoroutineExceptionHandler { _, throwable ->
                             Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)

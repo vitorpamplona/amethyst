@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Stable
 class BundledUpdate(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
@@ -66,7 +66,7 @@ class BundledUpdate(
 @Stable
 class BasicBundledUpdate(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     val scope: CoroutineScope,
 ) {
     private var onlyOneInBlock = AtomicBoolean()
@@ -104,7 +104,7 @@ class BasicBundledUpdate(
 @Stable
 class BundledInsert<T>(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
@@ -130,7 +130,7 @@ class BundledInsert<T>(
 @Stable
 class BasicBundledInsert<T>(
     val delay: Long,
-    val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     val scope: CoroutineScope,
 ) {
     private var onlyOneInBlock = AtomicBoolean()

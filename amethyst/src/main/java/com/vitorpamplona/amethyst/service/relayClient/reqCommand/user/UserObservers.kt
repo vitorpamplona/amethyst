@@ -253,7 +253,7 @@ fun observeUserFollowCount(
                 .mapLatest { userState ->
                     userState.user.transientFollowCount() ?: 0
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(0)
@@ -281,7 +281,7 @@ fun observeUserTagFollowCount(
                 }.onStart {
                     emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.size ?: 0)
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(0)
@@ -309,7 +309,7 @@ fun observeUserTagFollows(
                 }.onStart {
                     emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList())
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(emptyList())
@@ -356,7 +356,7 @@ fun observeUserBookmarkCount(
                 .mapLatest { noteState ->
                     (noteState.note.event as? BookmarkListEvent)?.countBookmarks() ?: 0
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(0)
@@ -396,7 +396,7 @@ fun observeUserFollowerCount(
                 .mapLatest { userState ->
                     userState.user.transientFollowerCount()
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(0)
@@ -426,7 +426,7 @@ fun observeUserIsFollowing(
                 .mapLatest { userState ->
                     userState.user.isFollowing(user2) || isUserInFollowSets
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(
@@ -450,7 +450,7 @@ fun observeUserIsFollowingHashtag(
                 }.onStart {
                     emit(hashtag in accountViewModel.account.hashtagList.flow.value)
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(hashtag in accountViewModel.account.hashtagList.flow.value)
@@ -471,7 +471,7 @@ fun observeUserIsFollowingGeohash(
                 }.onStart {
                     emit(geohash in accountViewModel.account.geohashList.flow.value)
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(geohash in accountViewModel.account.geohashList.flow.value)
@@ -496,7 +496,7 @@ fun observeUserIsFollowingChannel(
                 .mapLatest { followingChannels ->
                     channel.idHex in followingChannels
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     @SuppressLint("StateFlowValueCalledInComposition")
@@ -522,7 +522,7 @@ fun observeUserIsFollowingChannel(
                 .mapLatest { followingChannels ->
                     channel.roomId in followingChannels
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     @SuppressLint("StateFlowValueCalledInComposition")
@@ -563,7 +563,7 @@ fun observeUserZapAmount(
                 .mapLatest { userState ->
                     userState.user.zappedAmount()
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(BigDecimal.ZERO)
@@ -630,7 +630,7 @@ fun observeUserStatuses(
                 .mapLatest { userState ->
                     LocalCache.findStatusesForUser(userState.user)
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(persistentListOf())
@@ -649,7 +649,7 @@ fun observeUserRelayIntoList(
                 .mapLatest { relays ->
                     relayUrl in relays
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(false)

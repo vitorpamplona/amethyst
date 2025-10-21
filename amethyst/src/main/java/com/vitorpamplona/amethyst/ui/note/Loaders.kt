@@ -134,7 +134,7 @@ fun LoadOts(
 
     LaunchedEffect(key1 = noteStatus) {
         val newOts =
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 LocalCache.findEarliestOtsForNote(
                     note = noteStatus?.note ?: note,
                     otsVerifCache = Amethyst.instance.otsVerifCache,

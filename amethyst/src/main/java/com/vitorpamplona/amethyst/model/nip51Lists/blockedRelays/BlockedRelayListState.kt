@@ -67,7 +67,7 @@ class BlockedRelayListState(
             .map {
                 normalizeBlockedRelayListWithBackup(it.note)
             }.onStart { emit(normalizeBlockedRelayListWithBackup(blockedListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -99,7 +99,7 @@ class BlockedRelayListState(
             GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Blocked Relay List Collector Start")
             getBlockedRelayListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Blocked Relay List for ${signer.pubKey}")

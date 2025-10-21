@@ -42,7 +42,7 @@ class IncomingOtsEventVerifier(
                 newNotes.forEach {
                     consume(it)
                 }
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

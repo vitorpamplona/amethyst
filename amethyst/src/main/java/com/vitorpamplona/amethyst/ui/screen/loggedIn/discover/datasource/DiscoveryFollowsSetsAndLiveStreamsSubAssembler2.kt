@@ -70,17 +70,17 @@ class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.listNameFlow().collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.followsPerRelayFlow().sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     combine(
                         key.feedStates.discoverFollowSets.lastNoteCreatedAtWhenFullyLoaded,
                         key.feedStates.discoverLive.lastNoteCreatedAtWhenFullyLoaded,

@@ -78,7 +78,7 @@ class BookmarkListState(
             }.onStart {
                 emit(publicBookmarks(bookmarkList))
             }.debounce(100)
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -93,7 +93,7 @@ class BookmarkListState(
             }.onStart {
                 emit(privateBookmarks(bookmarkList))
             }.debounce(100)
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -107,7 +107,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is EventBookmark) it.eventId else null
                     }.toSet()
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -121,7 +121,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is AddressBookmark) it.address else null
                     }.toSet()
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -135,7 +135,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is EventBookmark) it.eventId else null
                     }.toSet()
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -149,7 +149,7 @@ class BookmarkListState(
                     .mapNotNull {
                         if (it is AddressBookmark) it.address else null
                     }.toSet()
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -185,7 +185,7 @@ class BookmarkListState(
             emit(bookmarkList(private, public))
         }.onStart {
             emit(bookmarkList(privateBookmarks.value, publicBookmarks.value))
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

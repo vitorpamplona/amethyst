@@ -88,7 +88,7 @@ fun NewImageButton(
 
     val postViewModel: NewMediaModel = viewModel()
     postViewModel.onceUploaded {
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             delay(500)
             withContext(Dispatchers.Main) { navScrollToTop() }
         }

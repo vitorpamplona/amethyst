@@ -34,7 +34,7 @@ class UpdatablePropertyFlow<T>(
 ) {
     val stateFlow =
         flow
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,

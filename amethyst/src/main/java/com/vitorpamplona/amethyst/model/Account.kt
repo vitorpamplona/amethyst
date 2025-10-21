@@ -1761,7 +1761,7 @@ class Account(
     fun observeDonatedInThisVersion() =
         settings
             .observeDonatedInVersion(BuildConfig.VERSION_NAME)
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)

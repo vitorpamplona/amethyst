@@ -81,7 +81,7 @@ class AppSpecificState(
                 }
             }
 
-            scope.launch(Dispatchers.Default) {
+            scope.launch(Dispatchers.IO) {
                 Log.d("AccountRegisterObservers", "AppSpecificData Collector Start")
                 getAppSpecificDataFlow().collect {
                     try {

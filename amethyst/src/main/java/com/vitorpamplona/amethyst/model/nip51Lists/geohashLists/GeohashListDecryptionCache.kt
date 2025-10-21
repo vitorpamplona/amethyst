@@ -72,5 +72,5 @@ class GeohashListDecryptionCache(
                     emit(EmptyGeohashListCard)
                 }
             }.distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
 }

@@ -113,7 +113,7 @@ class UserMetadataState(
         }
 
         // saves contact list for the next time.
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 0 Collector Start")
             getUserMetadataFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Kind 0 ${it.user.toBestDisplayName()}")

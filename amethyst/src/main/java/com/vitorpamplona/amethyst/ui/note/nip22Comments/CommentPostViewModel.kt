@@ -323,7 +323,7 @@ open class CommentPostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -465,7 +465,7 @@ open class CommentPostViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             isUploadingImage = true
@@ -673,7 +673,7 @@ open class CommentPostViewModel :
     }
 
     override fun updateZapFromText() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val tagger =
                 NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()

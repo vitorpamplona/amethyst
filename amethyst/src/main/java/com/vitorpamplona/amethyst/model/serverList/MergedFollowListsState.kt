@@ -79,7 +79,7 @@ class MergedFollowListsState(
                 ),
             )
         }.sample(200)
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -75,7 +75,7 @@ class TrustedRelayListsState(
                     ),
                 ),
             )
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

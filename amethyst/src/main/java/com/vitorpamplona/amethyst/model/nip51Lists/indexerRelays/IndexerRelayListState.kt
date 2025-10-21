@@ -67,7 +67,7 @@ class IndexerRelayListState(
         getIndexerRelayListFlow()
             .map { normalizeIndexerRelayListWithBackup(it.note) }
             .onStart { emit(normalizeIndexerRelayListWithBackup(indexerListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -78,7 +78,7 @@ class IndexerRelayListState(
         getIndexerRelayListFlow()
             .map { normalizeIndexerRelayListWithBackupNoDefaults(it.note) }
             .onStart { emit(normalizeIndexerRelayListWithBackupNoDefaults(indexerListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -109,7 +109,7 @@ class IndexerRelayListState(
             GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Index Relay List Collector Start")
             getIndexerRelayListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Index Relay List for ${signer.pubKey}")

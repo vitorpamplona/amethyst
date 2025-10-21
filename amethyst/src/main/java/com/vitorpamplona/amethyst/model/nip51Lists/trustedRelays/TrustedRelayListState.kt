@@ -65,7 +65,7 @@ class TrustedRelayListState(
         getTrustedRelayListFlow()
             .map { normalizeTrustedRelayListWithBackup(it.note) }
             .onStart { emit(normalizeTrustedRelayListWithBackup(trustedListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,
@@ -96,7 +96,7 @@ class TrustedRelayListState(
             GlobalScope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Trusted Relay List Collector Start")
             getTrustedRelayListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Trusted Relay List for ${signer.pubKey}")

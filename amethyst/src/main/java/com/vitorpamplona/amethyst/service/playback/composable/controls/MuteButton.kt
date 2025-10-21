@@ -65,7 +65,7 @@ fun MuteButton(
         }
 
     LaunchedEffect(key1 = controllerVisible) {
-        launch(Dispatchers.Default) {
+        launch(Dispatchers.IO) {
             delay(2000)
             holdOn.value = false
         }

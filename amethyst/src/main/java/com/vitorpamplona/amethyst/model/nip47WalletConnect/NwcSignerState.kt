@@ -76,7 +76,7 @@ class NwcSignerState(
         settings.zapPaymentRequest
             .map {
                 buildSigner(it) ?: signer
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -91,7 +91,7 @@ class NwcSignerState(
         nip47Signer
             .map {
                 NostrWalletConnectRequestCache(it)
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, NostrWalletConnectRequestCache(nip47Signer.value))
 
     /**
@@ -102,7 +102,7 @@ class NwcSignerState(
         nip47Signer
             .map {
                 NostrWalletConnectResponseCache(it)
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, NostrWalletConnectResponseCache(nip47Signer.value))
 
     fun buildSigner(uri: Nip47WalletConnect.Nip47URINorm?) =

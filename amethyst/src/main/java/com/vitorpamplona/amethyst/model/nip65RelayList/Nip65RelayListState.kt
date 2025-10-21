@@ -71,7 +71,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -82,7 +82,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -93,7 +93,7 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65AllRelayListWithBackupNoDefaults(it.note) }
             .onStart { emit(normalizeNIP65AllRelayListWithBackupNoDefaults(nip65ListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -124,7 +124,7 @@ class Nip65RelayListState(
             GlobalScope.launch(Dispatchers.IO) { cache.justConsumeMyOwnEvent(it) }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "NIP-65 Relay List Collector Start")
             getNIP65RelayListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating NIP-65 List for ${signer.pubKey}")

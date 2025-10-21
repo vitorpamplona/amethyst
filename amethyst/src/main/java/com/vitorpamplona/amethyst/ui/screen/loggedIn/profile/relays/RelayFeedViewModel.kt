@@ -89,7 +89,7 @@ class RelayFeedViewModel :
                 }
             }.onStart {
                 emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet(), currentUser.value))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -113,7 +113,7 @@ class RelayFeedViewModel :
                 }
             }.onStart {
                 emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet(), currentUser.value))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -137,13 +137,13 @@ class RelayFeedViewModel :
                 }
             }.onStart {
                 emit(convert((currentUser.value?.nip65RelayListNote?.event as? ChatMessageRelayListEvent)?.relays()?.toSet(), currentUser.value))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             refreshSuspended()
         }
     }

@@ -108,7 +108,7 @@ class NostrClient(
         }.sample(300)
             .onEach {
                 relayPool.updatePool(it)
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -229,7 +229,7 @@ class NostrClient(
 
     override fun renewFilters(relay: IRelayClient) {
         if (isActive) {
-            scope.launch(Dispatchers.Default) {
+            scope.launch(Dispatchers.IO) {
                 activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
                 activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
                 eventOutbox.syncState(relay.url, relay::sendOrConnectAndSync)

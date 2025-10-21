@@ -81,7 +81,7 @@ class FeedTopNavFilterState(
                 emitAll(loadFlowsFor(listName).flow())
             }.onStart {
                 loadFlowsFor(feedFilterListName.value).startValue(this)
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

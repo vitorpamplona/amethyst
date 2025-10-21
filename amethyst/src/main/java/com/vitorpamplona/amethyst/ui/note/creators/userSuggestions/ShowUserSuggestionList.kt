@@ -64,12 +64,12 @@ fun ShowUserSuggestionList(
     AnimateOnNewSearch(userSuggestions, listState)
 
     LaunchedEffect(Unit) {
-        launch(Dispatchers.Default) {
+        launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 userSuggestions.invalidateData()
             }
         }
-        launch(Dispatchers.Default) {
+        launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect {
                 userSuggestions.invalidateData()
             }

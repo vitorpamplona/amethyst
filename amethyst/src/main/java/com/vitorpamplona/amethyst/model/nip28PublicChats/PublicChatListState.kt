@@ -71,7 +71,7 @@ class PublicChatListState(
                 emit(publicChatListWithBackup(noteState.note))
             }.onStart {
                 emit(publicChatListWithBackup(publicChatListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -85,7 +85,7 @@ class PublicChatListState(
                 it.mapTo(mutableSetOf()) { it.eventId }
             }.onStart {
                 emit(flow.value.mapTo(mutableSetOf()) { it.eventId })
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -132,7 +132,7 @@ class PublicChatListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Channel List Collector Start")
             getChannelListFlow().collect {
                 Log.d("AccountRegisterObservers", "Channel List for ${signer.pubKey}")

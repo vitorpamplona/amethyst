@@ -39,7 +39,7 @@ class PreviewState {
             .debounce(500)
             .map { CachedUrlParser.parseValidUrls(it.text) }
             .distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
 
     fun reset() {
         source.tryEmit(TextFieldValue(""))

@@ -68,7 +68,7 @@ class GeohashListState(
                 emit(geohashListWithBackup(noteState.note))
             }.onStart {
                 emit(geohashListWithBackup(geohashListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -114,7 +114,7 @@ class GeohashListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Geohash List Collector Start")
             getGeohashListFlow().collect { noteState ->
                 Log.d("AccountRegisterObservers", "Geohash List for ${signer.pubKey}")
