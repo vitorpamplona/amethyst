@@ -34,6 +34,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -47,6 +52,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private const val ASPECT_RATIO = 4f / 3f
 private const val PORTRAIT_ASPECT_RATIO = 3f / 4f
@@ -79,6 +86,32 @@ private fun MediaUrlImage?.resolveOrientation(
         aspectRatio = resolvedAspectRatio,
         isLandscape = isLandscape,
     )
+}
+
+@Composable
+private fun rememberFirstImageOrientation(firstImage: MediaUrlImage?): FirstImageOrientation {
+    val initialOrientation =
+        remember(firstImage) {
+            firstImage.resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO)
+        }
+
+    var orientation by remember(firstImage) { mutableStateOf(initialOrientation) }
+
+    LaunchedEffect(firstImage) {
+        if (firstImage == null) return@LaunchedEffect
+        if (firstImage.dim?.hasSize() == true) return@LaunchedEffect
+
+        while (isActive) {
+            val ratio = firstImage.resolvedAspectRatio()
+            if (ratio != null && ratio > 0f) {
+                orientation = FirstImageOrientation(ratio, ratio >= 1f)
+                break
+            }
+            delay(200)
+        }
+    }
+
+    return orientation
 }
 
 @Composable
@@ -151,7 +184,7 @@ private fun TwoImageGallery(
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
 ) {
-    val orientation = images.firstOrNull().resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO)
+    val orientation = rememberFirstImageOrientation(images.firstOrNull())
 
     if (orientation.isLandscape) {
         Column(
@@ -195,7 +228,7 @@ private fun ThreeImageGallery(
     roundedCorner: Boolean,
 ) {
     val firstImage = images.first()
-    val orientation = firstImage.resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO)
+    val orientation = rememberFirstImageOrientation(firstImage)
     val remainingImages = images.drop(1)
 
     if (orientation.isLandscape) {
