@@ -83,7 +83,7 @@ fun filterUserMetadataForKey(
             }
 
             listOfNotNull(
-                if (firstTimers.isEmpty()) {
+                if (firstTimers.isNotEmpty()) {
                     RelayBasedFilter(
                         relay = relay,
                         filter =
