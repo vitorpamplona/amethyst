@@ -51,9 +51,9 @@ import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -516,7 +516,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.user_preferences,
-            icons = listOf(Icons.Outlined.Person, Icons.Outlined.Settings),
+            icons = listOf(Icons.Outlined.Translate),
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.UserSettings,
