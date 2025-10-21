@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follow
 
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.IEoseManager
@@ -32,6 +30,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
@@ -51,7 +50,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import kotlin.collections.forEach
-import kotlin.collections.ifEmpty
 
 /**
  * This downloads the outbox events for all Follows of all users.
@@ -62,12 +60,11 @@ class AccountFollowsLoaderSubAssembler(
     val cache: LocalCache,
     val scope: CoroutineScope,
     val authStatus: IAuthStatus,
+    val failureTracker: RelayOfflineTracker,
     val allKeys: () -> Set<AccountQueryState>,
 ) : IEoseManager {
     private val logTag = "AccountFollowsLoaderSubAssembler"
     private val orchestrator = SubscriptionController(client)
-
-    private val cannotConnectRelays = mutableSetOf<NormalizedRelayUrl>()
 
     // Refreshes observers in batches of 500ms
     private val bundler = BundledUpdate(500, Dispatchers.Default)
@@ -141,56 +138,28 @@ class AccountFollowsLoaderSubAssembler(
                         newEose(TimeUtils.now(), relay, forFilters)
                     }
                 }
-
-                override fun onCannotConnect(
-                    relay: NormalizedRelayUrl,
-                    message: String,
-                    forFilters: List<Filter>?,
-                ) {
-                    cannotConnectRelays.add(relay)
-                }
             },
         )
 
     fun updateFilterForAllAccounts(accounts: Collection<Account>): List<RelayBasedFilter>? {
-        val noOutboxList = mutableSetOf<User>()
-
-        val indexRelays = mutableSetOf<NormalizedRelayUrl>()
-        val homeRelays = mutableSetOf<NormalizedRelayUrl>()
-        val searchRelays = mutableSetOf<NormalizedRelayUrl>()
-        val commonRelays = mutableSetOf<NormalizedRelayUrl>()
-
+        val users = mutableSetOf<User>()
         accounts.forEach { key ->
             key.kind3FollowList.userList.value.forEach { user ->
                 if (user.authorRelayList() == null) {
-                    noOutboxList.add(user)
+                    users.add(user)
                 }
             }
-
-            indexRelays.addAll(
-                key.indexerRelayList.flow.value
-                    .ifEmpty { DefaultIndexerRelayList },
-            )
-
-            homeRelays.addAll(key.nip65RelayList.allFlowNoDefaults.value)
-            homeRelays.addAll(key.privateStorageRelayList.flow.value)
-            homeRelays.addAll(key.localRelayList.flow.value)
-
-            searchRelays.addAll(key.trustedRelayList.flow.value)
-            searchRelays.addAll(
-                key.searchRelayList.flow.value
-                    .ifEmpty { DefaultSearchRelayList },
-            )
-
-            // uses followShared to ignore personal relays when finding users.
-            commonRelays.addAll(key.followSharedOutboxesOrProxy.flow.value - cannotConnectRelays)
         }
 
-        if (noOutboxList.isEmpty()) return null
+        if (users.isEmpty()) return null
 
-        val perRelay = pickRelaysToLoadUsers(noOutboxList, indexRelays, homeRelays, searchRelays, commonRelays, hasTried)
+        println("AccountFollowNeeds ${users.size}")
 
-        hasTried.removeEveryoneBut(noOutboxList)
+        val connectedRelays = client.relayStatusFlow().value.connected
+
+        val perRelay = pickRelaysToLoadUsers(users, accounts, connectedRelays, failureTracker.cannotConnectRelays, hasTried)
+
+        hasTried.removeEveryoneBut(users)
 
         return perRelay.mapNotNull { (relay, users) ->
             if (users.isNotEmpty()) {

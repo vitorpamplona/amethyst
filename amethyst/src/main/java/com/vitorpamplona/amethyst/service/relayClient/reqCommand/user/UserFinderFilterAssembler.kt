@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.Us
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserReportsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 
 // This allows multiple screen to be listening to tags, even the same tag
 class UserFinderQueryState(
@@ -38,10 +39,11 @@ class UserFinderQueryState(
 class UserFinderFilterAssembler(
     client: INostrClient,
     cache: LocalCache,
+    failureTracker: RelayOfflineTracker,
 ) : ComposeSubscriptionManager<UserFinderQueryState>() {
     val group =
         listOf(
-            UserOutboxFinderSubAssembler(client, cache, ::allKeys),
+            UserOutboxFinderSubAssembler(client, cache, failureTracker, ::allKeys),
             UserWatcherSubAssembler(client, cache, ::allKeys),
             UserReportsSubAssembler(client, ::allKeys),
         )

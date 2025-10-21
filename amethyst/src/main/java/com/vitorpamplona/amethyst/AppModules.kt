@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
@@ -192,14 +193,26 @@ class AppModules(
     // Tries to verify new OTS events when they arrive.
     val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationDefaultScope)
 
+    // Tracks if it is possible to connect to relays.
+    val failureTracker = RelayOfflineTracker(client)
+
+    // Captures statistics about relays
     val relayStats = RelayStats(client)
 
+    // Logs debug messages when needed
     val detailedLogger = if (isDebug) RelayLogger(client, true, false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
-    val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, authCoordinator.receiver, applicationDefaultScope)
+    val sources: RelaySubscriptionsCoordinator =
+        RelaySubscriptionsCoordinator(
+            LocalCache,
+            client,
+            authCoordinator.receiver,
+            failureTracker,
+            applicationDefaultScope,
+        )
 
     // keeps all accounts live
     val accountsCache =

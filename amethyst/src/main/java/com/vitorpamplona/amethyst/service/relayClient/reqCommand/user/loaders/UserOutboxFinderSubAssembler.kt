@@ -20,27 +20,32 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
-import com.vitorpamplona.amethyst.model.Constants
-import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.BaseEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.pickRelaysToLoadUsers
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.ifEmpty
 
 class UserOutboxFinderSubAssembler(
     client: INostrClient,
     val cache: LocalCache,
+    val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
+    val relayListKinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND)
+
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
      * and reports, but only from trusted accounts (follows of all logged in users).
@@ -91,35 +96,28 @@ class UserOutboxFinderSubAssembler(
 
         if (noOutboxList.isEmpty()) return null
 
-        val indexRelays = mutableSetOf<NormalizedRelayUrl>()
-        val searchRelays = mutableSetOf<NormalizedRelayUrl>()
-        val allRelays = mutableSetOf<NormalizedRelayUrl>()
+        val accounts = keys.mapTo(mutableSetOf()) { it.account }
+        val connectedRelays = client.relayStatusFlow().value.connected
 
-        keys.mapTo(mutableSetOf()) { it.account }.forEach { acc ->
-            // broadens the search as it goes.
-            indexRelays.addAll(
-                acc.indexerRelayList.flow.value
-                    .ifEmpty { DefaultIndexerRelayList },
+        val perRelayKeysBoth =
+            pickRelaysToLoadUsers(
+                noOutboxList,
+                accounts,
+                connectedRelays,
+                failureTracker.cannotConnectRelays,
+                hasTried,
             )
-            indexRelays.addAll(acc.proxyRelayList.flow.value)
 
-            searchRelays.addAll(acc.nip65RelayList.allFlowNoDefaults.value)
-            searchRelays.addAll(acc.privateStorageRelayList.flow.value)
-            searchRelays.addAll(acc.localRelayList.flow.value)
-            searchRelays.addAll(acc.searchRelayList.flow.value)
-            searchRelays.addAll(acc.trustedRelayList.flow.value)
-
-            allRelays.addAll(acc.followOutboxesOrProxy.flow.value)
+        return perRelayKeysBoth.mapNotNull {
+            val sortedUsers = it.value.sorted()
+            if (sortedUsers.isNotEmpty()) {
+                RelayBasedFilter(
+                    relay = it.key,
+                    filter = Filter(kinds = relayListKinds, authors = sortedUsers),
+                )
+            } else {
+                null
+            }
         }
-        allRelays.addAll(Constants.eventFinderRelays)
-
-        return findFindUserOutBox(
-            noOutboxList,
-            client.relayStatusFlow().value.connected,
-            indexRelays,
-            searchRelays,
-            allRelays,
-            hasTried,
-        )
     }
 }

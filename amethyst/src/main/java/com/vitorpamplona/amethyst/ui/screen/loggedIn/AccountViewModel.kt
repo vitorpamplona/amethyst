@@ -98,6 +98,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -1678,6 +1679,7 @@ fun mockAccountViewModel(): AccountViewModel {
     val authenticator = EmptyIAuthStatus
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
+    val failureTracker = RelayOfflineTracker(client)
 
     val account =
         Account(
@@ -1696,7 +1698,7 @@ fun mockAccountViewModel(): AccountViewModel {
         settings = uiState,
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, scope),
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
     ).also {
         mockedCache = it
     }
@@ -1727,6 +1729,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
     val authenticator = EmptyIAuthStatus
 
     val nwcFilters = NWCPaymentFilterAssembler(client)
+    val failureTracker = RelayOfflineTracker(client)
 
     val account =
         Account(
@@ -1745,7 +1748,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         settings = uiState,
         torSettings = TorSettingsFlow(torType = MutableStateFlow(TorType.OFF)),
         httpClientBuilder = EmptyRoleBasedHttpClientBuilder(),
-        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, scope),
+        dataSources = RelaySubscriptionsCoordinator(LocalCache, client, authenticator, failureTracker, scope),
     ).also {
         vitorCache = it
     }

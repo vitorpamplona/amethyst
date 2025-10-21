@@ -20,71 +20,62 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows
 
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
+import kotlin.collections.ifEmpty
 
-val MetadataOnlyKinds = listOf(MetadataEvent.KIND)
-val OutboxOnlyKinds = listOf(AdvertisedRelayListEvent.KIND)
-val BothKinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND)
-
-fun filterFindFollowMetadataForKey(
-    loadMetadata: Set<User>,
-    loadOutbox: Set<User>,
-    connectedRelays: Set<NormalizedRelayUrl>,
-    indexRelays: Set<NormalizedRelayUrl>,
-    searchRelays: Set<NormalizedRelayUrl>,
-    allRelays: Set<NormalizedRelayUrl>,
+fun pickRelaysToLoadUsers(
+    users: Set<User>,
+    accounts: Collection<Account>,
+    connected: Set<NormalizedRelayUrl>,
+    cannotConnectRelays: Set<NormalizedRelayUrl>,
     hasTried: EOSEAccountFast<User>,
-): List<RelayBasedFilter> {
-    val both = loadMetadata.intersect(loadOutbox)
-    val onlyMetadata = loadMetadata - both
-    val onlyOutbox = loadOutbox - both
+): Map<NormalizedRelayUrl, Set<HexKey>> {
+    val indexRelays = mutableSetOf<NormalizedRelayUrl>()
+    val homeRelays = mutableSetOf<NormalizedRelayUrl>()
+    val searchRelays = mutableSetOf<NormalizedRelayUrl>()
+    val commonRelays = mutableSetOf<NormalizedRelayUrl>()
 
-    val perRelayKeysBoth = pickRelaysToLoadUsers(both, connectedRelays, indexRelays, searchRelays, allRelays, hasTried)
-    val perRelayKeysOnlyMetadata = pickRelaysToLoadUsers(onlyMetadata, connectedRelays, indexRelays, searchRelays, allRelays, hasTried)
-    val perRelayKeysOnlyOutbox = pickRelaysToLoadUsers(onlyOutbox, connectedRelays, indexRelays, searchRelays, allRelays, hasTried)
+    accounts.forEach { key ->
+        indexRelays.addAll(
+            key.indexerRelayList.flow.value
+                .ifEmpty { DefaultIndexerRelayList },
+        )
 
-    return perRelayKeysBoth.mapNotNull {
-        val sortedUsers = it.value.sorted()
-        if (sortedUsers.isNotEmpty()) {
-            RelayBasedFilter(
-                relay = it.key,
-                filter = Filter(kinds = BothKinds, authors = sortedUsers),
-            )
-        } else {
-            null
-        }
-    } +
-        perRelayKeysOnlyMetadata.mapNotNull {
-            val sortedUsers = it.value.sorted()
-            if (sortedUsers.isNotEmpty()) {
-                RelayBasedFilter(
-                    relay = it.key,
-                    filter = Filter(kinds = MetadataOnlyKinds, authors = sortedUsers),
-                )
-            } else {
-                null
-            }
-        } +
-        perRelayKeysOnlyOutbox.mapNotNull {
-            val sortedUsers = it.value.sorted()
-            if (sortedUsers.isNotEmpty()) {
-                RelayBasedFilter(
-                    relay = it.key,
-                    filter = Filter(kinds = OutboxOnlyKinds, authors = sortedUsers),
-                )
-            } else {
-                null
-            }
-        }
+        homeRelays.addAll(key.nip65RelayList.allFlowNoDefaults.value)
+        homeRelays.addAll(key.privateStorageRelayList.flow.value)
+        homeRelays.addAll(key.localRelayList.flow.value)
+
+        searchRelays.addAll(key.trustedRelayList.flow.value)
+        searchRelays.addAll(
+            key.searchRelayList.flow.value
+                .ifEmpty { DefaultSearchRelayList },
+        )
+
+        // uses followShared to ignore personal relays when finding users.
+        commonRelays.addAll(
+            key.followSharedOutboxesOrProxy.flow.value
+                .ifEmpty { Constants.eventFinderRelays },
+        )
+    }
+
+    return pickRelaysToLoadUsers(
+        users,
+        indexRelays - cannotConnectRelays,
+        homeRelays - cannotConnectRelays,
+        searchRelays - cannotConnectRelays,
+        connected,
+        commonRelays - cannotConnectRelays,
+        hasTried,
+    )
 }
 
 fun pickRelaysToLoadUsers(
@@ -92,6 +83,7 @@ fun pickRelaysToLoadUsers(
     indexRelays: Set<NormalizedRelayUrl>,
     homeRelays: Set<NormalizedRelayUrl>,
     searchRelays: Set<NormalizedRelayUrl>,
+    connected: Set<NormalizedRelayUrl>,
     commonRelays: Set<NormalizedRelayUrl>,
     hasTried: EOSEAccountFast<User>,
 ): Map<NormalizedRelayUrl, Set<HexKey>> =
@@ -164,6 +156,23 @@ fun pickRelaysToLoadUsers(
 
                         searchRelaysLeftToTry.forEach {
                             add(it, key.pubkeyHex)
+                        }
+
+                        val connectedRelaysLeftToTry =
+                            (connected - tried)
+                                .sortedBy { relay ->
+                                    key.pubkeyHex.hashCode() xor relay.url.hashCode()
+                                }.take(100)
+
+                        // picks one at random to avoid overloading these relays
+                        if (users.size > 300) {
+                            connectedRelaysLeftToTry.take(20).forEach {
+                                add(it, key.pubkeyHex)
+                            }
+                        } else {
+                            connectedRelaysLeftToTry.forEach {
+                                add(it, key.pubkeyHex)
+                            }
                         }
 
                         if (searchRelaysLeftToTry.size < 2) {
