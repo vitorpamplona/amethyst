@@ -39,7 +39,7 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
                         Amethyst.instance.torEvaluatorFlow.flow.value
                             .useTor(it),
                     users =
-                        account.followsPerRelay.value[it]?.mapNotNull { hex ->
+                        account.declaredFollowsPerRelay.value[it]?.mapNotNull { hex ->
                             LocalCache.checkGetOrCreateUser(hex)
                         } ?: emptyList(),
                 )
