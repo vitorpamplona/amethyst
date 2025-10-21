@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -43,6 +44,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 private const val ASPECT_RATIO = 4f / 3f
+private const val PORTRAIT_ASPECT_RATIO = 3f / 4f
 private val IMAGE_SPACING: Dp = Size5dp
 
 @Composable
@@ -115,19 +117,51 @@ private fun TwoImageGallery(
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
 ) {
-    Row(
-        modifier = Modifier.aspectRatio(ASPECT_RATIO),
-        horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
-    ) {
-        images.take(2).forEach { image ->
-            GalleryImage(
-                image = image,
-                allImages = images,
-                modifier = Modifier.weight(1f).fillMaxSize(),
-                roundedCorner = roundedCorner,
-                contentScale = ContentScale.Crop,
-                accountViewModel = accountViewModel,
-            )
+    val firstImage = images.firstOrNull()
+    val firstImageAspectRatio =
+        firstImage
+            ?.dim
+            ?.takeIf { it.hasSize() }
+            ?.aspectRatio()
+            ?: firstImage?.url?.let { MediaAspectRatioCache.get(it) }
+
+    val isLandscape = firstImageAspectRatio?.let { it >= 1f } ?: false
+    val itemAspectRatio =
+        firstImageAspectRatio
+            ?.takeIf { it > 0f }
+            ?: if (isLandscape) ASPECT_RATIO else PORTRAIT_ASPECT_RATIO
+
+    if (isLandscape) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+        ) {
+            images.take(2).forEach { image ->
+                GalleryImage(
+                    image = image,
+                    allImages = images,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(itemAspectRatio),
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+        ) {
+            images.take(2).forEach { image ->
+                GalleryImage(
+                    image = image,
+                    allImages = images,
+                    modifier = Modifier.weight(1f, fill = true).aspectRatio(itemAspectRatio),
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }
