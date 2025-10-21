@@ -81,7 +81,7 @@ class SearchRelayListState(
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 emptySet(),
             )
 
@@ -89,13 +89,13 @@ class SearchRelayListState(
         val relayListForSearch = getSearchRelayList()
 
         return if (relayListForSearch != null && relayListForSearch.tags.isNotEmpty()) {
-            SearchRelayListEvent.Companion.updateRelayList(
+            SearchRelayListEvent.updateRelayList(
                 earlierVersion = relayListForSearch,
                 relays = searchRelays,
                 signer = signer,
             )
         } else {
-            SearchRelayListEvent.Companion.create(
+            SearchRelayListEvent.create(
                 relays = searchRelays,
                 signer = signer,
             )
