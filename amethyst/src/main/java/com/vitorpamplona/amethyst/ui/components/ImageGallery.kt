@@ -52,6 +52,35 @@ private const val ASPECT_RATIO = 4f / 3f
 private const val PORTRAIT_ASPECT_RATIO = 3f / 4f
 private val IMAGE_SPACING: Dp = Size5dp
 
+private data class FirstImageOrientation(
+    val aspectRatio: Float,
+    val isLandscape: Boolean,
+)
+
+private fun MediaUrlImage.resolvedAspectRatio(): Float? =
+    dim
+        ?.takeIf { it.hasSize() }
+        ?.aspectRatio()
+        ?: MediaAspectRatioCache.get(url)
+
+private fun MediaUrlImage?.resolveOrientation(
+    landscapeDefaultAspectRatio: Float,
+    portraitDefaultAspectRatio: Float,
+    defaultToLandscape: Boolean = false,
+): FirstImageOrientation {
+    val ratio = this?.resolvedAspectRatio()
+    val isLandscape = ratio?.let { it >= 1f } ?: defaultToLandscape
+    val resolvedAspectRatio =
+        ratio
+            ?.takeIf { it > 0f }
+            ?: if (isLandscape) landscapeDefaultAspectRatio else portraitDefaultAspectRatio
+
+    return FirstImageOrientation(
+        aspectRatio = resolvedAspectRatio,
+        isLandscape = isLandscape,
+    )
+}
+
 @Composable
 private fun GalleryImage(
     image: MediaUrlImage,
@@ -122,21 +151,9 @@ private fun TwoImageGallery(
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
 ) {
-    val firstImage = images.firstOrNull()
-    val firstImageAspectRatio =
-        firstImage
-            ?.dim
-            ?.takeIf { it.hasSize() }
-            ?.aspectRatio()
-            ?: firstImage?.url?.let { MediaAspectRatioCache.get(it) }
+    val orientation = images.firstOrNull().resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO)
 
-    val isLandscape = firstImageAspectRatio?.let { it >= 1f } ?: false
-    val itemAspectRatio =
-        firstImageAspectRatio
-            ?.takeIf { it > 0f }
-            ?: if (isLandscape) ASPECT_RATIO else PORTRAIT_ASPECT_RATIO
-
-    if (isLandscape) {
+    if (orientation.isLandscape) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
@@ -145,7 +162,7 @@ private fun TwoImageGallery(
                 GalleryImage(
                     image = image,
                     allImages = images,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(itemAspectRatio),
+                    modifier = Modifier.fillMaxWidth().aspectRatio(orientation.aspectRatio),
                     roundedCorner = roundedCorner,
                     contentScale = ContentScale.Crop,
                     accountViewModel = accountViewModel,
@@ -161,7 +178,7 @@ private fun TwoImageGallery(
                 GalleryImage(
                     image = image,
                     allImages = images,
-                    modifier = Modifier.weight(1f, fill = true).aspectRatio(itemAspectRatio),
+                    modifier = Modifier.weight(1f, fill = true).aspectRatio(orientation.aspectRatio),
                     roundedCorner = roundedCorner,
                     contentScale = ContentScale.Crop,
                     accountViewModel = accountViewModel,
@@ -178,21 +195,10 @@ private fun ThreeImageGallery(
     roundedCorner: Boolean,
 ) {
     val firstImage = images.first()
-    val firstImageAspectRatio =
-        firstImage
-            .dim
-            ?.takeIf { it.hasSize() }
-            ?.aspectRatio()
-            ?: MediaAspectRatioCache.get(firstImage.url)
-
+    val orientation = firstImage.resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO)
     val remainingImages = images.drop(1)
-    val isLandscape = firstImageAspectRatio?.let { it >= 1f } ?: false
-    val firstItemAspectRatio =
-        firstImageAspectRatio
-            ?.takeIf { it > 0f }
-            ?: if (isLandscape) ASPECT_RATIO else PORTRAIT_ASPECT_RATIO
 
-    if (isLandscape) {
+    if (orientation.isLandscape) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
@@ -200,7 +206,7 @@ private fun ThreeImageGallery(
             GalleryImage(
                 image = firstImage,
                 allImages = images,
-                modifier = Modifier.fillMaxWidth().aspectRatio(firstItemAspectRatio),
+                modifier = Modifier.fillMaxWidth().aspectRatio(orientation.aspectRatio),
                 roundedCorner = roundedCorner,
                 contentScale = ContentScale.Crop,
                 accountViewModel = accountViewModel,
