@@ -37,13 +37,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
@@ -108,8 +106,7 @@ class NostrClient(
         }.sample(300)
             .onEach {
                 relayPool.updatePool(it)
-            }.flowOn(Dispatchers.IO)
-            .stateIn(
+            }.stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value,
@@ -229,7 +226,7 @@ class NostrClient(
 
     override fun renewFilters(relay: IRelayClient) {
         if (isActive) {
-            scope.launch(Dispatchers.IO) {
+            scope.launch {
                 activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
                 activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
                 eventOutbox.syncState(relay.url, relay::sendOrConnectAndSync)
