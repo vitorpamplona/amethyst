@@ -12,7 +12,7 @@ echo "$JAVA_HOME"
 echo "$(java -version)"
 echo "Running test... "
 
-./gradlew spotlessCheck
+./gradlew clean spotlessCheck
 
 status=$?
 
