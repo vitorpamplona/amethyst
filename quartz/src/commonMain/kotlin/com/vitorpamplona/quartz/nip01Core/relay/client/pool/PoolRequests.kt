@@ -230,13 +230,17 @@ class PoolRequests {
         sync: (NormalizedRelayUrl, Command) -> Unit,
     ) {
         relaysToUpdate.forEach { relay ->
-            val currentState = relayState.get(subId)?.currentState(relay)
+            sendToRelayIfChanged(subId, relay) { cmd ->
+                if (cmd is ReqCmd) {
+                    val currentState = relayState.get(subId)?.currentState(relay)
 
-            if (currentState == ReqSubStatus.SENT || currentState == ReqSubStatus.QUERYING_PAST) {
-                // sending multiple REQs triggers multiple EOSEs back and we then don't know which
-                // one is which.
-            } else {
-                sendToRelayIfChanged(subId, relay) { cmd ->
+                    if (currentState == ReqSubStatus.SENT || currentState == ReqSubStatus.QUERYING_PAST) {
+                        // sending multiple REQs triggers multiple EOSEs back and we then don't know which
+                        // one is which.
+                    } else {
+                        sync(relay, cmd)
+                    }
+                } else {
                     sync(relay, cmd)
                 }
             }
