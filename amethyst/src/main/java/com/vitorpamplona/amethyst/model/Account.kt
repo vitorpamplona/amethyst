@@ -205,6 +205,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -1676,6 +1677,16 @@ class Account(
             // if user has not reported this post
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }
+
+    fun isDecryptedContentHidden(noteEvent: PrivateDmEvent): Boolean =
+        if (hiddenUsers.flow.value.hiddenWordsCase
+                .isNotEmpty()
+        ) {
+            val decrypted = privateDMDecryptionCache.cachedDM(noteEvent)
+            decrypted?.containsAny(hiddenUsers.flow.value.hiddenWordsCase) == true
+        } else {
+            false
+        }
 
     fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 

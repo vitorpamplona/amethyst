@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent

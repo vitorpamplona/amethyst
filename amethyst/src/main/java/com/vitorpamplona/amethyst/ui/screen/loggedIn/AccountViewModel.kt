@@ -106,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -137,6 +138,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -348,7 +350,10 @@ class AccountViewModel(
         val isPostHidden = note.isHiddenFor(accountChoices)
         val isHiddenAuthor = note.author?.let { account.isHidden(it) } == true
 
-        return if (isPostHidden) {
+        val noteEvent = note.event
+        val isDecryptedPostHidden = if (noteEvent is PrivateDmEvent) account.isDecryptedContentHidden(noteEvent) else false
+
+        return if (isPostHidden || isDecryptedPostHidden) {
             // Spam + Blocked Users + Hidden Words + Sensitive Content
             NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor)
         } else if (isFromLoggedIn || isFromLoggedInFollow) {
