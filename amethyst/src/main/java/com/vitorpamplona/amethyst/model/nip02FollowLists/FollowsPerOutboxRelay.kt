@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 class FollowsPerOutboxRelay(
-    kind3Follows: FollowListState,
+    kind3Follows: Kind3FollowListState,
     blockedRelayList: BlockedRelayListState,
     proxyRelayList: ProxyRelayListState,
     val cache: LocalCache,

@@ -23,14 +23,11 @@ package com.vitorpamplona.quartz.nip02FollowList
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -45,12 +42,7 @@ class ContactListEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressHintProvider,
     PubKeyHintProvider {
-    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
-
-    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
-
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(ContactTag::parseKey)
@@ -60,16 +52,7 @@ class ContactListEvent(
      */
     fun verifiedFollowKeySet(): Set<HexKey> = tags.mapNotNullTo(mutableSetOf(), ContactTag::parseValidKey)
 
-    /**
-     * Returns a list of a-tags that are verified as correct.
-     */
-    @Deprecated("Use CommunityListEvent instead.")
-    fun verifiedFollowAddressSet(): Set<HexKey> = tags.mapNotNullTo(mutableSetOf(), ATag::parseValidAddress)
-
     fun unverifiedFollowKeySet() = tags.mapNotNull(ContactTag::parseKey)
-
-    @Deprecated("Use HashtagListEvent instead.")
-    fun unverifiedFollowTagSet() = tags.hashtags()
 
     fun follows() = tags.mapNotNull(ContactTag::parseValid)
 

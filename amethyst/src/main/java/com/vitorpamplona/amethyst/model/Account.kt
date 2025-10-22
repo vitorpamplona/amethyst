@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.DeclaredFollowsPerOutboxRelay
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListReusedOutboxOrProxyRelays
-import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowsPerOutboxRelay
+import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
@@ -266,7 +266,7 @@ class Account(
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
-    val kind3FollowList = FollowListState(signer, cache, scope, settings)
+    val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
     val followSetsState = FollowSetState(signer, cache, scope)
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)

@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.model.serverList
 
-import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,38 +40,50 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 
 class MergedFollowListsState(
-    val kind3List: FollowListState,
+    val kind3List: Kind3FollowListState,
     val followSetList: FollowSetState,
     val hashtagList: HashtagListState,
     val geohashList: GeohashListState,
     val communityList: CommunityListState,
     val scope: CoroutineScope,
 ) {
+    /**
+     This contains a big OR of everything the user wants to see in the a single feed.
+     */
+    @Immutable
+    class AllFollows(
+        val authors: Set<String> = emptySet(),
+        val hashtags: Set<String> = emptySet(),
+        val geotags: Set<String> = emptySet(),
+        val communities: Set<String> = emptySet(),
+    ) {
+        val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
+        val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf<String>()) { HashtagId.toScope(it) }
+    }
+
     fun mergeLists(
-        kind3: FollowListState.Kind3Follows,
+        kind3: Kind3FollowListState.Kind3Follows,
         followSetProfiles: Set<String>,
         hashtags: Set<String>,
         geohashes: Set<String>,
         community: Set<CommunityTag>,
-    ): FollowListState.Kind3Follows =
-        FollowListState.Kind3Follows(
-            kind3.authors + followSetProfiles,
-            kind3.authorsPlusMe,
-            kind3.hashtags + hashtags,
-            kind3.geotags + geohashes,
-            kind3.communities + community.map { it.address.toValue() },
+    ): AllFollows =
+        AllFollows(
+            authors = kind3.authors + followSetProfiles,
+            hashtags = hashtags,
+            geotags = geohashes,
+            communities = community.mapTo(mutableSetOf()) { it.address.toValue() },
         )
 
-    val flow: StateFlow<FollowListState.Kind3Follows> =
+    val flow: StateFlow<AllFollows> =
         combine(
             kind3List.flow,
             followSetList.profilesFlow,
             hashtagList.flow,
             geohashList.flow,
             communityList.flow,
-        ) { kind3, followSet, hashtag, geohash, community ->
-            mergeLists(kind3, followSet, hashtag, geohash, community)
-        }.onStart {
+            ::mergeLists,
+        ).onStart {
             emit(
                 mergeLists(
                     kind3List.flow.value,
@@ -83,6 +98,12 @@ class MergedFollowListsState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                kind3List.flow.value,
+                mergeLists(
+                    kind3List.flow.value,
+                    followSetList.profilesFlow.value,
+                    hashtagList.flow.value,
+                    geohashList.flow.value,
+                    communityList.flow.value,
+                ),
             )
 }

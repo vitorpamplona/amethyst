@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
-import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
+import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -29,31 +29,31 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 
 class AllFollowsFeedFlow(
-    val allFollows: StateFlow<FollowListState.Kind3Follows?>,
+    val allFollows: StateFlow<MergedFollowListsState.AllFollows?>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
     fun convert(
-        kind3: FollowListState.Kind3Follows?,
+        allFollows: MergedFollowListsState.AllFollows?,
         proxyRelays: Set<NormalizedRelayUrl>,
     ): IFeedTopNavFilter =
-        if (kind3 != null) {
+        if (allFollows != null) {
             if (proxyRelays.isEmpty()) {
                 AllFollowsByOutboxTopNavFilter(
-                    authors = kind3.authors,
-                    hashtags = kind3.hashtags,
-                    geotags = kind3.geotags,
-                    communities = kind3.communities,
+                    authors = allFollows.authors,
+                    hashtags = allFollows.hashtags,
+                    geotags = allFollows.geotags,
+                    communities = allFollows.communities,
                     defaultRelays = followsRelays,
                     blockedRelays = blockedRelays,
                 )
             } else {
                 AllFollowsByProxyTopNavFilter(
-                    authors = kind3.authors,
-                    hashtags = kind3.hashtags,
-                    geotags = kind3.geotags,
-                    communities = kind3.communities,
+                    authors = allFollows.authors,
+                    hashtags = allFollows.hashtags,
+                    geotags = allFollows.geotags,
+                    communities = allFollows.communities,
                     proxyRelays = proxyRelays,
                 )
             }

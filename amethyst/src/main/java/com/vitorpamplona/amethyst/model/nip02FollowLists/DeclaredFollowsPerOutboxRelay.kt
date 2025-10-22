@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 class DeclaredFollowsPerOutboxRelay(
-    kind3Follows: FollowListState,
+    kind3Follows: Kind3FollowListState,
     val cache: LocalCache,
     scope: CoroutineScope,
 ) {
