@@ -58,7 +58,7 @@ class GeohashListState(
 
     suspend fun geohashListWithBackup(note: Note): Set<String> {
         val event = note.event as? GeohashListEvent ?: settings.backupGeohashList
-        return event?.let { decryptionCache.geohashes(it) } ?: emptySet()
+        return event?.let { decryptionCache.geohashes(it).mapTo(mutableSetOf()) { it.lowercase() } } ?: emptySet()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
