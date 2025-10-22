@@ -35,10 +35,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -90,12 +88,10 @@ private fun MediaUrlImage?.resolveOrientation(
 
 @Composable
 private fun rememberFirstImageOrientation(firstImage: MediaUrlImage?): FirstImageOrientation {
-    val initialOrientation =
+    val orientationState =
         remember(firstImage) {
-            firstImage.resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO)
+            mutableStateOf(firstImage.resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO))
         }
-
-    var orientation by remember(firstImage) { mutableStateOf(initialOrientation) }
 
     LaunchedEffect(firstImage) {
         if (firstImage == null) return@LaunchedEffect
@@ -104,14 +100,14 @@ private fun rememberFirstImageOrientation(firstImage: MediaUrlImage?): FirstImag
         while (isActive) {
             val ratio = firstImage.resolvedAspectRatio()
             if (ratio != null && ratio > 0f) {
-                orientation = FirstImageOrientation(ratio, ratio >= 1f)
+                orientationState.value = FirstImageOrientation(ratio, ratio >= 1f)
                 break
             }
             delay(200)
         }
     }
 
-    return orientation
+    return orientationState.value
 }
 
 @Composable
