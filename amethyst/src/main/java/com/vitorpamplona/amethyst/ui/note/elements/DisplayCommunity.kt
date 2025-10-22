@@ -22,14 +22,12 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.buildLinkString
+import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -53,29 +51,20 @@ private fun DisplayCommunity(
     note: Note,
     nav: INav,
 ) {
-    val communityTag =
-        remember(note) { note.event?.communityAddress() } ?: return
+    val communityTag = note.event?.communityAddress() ?: return
 
-    val displayTag =
-        remember(note) {
-            buildLinkString(
-                getCommunityShortName(communityTag),
-            ) {
-                nav.nav(Route.Community(communityTag.kind, communityTag.pubKeyHex, communityTag.dTag))
+    ClickableTextColor(
+        getCommunityShortName(communityTag),
+        linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1,
+    ) {
+        nav.nav {
+            note.event?.communityAddress()?.let { communityTag ->
+                Route.Community(communityTag.kind, communityTag.pubKeyHex, communityTag.dTag)
             }
         }
-
-    Text(
-        text = displayTag,
-        style =
-            LocalTextStyle.current.copy(
-                color =
-                    MaterialTheme.colorScheme.primary.copy(
-                        alpha = 0.52f,
-                    ),
-            ),
-        maxLines = 1,
-    )
+    }
 }
 
 fun getCommunityShortName(communityAddress: Address): String {

@@ -23,9 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,7 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.buildLinkString
+import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -82,15 +80,12 @@ private fun DisplayTagList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Text(
-        text =
-            remember(firstTag) {
-                buildLinkString(" #$firstTag") {
-                    nav.nav(Route.Hashtag(firstTag))
-                }
-            },
-        style = LocalTextStyle.current.copy(MaterialTheme.colorScheme.primary.copy(alpha = 0.52f)),
+    ClickableTextColor(
+        "#$firstTag",
+        linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
         overflow = TextOverflow.Ellipsis,
         maxLines = 1,
-    )
+    ) {
+        nav.nav(Route.Hashtag(firstTag))
+    }
 }
