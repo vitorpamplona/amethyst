@@ -37,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observe
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
@@ -154,12 +154,10 @@ fun SecurityFiltersScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    DisappearingScaffold(
-        isInvertedLayout = false,
+    Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.security_filters), nav::popBack)
         },
-        accountViewModel = accountViewModel,
     ) {
         Column(
             Modifier

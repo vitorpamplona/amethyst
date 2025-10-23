@@ -35,6 +35,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -74,12 +74,10 @@ fun UserSettingsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DisappearingScaffold(
-        isInvertedLayout = false,
+    Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.user_preferences), nav::popBack)
         },
-        accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {
             Column(

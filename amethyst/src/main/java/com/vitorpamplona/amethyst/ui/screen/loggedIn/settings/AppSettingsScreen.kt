@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,7 +61,6 @@ import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,12 +83,10 @@ fun SettingsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DisappearingScaffold(
-        isInvertedLayout = false,
+    Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.application_preferences), nav::popBack)
         },
-        accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {
             SettingsScreen(accountViewModel.settings.uiSettingsFlow)
