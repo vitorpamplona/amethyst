@@ -59,7 +59,7 @@ class FileStorageServerListState(
         getFileServersListFlow()
             .map { normalizeServers(it.note) }
             .onStart { emit(normalizeServers(fileStorageListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

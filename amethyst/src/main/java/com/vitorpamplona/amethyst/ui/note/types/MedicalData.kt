@@ -185,7 +185,7 @@ fun RenderFhirResource(
 fun RenderFhirResource(event: FhirResourceEvent) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val state by produceState(initialValue = FhirElementDatabase(), key1 = event) {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             parseResourceBundleOrNull(event.content)?.let {
                 value = it
             }

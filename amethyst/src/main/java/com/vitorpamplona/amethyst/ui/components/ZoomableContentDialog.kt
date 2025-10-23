@@ -150,7 +150,7 @@ private fun DialogContent(
                 pagerState.scrollToPage(page)
             }
         }
-        launch(Dispatchers.Default) {
+        launch(Dispatchers.IO) {
             delay(2000)
             withContext(Dispatchers.Main) {
                 controllerVisible.value = false

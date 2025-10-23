@@ -71,12 +71,12 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     key.account.notificationRelays.flow.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }

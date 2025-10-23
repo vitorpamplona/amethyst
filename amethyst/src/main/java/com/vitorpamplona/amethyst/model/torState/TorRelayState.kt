@@ -74,7 +74,7 @@ class TorRelayState(
                     trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
                 ),
             )
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -108,7 +108,7 @@ class TorRelayState(
                     dmRelayList = dmRelays.value,
                 ),
             )
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -106,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -202,7 +203,7 @@ class AccountViewModel(
 
     val notificationHasNewItemsFlow =
         notificationHasNewItems
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -251,7 +252,7 @@ class AccountViewModel(
 
     val messagesHasNewItemsFlow =
         messagesHasNewItems
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -284,7 +285,7 @@ class AccountViewModel(
 
     val homeHasNewItemsFlow =
         homeHasNewItems
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(30000), false)
 
     val hasNewItems =
@@ -348,7 +349,10 @@ class AccountViewModel(
         val isPostHidden = note.isHiddenFor(accountChoices)
         val isHiddenAuthor = note.author?.let { account.isHidden(it) } == true
 
-        return if (isPostHidden) {
+        val noteEvent = note.event
+        val isDecryptedPostHidden = if (noteEvent is PrivateDmEvent) account.isDecryptedContentHidden(noteEvent) else false
+
+        return if (isPostHidden || isDecryptedPostHidden) {
             // Spam + Blocked Users + Hidden Words + Sensitive Content
             NoteComposeReportState(isPostHidden, false, false, isHiddenAuthor)
         } else if (isFromLoggedIn || isFromLoggedInFollow) {
@@ -394,7 +398,7 @@ class AccountViewModel(
                         account.kind3FollowList.flow.value.authors,
                     ),
                 )
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
                 .stateIn(
                     viewModelScope,
                     SharingStarted.WhileSubscribed(10000, 10000),
@@ -412,7 +416,7 @@ class AccountViewModel(
                 .relays
                 .stateFlow
                 .map { it.note.relays.size > 3 }
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
                 .stateIn(
                     viewModelScope,
                     SharingStarted.WhileSubscribed(10000, 10000),
@@ -431,7 +435,7 @@ class AccountViewModel(
 
     suspend fun calculateZapAmount(zappedNote: Note): String =
         if (zappedNote.zapPayments.isNotEmpty()) {
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 val it = account.calculateZappedAmount(zappedNote)
                 showAmount(it)
             }
@@ -442,7 +446,7 @@ class AccountViewModel(
     suspend fun calculateZapraiser(zappedNote: Note): ZapraiserStatus {
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
         return if (zappedNote.zapPayments.isNotEmpty()) {
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 val newZapAmount = account.calculateZappedAmount(zappedNote)
                 var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
@@ -1027,7 +1031,7 @@ class AccountViewModel(
     fun cachedModificationEventsForNote(note: Note) = LocalCache.cachedModificationEventsForNote(note)
 
     suspend fun findModificationEventsForNote(note: Note): List<Note> =
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             LocalCache.findLatestModificationForNote(note)
         }
 
@@ -1067,7 +1071,7 @@ class AccountViewModel(
         hexList: List<String>,
         onReady: (ImmutableList<User>) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             onReady(loadUsersSync(hexList).toImmutableList())
         }
     }
@@ -1094,7 +1098,7 @@ class AccountViewModel(
         val onIsNew = createdAt > lastTime
 
         if (onIsNew) {
-            viewModelScope.launch(Dispatchers.Default) {
+            viewModelScope.launch(Dispatchers.IO) {
                 account.markAsRead(routeForLastRead, createdAt)
             }
         }
@@ -1142,7 +1146,7 @@ class AccountViewModel(
 
     init {
         Log.d("Init", "AccountViewModel")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             feedStates.init()
             // awaits for init to finish before starting to capture new events.
             LocalCache.live.newEventBundles.collect { newNotes ->
@@ -1152,7 +1156,7 @@ class AccountViewModel(
             }
         }
 
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
                 logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
                     feedStates.deleteNotes(newNotes)
@@ -1602,7 +1606,7 @@ class AccountViewModel(
         val accountViewModel: AccountViewModel,
     ) : GenericBaseCache<String, LoadedBechLink>(20) {
         override suspend fun compute(key: String): LoadedBechLink? =
-            withContext(Dispatchers.Default) {
+            withContext(Dispatchers.IO) {
                 Nip19Parser.uriToRoute(key)?.let {
                     var returningNote: Note? = null
 
@@ -1621,10 +1625,10 @@ class AccountViewModel(
                             }
                         }
                         is NEmbed ->
-                            withContext(Dispatchers.Default) {
+                            withContext(Dispatchers.IO) {
                                 val baseNote = LocalCache.getOrCreateNote(parsed.event)
                                 if (baseNote.event == null) {
-                                    launch(Dispatchers.Default) {
+                                    launch(Dispatchers.IO) {
                                         LocalCache.justConsume(parsed.event, null, false)
                                     }
                                 }

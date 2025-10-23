@@ -64,7 +64,7 @@ class DmRelayListState(
         getDMRelayListFlow()
             .map { normalizeDMRelayListWithBackup(it.note) }
             .onStart { emit(normalizeDMRelayListWithBackup(dmListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -96,7 +96,7 @@ class DmRelayListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "NIP-17 Relay List Collector Start")
             getDMRelayListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating DM Relay List for ${signer.pubKey}")

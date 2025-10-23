@@ -320,7 +320,7 @@ class NewPublicMessageViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -413,7 +413,7 @@ class NewPublicMessageViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             isUploadingImage = true
@@ -628,7 +628,7 @@ class NewPublicMessageViewModel :
     }
 
     override fun updateZapFromText() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->

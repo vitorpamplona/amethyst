@@ -80,7 +80,7 @@ abstract class LevelFeedViewModel(
                         MutableStateFlow(mapOf())
                     },
                 )
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5000),

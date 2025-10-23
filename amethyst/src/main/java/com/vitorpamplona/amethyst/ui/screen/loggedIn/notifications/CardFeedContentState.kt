@@ -104,7 +104,7 @@ class CardFeedContentState(
     fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
     fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
     @Synchronized

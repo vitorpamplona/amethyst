@@ -81,7 +81,7 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                 ClosedMessage.LABEL ->
                     ClosedMessage(
                         subId = jp.nextTextValue(),
-                        message = jp.nextTextValue(),
+                        message = jp.nextTextValue() ?: "",
                     )
 
                 CountMessage.LABEL -> {

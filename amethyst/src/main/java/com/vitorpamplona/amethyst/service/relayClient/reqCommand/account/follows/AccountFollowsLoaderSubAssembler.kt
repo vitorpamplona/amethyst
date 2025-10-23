@@ -67,7 +67,7 @@ class AccountFollowsLoaderSubAssembler(
     private val orchestrator = SubscriptionController(client)
 
     // Refreshes observers in batches of 500ms
-    private val bundler = BundledUpdate(500, Dispatchers.Default)
+    private val bundler = BundledUpdate(500, Dispatchers.IO)
 
     /**
      * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
@@ -203,7 +203,7 @@ class AccountFollowsLoaderSubAssembler(
     ) {
         accountUpdatesJobMap[user]?.cancel()
         accountUpdatesJobMap[user] =
-            scope.launch(Dispatchers.Default) {
+            scope.launch(Dispatchers.IO) {
                 followList.sample(1000).collectLatest {
                     invalidateFilters(true)
                 }

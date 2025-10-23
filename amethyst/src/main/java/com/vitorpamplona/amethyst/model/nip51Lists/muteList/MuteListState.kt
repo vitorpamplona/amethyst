@@ -67,7 +67,7 @@ class MuteListState(
         getMuteListFlow()
             .map { muteListWithBackup(it.note) }
             .onStart { emit(muteListWithBackup(muteListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -149,7 +149,7 @@ class MuteListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Mute List Collector Start")
             getMuteListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Mute List for ${signer.pubKey}")

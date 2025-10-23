@@ -29,8 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -95,7 +93,7 @@ suspend fun INostrClient.sendAndWaitForResponse(
     val resultSubscription =
         coroutineScope {
             val result =
-                async(Dispatchers.IO) {
+                async {
                     val receivedResults = mutableMapOf<NormalizedRelayUrl, Boolean>()
                     // The withTimeout block will cancel the coroutine if the loop takes too long
                     withTimeoutOrNull(timeoutInSeconds * 1000) {

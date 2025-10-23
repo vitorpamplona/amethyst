@@ -72,17 +72,17 @@ class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.listNameFlow().collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.followsPerRelayFlow().sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     combine(
                         key.feedStates.discoverReads.lastNoteCreatedAtWhenFullyLoaded,
                         key.feedStates.discoverDVMs.lastNoteCreatedAtWhenFullyLoaded,

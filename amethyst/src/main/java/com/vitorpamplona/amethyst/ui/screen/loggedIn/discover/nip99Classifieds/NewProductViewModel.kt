@@ -297,7 +297,7 @@ open class NewProductViewModel :
         cancel()
 
         accountViewModel.account.signAndSendPrivatelyOrBroadcast(template, relayList = { relayList })
-        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -379,7 +379,7 @@ open class NewProductViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val myAccount = account ?: return@launch
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
@@ -593,7 +593,7 @@ open class NewProductViewModel :
     }
 
     override fun updateZapFromText() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->

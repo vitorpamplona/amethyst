@@ -67,7 +67,7 @@ class SearchRelayListState(
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackup(it.note) }
             .onStart { emit(normalizeSearchRelayListWithBackup(searchListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,
@@ -78,7 +78,7 @@ class SearchRelayListState(
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackupNoDefaults(it.note) }
             .onStart { emit(normalizeSearchRelayListWithBackupNoDefaults(searchListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -109,7 +109,7 @@ class SearchRelayListState(
             GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Search Relay List Collector Start")
             getSearchRelayListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Search Relay List for ${signer.pubKey}")

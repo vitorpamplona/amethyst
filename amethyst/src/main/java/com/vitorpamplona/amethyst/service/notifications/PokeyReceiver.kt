@@ -47,7 +47,7 @@ class PokeyReceiver : BroadcastReceiver() {
             Log.e("AmethystCoroutine", "Caught exception: ${throwable.message}", throwable)
         }
 
-    val scope = CoroutineScope(Dispatchers.Default + SupervisorJob() + exceptionHandler)
+    val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
     fun register(app: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

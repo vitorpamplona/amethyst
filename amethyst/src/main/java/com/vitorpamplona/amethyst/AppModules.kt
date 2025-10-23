@@ -86,7 +86,7 @@ class AppModules(
         }
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
-    val applicationDefaultScope = CoroutineScope(Dispatchers.Default + SupervisorJob() + exceptionHandler)
+    val applicationDefaultScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {

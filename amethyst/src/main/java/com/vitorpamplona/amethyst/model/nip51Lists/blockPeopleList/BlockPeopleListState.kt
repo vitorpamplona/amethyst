@@ -61,7 +61,7 @@ class BlockPeopleListState(
         getBlockListFlow()
             .map { blockListWithBackup(it.note) }
             .onStart { emit(blockListWithBackup(blockListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

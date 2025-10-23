@@ -32,6 +32,10 @@ import com.vitorpamplona.quartz.utils.mapOfSet
 fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl> {
     val set = mutableSetOf<NormalizedRelayUrl>()
 
+    LocalCache.getOrCreateUser(note.address.pubKeyHex).outboxRelays()?.let {
+        set.addAll(it)
+    }
+
     set.addAll(LocalCache.relayHints.hintsForAddress(note.idHex))
 
     LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }

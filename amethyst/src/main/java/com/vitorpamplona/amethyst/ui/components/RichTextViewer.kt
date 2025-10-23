@@ -583,7 +583,7 @@ fun DisplaySecretEmoji(
 
         if (secretContent == null) {
             LaunchedEffect(segment) {
-                launch(Dispatchers.Default) {
+                launch(Dispatchers.IO) {
                     secretContent =
                         CachedRichTextParser.parseText(
                             EmojiCoder.decode(segment.segmentText),

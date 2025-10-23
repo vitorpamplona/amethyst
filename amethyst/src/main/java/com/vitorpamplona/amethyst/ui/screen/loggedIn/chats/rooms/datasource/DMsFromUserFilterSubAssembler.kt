@@ -61,12 +61,12 @@ class DMsFromUserFilterSubAssembler(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     key.account.homeRelays.flow.collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     key.account.dmRelays.flow.collectLatest {
                         invalidateFilters()
                     }

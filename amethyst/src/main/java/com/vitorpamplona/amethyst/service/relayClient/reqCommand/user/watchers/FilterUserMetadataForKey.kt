@@ -72,7 +72,7 @@ fun filterUserMetadataForKey(
 
             users.forEach { user ->
                 val time = since.since(user)?.get(relay)?.time
-                if (time == null) {
+                if (time == null || user.latestMetadata == null) {
                     firstTimers.add(user.pubkeyHex)
                 } else {
                     updates.add(user.pubkeyHex)
@@ -82,24 +82,32 @@ fun filterUserMetadataForKey(
                 }
             }
 
-            listOf(
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        Filter(
-                            kinds = UserMetadataForKeyKinds,
-                            authors = firstTimers.sorted(),
-                        ),
-                ),
-                RelayBasedFilter(
-                    relay = relay,
-                    filter =
-                        Filter(
-                            kinds = UserMetadataForKeyKinds,
-                            authors = updates.sorted(),
-                            since = minimumTime,
-                        ),
-                ),
+            listOfNotNull(
+                if (firstTimers.isNotEmpty()) {
+                    RelayBasedFilter(
+                        relay = relay,
+                        filter =
+                            Filter(
+                                kinds = UserMetadataForKeyKinds,
+                                authors = firstTimers.sorted(),
+                            ),
+                    )
+                } else {
+                    null
+                },
+                if (updates.isNotEmpty()) {
+                    RelayBasedFilter(
+                        relay = relay,
+                        filter =
+                            Filter(
+                                kinds = UserMetadataForKeyKinds,
+                                authors = updates.sorted(),
+                                since = minimumTime,
+                            ),
+                    )
+                } else {
+                    null
+                },
             )
         }.flatten()
 }

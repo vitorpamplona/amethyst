@@ -76,7 +76,7 @@ fun observeChannelNoteAuthors(
                         channelToParticipatingUsers(baseChannel, accountViewModel),
                     )
                 }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
+                .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(persistentListOf())

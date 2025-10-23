@@ -72,7 +72,7 @@ fun LoadValueFromInvoice(
     @Suppress("ProduceStateDoesNotAssignValue")
     val lnInvoice by
         produceState(initialValue = CachedLnInvoiceParser.cached(lnbcWord), key1 = lnbcWord) {
-            val newLnInvoice = withContext(Dispatchers.Default) { CachedLnInvoiceParser.parse(lnbcWord) }
+            val newLnInvoice = withContext(Dispatchers.IO) { CachedLnInvoiceParser.parse(lnbcWord) }
             if (value != newLnInvoice) {
                 value = newLnInvoice
             }

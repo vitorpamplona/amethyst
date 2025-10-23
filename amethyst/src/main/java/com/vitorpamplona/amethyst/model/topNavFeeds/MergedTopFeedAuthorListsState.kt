@@ -100,7 +100,7 @@ class MergedTopFeedAuthorListsState(
                     notificationNavFilter.value,
                 ),
             )
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

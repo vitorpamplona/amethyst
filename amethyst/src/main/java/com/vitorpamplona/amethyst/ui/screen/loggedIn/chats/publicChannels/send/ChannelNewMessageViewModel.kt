@@ -277,7 +277,7 @@ open class ChannelNewMessageViewModel :
         cancel()
 
         accountViewModel.account.signAndSendPrivately(template, channelRelays)
-        accountViewModel.viewModelScope.launch(Dispatchers.Default) {
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
@@ -319,7 +319,7 @@ open class ChannelNewMessageViewModel :
         context: Context,
         onceUploaded: suspend () -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val uploadState = uploadState ?: return@launch
 
             val myMultiOrchestrator = uploadState.multiOrchestrator ?: return@launch
@@ -630,7 +630,7 @@ open class ChannelNewMessageViewModel :
     }
 
     fun updateZapFromText() {
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->

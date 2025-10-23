@@ -44,7 +44,7 @@ open class LnZapFeedViewModel(
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
     private fun refreshSuspended() {

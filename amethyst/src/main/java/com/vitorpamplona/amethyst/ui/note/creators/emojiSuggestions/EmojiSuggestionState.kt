@@ -44,7 +44,7 @@ class EmojiSuggestionState(
                 } else {
                     emptyList()
                 }
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
 
     fun reset() {
         if (search.value.isNotEmpty()) {

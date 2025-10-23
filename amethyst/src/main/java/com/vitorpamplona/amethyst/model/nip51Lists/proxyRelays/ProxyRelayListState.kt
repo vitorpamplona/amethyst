@@ -61,7 +61,7 @@ class ProxyRelayListState(
         getProxyRelayListFlow()
             .map { normalizeProxyRelayListWithBackup(it.note) }
             .onStart { emit(normalizeProxyRelayListWithBackup(proxyListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

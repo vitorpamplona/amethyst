@@ -61,7 +61,7 @@ class BroadcastRelayListState(
         getBroadcastRelayListFlow()
             .map { normalizeBroadcastRelayListWithBackup(it.note) }
             .onStart { emit(normalizeBroadcastRelayListWithBackup(broadcastListNote)) }
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

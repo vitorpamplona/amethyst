@@ -62,7 +62,7 @@ class UserSuggestionState(
             } else {
                 emptyList()
             }
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
 
     fun reset() {
         currentWord.tryEmit("")

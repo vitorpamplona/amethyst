@@ -75,7 +75,7 @@ class EmojiPackState(
                 emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
             }.onStart {
                 emit(convertEmojiSelectionPack(getEmojiPackSelection()))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -120,7 +120,7 @@ class EmojiPackState(
                         )?.map { it.value }?.toTypedArray() ?: emptyArray(),
                     ),
                 )
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

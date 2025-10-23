@@ -58,7 +58,7 @@ class HashtagListState(
 
     suspend fun hashtagListWithBackup(note: Note): Set<String> {
         val event = note.event as? HashtagListEvent ?: settings.backupHashtagList
-        return event?.let { decryptionCache.hashtags(it) } ?: emptySet()
+        return event?.let { decryptionCache.hashtags(it).mapTo(mutableSetOf()) { it.lowercase() } } ?: emptySet()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -68,10 +68,10 @@ class HashtagListState(
                 emit(hashtagListWithBackup(noteState.note))
             }.onStart {
                 emit(hashtagListWithBackup(hashtagListNote))
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 emptySet(),
             )
 
@@ -79,9 +79,9 @@ class HashtagListState(
         val hashtagList = getHashtagList()
 
         return if (hashtagList == null) {
-            HashtagListEvent.Companion.create(hashtags, true, signer)
+            HashtagListEvent.create(hashtags, true, signer)
         } else {
-            HashtagListEvent.Companion.add(hashtagList, hashtags, true, signer)
+            HashtagListEvent.add(hashtagList, hashtags, true, signer)
         }
     }
 
@@ -89,9 +89,9 @@ class HashtagListState(
         val hashtagList = getHashtagList()
 
         return if (hashtagList == null) {
-            HashtagListEvent.Companion.create(hashtag, true, signer)
+            HashtagListEvent.create(hashtag, true, signer)
         } else {
-            HashtagListEvent.Companion.add(hashtagList, hashtag, true, signer)
+            HashtagListEvent.add(hashtagList, hashtag, true, signer)
         }
     }
 
@@ -99,7 +99,7 @@ class HashtagListState(
         val hashtagList = getHashtagList()
 
         return if (hashtagList != null) {
-            HashtagListEvent.Companion.remove(hashtagList, hashtag, signer)
+            HashtagListEvent.remove(hashtagList, hashtag, signer)
         } else {
             null
         }
@@ -114,7 +114,7 @@ class HashtagListState(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Hashtag List Collector Start")
             getHashtagListFlow().collect {
                 Log.d("AccountRegisterObservers", "Hashtag List for ${signer.pubKey}")

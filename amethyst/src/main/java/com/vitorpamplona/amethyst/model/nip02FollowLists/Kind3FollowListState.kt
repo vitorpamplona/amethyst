@@ -25,12 +25,10 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -45,7 +43,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
-class FollowListState(
+class Kind3FollowListState(
     val signer: NostrSigner,
     val cache: LocalCache,
     val scope: CoroutineScope,
@@ -66,7 +64,7 @@ class FollowListState(
 
     val flow =
         innerFlow
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -77,11 +75,11 @@ class FollowListState(
     // Creates a long-term reference for all follows of a user
     val userList =
         flow
-            .map {
-                it.authors.mapNotNull {
+            .map { kind3Follows ->
+                kind3Follows.authors.mapNotNull {
                     cache.checkGetOrCreateUser(it)
                 }
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -96,15 +94,9 @@ class FollowListState(
      */
     @Immutable
     class Kind3Follows(
-        val authors: Set<String> = emptySet(),
-        val authorsPlusMe: Set<String>,
-        val hashtags: Set<String> = emptySet(),
-        val geotags: Set<String> = emptySet(),
-        val communities: Set<String> = emptySet(),
-    ) {
-        val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
-        val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf<String>()) { HashtagId.toScope(it) }
-    }
+        val authors: Set<HexKey> = emptySet(),
+        val authorsPlusMe: Set<HexKey>,
+    )
 
     fun buildKind3Follows(latestContactList: ContactListEvent?): Kind3Follows {
         // makes sure the output include only valid p tags
@@ -113,19 +105,6 @@ class FollowListState(
         return Kind3Follows(
             authors = verifiedFollowingUsers,
             authorsPlusMe = verifiedFollowingUsers + signer.pubKey,
-            hashtags =
-                latestContactList
-                    ?.unverifiedFollowTagSet()
-                    ?.map { it.lowercase() }
-                    ?.toSet() ?: emptySet(),
-            geotags =
-                latestContactList
-                    ?.geohashes()
-                    ?.toSet() ?: emptySet(),
-            communities =
-                latestContactList
-                    ?.verifiedFollowAddressSet()
-                    ?.toSet() ?: emptySet(),
         )
     }
 
@@ -166,7 +145,7 @@ class FollowListState(
         }
 
         // saves contact list for the next time.
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
             getFollowListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Kind 3 ${signer.pubKey}")

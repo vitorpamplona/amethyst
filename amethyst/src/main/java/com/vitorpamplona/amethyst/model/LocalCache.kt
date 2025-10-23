@@ -1962,7 +1962,7 @@ object LocalCache : ILocalCache {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            GlobalScope.launch(Dispatchers.Default) {
+            GlobalScope.launch(Dispatchers.IO) {
                 responseCallback(event)
             }
 
@@ -2913,10 +2913,10 @@ class LocalCacheFlow {
     val deletedEventBundles = _deletedEventBundles.asSharedFlow() // read-only public view
 
     // Refreshes observers in batches.
-    private val bundler = BundledInsert<Note>(1000, Dispatchers.Default)
+    private val bundler = BundledInsert<Note>(1000, Dispatchers.IO)
 
     // Refreshes observers in batches.
-    private val bundler2 = BundledInsert<Note>(1000, Dispatchers.Default)
+    private val bundler2 = BundledInsert<Note>(1000, Dispatchers.IO)
 
     fun newNote(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->

@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import android.widget.Toast
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
@@ -34,12 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.countToHumanReadable
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
@@ -51,7 +44,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
-import kotlinx.coroutines.launch
 
 @Composable
 fun RelayStatusRow(

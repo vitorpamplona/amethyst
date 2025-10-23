@@ -55,7 +55,7 @@ abstract class BaseEoseManager<T>(
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
     // Refreshes observers in batches.
-    private val bundler = BundledUpdate(sampleTime, Dispatchers.Default)
+    private val bundler = BundledUpdate(sampleTime, Dispatchers.IO)
 
     override fun invalidateFilters(ignoreIfDoing: Boolean) {
         bundler.invalidate(ignoreIfDoing, ::forceInvalidate)

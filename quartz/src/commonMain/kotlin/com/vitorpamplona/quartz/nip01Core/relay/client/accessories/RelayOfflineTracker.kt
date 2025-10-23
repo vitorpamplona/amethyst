@@ -23,8 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NotifyMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 

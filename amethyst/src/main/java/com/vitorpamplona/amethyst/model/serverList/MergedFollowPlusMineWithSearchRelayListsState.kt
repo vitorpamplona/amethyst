@@ -69,7 +69,7 @@ class MergedFollowPlusMineWithSearchRelayListsState(
                     ),
                 ),
             )
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

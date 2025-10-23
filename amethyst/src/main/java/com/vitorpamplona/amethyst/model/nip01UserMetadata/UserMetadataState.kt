@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip01UserMetadata
 
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -40,13 +39,14 @@ class UserMetadataState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val user = cache.getOrCreateUser(signer.pubKey)
+
     // fun getEphemeralChatListAddress() = cache.getOrCreateUser(signer.pubKey)
 
-    fun getUserMetadataUser(): User = cache.getOrCreateUser(signer.pubKey)
+    fun getUserMetadataFlow(): StateFlow<UserState> = user.flow().metadata.stateFlow
 
-    fun getUserMetadataFlow(): StateFlow<UserState> = getUserMetadataUser().flow().metadata.stateFlow
-
-    fun getUserMetadataEvent(): MetadataEvent? = getUserMetadataUser().latestMetadata
+    fun getUserMetadataEvent(): MetadataEvent? = user.latestMetadata
 
     suspend fun sendNewUserMetadata(
         name: String? = null,
@@ -112,7 +112,7 @@ class UserMetadataState(
         }
 
         // saves contact list for the next time.
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 0 Collector Start")
             getUserMetadataFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Kind 0 ${it.user.toBestDisplayName()}")

@@ -49,7 +49,7 @@ open class UserFeedViewModel(
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
@@ -100,14 +100,14 @@ open class UserFeedViewModel(
 
     init {
         Log.d("Init", "${this.javaClass.simpleName}")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Update feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }
         }
 
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
                 Log.d("Rendering Metrics", "Delete from feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()

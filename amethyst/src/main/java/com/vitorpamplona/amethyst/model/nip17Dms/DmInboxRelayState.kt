@@ -47,7 +47,7 @@ class DmInboxRelayState(
             localRelayList.flow,
         ) { nip65Inbox, dmRelayList, privateOutBox, localRelays ->
             nip65Inbox + dmRelayList + privateOutBox + localRelays
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

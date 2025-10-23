@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -148,22 +149,23 @@ class NotificationFeedFilter(
                 }
             }
 
-        return it.event !is ChannelCreateEvent &&
-            it.event !is ChannelMetadataEvent &&
-            it.event !is LnZapRequestEvent &&
-            it.event !is BadgeDefinitionEvent &&
-            it.event !is BadgeProfilesEvent &&
-            it.event !is NIP90ContentDiscoveryResponseEvent &&
-            it.event !is NIP90StatusEvent &&
-            it.event !is NIP90ContentDiscoveryRequestEvent &&
-            it.event !is GiftWrapEvent &&
-            it.event !is PrivateTagArrayEvent &&
-            it.event !is LnZapPaymentRequestEvent &&
-            it.event !is LnZapPaymentResponseEvent &&
-            (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
+        return noteEvent !is ChannelCreateEvent &&
+            noteEvent !is ChannelMetadataEvent &&
+            noteEvent !is LnZapRequestEvent &&
+            noteEvent !is BadgeDefinitionEvent &&
+            noteEvent !is BadgeProfilesEvent &&
+            noteEvent !is NIP90ContentDiscoveryResponseEvent &&
+            noteEvent !is NIP90StatusEvent &&
+            noteEvent !is NIP90ContentDiscoveryRequestEvent &&
+            noteEvent !is GiftWrapEvent &&
+            noteEvent !is PrivateTagArrayEvent &&
+            noteEvent !is LnZapPaymentRequestEvent &&
+            noteEvent !is LnZapPaymentResponseEvent &&
+            (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
             (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
-            it.event?.isTaggedUser(loggedInUserHex) ?: false &&
+            noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
+            (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&
             tagsAnEventByUser(it, loggedInUserHex)
     }
 

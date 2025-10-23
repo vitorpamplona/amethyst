@@ -143,7 +143,7 @@ private fun SearchBar(
     TextSearchDataSourceSubscription(searchBarViewModel, accountViewModel)
 
     LaunchedEffect(Unit) {
-        launch(Dispatchers.Default) {
+        launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect {
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()
@@ -151,7 +151,7 @@ private fun SearchBar(
             }
         }
 
-        launch(Dispatchers.Default) {
+        launch(Dispatchers.IO) {
             LocalCache.live.deletedEventBundles.collect {
                 if (searchBarViewModel.isSearchingFun()) {
                     searchBarViewModel.invalidateData()

@@ -43,7 +43,7 @@ class AccountHomeRelayState(
             local.flow,
         ) { nip65Outbox, privateOutBox, localRelays ->
             nip65Outbox + privateOutBox + localRelays
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

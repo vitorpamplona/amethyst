@@ -61,7 +61,7 @@ abstract class ListChangeFeedViewModel(
 
     init {
         Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             localFilter.changesFlow().collect {
                 Log.d("Init", "Collecting changes to: ${this@ListChangeFeedViewModel.javaClass.simpleName}")
                 when (it) {

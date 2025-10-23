@@ -63,7 +63,7 @@ class AccountDraftsEoseManager(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     relayFlow(key).collectLatest {
                         invalidateFilters()
                     }

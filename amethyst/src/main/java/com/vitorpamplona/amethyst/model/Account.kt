@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.DeclaredFollowsPerOutboxRelay
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListReusedOutboxOrProxyRelays
-import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowsPerOutboxRelay
+import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
@@ -205,6 +205,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -265,7 +266,7 @@ class Account(
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
-    val kind3FollowList = FollowListState(signer, cache, scope, settings)
+    val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
     val followSetsState = FollowSetState(signer, cache, scope)
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
@@ -1677,6 +1678,16 @@ class Account(
             note.countReportAuthorsBy(followingKeySet()) < 5 // if it has 5 reports by reliable users
     }
 
+    fun isDecryptedContentHidden(noteEvent: PrivateDmEvent): Boolean =
+        if (hiddenUsers.flow.value.hiddenWordsCase
+                .isNotEmpty()
+        ) {
+            val decrypted = privateDMDecryptionCache.cachedDM(noteEvent)
+            decrypted?.containsAny(hiddenUsers.flow.value.hiddenWordsCase) == true
+        } else {
+            false
+        }
+
     fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
     fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
@@ -1761,7 +1772,7 @@ class Account(
     fun observeDonatedInThisVersion() =
         settings
             .observeDonatedInVersion(BuildConfig.VERSION_NAME)
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)

@@ -71,7 +71,7 @@ class FeedContentState(
     }
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) { refreshSuspended() }
     }
 
     fun visibleNotes(): List<Note> {

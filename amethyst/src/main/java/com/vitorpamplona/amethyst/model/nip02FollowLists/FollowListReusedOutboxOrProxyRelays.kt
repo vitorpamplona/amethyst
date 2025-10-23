@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 class FollowListReusedOutboxOrProxyRelays(
-    kind3Follows: FollowListState,
+    kind3Follows: Kind3FollowListState,
     blockedRelayList: BlockedRelayListState,
     proxyRelayList: ProxyRelayListState,
     val cache: LocalCache,
@@ -78,7 +78,7 @@ class FollowListReusedOutboxOrProxyRelays(
                     },
                 )
             }.distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -90,7 +90,7 @@ class FollowListReusedOutboxOrProxyRelays(
             followList.minus(blockedRelays)
         }.onStart {
             emit(outboxRelayFlow.value.minus(blockedRelayList.flow.value.toSet()))
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -112,7 +112,7 @@ class FollowListReusedOutboxOrProxyRelays(
                         outboxRelayMinusBlockedFlow.value
                     },
                 )
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -126,7 +126,7 @@ class FollowListReusedOutboxOrProxyRelays(
                 relayList.mapTo(mutableSetOf()) { it.url }
             }.onStart {
                 emit(flow.value.mapTo(mutableSetOf()) { it.url })
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

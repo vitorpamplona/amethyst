@@ -91,22 +91,22 @@ class HomeOutboxEventsEoseManager(
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.listNameFlow().collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.scope.launch(Dispatchers.Default) {
+                key.scope.launch(Dispatchers.IO) {
                     key.followRelayFlow().sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     key.feedState.homeNewThreads.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },
-                key.account.scope.launch(Dispatchers.Default) {
+                key.account.scope.launch(Dispatchers.IO) {
                     key.feedState.homeReplies.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }

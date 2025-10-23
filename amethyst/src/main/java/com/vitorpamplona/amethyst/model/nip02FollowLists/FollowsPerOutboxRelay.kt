@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 class FollowsPerOutboxRelay(
-    kind3Follows: FollowListState,
+    kind3Follows: Kind3FollowListState,
     blockedRelayList: BlockedRelayListState,
     proxyRelayList: ProxyRelayListState,
     val cache: LocalCache,
@@ -60,7 +60,7 @@ class FollowsPerOutboxRelay(
                     OutboxRelayLoader().authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it },
                 )
             }.distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -72,7 +72,7 @@ class FollowsPerOutboxRelay(
             followList.minus(blockedRelays)
         }.onStart {
             emit(outboxPerRelayFlow.value.minus(blockedRelayList.flow.value.toSet()))
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -96,7 +96,7 @@ class FollowsPerOutboxRelay(
                 } else {
                     emit(proxyRelayList.flow.value.associateWith { kind3Follows.flow.value.authors })
                 }
-            }.flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
