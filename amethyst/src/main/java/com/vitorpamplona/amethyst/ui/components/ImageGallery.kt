@@ -22,28 +22,93 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private const val ASPECT_RATIO = 4f / 3f
+private const val PORTRAIT_ASPECT_RATIO = 3f / 4f
 private val IMAGE_SPACING: Dp = Size5dp
+
+private data class FirstImageOrientation(
+    val aspectRatio: Float,
+    val isLandscape: Boolean,
+)
+
+private fun MediaUrlImage.resolvedAspectRatio(): Float? =
+    dim
+        ?.takeIf { it.hasSize() }
+        ?.aspectRatio()
+        ?: MediaAspectRatioCache.get(url)
+
+private fun MediaUrlImage?.resolveOrientation(
+    landscapeDefaultAspectRatio: Float,
+    portraitDefaultAspectRatio: Float,
+    defaultToLandscape: Boolean = false,
+): FirstImageOrientation {
+    val ratio = this?.resolvedAspectRatio()
+    val isLandscape = ratio?.let { it >= 1f } ?: defaultToLandscape
+    val resolvedAspectRatio =
+        ratio
+            ?.takeIf { it > 0f }
+            ?: if (isLandscape) landscapeDefaultAspectRatio else portraitDefaultAspectRatio
+
+    return FirstImageOrientation(
+        aspectRatio = resolvedAspectRatio,
+        isLandscape = isLandscape,
+    )
+}
+
+@Composable
+private fun rememberFirstImageOrientation(firstImage: MediaUrlImage?): FirstImageOrientation {
+    val orientationState =
+        remember(firstImage) {
+            mutableStateOf(firstImage.resolveOrientation(ASPECT_RATIO, PORTRAIT_ASPECT_RATIO))
+        }
+
+    LaunchedEffect(firstImage) {
+        if (firstImage == null) return@LaunchedEffect
+        if (firstImage.dim?.hasSize() == true) return@LaunchedEffect
+
+        while (isActive) {
+            val ratio = firstImage.resolvedAspectRatio()
+            if (ratio != null && ratio > 0f) {
+                orientationState.value = FirstImageOrientation(ratio, ratio >= 1f)
+                break
+            }
+            delay(200)
+        }
+    }
+
+    return orientationState.value
+}
 
 @Composable
 private fun GalleryImage(
@@ -115,19 +180,39 @@ private fun TwoImageGallery(
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
 ) {
-    Row(
-        modifier = Modifier.aspectRatio(ASPECT_RATIO),
-        horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
-    ) {
-        images.take(2).forEach { image ->
-            GalleryImage(
-                image = image,
-                allImages = images,
-                modifier = Modifier.weight(1f).fillMaxSize(),
-                roundedCorner = roundedCorner,
-                contentScale = ContentScale.Crop,
-                accountViewModel = accountViewModel,
-            )
+    val orientation = rememberFirstImageOrientation(images.firstOrNull())
+
+    if (orientation.isLandscape) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+        ) {
+            images.take(2).forEach { image ->
+                GalleryImage(
+                    image = image,
+                    allImages = images,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(orientation.aspectRatio),
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+        ) {
+            images.take(2).forEach { image ->
+                GalleryImage(
+                    image = image,
+                    allImages = images,
+                    modifier = Modifier.weight(1f, fill = true).aspectRatio(orientation.aspectRatio),
+                    roundedCorner = roundedCorner,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }
@@ -138,32 +223,74 @@ private fun ThreeImageGallery(
     accountViewModel: AccountViewModel,
     roundedCorner: Boolean,
 ) {
-    Row(
-        modifier = Modifier.aspectRatio(ASPECT_RATIO),
-        horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
-    ) {
-        GalleryImage(
-            image = images[0],
-            allImages = images,
-            modifier = Modifier.weight(2f).fillMaxSize(),
-            roundedCorner = roundedCorner,
-            contentScale = ContentScale.Crop,
-            accountViewModel = accountViewModel,
-        )
+    val firstImage = images.first()
+    val orientation = rememberFirstImageOrientation(firstImage)
+    val remainingImages = images.drop(1)
 
+    if (orientation.isLandscape) {
         Column(
-            modifier = Modifier.weight(1f).fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
         ) {
-            images.drop(1).forEach { image ->
+            GalleryImage(
+                image = firstImage,
+                allImages = images,
+                modifier = Modifier.fillMaxWidth().aspectRatio(orientation.aspectRatio),
+                roundedCorner = roundedCorner,
+                contentScale = ContentScale.Crop,
+                accountViewModel = accountViewModel,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+            ) {
+                remainingImages.forEach { image ->
+                    GalleryImage(
+                        image = image,
+                        allImages = images,
+                        modifier = Modifier.weight(1f).aspectRatio(1f),
+                        roundedCorner = roundedCorner,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
+    } else {
+        BoxWithConstraints {
+            val horizontalSpacing = IMAGE_SPACING
+            val columnWidth = ((maxWidth - horizontalSpacing).coerceAtLeast(0.dp)) / 2
+            val rowHeight = (columnWidth * 2) + IMAGE_SPACING
+
+            Row(
+                modifier = Modifier.fillMaxWidth().height(rowHeight),
+                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+            ) {
                 GalleryImage(
-                    image = image,
+                    image = firstImage,
                     allImages = images,
-                    modifier = Modifier.weight(1f).fillMaxSize(),
+                    modifier = Modifier.width(columnWidth).fillMaxHeight(),
                     roundedCorner = roundedCorner,
                     contentScale = ContentScale.Crop,
                     accountViewModel = accountViewModel,
                 )
+
+                Column(
+                    modifier = Modifier.width(columnWidth).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(IMAGE_SPACING),
+                ) {
+                    remainingImages.forEach { image ->
+                        GalleryImage(
+                            image = image,
+                            allImages = images,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                            roundedCorner = roundedCorner,
+                            contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
             }
         }
     }
