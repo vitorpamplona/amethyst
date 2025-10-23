@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.Note
@@ -52,7 +51,7 @@ fun PublicChatChannelScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).statusBarsPadding()) {
+        Column(Modifier.padding(it)) {
             PublicChatChannelView(channelId, draft, replyTo, accountViewModel, nav)
         }
     }
