@@ -51,14 +51,14 @@ fun DisappearingScaffold(
     val topBehavior =
         enterAlwaysScrollBehavior(
             canScroll = {
-                isActive() && accountViewModel.settings.isImmersiveScrollingActive()
+                topBar != null && isActive() && accountViewModel.settings.isImmersiveScrollingActive()
             },
             reverseLayout = isInvertedLayout,
         )
     val bottomBehavior =
         BottomAppBarDefaults.exitAlwaysScrollBehavior(
             canScroll = {
-                isActive() && accountViewModel.settings.isImmersiveScrollingActive()
+                (bottomBar != null || floatingButton != null) && isActive() && accountViewModel.settings.isImmersiveScrollingActive()
             },
         )
 
