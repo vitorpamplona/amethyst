@@ -20,42 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.layouts
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.BottomAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import kotlin.math.abs
+import com.vitorpamplona.myapplication.DisappearingBottomBar
+import com.vitorpamplona.myapplication.DisappearingFloatingButton
+import com.vitorpamplona.myapplication.DisappearingTopBar
+import com.vitorpamplona.myapplication.enterAlwaysScrollBehavior
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisappearingScaffold(
     isInvertedLayout: Boolean,
@@ -66,139 +48,50 @@ fun DisappearingScaffold(
     isActive: () -> Boolean = { true },
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
-    val shouldShow = remember { mutableStateOf(isActive()) }
-
-    val modifier =
-        if (accountViewModel.settings.isImmersiveScrollingActive()) {
-            val bottomBarHeightPx = with(LocalDensity.current) { 50.dp.roundToPx().toFloat() }
-            val bottomBarOffsetHeightPx = remember { mutableFloatStateOf(0f) }
-
-            val nestedScrollConnection =
-                remember {
-                    object : NestedScrollConnection {
-                        override fun onPreScroll(
-                            available: Offset,
-                            source: NestedScrollSource,
-                        ): Offset {
-                            if (!isActive()) {
-                                if (!shouldShow.value) {
-                                    shouldShow.value = true
-                                }
-                                return Offset.Zero
-                            }
-
-                            val newOffset = bottomBarOffsetHeightPx.floatValue + available.y
-
-                            if (accountViewModel.settings.isImmersiveScrollingActive()) {
-                                val newBottomBarOffset =
-                                    if (!isInvertedLayout) {
-                                        newOffset.coerceIn(-bottomBarHeightPx, 0f)
-                                    } else {
-                                        newOffset.coerceIn(0f, bottomBarHeightPx)
-                                    }
-
-                                if (newBottomBarOffset != bottomBarOffsetHeightPx.floatValue) {
-                                    bottomBarOffsetHeightPx.floatValue = newBottomBarOffset
-                                }
-                            } else {
-                                if (abs(bottomBarOffsetHeightPx.floatValue) > 0.1) {
-                                    bottomBarOffsetHeightPx.floatValue = 0f
-                                }
-                            }
-
-                            val newShouldShow = abs(bottomBarOffsetHeightPx.floatValue) < bottomBarHeightPx / 2.0f
-
-                            if (shouldShow.value != newShouldShow) {
-                                shouldShow.value = newShouldShow
-                            }
-
-                            return Offset.Zero
-                        }
-                    }
-                }
-
-            // resets bar on resume
-            val lifeCycleOwner = LocalLifecycleOwner.current
-            DisposableEffect(lifeCycleOwner) {
-                val observer =
-                    LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) {
-                            bottomBarOffsetHeightPx.floatValue = 0f
-                            shouldShow.value = true
-                        }
-                    }
-
-                lifeCycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            Modifier
-                .imePadding()
-                .nestedScroll(nestedScrollConnection)
-        } else {
-            Modifier
-                .imePadding()
-        }
+    val topBehavior =
+        enterAlwaysScrollBehavior(
+            canScroll = {
+                isActive() && accountViewModel.settings.isImmersiveScrollingActive()
+            },
+            reverseLayout = isInvertedLayout,
+        )
+    val bottomBehavior =
+        BottomAppBarDefaults.exitAlwaysScrollBehavior(
+            canScroll = {
+                isActive() && accountViewModel.settings.isImmersiveScrollingActive()
+            },
+        )
 
     Scaffold(
-        modifier = modifier,
+        modifier =
+            Modifier
+                .imePadding()
+                .nestedScroll(topBehavior.nestedScrollConnection)
+                .nestedScroll(bottomBehavior.nestedScrollConnection),
         bottomBar = {
             bottomBar?.let {
-                AnimatedContent(
-                    targetState = shouldShow.value,
-                    transitionSpec = AnimatedContentTransitionScope<Boolean>::bottomBarTransitionSpec,
-                    label = "BottomBarAnimatedContent",
-                ) { isVisible ->
-                    if (isVisible) {
-                        it()
-                    }
+                DisappearingBottomBar(bottomBehavior) {
+                    it()
                 }
             }
         },
         topBar = {
             topBar?.let {
-                AnimatedContent(
-                    targetState = shouldShow.value,
-                    transitionSpec = AnimatedContentTransitionScope<Boolean>::topBarTransitionSpec,
-                    label = "TopBarAnimatedContent",
-                ) { isVisible ->
-                    if (isVisible) {
-                        Column {
-                            it()
-                            HorizontalDivider(thickness = DividerThickness)
-                        }
+                DisappearingTopBar(topBehavior) {
+                    Column {
+                        it()
+                        HorizontalDivider(thickness = DividerThickness)
                     }
                 }
             }
         },
         floatingActionButton = {
             floatingButton?.let {
-                AnimatedVisibility(
-                    visible = shouldShow.value,
-                    enter = remember { scaleIn() },
-                    exit = remember { scaleOut() },
-                ) {
-                    Box(
-                        modifier = Modifier.defaultMinSize(minWidth = 55.dp, minHeight = 55.dp),
-                    ) {
-                        floatingButton()
-                    }
+                DisappearingFloatingButton(bottomBehavior) {
+                    it()
                 }
             }
         },
         content = mainContent,
     )
 }
-
-@OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentTransitionScope<S>.topBarTransitionSpec(): ContentTransform = topBarAnimation
-
-@OptIn(ExperimentalAnimationApi::class)
-private fun <S> AnimatedContentTransitionScope<S>.bottomBarTransitionSpec(): ContentTransform = bottomBarAnimation
-
-@ExperimentalAnimationApi
-val topBarAnimation: ContentTransform =
-    slideInVertically { height -> 0 } togetherWith slideOutVertically { height -> 0 }
-
-val bottomBarAnimation: ContentTransform =
-    slideInVertically { height -> height } togetherWith slideOutVertically { height -> height }
