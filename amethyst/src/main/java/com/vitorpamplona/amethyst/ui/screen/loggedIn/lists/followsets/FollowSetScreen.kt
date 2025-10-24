@@ -62,30 +62,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.theme.VertPadding
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -260,6 +266,26 @@ fun TitleAndDescription(
 }
 
 @Composable
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
+fun FollowSetListViewPreview() {
+    val accountViewModel = mockAccountViewModel()
+
+    val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val user2: User = LocalCache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+    val user3: User = LocalCache.getOrCreateUser("7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf")
+
+    ThemeComparisonRow {
+        FollowSetListView(
+            publicMemberList = listOf(user1, user2, user3),
+            privateMemberList = listOf(user1, user2, user3),
+            onDeleteUser = { },
+            accountViewModel = accountViewModel,
+            nav = EmptyNav,
+        )
+    }
+}
+
+@Composable
 private fun FollowSetListView(
     modifier: Modifier = Modifier,
     publicMemberList: List<User>,
@@ -277,15 +303,13 @@ private fun FollowSetListView(
     ) {
         if (publicMemberList.isNotEmpty()) {
             stickyHeader {
-                Column(
-                    modifier = VertPadding,
-                ) {
-                    Text(
-                        text = stringRes(R.string.follow_set_public_members_header_label),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                Text(
+                    text = stringRes(R.string.follow_set_public_members_header_label2),
+                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(vertical = 5.dp),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
                 HorizontalDivider(thickness = DividerThickness)
             }
             itemsIndexed(publicMemberList, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
@@ -298,15 +322,17 @@ private fun FollowSetListView(
                 )
             }
             item {
-                Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(10.dp))
             }
         }
         if (privateMemberList.isNotEmpty()) {
             stickyHeader {
                 Text(
-                    text = stringRes(R.string.follow_set_private_members_header_label),
+                    text = stringRes(R.string.follow_set_private_members_header_label2),
+                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(vertical = 5.dp),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
                 )
                 HorizontalDivider(thickness = DividerThickness)
             }
@@ -337,7 +363,7 @@ fun FollowSetListItem(
     Column(
         modifier = modifier,
     ) {
-        Row {
+        Row(HalfHalfHorzModifier) {
             UserCompose(
                 user,
                 overallModifier = HalfPadding.weight(1f, fill = false),

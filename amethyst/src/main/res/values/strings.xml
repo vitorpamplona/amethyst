@@ -527,6 +527,8 @@
     <string name="follow_set_private_presence_indicator">%1$s is a private member</string>
     <string name="follow_set_public_member_add_label">Add as public member</string>
     <string name="follow_set_private_member_add_label">Add as private member</string>
+    <string name="follow_set_public_members_header_label2">Public Members</string>
+    <string name="follow_set_private_members_header_label2">Private Members</string>
     <string name="follow_set_public_members_header_label">Public Profiles</string>
     <string name="follow_set_private_members_header_label">Private Profiles</string>
     <string name="follow_set_single_member_label">member</string>
