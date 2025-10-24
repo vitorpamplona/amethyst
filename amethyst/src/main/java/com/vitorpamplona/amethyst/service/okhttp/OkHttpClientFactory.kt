@@ -65,6 +65,8 @@ class OkHttpClientFactory(
                 maxRequestsPerHost = 10
                 maxRequests = 1024
             } else {
+                maxRequestsPerHost = 5
+                maxRequests = 256
                 Log.i("OkHttpClientFactory", "Emulator detected, using default maxRequests: 64.")
             }
         }
