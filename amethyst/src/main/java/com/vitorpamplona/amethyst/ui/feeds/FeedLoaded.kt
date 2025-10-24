@@ -21,21 +21,34 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -47,15 +60,45 @@ fun FeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val isPreFetching by accountViewModel.feedStates.homeNewThreads.isPreFetching
+        .collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+
+    // Create prefetch state
+    val prefetchState = remember { LazyLayoutPrefetchState() }
+
+    // Create prefetch manager
+    val prefetchManager =
+        remember(prefetchState, coroutineScope) {
+            NotePrefetchManager(accountViewModel.feedStates.homeNewThreads, prefetchState, coroutineScope)
+        }
+
+    // Monitor scroll position for prefetching with debouncing
+    LaunchedEffect(listState.firstVisibleItemIndex, items.list.size) {
+        // Debounce scroll events to prevent excessive recomposition
+        delay(100) // 100ms debounce
+        val currentIndex = listState.firstVisibleItemIndex
+        val totalItems = items.list.size
+        prefetchManager.updatePrefetching(currentIndex, totalItems)
+    }
 
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
+        // Performance optimizations for better scrolling
+        userScrollEnabled = true,
+        reverseLayout = false,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
+        itemsIndexed(
+            items.list,
+            key = { index, item -> "${item.idHex}_$index" }, // More unique key with index
+        ) { index, item ->
+            // Use remember to stabilize the item and prevent unnecessary recomposition
+            val stableItem = remember(item.idHex, index) { item }
+
+            Row(Modifier.fillMaxWidth()) {
                 NoteCompose(
-                    item,
+                    stableItem,
                     modifier = Modifier.fillMaxWidth(),
                     routeForLastRead = routeForLastRead,
                     isBoostedNote = false,
@@ -69,6 +112,34 @@ fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+        }
+
+        // Show prefetching indicator
+        if (isPreFetching) {
+            item {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(4.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = "Loading more notes...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 }

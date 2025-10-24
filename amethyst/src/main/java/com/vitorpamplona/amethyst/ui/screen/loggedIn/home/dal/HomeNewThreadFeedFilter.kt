@@ -131,4 +131,28 @@ class HomeNewThreadFeedFilter(
                     it.idHex
                 }
             }.sortedWith(DefaultFeedOrder)
+
+    override fun loadOlderNotesImpl(
+        afterNote: Note?,
+        limit: Int,
+    ): List<Note> {
+        val filterParams = buildFilterParams(account)
+
+        val notes =
+            LocalCache.notes.filterIntoSet { _, note ->
+                (note.event?.kind ?: 99999) < 10000 &&
+                    acceptableEvent(note, filterParams) &&
+                    (afterNote == null || (note.createdAt() ?: 0L) < (afterNote.createdAt() ?: 0L))
+            }
+
+        val longFormNotes =
+            LocalCache.addressables.filterIntoSet(
+                kinds = ADDRESSABLE_KINDS,
+            ) { _, note ->
+                acceptableEvent(note, filterParams) &&
+                    (afterNote == null || (note.createdAt() ?: 0L) < (afterNote.createdAt() ?: 0L))
+            }
+
+        return sort(notes + longFormNotes).take(limit)
+    }
 }

@@ -31,10 +31,35 @@ abstract class FeedFilter<T> : IFeedFilter<T> {
             )
         return feed.take(limit())
     }
+
+    override fun loadOlderNotes(
+        afterNote: T?,
+        limit: Int,
+    ): List<T> =
+        logTime(
+            debugMessage = { "${this.javaClass.simpleName} FeedFilter loading ${it.size} older objects" },
+            block = { loadOlderNotesImpl(afterNote, limit) },
+        )
+
+    /** Default implementation - can be overridden by specific filters */
+    open fun loadOlderNotesImpl(
+        afterNote: T?,
+        limit: Int,
+    ): List<T> {
+        // Default implementation returns empty list
+        // Specific filters can override this for prefetching support
+        return emptyList()
+    }
 }
 
 interface IFeedFilter<T> {
     fun loadTop(): List<T>
+
+    /** Load older notes for prefetching */
+    fun loadOlderNotes(
+        afterNote: T?,
+        limit: Int,
+    ): List<T>
 
     fun limit(): Int = 500
 

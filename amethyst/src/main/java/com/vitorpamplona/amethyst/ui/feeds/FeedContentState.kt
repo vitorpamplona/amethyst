@@ -59,6 +59,12 @@ class FeedContentState(
 
     val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
 
+    // Prefetching state
+    private val _isPreFetching = MutableStateFlow(false)
+    val isPreFetching = _isPreFetching.asStateFlow()
+
+    private var lastPreFetchedIndex = -1
+
     fun sendToTop() {
         if (scrollToTopPending) return
 
@@ -225,6 +231,31 @@ class FeedContentState(
         } else {
             // Refresh Everything
             invalidateData()
+        }
+    }
+
+    suspend fun preFetchOlderNotes(currentVisibleCount: Int) {
+        if (_isPreFetching.value) return
+
+        val currentState = _feedContent.value
+        if (currentState !is FeedState.Loaded) return
+
+        val currentNotes = currentState.feed.value.list
+        if (currentNotes.size < currentVisibleCount + 25) {
+            _isPreFetching.value = true
+            try {
+                // Load 50 more notes to maintain 25-note lead
+                val olderNotes = localFilter.loadOlderNotes(currentNotes.lastOrNull(), 50)
+                if (olderNotes.isNotEmpty()) {
+                    val updatedNotes = (currentNotes + olderNotes).distinctBy { it.idHex }.toImmutableList()
+                    // Only update if the list actually changed to prevent unnecessary recomposition
+                    if (updatedNotes.size > currentNotes.size) {
+                        updateFeed(updatedNotes)
+                    }
+                }
+            } finally {
+                _isPreFetching.value = false
+            }
         }
     }
 }
