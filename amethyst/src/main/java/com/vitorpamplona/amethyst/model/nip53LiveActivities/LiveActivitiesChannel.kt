@@ -59,7 +59,7 @@ class LiveActivitiesChannel(
         super.updateChannelInfo()
     }
 
-    override fun toBestDisplayName(): String = info?.title() ?: toNAddr().toShortDisplay()
+    override fun toBestDisplayName(): String = info?.title() ?: creatorName() ?: toNAddr().toShortDisplay()
 
     fun creatorName(): String? = creator?.toBestDisplayName()
 
