@@ -126,10 +126,10 @@ fun AppNavigation(
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.Lists> { ListsAndSetsScreen(accountViewModel, nav) }
-            composableArgs<Route.FollowSetRoute> {
+            composableFromEndArgs<Route.FollowSetRoute> {
                 FollowSetScreen(it.setIdentifier, accountViewModel, nav)
             }
-            composableArgs<Route.FollowSetManagement> {
+            composableFromEndArgs<Route.FollowSetManagement> {
                 FollowSetsManagementDialog(it.userHexKey, accountViewModel, nav)
             }
 
