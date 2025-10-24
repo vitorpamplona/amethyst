@@ -288,7 +288,7 @@ private fun FollowSetListView(
                 }
                 HorizontalDivider(thickness = DividerThickness)
             }
-            itemsIndexed(publicMemberList, key = { _, item -> item.pubkeyHex }) { _, item ->
+            itemsIndexed(publicMemberList, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
                 FollowSetListItem(
                     modifier = Modifier.animateItem(),
                     user = item,
@@ -310,7 +310,7 @@ private fun FollowSetListView(
                 )
                 HorizontalDivider(thickness = DividerThickness)
             }
-            itemsIndexed(privateMemberList, key = { _, item -> item.pubkeyHex }) { _, item ->
+            itemsIndexed(privateMemberList, key = { _, item -> "i" + item.pubkeyHex }) { _, item ->
                 FollowSetListItem(
                     modifier = Modifier.animateItem(),
                     user = item,
