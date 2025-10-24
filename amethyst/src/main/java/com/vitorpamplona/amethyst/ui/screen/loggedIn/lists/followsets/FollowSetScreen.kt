@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -239,7 +240,7 @@ fun TitleAndDescription(
             Text(
                 text = followSet.title,
             )
-            Spacer(modifier = StdHorzSpacer)
+            Spacer(modifier = DoubleHorzSpacer)
             Icon(
                 painter = painterResource(R.drawable.format_list_bulleted_type),
                 contentDescription = null,
