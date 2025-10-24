@@ -41,7 +41,9 @@ fun NIP19QrCodeScanner(
 ) {
     SimpleQrCodeScanner {
         try {
-            onScan(uriToRoute(it, accountViewModel.account))
+            if (it != null) {
+                onScan(uriToRoute(it, accountViewModel.account))
+            }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.e("NIP19 Scanner", "Error parsing $it", e)

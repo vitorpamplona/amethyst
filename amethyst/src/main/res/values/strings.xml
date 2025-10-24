@@ -841,6 +841,17 @@
     <string name="invalid_nip47_uri_title">Invalid NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">The URI %1$s is not a valid NIP-47 login URI.</string>
 
+    <string name="connect_to_new_nwc_wallet">Connect to new NWC wallet</string>
+    <string name="couldnt_find_nwc_wallets">Wallet not found</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst couldn\'t find any wallet apps that support Nostr Wallet Connect (NWC).
+\n\nWhat you can do:
+\n\t1. Verify NWC Support: Double-check that your preferred wallet app is compatible with Nostr Wallet Connect.
+\n\t2. Create Connection: Go to your wallet app and create a new NWC connection.
+\n\t3. Link to Amethyst: Your wallet will usually give you three options:
+\n\t\t3.1 Automatic Link: A button to automatically open and connect to Amethyst. If so, click that button, open Amethyst and hit save on the new screen.
+\n\t\t3.2 Manual Link: A Connection URI you can copy and click the paste icon on this screen to directly input it.
+\n\t\t3.3 QR Code: The wallet creates a QR code which you can read from the QR code button in this screen.
+    </string>
 
     <string name="language_description">For the App\'s Interface</string>
     <string name="theme_description">Dark, Light or System theme</string>

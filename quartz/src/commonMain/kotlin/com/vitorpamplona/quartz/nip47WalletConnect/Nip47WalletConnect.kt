@@ -38,7 +38,7 @@ class Nip47WalletConnect {
 
             val url = UriParser(uri)
 
-            if (url.scheme() != "nostrwalletconnect" && url.scheme() != "nostr+walletconnect") {
+            if (url.scheme() != "nostrwalletconnect" && url.scheme() != "nostr+walletconnect" && url.scheme() != "amethyst+walletconnect") {
                 throw IllegalArgumentException("Not a Wallet Connect QR Code")
             }
 

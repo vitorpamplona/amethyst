@@ -46,6 +46,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -328,14 +329,19 @@ fun UpdateZapAmountContent(
             IconButton(
                 onClick = {
                     onClose()
-                    runCatching { uri.openUri("https://nwc.getalby.com/apps/new?c=Amethyst") }
+
+                    try {
+                        uri.openUri("nostrnwc://connect?appname=Amethyst&appicon=https%3A%2F%2Fraw.githubusercontent.com%2Fvitorpamplona%2Famethyst%2Frefs%2Fheads%2Fmain%2Ficon.png&callback=amethyst%2Bwalletconnect%3A%2F%2Fdlnwc")
+                    } catch (_: IllegalArgumentException) {
+                        accountViewModel.toastManager.toast(R.string.couldnt_find_nwc_wallets, R.string.couldnt_find_nwc_wallets_description)
+                    }
                 },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.alby, 1),
-                    contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = stringRes(id = R.string.connect_to_new_nwc_wallet),
                     modifier = Size24Modifier,
-                    tint = Color.Unspecified,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -352,7 +358,7 @@ fun UpdateZapAmountContent(
                 },
             ) {
                 Icon(
-                    Icons.Outlined.ContentPaste,
+                    imageVector = Icons.Outlined.ContentPaste,
                     contentDescription = stringRes(id = R.string.paste_from_clipboard),
                     modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,

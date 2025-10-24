@@ -89,6 +89,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="nostr" />
+                <data android:scheme="amethyst" />
             </intent-filter>
 
             <intent-filter android:label="Amethyst">
@@ -103,6 +104,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="nostrwalletconnect" />
                 <data android:scheme="nostr+walletconnect" />
+                <data android:scheme="amethyst+walletconnect" />
             </intent-filter>
 
             <intent-filter android:label="New Post">

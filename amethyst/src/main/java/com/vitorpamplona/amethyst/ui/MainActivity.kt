@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.UriParser
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -126,20 +127,28 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+fun isNotificationRoute(uri: String) = uri.startsWith("notifications", true) || uri.startsWith("nostr:notifications", true)
+
+fun isHashtagRoute(uri: String) = uri.startsWith("hashtag?id=") || uri.startsWith("nostr:hashtag?id=")
+
+fun isWalletConnectRoute(uri: String) = uri.startsWith("dlnwc?value=") || uri.startsWith("amethyst+walletconnect:dlnwc?value=") || uri.startsWith("amethyst+walletconnect://dlnwc?value=")
+
 fun uriToRoute(
-    uri: String?,
+    uri: String,
     account: Account,
-): Route? =
-    if (uri?.startsWith("notifications", true) == true || uri?.startsWith("nostr:notifications", true) == true) {
-        Route.Notification
-    } else {
-        if (uri?.startsWith("hashtag?id=") == true || uri?.startsWith("nostr:hashtag?id=") == true) {
-            Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id="))
-        } else {
-            val nip19 = Nip19Parser.uriToRoute(uri)?.entity
-            if (nip19 != null) {
-                LocalCache.consume(nip19)
-            }
+): Route? {
+    if (isNotificationRoute(uri)) {
+        return Route.Notification
+    }
+    if (isHashtagRoute(uri)) {
+        return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id="))
+    }
+
+    val nip19 = Nip19Parser.uriToRoute(uri)?.entity
+    if (nip19 != null) {
+        LocalCache.consume(nip19)
+
+        val route =
             when (nip19) {
                 is NPub -> Route.Profile(nip19.hex)
                 is NProfile -> Route.Profile(nip19.hex)
@@ -175,14 +184,27 @@ fun uriToRoute(
 
                 else -> null
             }
+
+        if (route != null) {
+            return route
         }
-            ?: try {
-                uri?.let {
-                    Nip47WalletConnect.parse(it)
-                    Route.Nip47NWCSetup(it)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
     }
+
+    if (isWalletConnectRoute(uri)) {
+        val url = UriParser(uri)
+        val nip47Uri = url.getQueryParameter("value")
+        if (nip47Uri != null) {
+            Nip47WalletConnect.parse(nip47Uri)
+            return Route.Nip47NWCSetup(nip47Uri)
+        }
+    }
+
+    try {
+        Nip47WalletConnect.parse(uri)
+        return Route.Nip47NWCSetup(uri)
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+    }
+
+    return null
+}
