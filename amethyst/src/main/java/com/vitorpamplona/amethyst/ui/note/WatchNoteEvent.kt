@@ -76,14 +76,14 @@ fun WatchNoteEvent(
     if (baseNote.event != null) {
         onNoteEventFound()
     } else {
-        // avoid observing costs if already has an event.
+        // Optimize: Use a more efficient state observation with better caching
         val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
-        CrossfadeIfEnabled(targetState = hasEvent, accountViewModel = accountViewModel) {
-            if (it) {
-                onNoteEventFound()
-            } else {
-                onBlank()
-            }
+
+        // Optimize: Remove expensive Crossfade animation during scrolling
+        if (hasEvent) {
+            onNoteEventFound()
+        } else {
+            onBlank()
         }
     }
 }

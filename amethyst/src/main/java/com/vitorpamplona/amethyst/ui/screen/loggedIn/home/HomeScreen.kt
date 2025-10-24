@@ -298,8 +298,7 @@ fun FeedLoaded(
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             Row(
                 Modifier
-                    .fillMaxWidth()
-                    .animateItem(),
+                    .fillMaxWidth(),
             ) {
                 NoteCompose(
                     item,

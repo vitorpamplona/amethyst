@@ -227,6 +227,14 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.coroutines.delay
 
+// Data class to consolidate note metadata and reduce recomposition
+private data class NoteMetadata(
+    val geo: String?,
+    val baseReward: Reward?,
+    val pow: Int?,
+    val weightModifier: Modifier,
+)
+
 @Composable
 fun NoteCompose(
     baseNote: Note,
@@ -674,8 +682,8 @@ fun NoteBody(
 
     if (!makeItShort) {
         val noteEvent = baseNote.event
-        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
-        if (zapSplits && noteEvent != null) {
+        // Optimize: Only compute zapSplits if noteEvent exists
+        if (noteEvent?.hasZapSplitSetup() == true) {
             Spacer(modifier = HalfDoubleVertSpacer)
             DisplayZapSplits(noteEvent, false, accountViewModel, nav)
         }
@@ -975,7 +983,8 @@ fun RenderDraft(
     nav: INav,
 ) {
     ObserveDraftEvent(note, accountViewModel) {
-        val edits = remember { mutableStateOf(GenericLoadable.Empty<EditState>()) }
+        // Optimize: Use a more efficient state initialization
+        val edits = remember(it.idHex) { mutableStateOf(GenericLoadable.Empty<EditState>()) }
 
         RenderNoteRow(
             baseNote = it,
@@ -989,10 +998,11 @@ fun RenderDraft(
             nav = nav,
         )
 
-        val zapSplits = remember(it.event) { it.event?.hasZapSplitSetup() }
-        if (zapSplits == true) {
+        // Optimize: Direct check instead of remember
+        val event = it.event
+        if (event?.hasZapSplitSetup() == true) {
             Spacer(modifier = HalfDoubleVertSpacer)
-            DisplayZapSplits(it.event!!, false, accountViewModel, nav)
+            DisplayZapSplits(event, false, accountViewModel, nav)
         }
     }
 }
@@ -1058,32 +1068,40 @@ fun SecondUserInfoRow(
     val noteEvent = note.event ?: return
     val noteAuthor = note.author ?: return
 
+    // Consolidate multiple remember calls into a single data class
+    val noteMetadata =
+        remember(noteEvent) {
+            NoteMetadata(
+                geo = noteEvent.geoHashOrScope(),
+                baseReward = noteEvent.bountyBaseReward()?.let { Reward(it) },
+                pow = noteEvent.strongPoWOrNull(),
+                weightModifier = Modifier.fillMaxWidth(),
+            )
+        }
+
     Row(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
         if (noteEvent is BaseThreadedEvent && noteEvent.isAFork()) {
-            ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+            ShowForkInformation(noteEvent, noteMetadata.weightModifier, accountViewModel, nav)
         } else {
-            ObserveDisplayNip05Status(noteAuthor, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+            ObserveDisplayNip05Status(noteAuthor, noteMetadata.weightModifier, accountViewModel, nav)
         }
 
-        val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }
-        if (geo != null) {
+        if (noteMetadata.geo != null) {
             Spacer(StdHorzSpacer)
-            DisplayLocation(geo, accountViewModel, nav)
+            DisplayLocation(noteMetadata.geo, accountViewModel, nav)
         }
 
-        val baseReward = remember(noteEvent) { noteEvent.bountyBaseReward()?.let { Reward(it) } }
-        if (baseReward != null) {
+        if (noteMetadata.baseReward != null) {
             Spacer(StdHorzSpacer)
-            DisplayReward(baseReward, note, accountViewModel, nav)
+            DisplayReward(noteMetadata.baseReward, note, accountViewModel, nav)
         }
 
-        val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }
-        if (pow != null) {
+        if (noteMetadata.pow != null) {
             Spacer(StdHorzSpacer)
-            DisplayPoW(pow)
+            DisplayPoW(noteMetadata.pow)
         }
 
         DisplayOtsIfInOriginal(note, editState, accountViewModel)

@@ -34,7 +34,9 @@ import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.config.AppSpecificStorageConfiguration
 import com.abedelazizshe.lightcompressorlibrary.config.Configuration
 import com.abedelazizshe.lightcompressorlibrary.config.VideoResizer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.UUID
@@ -313,43 +315,44 @@ object VideoCompressionHelper {
         }
     }
 
-    private fun getVideoInfo(
+    private suspend fun getVideoInfo(
         uri: Uri,
         context: Context,
-    ): VideoInfo? {
-        var retriever: MediaMetadataRetriever? = null
-        return try {
-            retriever = MediaMetadataRetriever()
-            retriever.setDataSource(context, uri)
-            val width = retriever.prepareVideoWidth()
-            val height = retriever.prepareVideoHeight()
-            val rotation = retriever.prepareRotation() ?: 0
+    ): VideoInfo? =
+        withContext(Dispatchers.IO) {
+            var retriever: MediaMetadataRetriever? = null
+            return@withContext try {
+                retriever = MediaMetadataRetriever()
+                retriever.setDataSource(context, uri)
+                val width = retriever.prepareVideoWidth()
+                val height = retriever.prepareVideoHeight()
+                val rotation = retriever.prepareRotation() ?: 0
 
-            // Get framerate
-            val framerateString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
-            val framerate = framerateString?.toFloatOrNull() ?: 30.0f
+                // Get framerate
+                val framerateString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
+                val framerate = framerateString?.toFloatOrNull() ?: 30.0f
 
-            if (width != null && height != null && width > 0 && height > 0) {
-                // Account for rotation
-                val resolution =
-                    if (rotation == 90 || rotation == 270) {
-                        VideoResolution(height, width)
-                    } else {
-                        VideoResolution(width, height)
-                    }
-                VideoInfo(resolution, framerate)
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            Log.w(LOG_TAG, "Failed to get video resolution: ${e.message}")
-            null
-        } finally {
-            try {
-                retriever?.release()
+                if (width != null && height != null && width > 0 && height > 0) {
+                    // Account for rotation
+                    val resolution =
+                        if (rotation == 90 || rotation == 270) {
+                            VideoResolution(height, width)
+                        } else {
+                            VideoResolution(width, height)
+                        }
+                    VideoInfo(resolution, framerate)
+                } else {
+                    null
+                }
             } catch (e: Exception) {
-                Log.w(LOG_TAG, "Failed to release MediaMetadataRetriever: ${e.message}")
+                Log.w(LOG_TAG, "Failed to get video resolution: ${e.message}")
+                null
+            } finally {
+                try {
+                    retriever?.release()
+                } catch (e: Exception) {
+                    Log.w(LOG_TAG, "Failed to release MediaMetadataRetriever: ${e.message}")
+                }
             }
         }
-    }
 }

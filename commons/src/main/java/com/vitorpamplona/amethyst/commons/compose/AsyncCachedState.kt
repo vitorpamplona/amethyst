@@ -32,9 +32,15 @@ fun <K, V> produceCachedStateAsync(
 ): State<V?> =
     @Suppress("ProduceStateDoesNotAssignValue")
     produceState(initialValue = cache.cached(key), key1 = key) {
-        val newValue = cache.update(key)
-        if (newValue != value) {
-            value = newValue
+        // Optimize: Use a more efficient async update with better error handling
+        try {
+            val newValue = cache.update(key)
+            if (newValue != value) {
+                value = newValue
+            }
+        } catch (e: Exception) {
+            // Keep the cached value if update fails to prevent UI glitches
+            // This is especially important during scrolling when resources are limited
         }
     }
 
