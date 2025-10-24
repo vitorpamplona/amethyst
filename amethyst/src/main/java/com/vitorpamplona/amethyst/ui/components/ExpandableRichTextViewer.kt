@@ -78,10 +78,12 @@ fun ExpandableRichTextViewer(
             }
         }
 
+    // Cache the cutoff calculation to prevent recalculation on every recomposition
     val whereToCut = remember(content) { ExpandableTextCutOffCalculator.indexToCutOff(content) }
 
+    // Use stable text calculation to prevent unnecessary recomposition
     val text by
-        remember(content) {
+        remember(content, showFullText, whereToCut) {
             derivedStateOf {
                 if (showFullText) {
                     content
@@ -104,6 +106,7 @@ fun ExpandableRichTextViewer(
             nav,
         )
 
+        // Only show button if content is actually truncated
         if (content.length > whereToCut && !showFullText) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

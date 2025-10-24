@@ -26,7 +26,27 @@ class ExpandableTextCutOffCalculator {
         private const val SHORTEN_AFTER_LINES = 10
         private const val TOO_FAR_SEARCH_THE_OTHER_WAY = 450
 
+        // Cache for cutoff calculations to prevent repeated string operations
+        private val cutoffCache = mutableMapOf<String, Int>()
+        private const val MAX_CACHE_SIZE = 100
+
         fun indexToCutOff(content: String): Int {
+            // Return cached result if available
+            cutoffCache[content]?.let { return it }
+
+            // Calculate cutoff
+            val result = calculateCutOff(content)
+
+            // Cache the result (with size limit to prevent memory leaks)
+            if (cutoffCache.size >= MAX_CACHE_SIZE) {
+                cutoffCache.clear()
+            }
+            cutoffCache[content] = result
+
+            return result
+        }
+
+        private fun calculateCutOff(content: String): Int {
             // Cuts the text in the first space or first new line after SHORT_TEXT_LENGTH characters
             val firstSpaceAfterCut =
                 content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }

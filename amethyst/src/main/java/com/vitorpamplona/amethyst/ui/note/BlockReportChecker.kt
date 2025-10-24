@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
@@ -61,8 +62,9 @@ fun WatchBlockAndReport(
 ) {
     val isHidden by accountViewModel.createIsHiddenFlow(note).collectAsStateWithLifecycle()
 
+    // Use rememberSaveable to persist state across recomposition but allow proper disposal
     val showAnyway =
-        remember {
+        rememberSaveable(note.idHex) {
             mutableStateOf(false)
         }
 
