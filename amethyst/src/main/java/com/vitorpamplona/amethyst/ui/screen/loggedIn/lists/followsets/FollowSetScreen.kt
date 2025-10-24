@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -283,12 +284,8 @@ private fun FollowSetListView(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
                 }
+                HorizontalDivider(thickness = DividerThickness)
             }
             itemsIndexed(publicMemberList, key = { _, item -> item.pubkeyHex }) { _, item ->
                 FollowSetListItem(
@@ -310,11 +307,7 @@ private fun FollowSetListView(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(),
-                    thickness = 2.dp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
+                HorizontalDivider(thickness = DividerThickness)
             }
             itemsIndexed(privateMemberList, key = { _, item -> item.pubkeyHex }) { _, item ->
                 FollowSetListItem(
@@ -369,7 +362,7 @@ fun FollowSetListItem(
                 )
             }
         }
-        HorizontalDivider()
+        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
@@ -426,7 +419,7 @@ fun ListActionsMenu(
                 onCloseMenu()
             },
         )
-        HorizontalDivider()
+        HorizontalDivider(thickness = DividerThickness)
         DropdownMenuItem(
             text = {
                 Text("Delete List")

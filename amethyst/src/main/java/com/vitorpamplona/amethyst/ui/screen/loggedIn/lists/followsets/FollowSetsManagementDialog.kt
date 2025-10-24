@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewSetCreationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
@@ -539,7 +540,7 @@ fun FollowSetCreationItem(
     val context = LocalContext.current
     val setTypeLabel = stringRes(context, if (setIsPrivate) R.string.follow_set_type_private else R.string.follow_set_type_public)
 
-    HorizontalDivider()
+    HorizontalDivider(thickness = DividerThickness)
     Column(
         modifier =
             modifier
@@ -586,5 +587,5 @@ fun FollowSetCreationItem(
             color = Color.Gray,
         )
     }
-    HorizontalDivider()
+    HorizontalDivider(thickness = DividerThickness)
 }

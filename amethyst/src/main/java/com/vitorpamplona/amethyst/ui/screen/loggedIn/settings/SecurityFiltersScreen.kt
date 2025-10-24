@@ -169,7 +169,7 @@ fun SecurityFiltersScreen(
 
             HeaderOptions(accountViewModel)
 
-            HorizontalDivider()
+            HorizontalDivider(thickness = DividerThickness)
 
             ScrollableTabRow(
                 containerColor = MaterialTheme.colorScheme.background,
