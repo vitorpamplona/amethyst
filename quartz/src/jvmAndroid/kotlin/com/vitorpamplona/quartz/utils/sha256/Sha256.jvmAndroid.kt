@@ -32,12 +32,12 @@ actual fun sha256(data: ByteArray) = pool.hash(data)
  * This is more efficient than reading the stream twice.
  *
  * @param inputStream The input stream to hash
- * @param bufferSize Size of chunks to read (default 8KB)
+ * @param bufferSize Size of chunks to read (default 64KB)
  * @return Pair of (hash bytes, bytes read count)
  */
 fun sha256StreamWithCount(
     inputStream: InputStream,
-    bufferSize: Int = 8192,
+    bufferSize: Int = 65536,
 ): Pair<ByteArray, Long> {
     val countingStream = CountingInputStream(inputStream)
     val hash = pool.hashStream(countingStream, bufferSize)

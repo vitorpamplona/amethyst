@@ -37,12 +37,12 @@ class Sha256Hasher {
      * This avoids loading the entire input into memory at once.
      *
      * @param inputStream The input stream to hash
-     * @param bufferSize Size of chunks to read (default 8KB)
+     * @param bufferSize Size of chunks to read (default 64KB)
      * @return SHA256 hash bytes
      */
     fun hashStream(
         inputStream: InputStream,
-        bufferSize: Int = 8192,
+        bufferSize: Int = 65536,
     ): ByteArray {
         val buffer = ByteArray(bufferSize)
         try {
