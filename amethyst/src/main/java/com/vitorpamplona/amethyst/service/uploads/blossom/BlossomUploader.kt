@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256Stream
+import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -61,30 +61,8 @@ class BlossomUploader {
      * to avoid loading the entire file into memory.
      */
     private fun calculateHashAndSize(inputStream: InputStream): StreamInfo {
-        var totalBytes = 0L
-
-        // Wrap the input stream to count bytes while hashing
-        val countingStream =
-            object : InputStream() {
-                override fun read(): Int {
-                    val byte = inputStream.read()
-                    if (byte != -1) totalBytes++
-                    return byte
-                }
-
-                override fun read(
-                    b: ByteArray,
-                    off: Int,
-                    len: Int,
-                ): Int {
-                    val bytesRead = inputStream.read(b, off, len)
-                    if (bytesRead > 0) totalBytes += bytesRead
-                    return bytesRead
-                }
-            }
-
-        val hash = sha256Stream(countingStream).toHexKey()
-        return StreamInfo(hash, totalBytes)
+        val (hash, size) = sha256StreamWithCount(inputStream)
+        return StreamInfo(hash.toHexKey(), size)
     }
 
     fun Context.getFileName(uri: Uri): String? =
@@ -132,10 +110,19 @@ class BlossomUploader {
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
         return imageInputStream.use { stream ->
+            // Validate file size to prevent overflow when converting to Int
+            val sizeInt =
+                streamInfo.size.let {
+                    require(it <= Int.MAX_VALUE) {
+                        "File too large: ${it / 1_048_576}MB exceeds maximum size of ${Int.MAX_VALUE / 1_048_576}MB"
+                    }
+                    it.toInt()
+                }
+
             upload(
                 stream,
                 streamInfo.hash,
-                streamInfo.size.toInt(),
+                sizeInt,
                 fileName,
                 myContentType,
                 alt,

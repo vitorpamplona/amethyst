@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256Stream
+import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -137,42 +137,24 @@ class ImageDownloader {
                 responseCode = huc.responseCode
             }
 
-            return@withContext if (responseCode in 200..300) {
-                var totalBytes = 0L
-
-                // Wrap the input stream to count bytes while hashing
-                val countingStream =
-                    object : java.io.InputStream() {
-                        val inner = huc.inputStream
-
-                        override fun read(): Int {
-                            val byte = inner.read()
-                            if (byte != -1) totalBytes++
-                            return byte
+            return@withContext try {
+                if (responseCode in 200..300) {
+                    val (hash, totalBytes) =
+                        huc.inputStream.use {
+                            sha256StreamWithCount(it)
                         }
 
-                        override fun read(
-                            b: ByteArray,
-                            off: Int,
-                            len: Int,
-                        ): Int {
-                            val bytesRead = inner.read(b, off, len)
-                            if (bytesRead > 0) totalBytes += bytesRead
-                            return bytesRead
-                        }
-
-                        override fun close() = inner.close()
-                    }
-
-                val hash = countingStream.use { sha256Stream(it).toHexKey() }
-
-                StreamVerification(
-                    hash = hash,
-                    size = totalBytes,
-                    contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
-                )
-            } else {
-                null
+                    StreamVerification(
+                        hash = hash.toHexKey(),
+                        size = totalBytes,
+                        contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
+                    )
+                } else {
+                    null
+                }
+            } finally {
+                // Always disconnect to release connection resources
+                huc.disconnect()
             }
         }
 

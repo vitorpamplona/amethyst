@@ -27,15 +27,19 @@ val pool = Sha256Pool(5) // max parallel operations
 actual fun sha256(data: ByteArray) = pool.hash(data)
 
 /**
- * Calculate SHA256 hash by streaming the input in chunks.
- * This avoids loading the entire input into memory at once.
- * Useful for hashing large files without running out of memory.
+ * Calculate SHA256 hash while counting bytes read from the stream.
+ * Returns both the hash and the number of bytes processed.
+ * This is more efficient than reading the stream twice.
  *
  * @param inputStream The input stream to hash
  * @param bufferSize Size of chunks to read (default 8KB)
- * @return SHA256 hash bytes
+ * @return Pair of (hash bytes, bytes read count)
  */
-fun sha256Stream(
+fun sha256StreamWithCount(
     inputStream: InputStream,
     bufferSize: Int = 8192,
-) = pool.hashStream(inputStream, bufferSize)
+): Pair<ByteArray, Long> {
+    val countingStream = CountingInputStream(inputStream)
+    val hash = pool.hashStream(countingStream, bufferSize)
+    return Pair(hash, countingStream.bytesRead)
+}
