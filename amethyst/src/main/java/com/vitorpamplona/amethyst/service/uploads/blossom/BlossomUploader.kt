@@ -96,8 +96,6 @@ class BlossomUploader {
         val myContentType = contentType ?: contentResolver.getType(uri)
         val fileName = context.getFileName(uri)
 
-        // Calculate hash and size by streaming the file in chunks
-        // to avoid loading the entire file into memory
         val imageInputStreamForHash = contentResolver.openInputStream(uri)
         checkNotNull(imageInputStreamForHash) { "Can't open the image input stream" }
 
@@ -107,22 +105,14 @@ class BlossomUploader {
             }
 
         val imageInputStream = contentResolver.openInputStream(uri)
+
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
         return imageInputStream.use { stream ->
-            // Validate file size to prevent overflow when converting to Int
-            val sizeInt =
-                streamInfo.size.let {
-                    require(it <= Int.MAX_VALUE) {
-                        "File too large: ${it / 1_048_576}MB exceeds maximum size of ${Int.MAX_VALUE / 1_048_576}MB"
-                    }
-                    it.toInt()
-                }
-
             upload(
                 stream,
                 streamInfo.hash,
-                sizeInt,
+                streamInfo.size,
                 fileName,
                 myContentType,
                 alt,
@@ -143,7 +133,7 @@ class BlossomUploader {
     suspend fun upload(
         inputStream: InputStream,
         hash: HexKey,
-        length: Int,
+        length: Long,
         baseFileName: String?,
         contentType: String?,
         alt: String?,
@@ -168,14 +158,14 @@ class BlossomUploader {
             object : RequestBody() {
                 override fun contentType() = contentType?.toMediaType()
 
-                override fun contentLength() = length.toLong()
+                override fun contentLength() = length
 
                 override fun writeTo(sink: BufferedSink) {
                     inputStream.source().use(sink::writeAll)
                 }
             }
 
-        httpAuth(hash, length.toLong(), alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
+        httpAuth(hash, length, alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
             requestBuilder.addHeader("Authorization", encodeAuth(it))
         }
 
