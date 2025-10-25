@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,9 +47,34 @@ import okio.BufferedSink
 import okio.source
 import java.io.File
 import java.io.InputStream
+import java.security.MessageDigest
 import java.util.Base64
 
 class BlossomUploader {
+    data class StreamInfo(
+        val hash: HexKey,
+        val size: Long,
+    )
+
+    /**
+     * Calculate SHA256 hash and size of a file by streaming it in chunks
+     * to avoid loading the entire file into memory.
+     */
+    private fun calculateHashAndSize(inputStream: InputStream): StreamInfo {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(8192) // 8KB buffer
+        var bytesRead: Int
+        var totalBytes = 0L
+
+        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+            digest.update(buffer, 0, bytesRead)
+            totalBytes += bytesRead
+        }
+
+        val hash = digest.digest().toHexKey()
+        return StreamInfo(hash, totalBytes)
+    }
+
     fun Context.getFileName(uri: Uri): String? =
         when (uri.scheme) {
             ContentResolver.SCHEME_CONTENT -> getContentFileName(uri)
@@ -82,25 +106,24 @@ class BlossomUploader {
         val myContentType = contentType ?: contentResolver.getType(uri)
         val fileName = context.getFileName(uri)
 
+        // Calculate hash and size by streaming the file in chunks
+        // to avoid loading the entire file into memory
         val imageInputStreamForHash = contentResolver.openInputStream(uri)
-        val payload =
-            imageInputStreamForHash?.use {
-                it.readBytes()
+        checkNotNull(imageInputStreamForHash) { "Can't open the image input stream" }
+
+        val streamInfo =
+            imageInputStreamForHash.use {
+                calculateHashAndSize(it)
             }
 
-        checkNotNull(payload) { "Can't open the image input stream" }
-
-        val hash = sha256(payload).toHexKey()
-
         val imageInputStream = contentResolver.openInputStream(uri)
-
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
         return imageInputStream.use { stream ->
             upload(
                 stream,
-                hash,
-                payload.size,
+                streamInfo.hash,
+                streamInfo.size.toInt(),
                 fileName,
                 myContentType,
                 alt,
