@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.utils.sha256
 
 import com.vitorpamplona.quartz.utils.Log
+import java.io.InputStream
 import java.util.concurrent.ArrayBlockingQueue
 
 class Sha256Pool(
@@ -50,6 +51,26 @@ class Sha256Pool(
         val hasher = acquire()
         try {
             return hasher.digest(byteArray)
+        } finally {
+            release(hasher)
+        }
+    }
+
+    /**
+     * Calculate SHA256 hash by streaming the input in chunks.
+     * This avoids loading the entire input into memory at once.
+     *
+     * @param inputStream The input stream to hash
+     * @param bufferSize Size of chunks to read (default 8KB)
+     * @return SHA256 hash bytes
+     */
+    fun hashStream(
+        inputStream: InputStream,
+        bufferSize: Int = 8192,
+    ): ByteArray {
+        val hasher = acquire()
+        try {
+            return hasher.hashStream(inputStream, bufferSize)
         } finally {
             release(hasher)
         }

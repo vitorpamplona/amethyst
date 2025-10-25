@@ -231,34 +231,32 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(uploadResult.url, okHttpClient)
+        // Use streaming verification for memory efficiency with large files
+        val verification: ImageDownloader.StreamVerification? = ImageDownloader().waitAndVerifyStream(uploadResult.url, okHttpClient)
 
-        if (imageData != null) {
+        if (verification != null) {
             updateState(0.8, UploadingState.Hashing)
 
-            val result =
-                FileHeader.prepare(
-                    imageData.bytes,
-                    uploadResult.type ?: localContentType ?: imageData.contentType,
-                    uploadResult.dimension,
+            // Create FileHeader with hash from streaming verification
+            // Note: We skip blurhash/dimensions since we already have them from upload
+            val fileHeader =
+                FileHeader(
+                    mimeType = uploadResult.type ?: localContentType ?: verification.contentType,
+                    hash = verification.hash,
+                    size = verification.size.toInt(),
+                    dim = uploadResult.dimension,
+                    blurHash = null, // Skip blurhash generation for verification
                 )
 
-            result.fold(
-                onSuccess = {
-                    return finish(
-                        OrchestratorResult.ServerResult(
-                            it,
-                            uploadResult.url,
-                            uploadResult.magnet,
-                            uploadResult.sha256,
-                            originalContentType,
-                            originalHash,
-                        ),
-                    )
-                },
-                onFailure = {
-                    return error(R.string.could_not_prepare_local_file_to_upload, it.message ?: it.javaClass.simpleName)
-                },
+            return finish(
+                OrchestratorResult.ServerResult(
+                    fileHeader,
+                    uploadResult.url,
+                    uploadResult.magnet,
+                    uploadResult.sha256,
+                    originalContentType,
+                    originalHash,
+                ),
             )
         } else {
             return error(R.string.could_not_download_from_the_server)

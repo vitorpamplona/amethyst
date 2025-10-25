@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils.sha256
 
+import java.io.InputStream
 import java.security.MessageDigest
 
 class Sha256Hasher {
@@ -30,4 +31,26 @@ class Sha256Hasher {
     fun digest(byteArray: ByteArray) = digest.digest(byteArray)
 
     fun reset() = digest.reset()
+
+    /**
+     * Calculate SHA256 hash by streaming the input in chunks.
+     * This avoids loading the entire input into memory at once.
+     *
+     * @param inputStream The input stream to hash
+     * @param bufferSize Size of chunks to read (default 8KB)
+     * @return SHA256 hash bytes
+     */
+    fun hashStream(
+        inputStream: InputStream,
+        bufferSize: Int = 8192,
+    ): ByteArray {
+        val buffer = ByteArray(bufferSize)
+        var bytesRead: Int
+
+        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+            digest.update(buffer, 0, bytesRead)
+        }
+
+        return digest.digest().also { digest.reset() }
+    }
 }

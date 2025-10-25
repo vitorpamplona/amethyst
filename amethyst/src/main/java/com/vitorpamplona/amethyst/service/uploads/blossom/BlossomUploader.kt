@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.sha256.sha256Stream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -47,7 +48,6 @@ import okio.BufferedSink
 import okio.source
 import java.io.File
 import java.io.InputStream
-import java.security.MessageDigest
 import java.util.Base64
 
 class BlossomUploader {
@@ -61,17 +61,29 @@ class BlossomUploader {
      * to avoid loading the entire file into memory.
      */
     private fun calculateHashAndSize(inputStream: InputStream): StreamInfo {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val buffer = ByteArray(8192) // 8KB buffer
-        var bytesRead: Int
         var totalBytes = 0L
 
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-            digest.update(buffer, 0, bytesRead)
-            totalBytes += bytesRead
-        }
+        // Wrap the input stream to count bytes while hashing
+        val countingStream =
+            object : InputStream() {
+                override fun read(): Int {
+                    val byte = inputStream.read()
+                    if (byte != -1) totalBytes++
+                    return byte
+                }
 
-        val hash = digest.digest().toHexKey()
+                override fun read(
+                    b: ByteArray,
+                    off: Int,
+                    len: Int,
+                ): Int {
+                    val bytesRead = inputStream.read(b, off, len)
+                    if (bytesRead > 0) totalBytes += bytesRead
+                    return bytesRead
+                }
+            }
+
+        val hash = sha256Stream(countingStream).toHexKey()
         return StreamInfo(hash, totalBytes)
     }
 

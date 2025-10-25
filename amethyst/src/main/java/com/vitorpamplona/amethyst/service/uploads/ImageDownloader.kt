@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256Stream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -33,6 +36,46 @@ class ImageDownloader {
         val bytes: ByteArray,
         val contentType: String?,
     )
+
+    /**
+     * Result of streaming verification - hash and metadata without storing full file
+     */
+    class StreamVerification(
+        val hash: HexKey,
+        val size: Long,
+        val contentType: String?,
+    )
+
+    /**
+     * Stream download and calculate hash for verification without loading entire file into memory.
+     * This is memory-efficient for large files (videos, high-res images, etc.)
+     */
+    suspend fun waitAndVerifyStream(
+        imageUrl: String,
+        okHttpClient: (url: String) -> OkHttpClient,
+    ): StreamVerification? =
+        withContext(Dispatchers.IO) {
+            var verification: StreamVerification? = null
+            var tentatives = 0
+
+            // Servers are usually not ready, so tries to download it for 15 times/seconds.
+            while (verification == null && tentatives < 15) {
+                verification =
+                    try {
+                        tryStreamAndVerify(imageUrl, okHttpClient)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        null
+                    }
+
+                if (verification == null) {
+                    tentatives++
+                    delay(1000)
+                }
+            }
+
+            return@withContext verification
+        }
 
     suspend fun waitAndGetImage(
         imageUrl: String,
@@ -59,6 +102,78 @@ class ImageDownloader {
             }
 
             return@withContext imageData
+        }
+
+    private suspend fun tryStreamAndVerify(
+        imageUrl: String,
+        okHttpClient: (url: String) -> OkHttpClient,
+    ): StreamVerification? =
+        withContext(Dispatchers.IO) {
+            // TODO: Migrate to OkHttp
+            HttpURLConnection.setFollowRedirects(true)
+            var url = URL(imageUrl)
+            var clientProxy = okHttpClient(imageUrl).proxy
+            var huc =
+                if (clientProxy != null) {
+                    url.openConnection(clientProxy) as HttpURLConnection
+                } else {
+                    url.openConnection() as HttpURLConnection
+                }
+            huc.instanceFollowRedirects = true
+            var responseCode = huc.responseCode
+
+            if (responseCode in 300..400) {
+                val newUrl: String = huc.getHeaderField("Location")
+
+                // open the new connection again
+                url = URL(newUrl)
+                clientProxy = okHttpClient(newUrl).proxy
+                huc =
+                    if (clientProxy != null) {
+                        url.openConnection(clientProxy) as HttpURLConnection
+                    } else {
+                        url.openConnection() as HttpURLConnection
+                    }
+                responseCode = huc.responseCode
+            }
+
+            return@withContext if (responseCode in 200..300) {
+                var totalBytes = 0L
+
+                // Wrap the input stream to count bytes while hashing
+                val countingStream =
+                    object : java.io.InputStream() {
+                        val inner = huc.inputStream
+
+                        override fun read(): Int {
+                            val byte = inner.read()
+                            if (byte != -1) totalBytes++
+                            return byte
+                        }
+
+                        override fun read(
+                            b: ByteArray,
+                            off: Int,
+                            len: Int,
+                        ): Int {
+                            val bytesRead = inner.read(b, off, len)
+                            if (bytesRead > 0) totalBytes += bytesRead
+                            return bytesRead
+                        }
+
+                        override fun close() = inner.close()
+                    }
+
+                val hash = countingStream.use { sha256Stream(it).toHexKey() }
+
+                StreamVerification(
+                    hash = hash,
+                    size = totalBytes,
+                    contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
+                )
+            } else {
+                null
+            }
         }
 
     private suspend fun tryGetTheImage(
