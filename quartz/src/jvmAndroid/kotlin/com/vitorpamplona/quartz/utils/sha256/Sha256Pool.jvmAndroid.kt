@@ -61,12 +61,12 @@ class Sha256Pool(
      * This avoids loading the entire input into memory at once.
      *
      * @param inputStream The input stream to hash
-     * @param bufferSize Size of chunks to read (default 64KB)
+     * @param bufferSize Size of chunks to read (default 8KB)
      * @return SHA256 hash bytes
      */
     fun hashStream(
         inputStream: InputStream,
-        bufferSize: Int = 65536,
+        bufferSize: Int = 8192,
     ): ByteArray {
         val hasher = acquire()
         try {
