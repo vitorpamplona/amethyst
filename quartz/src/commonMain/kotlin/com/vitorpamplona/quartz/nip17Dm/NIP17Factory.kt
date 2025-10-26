@@ -47,6 +47,9 @@ class NIP17Factory {
         to: Set<HexKey>,
         signer: NostrSigner,
     ): List<GiftWrapEvent> {
+        require(event.sig.isBlank()) {
+            "Rumors wrapped with NIP-17 gift wraps must remain unsigned"
+        }
         val innerExpDelta =
             event.expiration()?.let {
                 if (it > event.createdAt) {
