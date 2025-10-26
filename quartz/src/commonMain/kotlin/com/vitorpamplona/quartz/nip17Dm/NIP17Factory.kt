@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip17Dm
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -32,6 +33,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 
 class NIP17Factory {
@@ -75,7 +77,8 @@ class NIP17Factory {
         template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
     ): Result {
-        val senderMessage = signer.sign(template)
+        // Rumor must be unsigned per NIP-17; we synthesize it instead of schnorr-signing.
+        val senderMessage = createUnsignedEvent(template, signer.pubKey)
         val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
         return Result(
             msg = senderMessage,
@@ -87,7 +90,8 @@ class NIP17Factory {
         template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
     ): Result {
-        val senderMessage = signer.sign(template)
+        // File headers follow the same unsigned rumor requirement.
+        val senderMessage = createUnsignedEvent(template, signer.pubKey)
         val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
 
         return Result(
@@ -105,7 +109,8 @@ class NIP17Factory {
         val senderPublicKey = signer.pubKey
         val template = ReactionEvent.build(content, originalNote)
 
-        val senderReaction = signer.sign(template)
+        // Reactions are also rumors inside gift wraps: keep them unsigned for NIP-17 deniability.
+        val senderReaction = createUnsignedEvent(template, senderPublicKey)
         val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
         return Result(
             msg = senderReaction,
@@ -122,12 +127,36 @@ class NIP17Factory {
         val senderPublicKey = signer.pubKey
         val template = ReactionEvent.build(emojiUrl, originalNote)
 
-        val senderReaction = signer.sign(template)
+        // Emoji reactions share the same unsigned requirement to avoid leaking signer identity.
+        val senderReaction = createUnsignedEvent(template, senderPublicKey)
         val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
 
         return Result(
             msg = senderReaction,
             wraps = wraps,
         )
+    }
+
+    /**
+     * Builds an unsigned event from the template so that the inner rumor never
+     * carries a Schnorr signature (NIP-17 requirement to avoid public leakage).
+     */
+    private fun <T : Event> createUnsignedEvent(
+        template: EventTemplate<T>,
+        pubKey: HexKey,
+    ): T {
+        val id = EventHasher.hashId(pubKey, template.createdAt, template.kind, template.tags, template.content)
+        val event: T =
+            EventFactory.create<T>(
+                id,
+                pubKey,
+                template.createdAt,
+                template.kind,
+                template.tags,
+                template.content,
+                "",
+            )
+
+        return event
     }
 }
