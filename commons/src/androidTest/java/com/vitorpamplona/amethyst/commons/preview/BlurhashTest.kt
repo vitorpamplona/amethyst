@@ -96,7 +96,14 @@ class BlurhashTest {
     @Test
     fun testLorikeet() {
         val blurhash = load("/lorikeet.jpg").toBlurhash()
-        assertEquals("rFDcT@_LNs#:-pyBnhRRE2Z~MyX5VuV@WUo{xta\$9]RQw[OXS}rrWFXSw|OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI", blurhash)
+        val expected =
+            setOf(
+                // Legacy decoders (older Bitmap pipeline) round coefficients slightly differently.
+                "rFDcT@_LNs#:-pyBnhRRE2Z~MyX5VuV@WUo{xta\$9]RQw[OXS}rrWFXSw|OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI",
+                // Observed on newer codecs / connected devices.
+                "rFDcT@_LNs#:-pyBnhRRE2Z~MySxVuV@WUo{xta\$9]RQw[OXS}rrWFXSw{]OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI",
+            )
+        assertTrue("Unexpected blurhash for lorikeet.jpg: $blurhash", blurhash in expected)
     }
 
     private fun load(filename: String): Bitmap =
