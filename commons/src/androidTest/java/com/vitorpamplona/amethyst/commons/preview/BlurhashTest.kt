@@ -100,8 +100,9 @@ class BlurhashTest {
             setOf(
                 // Legacy decoders (older Bitmap pipeline) round coefficients slightly differently.
                 "rFDcT@_LNs#:-pyBnhRRE2Z~MyX5VuV@WUo{xta\$9]RQw[OXS}rrWFXSw|OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI",
-                // Observed on newer codecs / connected devices.
+                // Observed on newer codecs / connected devices (two slightly different rounding points).
                 "rFDcT@_LNs#:-pyBnhRRE2Z~MySxVuV@WUo{xta\$9]RQw[OXS}rrWFXSw{]OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI",
+                "rFDcT@_LNs#:-pyBnhRRE2Z~MySxVuV@WUo{xta\$9]RQw[OXS}rrWFXSw{OsxaxWNHSwn~M}NGaK%0RkM}w{xto|jGs+Sh-Tj]W?wJnjXSxGs.NI",
             )
         assertTrue("Unexpected blurhash for lorikeet.jpg: $blurhash", blurhash in expected)
     }
