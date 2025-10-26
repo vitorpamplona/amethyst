@@ -29,10 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import kotlinx.coroutines.test.runTest
@@ -65,7 +65,7 @@ class NIP17FactoryTest {
             val parentTemplate = ChatMessageEvent.build("root", recipients, createdAt = FIXED_CREATED_AT)
             val parent = factory.createMessageNIP17(parentTemplate, signer).msg
             val bundle = EventHintBundle<Event>(parent)
-            val to = parent.groupMembers().toList()
+            val to = parent.recipients()
 
             val result = factory.createReactionWithinGroup("❤️", bundle, to, signer)
 
@@ -78,7 +78,7 @@ class NIP17FactoryTest {
             val parentTemplate = ChatMessageEvent.build("root", recipients, createdAt = FIXED_CREATED_AT)
             val parent = factory.createMessageNIP17(parentTemplate, signer).msg
             val bundle = EventHintBundle<Event>(parent)
-            val to = parent.groupMembers().toList()
+            val to = parent.recipients()
             val emoji = EmojiUrlTag(code = "wave", url = "https://example.com/wave.png")
 
             val result = factory.createReactionWithinGroup(emoji, bundle, to, signer)
@@ -133,8 +133,7 @@ class NIP17FactoryTest {
             fromPublicKey: HexKey,
         ) = ciphertext
 
-        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent =
-            throw UnsupportedOperationException("Not needed for this test")
+        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = throw UnsupportedOperationException("Not needed for this test")
 
         override suspend fun deriveKey(nonce: HexKey): HexKey = nonce
 
