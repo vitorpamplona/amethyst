@@ -45,7 +45,7 @@ class ExpirationModule {
             BEGIN
                 -- Check for existing newer record
                 SELECT RAISE(ABORT, 'blocked: this event is expired')
-                WHERE NEW.expiration <= unixepoch();
+                WHERE NEW.expiration <= strftime('%s','now');
             END;
             """.trimIndent(),
         )
@@ -78,7 +78,7 @@ class ExpirationModule {
         DELETE FROM event_headers
         WHERE row_id IN (
             SELECT event_expirations.event_header_row_id FROM event_expirations
-            WHERE event_expirations.expiration < unixepoch()
+            WHERE event_expirations.expiration < strftime('%s','now')
         );
         """.trimIndent()
 
