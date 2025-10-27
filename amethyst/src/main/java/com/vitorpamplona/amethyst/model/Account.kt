@@ -715,10 +715,11 @@ class Account(
                         ?.ifEmpty { null }
                 if (relayList != null) {
                     client.send(event, relayList.toSet())
-                } else {
-                    val publicRelayList = computeRelayListForLinkedUser(receiver)
-                    client.send(event, publicRelayList)
                 }
+                // NIP-17: "If that is not found that indicates the user is not ready to
+                // receive messages under this NIP and clients shouldn't try."
+                // Do NOT fall back to public relays - this leaks DM metadata and
+                // is unlikely to reach the intended inbox.
             } else {
                 return emptySet()
             }
