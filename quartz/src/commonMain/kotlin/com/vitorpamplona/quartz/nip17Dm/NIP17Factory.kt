@@ -36,13 +36,13 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 
-class NIP17Factory {
+open class NIP17Factory {
     data class Result(
         val msg: Event,
         val wraps: List<GiftWrapEvent>,
     )
 
-    private suspend fun createWraps(
+    protected open suspend fun createWraps(
         event: Event,
         to: Set<HexKey>,
         signer: NostrSigner,

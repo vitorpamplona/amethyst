@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import kotlinx.coroutines.test.runTest
@@ -42,7 +43,7 @@ import kotlin.test.assertTrue
 
 class NIP17FactoryTest {
     private val signer = TestSigner()
-    private val factory = NIP17Factory()
+    private val factory = TestNIP17Factory()
     private val recipients =
         listOf(
             PTag("01".repeat(32)),
@@ -138,6 +139,17 @@ class NIP17FactoryTest {
         override suspend fun deriveKey(nonce: HexKey): HexKey = nonce
 
         override fun hasForegroundSupport() = true
+    }
+
+    private class TestNIP17Factory : NIP17Factory() {
+        override suspend fun createWraps(
+            event: Event,
+            to: Set<HexKey>,
+            signer: NostrSigner,
+        ): List<GiftWrapEvent> {
+            require(event.sig.isBlank())
+            return emptyList()
+        }
     }
 
     companion object {
