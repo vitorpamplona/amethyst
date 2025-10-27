@@ -63,9 +63,9 @@ class NIP17FactoryTest {
     fun `reactions stay unsigned inside gift wraps`() =
         runTest {
             val parentTemplate = ChatMessageEvent.build("root", recipients, createdAt = FIXED_CREATED_AT)
-            val parent = factory.createMessageNIP17(parentTemplate, signer).msg
+            val parent = factory.createMessageNIP17(parentTemplate, signer).msg as ChatMessageEvent
             val bundle = EventHintBundle<Event>(parent)
-            val to = parent.recipients()
+            val to = parent.groupMembers().toList()
 
             val result = factory.createReactionWithinGroup("❤️", bundle, to, signer)
 
@@ -76,9 +76,9 @@ class NIP17FactoryTest {
     fun `emoji reactions are also unsigned`() =
         runTest {
             val parentTemplate = ChatMessageEvent.build("root", recipients, createdAt = FIXED_CREATED_AT)
-            val parent = factory.createMessageNIP17(parentTemplate, signer).msg
+            val parent = factory.createMessageNIP17(parentTemplate, signer).msg as ChatMessageEvent
             val bundle = EventHintBundle<Event>(parent)
-            val to = parent.recipients()
+            val to = parent.groupMembers().toList()
             val emoji = EmojiUrlTag(code = "wave", url = "https://example.com/wave.png")
 
             val result = factory.createReactionWithinGroup(emoji, bundle, to, signer)
