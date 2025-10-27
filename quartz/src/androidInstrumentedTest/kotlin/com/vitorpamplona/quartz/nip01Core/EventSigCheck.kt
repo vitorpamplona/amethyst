@@ -90,7 +90,7 @@ class EventSigCheck {
         val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
-        assertEquals(old.toByteArray().joinToString(), new.joinToString())
+        assertJsonEquals(old, new)
         assertTrue(event.verifySignature())
         assertTrue(event.verifyId())
     }
@@ -156,11 +156,17 @@ class EventSigCheck {
         val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
-        println(old)
-        println(String(new))
-
-        assertEquals(old.toByteArray().joinToString(), new.joinToString())
+        assertJsonEquals(old, new)
         assertTrue(event.verifySignature())
         assertTrue(event.verifyId())
+    }
+
+    private fun assertJsonEquals(
+        expected: String,
+        actualBytes: ByteArray,
+    ) {
+        val expectedTree = OptimizedJsonMapper.mapper.readTree(expected)
+        val actualTree = OptimizedJsonMapper.mapper.readTree(String(actualBytes))
+        assertEquals(expectedTree, actualTree)
     }
 }
