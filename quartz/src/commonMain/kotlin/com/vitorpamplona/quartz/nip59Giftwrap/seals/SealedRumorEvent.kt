@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
@@ -118,12 +117,9 @@ class SealedRumorEvent(
         ): SealedRumorEvent {
             val msg = Rumor.toJson(rumor)
 
-            val tags =
-                expirationDelta?.let {
-                    // minimum expiration is two days in the future due to the random created at
-                    // this will make sure the even arrives and is not deleted because of the 2 days.
-                    arrayOf(ExpirationTag.assemble(createdAt + it + TimeUtils.twoDays()))
-                } ?: emptyArray()
+            // NIP-59: "Tags MUST always be empty in a kind:13"
+            // Expiration belongs on the gift wrap (kind 1059), not the seal.
+            val tags = emptyArray<Array<String>>()
 
             return signer.sign(
                 createdAt = createdAt,
