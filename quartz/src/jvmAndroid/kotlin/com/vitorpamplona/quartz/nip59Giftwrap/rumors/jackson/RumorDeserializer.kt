@@ -24,7 +24,7 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.vitorpamplona.quartz.nip01Core.jackson.toTypedArray
+import com.vitorpamplona.quartz.nip01Core.jackson.TagArrayManualDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 
 class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
@@ -38,10 +38,7 @@ class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
             pubKey = jsonObject.get("pubkey")?.asText()?.intern(),
             createdAt = jsonObject.get("created_at")?.asLong(),
             kind = jsonObject.get("kind")?.asInt(),
-            tags =
-                jsonObject.get("tags").toTypedArray {
-                    it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
-                },
+            tags = TagArrayManualDeserializer.fromJson(jsonObject.get("tags")),
             content = jsonObject.get("content")?.asText(),
         )
     }

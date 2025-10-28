@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.signers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.toTypedArray
+import com.vitorpamplona.quartz.nip01Core.jackson.TagArrayManualDeserializer
 
 class EventTemplateManualDeserializer {
     companion object {
@@ -30,10 +30,7 @@ class EventTemplateManualDeserializer {
             EventTemplate(
                 createdAt = jsonObject.get("created_at").asLong(),
                 kind = jsonObject.get("kind").asInt(),
-                tags =
-                    jsonObject.get("tags").toTypedArray {
-                        it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
-                    },
+                tags = TagArrayManualDeserializer.fromJson(jsonObject.get("tags")),
                 content = jsonObject.get("content").asText(),
             )
     }

@@ -32,10 +32,7 @@ class EventManualDeserializer {
                 pubKey = jsonObject.get("pubkey").asText().intern(),
                 createdAt = jsonObject.get("created_at").asLong(),
                 kind = jsonObject.get("kind").asInt(),
-                tags =
-                    jsonObject.get("tags").toTypedArray {
-                        it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
-                    },
+                tags = TagArrayManualDeserializer.fromJson(jsonObject.get("tags")),
                 content = jsonObject.get("content").asText(),
                 sig = jsonObject.get("sig").asText(),
             )
