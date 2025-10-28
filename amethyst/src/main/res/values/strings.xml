@@ -1146,6 +1146,12 @@
     <string name="search_relays_not_found_editing">Insert between 1–3 relays to use when searching for content or tagging users. Make sure your chosen relays implement NIP-50</string>
     <string name="search_relays_not_found_examples">Good options are:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
 
+    <string name="outbox_relays_title">Outbox Relays</string>
+    <string name="outbox_relays_not_found">Set up your Public Outbox relays to post</string>
+    <string name="outbox_relays_not_found_description">Creating a relay list specifically designed to receive your content is crucial for your Nostr experience and the only way your followers can find you. </string>
+    <string name="outbox_relays_not_found_editing">Insert between 1–3 relays that receive your posts. Make sure they don\'t require payment if you are not paying to insert</string>
+    <string name="outbox_relays_not_found_examples">Good options are:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+
     <string name="inbox_relays_title">Inbox Relays</string>
     <string name="inbox_relays_not_found">Set up your Public Inbox relays to receive notifications</string>
     <string name="inbox_relays_not_found_description">Creating a relay list specifically designed to receive notifications is crucial for your Nostr experience. </string>

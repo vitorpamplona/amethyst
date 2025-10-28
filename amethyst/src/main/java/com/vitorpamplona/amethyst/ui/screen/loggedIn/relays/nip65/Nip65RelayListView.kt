@@ -81,6 +81,26 @@ fun Nip65InboxRelayList(
     }
 }
 
+@Composable
+fun Nip65OutboxRelayList(
+    postViewModel: Nip65RelayListViewModel,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    nav: INav,
+) {
+    val newNav = rememberExtendedNav(nav, onClose)
+
+    val homeFeedState by postViewModel.homeRelays.collectAsStateWithLifecycle()
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        LazyColumn(
+            contentPadding = FeedPadding,
+        ) {
+            renderNip65HomeItems(homeFeedState, postViewModel, accountViewModel, newNav)
+        }
+    }
+}
+
 fun LazyListScope.renderNip65HomeItems(
     feedState: List<BasicRelaySetupInfo>,
     postViewModel: Nip65RelayListViewModel,

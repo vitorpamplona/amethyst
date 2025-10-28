@@ -93,6 +93,17 @@ class Nip65RelayListState(
                 emptySet(),
             )
 
+    val outboxFlowNoDefaults =
+        getNIP65RelayListFlow()
+            .map { normalizeNIP65WriteRelayListNoDefaults(it.note) }
+            .onStart { emit(normalizeNIP65WriteRelayListNoDefaults(nip65ListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptySet(),
+            )
+
     val inboxFlowNoDefaults =
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListNoDefaults(it.note) }

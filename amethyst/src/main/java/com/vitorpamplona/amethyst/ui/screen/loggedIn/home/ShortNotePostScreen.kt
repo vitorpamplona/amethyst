@@ -221,6 +221,8 @@ private fun NewPostScreenBody(
         modifier =
             Modifier.fillMaxSize(),
     ) {
+        ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
+
         Row(
             modifier =
                 Modifier
