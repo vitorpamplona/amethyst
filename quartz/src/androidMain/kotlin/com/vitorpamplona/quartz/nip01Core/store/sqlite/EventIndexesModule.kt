@@ -250,8 +250,8 @@ class EventIndexesModule(
                     cursor.getLong(2),
                     cursor.getInt(3),
                     OptimizedJsonMapper.fromJsonToTagArray(cursor.getString(4)),
-                    cursor.getString(5).intern(),
-                    cursor.getString(6).intern(),
+                    cursor.getString(5),
+                    cursor.getString(6),
                 ),
             )
         }
@@ -279,8 +279,8 @@ class EventIndexesModule(
                     cursor.getLong(2),
                     cursor.getInt(3),
                     OptimizedJsonMapper.fromJsonToTagArray(cursor.getString(4)),
-                    cursor.getString(5).intern(),
-                    cursor.getString(6).intern(),
+                    cursor.getString(5),
+                    cursor.getString(6),
                 ),
             )
         }
