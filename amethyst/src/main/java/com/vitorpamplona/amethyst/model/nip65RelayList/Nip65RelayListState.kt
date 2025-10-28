@@ -74,7 +74,7 @@ class Nip65RelayListState(
     val outboxFlow =
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
+            .onStart { emit(normalizeNIP65WriteRelayListWithBackup(nip65ListNote)) }
             .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
