@@ -63,6 +63,10 @@ class Nip65RelayListState(
 
     fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: Constants.bootstrapInbox
 
+    fun normalizeNIP65WriteRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: emptySet()
+
+    fun normalizeNIP65ReadRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: emptySet()
+
     fun normalizeNIP65AllRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: Constants.eventFinderRelays
 
     fun normalizeNIP65AllRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: emptySet()
@@ -82,6 +86,17 @@ class Nip65RelayListState(
         getNIP65RelayListFlow()
             .map { normalizeNIP65ReadRelayListWithBackup(it.note) }
             .onStart { emit(normalizeNIP65ReadRelayListWithBackup(nip65ListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptySet(),
+            )
+
+    val inboxFlowNoDefaults =
+        getNIP65RelayListFlow()
+            .map { normalizeNIP65ReadRelayListNoDefaults(it.note) }
+            .onStart { emit(normalizeNIP65ReadRelayListNoDefaults(nip65ListNote)) }
             .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,

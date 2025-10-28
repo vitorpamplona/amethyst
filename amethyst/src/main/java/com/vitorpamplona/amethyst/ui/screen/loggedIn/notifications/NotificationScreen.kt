@@ -87,6 +87,7 @@ fun NotificationScreen(
         Column(
             modifier = Modifier.padding(it).consumeWindowInsets(it),
         ) {
+            ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
             RefreshableCardView(
                 feedContent = notifFeedContentState,
                 accountViewModel = accountViewModel,
