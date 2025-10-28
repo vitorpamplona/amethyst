@@ -42,9 +42,9 @@ class BunkerRequestDeserializer : StdDeserializer<BunkerRequest>(BunkerRequest::
         ctxt: DeserializationContext,
     ): BunkerRequest {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
-        val id = jsonObject.get("id").asText().intern()
-        val method = jsonObject.get("method").asText().intern()
-        val params = jsonObject.get("params")?.toTypedArray { it.asText().intern() } ?: emptyArray()
+        val id = jsonObject.get("id").asText()
+        val method = jsonObject.get("method").asText()
+        val params = jsonObject.get("params")?.toTypedArray { it.asText() } ?: emptyArray()
 
         return when (method) {
             BunkerRequestConnect.METHOD_NAME -> BunkerRequestConnect.parse(id, params)

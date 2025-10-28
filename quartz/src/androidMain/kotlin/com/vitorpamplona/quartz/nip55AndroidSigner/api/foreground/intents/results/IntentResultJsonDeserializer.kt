@@ -33,8 +33,8 @@ class IntentResultJsonDeserializer : StdDeserializer<IntentResult>(IntentResult:
         val jsonObject: JsonNode = jp.codec.readTree(jp)
         return IntentResult(
             `package` = jsonObject.get("package")?.asText()?.intern(),
-            result = jsonObject.get("result")?.asText()?.intern(),
-            event = jsonObject.get("event")?.asText()?.intern(),
+            result = jsonObject.get("result")?.asText(),
+            event = jsonObject.get("event")?.asText(),
             id = jsonObject.get("id")?.asText()?.intern(),
             rejected = jsonObject.get("rejected")?.asBoolean() ?: false,
         )
