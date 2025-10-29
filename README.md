@@ -324,7 +324,7 @@ The client will add the relay to the pool, connect to it and start receiving eve
 and reconnects, the sub will be active again.
 
 To manage subscriptions that change over time, the simplest approach is to build mutable
-subscriptions in the Application class.
+subscriptions with a filters lambda that you can change at will.
 
 ```kt
 val metadataSub = client.req(
