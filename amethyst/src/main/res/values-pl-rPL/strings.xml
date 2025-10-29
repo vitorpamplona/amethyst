@@ -460,6 +460,8 @@
     <string name="follow_set_private_presence_indicator">%1$s jest uczestnikiem prywatnym</string>
     <string name="follow_set_public_member_add_label">Dodaj jako uczestnika publicznego</string>
     <string name="follow_set_private_member_add_label">Dodaj jako uczestnika prywatnego</string>
+    <string name="follow_set_public_members_header_label2">Uczestnicy publiczni</string>
+    <string name="follow_set_private_members_header_label2">Prywatni uczestnicy</string>
     <string name="follow_set_public_members_header_label">Profile publiczne</string>
     <string name="follow_set_private_members_header_label">Profile prywatne</string>
     <string name="follow_set_single_member_label">uczestnik</string>
@@ -704,6 +706,17 @@
     <string name="paste_from_clipboard">Wklej ze schowka</string>
     <string name="invalid_nip47_uri_title">Nieprawidłowy NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">URI %1$s nie jest prawidłowym URI logowania NIP-47.</string>
+    <string name="connect_to_new_nwc_wallet">Podłącz do nowego portfela NWC</string>
+    <string name="couldnt_find_nwc_wallets">Nie znaleziono portfela</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nie znalazł żadnej aplikacji portfela obsługującej Nostr Wallet Connect (NWC).
+\n\nCo możesz zrobić:
+\n\t1. Zweryfikuj wsparcie NWC: Sprawdź, czy preferowana aplikacja portfela jest kompatybilna z Nostr Wallet Connect.
+\n\t2. Utwórz połączenie: Przejdź do aplikacji portfela i utwórz nowe połączenie NWC.
+\n\t3. Połącz z Amethyst: Twój portfel zazwyczaj oferuje trzy opcje:
+\n\t\t3. Automatyczne połączenie: przycisk, który automatycznie otwiera i łączy się z Amethyst. Jeśli tak, kliknij ten przycisk, otwórz Ametyst i naciśnij przycisk \"Zapisz\" na nowym ekranie.
+\n\t\t3. Połączenie ręczne: adres URI połączenia, który można skopiować i wkleić, klikając ikonę wklejania na tym ekranie, aby wprowadzić go bezpośrednio.
+\n\t\t3. Kod QR: Portfel tworzy kod QR, który można odczytać z przycisku QR na tym ekranie.
+    </string>
     <string name="language_description">Dla interfejsu aplikacji</string>
     <string name="theme_description">Motyw ciemny, jasny lub automatyczny</string>
     <string name="automatically_load_images_gifs_description">Automatycznie załaduj obrazki i Gify</string>

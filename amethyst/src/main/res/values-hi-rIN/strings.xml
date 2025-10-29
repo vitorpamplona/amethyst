@@ -455,9 +455,21 @@
     <string name="follow_set_empty_feed_msg">        लगता है आपका अब तक कोइ अनुगम्य समुच्चय नहीं है।
         \nनवीकरण के लिए नीचे दबाएँ। अथवा एक नया बनाने के लिए जोड घुण्डियाँ टाँकें।
     </string>
+    <string name="follow_set_create_btn_label">नव्य</string>
     <string name="follow_set_add_author_from_note_action">लेखक जोडें अनुगम्य सूची में</string>
     <string name="follow_set_profile_actions_menu_description">प्रयोक्ता को सूचियों में जोडें अथवा हटाएँ अथवा इस प्रयोक्ता के साथ नई सूची बनाएँ।</string>
     <string name="follow_set_icon_description">सूची %1$s के लिए चिह्न</string>
+    <string name="follow_set_public_presence_indicator">%1$s एक सार्वजनिक सदस्य है</string>
+    <string name="follow_set_private_presence_indicator">%1$s एक निजी सदस्य है</string>
+    <string name="follow_set_public_member_add_label">सार्वजनिक सदस्य के रूप में जोडें</string>
+    <string name="follow_set_private_member_add_label">निजी सदस्य के रूप में जोडें</string>
+    <string name="follow_set_public_members_header_label2">सार्वजनिक सदस्य</string>
+    <string name="follow_set_private_members_header_label2">निजी सदस्य</string>
+    <string name="follow_set_public_members_header_label">सार्वजनिक परिचय</string>
+    <string name="follow_set_private_members_header_label">निजी परिचय</string>
+    <string name="follow_set_single_member_label">सदस्य</string>
+    <string name="follow_set_multiple_member_label">सदस्य सूची</string>
+    <string name="follow_set_empty_label">कोई सदस्य नहीं</string>
     <string name="follow_set_absence_indicator">%1$s इस सूची में नहीं है</string>
     <string name="follow_set_man_dialog_title">आपके अनुगम्य सूचियाँ</string>
     <string name="follow_set_empty_dialog_msg">कोई अनुगम्य सूचियाँ प्राप्त नहीं। अथवा आपका कोई अनुगम्य सूचियाँ हैं नहीं। नवीकरण के लिए नीचे दबाएँ अथवा विकल्पसूची द्वारा एक नया बनाएँ।</string>
@@ -466,10 +478,19 @@
     <string name="follow_set_creation_item_label">प्रयोक्ता के साथ नई सूची %1$s बनाएँ</string>
     <string name="follow_set_creation_item_description">अनुगम्य सूची %1$s बनाता है तथा उससे %2$s जोडता है।</string>
     <string name="follow_set_creation_dialog_title">नई %1$s सूची</string>
+    <string name="follow_set_copy_dialog_title">अनुचरण सूची की अनुकृति करें</string>
+    <string name="follow_set_desc_modify_label">विवरण का संशोधन करें</string>
+    <string name="follow_set_empty_desc_label">इस सूची का कोई विवरण नहीं</string>
+    <string name="follow_set_current_desc_label">वर्तमान विवरण :</string>
+    <string name="follow_set_copy_indicator_description">आप एक विशिष्ट नाम अथवा विवरण रख सकते हैं नीचे इस अनुकृत सूची के लिए।</string>
     <string name="follow_set_creation_name_label">समुच्चय नाम</string>
+    <string name="follow_set_copy_name_label">(मूल सूची नाम)</string>
     <string name="follow_set_creation_desc_label">समुच्चय विवरण (आवश्यक नहीं)</string>
+    <string name="follow_set_copy_desc_label">(मूल सूची विवरण)</string>
     <string name="follow_set_creation_action_btn_label">समुच्चय बनाएँ</string>
+    <string name="follow_set_copy_action_btn_label">सूची की अनुकृति</string>
     <string name="follow_set_rename_btn_label">समुच्चय पुनःनामकरण</string>
+    <string name="follow_set_desc_modify_btn_label">संशोधन करें</string>
     <string name="follow_set_rename_dialog_indicator_first_part">आप पनःनामकरण कर रहे हैं इस से </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> इस तक..</string>
     <string name="connect_through_your_orbot_setup_short">मूलविकल्प द्वार ९०५० है</string>
@@ -688,6 +709,17 @@
     <string name="paste_from_clipboard">टाँकाफलक से चिपकाएँ</string>
     <string name="invalid_nip47_uri_title">अमान्य निप॰-४७ वैश्विकसाधनपरिचायक</string>
     <string name="invalid_nip47_uri_description">यह %1$s एक मान्य निप॰-४७ प्रवेशांकन वैश्विकसाधनपरिचायक नहीं है।</string>
+    <string name="connect_to_new_nwc_wallet">नया नोस्टर धनकोष के साथ संयोजन करें</string>
+    <string name="couldnt_find_nwc_wallets">धनकोष अप्राप्त</string>
+    <string name="couldnt_find_nwc_wallets_description">अमेथिस्ट को कोई धनकोष क्रमक प्राप्य नहीं जो नोस्टर धनकोष संयोजन का अवलम्बन करता हो।
+\n\nआप यह कर सकते हैं :
+\n\t१॰ नोस्टर धनकोष संयोजन अवलम्बन का सत्यापन करें। दुबारा जाँचें की आपका मनचाहा धनकोष क्रमक नोस्टर धनकोष संयोजन के साथ संगत है।
+\n\t२॰ संयोजन बनाएँ। आपके धनकोष क्रमक में जाकर एक नया नोस्टर धनकोष संयोजन बनाएँ।
+\n\t३॰ अमेथिस्ट के साथ जोडें। आपका धनकोष क्रमक सामान्यतः तीन विकल्प देगा।
+\n\t\t३॰१ स्वचालित जोड। एक घुण्डी जिससे स्वचालित रूप से खोलें तथा अमेथिस्ट से जोडें। यदि हो तो उस घुण्डी को टाँकें तथा अमेथिस्ट खोलें तथा नव्य पटल पर अभिलेखन करें।
+\n\t\t३॰२ मनुष्यकृत जोड। एक संयोजन वैश्विकसंसाधनपरिचायक जिसकी अनुकृति करके सीधे इस पटल पर प्रविष्ट कर सकते हैं।
+\n\t\t३॰३ क्यूआर॰ क्रमचित्र। धनकोष क्रमक एक क्यूआर॰ क्रमचित्र बनएगा जिसे आप परख सकते हैं इस पटल पर क्यूआर॰ क्रमचित्र घुण्डी द्वारा।
+    </string>
     <string name="language_description">क्रमक के प्रयोगमाध्यम के लिए</string>
     <string name="theme_description">अन्धकारमय, प्रकाशवान अथवा यन्त्रव्यवस्थित प्रदर्शनशैली</string>
     <string name="automatically_load_images_gifs_description">स्वचालित रूप से चित्र तथा जिफ॰ का अवरोहण करें</string>
