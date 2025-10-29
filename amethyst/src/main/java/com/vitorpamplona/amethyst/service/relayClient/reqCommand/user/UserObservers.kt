@@ -413,7 +413,12 @@ fun observeUserIsFollowing(
     UserFinderFilterAssemblerSubscription(user1, accountViewModel)
     val isUserInFollowSets =
         remember(accountViewModel.account.followSetsState) {
-            accountViewModel.account.followSetsState.isUserInFollowSets(user2)
+            // Only check follow sets if user1 is the logged-in user
+            if (user1 == accountViewModel.account.userProfile()) {
+                accountViewModel.account.followSetsState.isUserInFollowSets(user2)
+            } else {
+                false
+            }
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
