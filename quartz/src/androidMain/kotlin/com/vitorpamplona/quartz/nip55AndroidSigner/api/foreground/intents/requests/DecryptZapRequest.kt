@@ -35,7 +35,7 @@ class DecryptZapRequest {
         ): Intent {
             val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:${event.toJson()}".toUri())
             intent.`package` = packageName
-            intent.putExtra("type", CommandType.NIP44_DECRYPT.code)
+            intent.putExtra("type", CommandType.DECRYPT_ZAP_EVENT.code)
             intent.putExtra("current_user", loggedInUser)
             return intent
         }
