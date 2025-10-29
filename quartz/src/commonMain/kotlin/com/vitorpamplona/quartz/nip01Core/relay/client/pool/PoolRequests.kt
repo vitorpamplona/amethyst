@@ -148,7 +148,13 @@ class PoolRequests {
         cmd: Command,
     ) {
         when (cmd) {
-            is ReqCmd -> subState(cmd.subId).onOpenReq(relay, cmd.filters)
+            is ReqCmd -> {
+                subState(cmd.subId).onOpenReq(relay, cmd.filters)
+                desiredSubListeners.get(cmd.subId)?.onStartReq(
+                    relay = relay.url,
+                    forFilters = cmd.filters,
+                )
+            }
             is CloseCmd -> subState(cmd.subId).onCloseReq(relay)
         }
     }

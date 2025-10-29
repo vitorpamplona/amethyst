@@ -48,4 +48,9 @@ interface IRequestListener {
         message: String,
         forFilters: List<Filter>?,
     ) {}
+
+    fun onStartReq(
+        relay: String,
+        forFilters: List<Filter>,
+    ) {}
 }
