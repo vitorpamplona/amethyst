@@ -47,7 +47,7 @@ class FollowSetState(
 
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.IO) {
-            val followSetNotes = LocalCache.getFollowSetNotesFor(user)
+            val followSetNotes = cache.getPeopleListNotesFor(user)
             return@withContext followSetNotes
         }
 

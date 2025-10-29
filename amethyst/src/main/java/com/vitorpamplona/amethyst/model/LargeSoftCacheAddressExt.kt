@@ -45,6 +45,28 @@ fun kindEnd(kind: Int) = kindEnd(kind, END_KEY)
 
 val ACCEPT_ALL_FILTER = CacheCollectors.BiFilter<Address, AddressableNote> { key, note -> true }
 
+fun LargeSoftCache<Address, AddressableNote>.filter(
+    kind: Int,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
+): List<AddressableNote> = filter(kindStart(kind), kindEnd(kind), consumer)
+
+fun LargeSoftCache<Address, AddressableNote>.filter(
+    kinds: List<Int>,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
+): List<AddressableNote> {
+    val set = mutableSetOf<AddressableNote>()
+    kinds.forEach {
+        set.addAll(filter(kindStart(it), kindEnd(it), consumer))
+    }
+    return set.toList()
+}
+
+fun LargeSoftCache<Address, AddressableNote>.filter(
+    kind: Int,
+    pubKey: HexKey,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
+): List<AddressableNote> = filter(kindStart(kind, pubKey), kindEnd(kind, pubKey), consumer)
+
 fun LargeSoftCache<Address, AddressableNote>.filterIntoSet(
     kind: Int,
     consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,

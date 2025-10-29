@@ -2126,18 +2126,7 @@ object LocalCache : ILocalCache {
         }
     }
 
-    fun getFollowSetNotesFor(user: User): List<AddressableNote> {
-        checkNotInMainThread()
-
-        return addressables
-            .filter { _, note ->
-                val listEvent = note.event
-                (
-                    listEvent is PeopleListEvent &&
-                        user.pubkeyHex == listEvent.pubKey
-                )
-            }
-    }
+    fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
 
     fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
         checkNotInMainThread()
