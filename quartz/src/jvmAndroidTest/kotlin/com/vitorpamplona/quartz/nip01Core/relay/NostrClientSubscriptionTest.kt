@@ -23,9 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClientSubscription
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,19 +47,13 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
             val events = mutableSetOf<Event>()
 
             val sub =
-                NostrClientSubscription(
-                    client = client,
-                    filter = {
-                        mapOf(
-                            RelayUrlNormalizer.normalize("wss://relay.damus.io") to
-                                listOf(
-                                    Filter(
-                                        kinds = listOf(MetadataEvent.KIND),
-                                        limit = 100,
-                                    ),
-                                ),
-                        )
-                    },
+                client.req(
+                    relay = "wss://relay.damus.io",
+                    filter =
+                        Filter(
+                            kinds = listOf(MetadataEvent.KIND),
+                            limit = 100,
+                        ),
                 ) { event ->
                     assertEquals(MetadataEvent.KIND, event.kind)
                     resultChannel.trySend(event)
@@ -75,7 +68,7 @@ class NostrClientSubscriptionTest : BaseNostrClientTest() {
 
             resultChannel.close()
 
-            sub.closeSubscription()
+            sub.close()
 
             client.disconnect()
             appScope.cancel()

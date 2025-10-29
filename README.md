@@ -268,7 +268,7 @@ val readOnly = KeyPair(pubKey = "npub1...".bechToBytes())
 ```
 
 Create signers that can be Internal, when you have the private key or a read-only public key,
-or External, when it is controlled by Amber in NIP-55. 
+or External, when it is controlled by Amber in NIP-55.
 
 Use either the `NostrSignerInternal` or `NostrSignerExternal` class:
 
@@ -277,7 +277,7 @@ val signer = NostrSignerInternal(keyPair)
 val amberSigner = NostrSignerExternal(
     pubKey = keyPair.pubKey.toHexKey(),
     packageName = signerPackageName, // Amber package name
-    contentResolver = appContext.contentResolver, 
+    contentResolver = appContext.contentResolver,
 )
 ```
 
@@ -305,39 +305,54 @@ val authCoordinator = RelayAuthenticator(client, appScope) { challenge, relay ->
 }
 ```
 
-To manage subscriptions, the simplest approach is to build mutable subscriptions in 
-the Application class. To use the best of the outbox model, this class allows you to 
-build filters for as many relays as needed. The `NostrClient` will connect to the 
-complete set of relays for all subscriptions.
+To make a request subscription simply do:
 
 ```kt
-val metadataSub = NostrClientSubscription(
-    client = client,
-    filter = {
+val metadataSub = client.req(
+    relays = listOf("wss://nos.lol", "wss://nostr.mom"),
+    filters = Filter(
+        kinds = listOf(MetadataEvent.KIND),
+        authors = listOf(signer.pubkey)
+    )
+) { event ->
+    /* consume event */
+}
+```
+
+The client will add the relay to the pool, connect to it and start receiving events. The
+`metadataSub` will be active until you call `metadataSub.close()`. If the client disconnects
+and reconnects, the sub will be active again.
+
+To manage subscriptions that change over time, the simplest approach is to build mutable
+subscriptions in the Application class.
+
+```kt
+val metadataSub = client.req(
+    filters = {
+        // Let's say you have a list of users that need to be rendered
+        val users = pubkeysSeeingInTheScreen()
+        // And a cache repository with their outbox relays
+        val outboxRelays = outboxRelays(users)
+
         val filters = listOf(
             Filter(
                 kinds = listOf(MetadataEvent.KIND),
-                authors = listOf(signer.pubkey)
+                authors = users
             )
         )
 
-        val signerOutboxRelays = listOfNotNull(
-            RelayUrlNormalizer.normalizeOrNull("wss://relay1.com"),
-            RelayUrlNormalizer.normalizeOrNull("wss://relay2.com")
-        )
-
-        signerOutboxRelays.associateWith { filters }
+        outboxRelays.associateWith { filters }
     }
 ) { event ->
     /* consume event */
 }
 ```
 
-In that way, you can simply call `metadataSub.updateFilter()` when you need to update 
-subscriptions to all relays. Or call `metadataSub.closeSubscription()` to stop the sub
+In that way, you can simply call `metadataSub.updateFilter()` when you need to update
+subscriptions to all relays. Or call `metadataSub.close()` to stop the sub
 without deleting it.
 
-When your app goes to the background, you can use NostrClient's `connect` and `disconnect` 
+When your app goes to the background, you can use NostrClient's `connect` and `disconnect`
 methods to stop all communication to relays. Add the `connect` to your `onResume` and `disconnect`
 to `onPause` methods.
 

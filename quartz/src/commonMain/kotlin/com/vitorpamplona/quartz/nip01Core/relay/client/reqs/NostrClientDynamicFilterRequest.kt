@@ -18,19 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client
+package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.RandomInstance
 
-class NostrClientSubscription(
+class NostrClientDynamicFilterRequest(
     val client: INostrClient,
-    val filter: () -> Map<NormalizedRelayUrl, List<Filter>> = { emptyMap() },
+    val filter: () -> Map<NormalizedRelayUrl, List<Filter>>,
     val onEvent: (event: Event) -> Unit = {},
-) : IRequestListener {
+) : IRequestListener,
+    IOpenNostrRequest {
     private val subId = RandomInstance.randomChars(10)
 
     override fun onEvent(
@@ -46,15 +47,16 @@ class NostrClientSubscription(
      * Creates or Updates the filter with relays. This method should be called
      * everytime the filter changes.
      */
-    fun updateFilter() = client.openReqSubscription(subId, filter(), this)
+    override fun updateFilter() = client.openReqSubscription(subId, filter(), this)
 
-    fun closeSubscription() = client.close(subId)
-
-    fun destroy() {
-        closeSubscription()
-    }
+    override fun close() = client.close(subId)
 
     init {
         updateFilter()
     }
 }
+
+fun INostrClient.req(
+    filters: () -> Map<NormalizedRelayUrl, List<Filter>>,
+    onEvent: (event: Event) -> Unit = {},
+): IOpenNostrRequest = NostrClientDynamicFilterRequest(this, filters, onEvent)
