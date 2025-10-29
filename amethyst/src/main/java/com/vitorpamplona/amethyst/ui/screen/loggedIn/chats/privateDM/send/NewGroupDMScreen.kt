@@ -228,7 +228,7 @@ fun GroupDMScreenContent(
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Size10dp).weight(1f)) {
             Column(
-                Modifier.fillMaxWidth().verticalScroll(scrollState),
+                Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true),
                 verticalArrangement = spacedBy(Size10dp),
             ) {
                 SendDirectMessageTo(postViewModel, accountViewModel)

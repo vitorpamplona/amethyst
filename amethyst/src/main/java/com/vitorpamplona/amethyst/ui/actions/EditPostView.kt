@@ -183,7 +183,7 @@ fun EditPostView(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .verticalScroll(scrollState),
+                                        .verticalScroll(scrollState, reverseScrolling = true),
                             ) {
                                 postViewModel.editedFromNote?.let {
                                     Row(Modifier.heightIn(max = 200.dp)) {

@@ -203,7 +203,7 @@ private fun GenericCommentPostBody(
                         end = Size10dp,
                     ).weight(1f),
         ) {
-            Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+            Column(Modifier.fillMaxWidth().verticalScroll(scrollState, reverseScrolling = true)) {
                 postViewModel.externalIdentity?.let {
                     Row {
                         DisplayExternalId(it, accountViewModel, nav)

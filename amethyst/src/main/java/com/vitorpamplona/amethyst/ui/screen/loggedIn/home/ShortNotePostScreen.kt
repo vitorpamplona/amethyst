@@ -236,7 +236,7 @@ private fun NewPostScreenBody(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .verticalScroll(scrollState),
+                        .verticalScroll(scrollState, reverseScrolling = true),
             ) {
                 postViewModel.originalNote?.let {
                     Row {

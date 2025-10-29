@@ -206,7 +206,7 @@ private fun NewProductBody(
                 .fillMaxWidth()
                 .padding(horizontal = Size10dp)
                 .weight(1f)
-                .verticalScroll(scrollState),
+                .verticalScroll(scrollState, reverseScrolling = true),
         ) {
             Row(
                 verticalAlignment = CenterVertically,
