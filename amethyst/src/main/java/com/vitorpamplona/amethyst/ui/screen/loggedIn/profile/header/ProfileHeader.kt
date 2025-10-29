@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
+import android.content.ClipData
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,11 +42,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -62,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileHeader(
@@ -123,7 +126,8 @@ fun ProfileHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom,
             ) {
-                val clipboardManager = LocalClipboardManager.current
+                val clipboardManager = LocalClipboard.current
+                val scope = rememberCoroutineScope()
 
                 ClickableUserPicture(
                     baseUser = baseUser,
@@ -137,9 +141,10 @@ fun ProfileHeader(
                     },
                     onLongClick = {
                         it.info?.picture?.let { it1 ->
-                            clipboardManager.setText(
-                                AnnotatedString(it1),
-                            )
+                            scope.launch {
+                                val clipData = ClipData.newPlainText("profile picture url", it1)
+                                clipboardManager.setClipEntry(ClipEntry(clipData))
+                            }
                         }
                     },
                 )
