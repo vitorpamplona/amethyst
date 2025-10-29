@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 
 @Composable
@@ -64,8 +63,8 @@ fun RelayFeedView(
         ) {
             item {
                 SettingsCategory(
-                    stringRes(R.string.public_home_section),
-                    stringRes(R.string.public_home_section_explainer_profile),
+                    R.string.public_home_section,
+                    R.string.public_home_section_explainer_profile,
                     Modifier.padding(top = 10.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
                 )
             }
@@ -74,8 +73,8 @@ fun RelayFeedView(
             }
             item {
                 SettingsCategory(
-                    stringRes(R.string.public_notif_section),
-                    stringRes(R.string.public_notif_section_explainer_profile),
+                    R.string.public_notif_section,
+                    R.string.public_notif_section_explainer_profile,
                     Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
                 )
             }
@@ -84,8 +83,8 @@ fun RelayFeedView(
             }
             item {
                 SettingsCategory(
-                    stringRes(R.string.private_inbox_section),
-                    stringRes(R.string.private_inbox_section_explainer_profile),
+                    R.string.private_inbox_section,
+                    R.string.private_inbox_section_explainer_profile,
                     Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
                 )
             }

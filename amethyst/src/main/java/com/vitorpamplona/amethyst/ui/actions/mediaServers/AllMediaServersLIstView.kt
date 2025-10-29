@@ -70,8 +70,8 @@ fun AllMediaBody(
     ) {
         item {
             SettingsCategory(
-                stringRes(R.string.media_servers_blossom_section),
-                stringRes(R.string.media_servers_blossom_explainer),
+                R.string.media_servers_blossom_section,
+                R.string.media_servers_blossom_explainer,
                 SettingsCategoryFirstModifier,
             )
         }
@@ -91,8 +91,8 @@ fun AllMediaBody(
 
         item {
             SettingsCategory(
-                stringRes(R.string.media_servers_nip96_section),
-                stringRes(R.string.media_servers_nip96_explainer),
+                R.string.media_servers_nip96_section,
+                R.string.media_servers_nip96_explainer,
                 SettingsCategorySpacingModifier,
             )
         }
@@ -113,8 +113,8 @@ fun AllMediaBody(
         DEFAULT_MEDIA_SERVERS.let {
             item {
                 SettingsCategoryWithButton(
-                    title = stringRes(id = R.string.built_in_media_servers_title),
-                    description = stringRes(id = R.string.built_in_servers_description),
+                    title = R.string.built_in_media_servers_title,
+                    description = R.string.built_in_servers_description,
                     modifier = SettingsCategorySpacingModifier,
                 ) {
                     OutlinedButton(

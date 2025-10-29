@@ -185,8 +185,8 @@ private fun ChannelMetadataScaffold(
         ) {
             item {
                 SettingsCategory(
-                    stringRes(R.string.public_chat_title),
-                    stringRes(R.string.public_chat_explainer),
+                    R.string.public_chat_title,
+                    R.string.public_chat_explainer,
                     SettingsCategoryFirstModifier,
                 )
 
@@ -201,8 +201,8 @@ private fun ChannelMetadataScaffold(
                 Description(postViewModel)
 
                 SettingsCategory(
-                    stringRes(R.string.public_chat_relays_title),
-                    stringRes(R.string.public_chat_relays_explainer),
+                    R.string.public_chat_relays_title,
+                    R.string.public_chat_relays_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }

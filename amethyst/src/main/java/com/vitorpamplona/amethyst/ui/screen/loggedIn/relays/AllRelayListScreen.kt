@@ -215,8 +215,8 @@ fun MappedAllRelayListView(
         ) {
             item {
                 SettingsCategory(
-                    stringRes(R.string.public_home_section),
-                    stringRes(R.string.public_home_section_explainer),
+                    R.string.public_home_section,
+                    R.string.public_home_section_explainer,
                     SettingsCategoryFirstModifier,
                 )
             }
@@ -224,8 +224,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.public_notif_section),
-                    stringRes(R.string.public_notif_section_explainer),
+                    R.string.public_notif_section,
+                    R.string.public_notif_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -233,8 +233,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
-                    stringRes(R.string.private_inbox_section),
-                    stringRes(R.string.private_inbox_section_explainer),
+                    R.string.private_inbox_section,
+                    R.string.private_inbox_section_explainer,
                     SettingsCategorySpacingModifier,
                     action = {
                         ResetDMRelays(dmViewModel)
@@ -245,8 +245,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.private_outbox_section),
-                    stringRes(R.string.private_outbox_section_explainer),
+                    R.string.private_outbox_section,
+                    R.string.private_outbox_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -254,8 +254,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.proxy_section),
-                    stringRes(R.string.proxy_section_explainer),
+                    R.string.proxy_section,
+                    R.string.proxy_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -263,8 +263,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.broadcast_section),
-                    stringRes(R.string.broadcast_section_explainer),
+                    R.string.broadcast_section,
+                    R.string.broadcast_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -272,8 +272,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
-                    stringRes(R.string.indexer_section),
-                    stringRes(R.string.indexer_section_explainer),
+                    R.string.indexer_section,
+                    R.string.indexer_section_explainer,
                     SettingsCategorySpacingModifier,
                 ) {
                     ResetIndexerRelays(indexerViewModel)
@@ -283,8 +283,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
-                    stringRes(R.string.search_section),
-                    stringRes(R.string.search_section_explainer),
+                    R.string.search_section,
+                    R.string.search_section_explainer,
                     SettingsCategorySpacingModifier,
                 ) {
                     ResetSearchRelays(searchViewModel)
@@ -294,8 +294,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.local_section),
-                    stringRes(R.string.local_section_explainer),
+                    R.string.local_section,
+                    R.string.local_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -303,8 +303,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.trusted_section),
-                    stringRes(R.string.trusted_section_explainer),
+                    R.string.trusted_section,
+                    R.string.trusted_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -312,8 +312,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.blocked_section),
-                    stringRes(R.string.blocked_section_explainer),
+                    R.string.blocked_section,
+                    R.string.blocked_section_explainer,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -321,8 +321,8 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategory(
-                    stringRes(R.string.connected_section),
-                    stringRes(R.string.connected_section_description),
+                    R.string.connected_section,
+                    R.string.connected_section_description,
                     SettingsCategorySpacingModifier,
                 )
             }
@@ -382,19 +382,19 @@ fun ResetDMRelays(postViewModel: DMRelayListViewModel) {
 
 @Composable
 fun SettingsCategory(
-    title: String,
-    description: String? = null,
+    title: Int,
+    description: Int? = null,
     modifier: Modifier,
 ) {
     Column(modifier) {
         Text(
-            text = title,
+            text = stringRes(title),
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.titleSmall,
         )
         if (description != null) {
             Text(
-                description,
+                text = stringRes(description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.grayText,
             )
@@ -404,21 +404,21 @@ fun SettingsCategory(
 
 @Composable
 fun SettingsCategoryWithButton(
-    title: String,
-    description: String? = null,
+    title: Int,
+    description: Int? = null,
     modifier: Modifier,
     action: @Composable () -> Unit,
 ) {
     Row(modifier, horizontalArrangement = RowColSpacing) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
+                text = stringRes(title),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.titleSmall,
             )
             if (description != null) {
                 Text(
-                    text = description,
+                    text = stringRes(description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.grayText,
                 )

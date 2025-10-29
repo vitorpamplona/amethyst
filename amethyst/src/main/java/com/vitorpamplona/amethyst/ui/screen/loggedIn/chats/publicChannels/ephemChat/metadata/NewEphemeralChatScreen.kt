@@ -123,8 +123,8 @@ private fun ChannelMetadataScaffold(
         ) {
             item {
                 SettingsCategory(
-                    stringRes(R.string.relay_chat_title),
-                    stringRes(R.string.relay_chat_explainer),
+                    R.string.relay_chat_title,
+                    R.string.relay_chat_explainer,
                     SettingsCategoryFirstModifier,
                 )
 
