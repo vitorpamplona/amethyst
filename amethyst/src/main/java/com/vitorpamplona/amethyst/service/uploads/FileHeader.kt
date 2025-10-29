@@ -20,11 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.MediaDataSource
-import android.media.MediaMetadataRetriever
-import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -75,27 +71,7 @@ class FileHeader(
                 val hash = sha256(data).toHexKey()
                 val size = data.size
 
-                val (blurHash, dim) =
-                    if (mimeType?.startsWith("image/") == true) {
-                        val opt = BitmapFactory.Options()
-                        opt.inPreferredConfig = Bitmap.Config.ARGB_8888
-                        val mBitmap = BitmapFactory.decodeByteArray(data, 0, data.size, opt)
-                        Pair(BlurhashWrapper(mBitmap.toBlurhash()), DimensionTag(mBitmap.width, mBitmap.height))
-                    } else if (mimeType?.startsWith("video/") == true) {
-                        val mediaMetadataRetriever = MediaMetadataRetriever()
-                        mediaMetadataRetriever.setDataSource(ByteArrayMediaDataSource(data))
-
-                        val newDim = mediaMetadataRetriever.prepareDimFromVideo() ?: dimPrecomputed
-                        val blurhash = mediaMetadataRetriever.getThumbnail()?.toBlurhash()?.let { BlurhashWrapper(it) }
-
-                        if (newDim?.hasSize() == true) {
-                            Pair(blurhash, newDim)
-                        } else {
-                            Pair(blurhash, null)
-                        }
-                    } else {
-                        Pair(null, null)
-                    }
+                val (blurHash, dim) = BlurhashMetadataCalculator.computeFromBytes(data, mimeType, dimPrecomputed)
 
                 Result.success(FileHeader(mimeType, hash, size, dim, blurHash))
             } catch (e: Exception) {

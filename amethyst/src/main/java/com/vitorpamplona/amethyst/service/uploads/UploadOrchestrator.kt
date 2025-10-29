@@ -245,7 +245,7 @@ class UploadOrchestrator {
                     hash = verification.hash,
                     size = verification.size.toInt(),
                     dim = uploadResult.dimension,
-                    blurHash = null, // Skip blurhash generation for verification
+                    blurHash = uploadResult.blurHash,
                 )
 
             return finish(

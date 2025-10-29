@@ -28,6 +28,7 @@ import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -104,25 +105,35 @@ class BlossomUploader {
                 calculateHashAndSize(it)
             }
 
+        val localMetadata = BlurhashMetadataCalculator.computeFromUri(context, uri, myContentType)
+
         val imageInputStream = contentResolver.openInputStream(uri)
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return imageInputStream.use { stream ->
-            upload(
-                stream,
-                streamInfo.hash,
-                streamInfo.size,
-                fileName,
-                myContentType,
-                alt,
-                sensitiveContent,
-                serverBaseUrl,
-                okHttpClient,
-                httpAuth,
-                context,
+        val serverResult =
+            imageInputStream.use { stream ->
+                upload(
+                    stream,
+                    streamInfo.hash,
+                    streamInfo.size,
+                    fileName,
+                    myContentType,
+                    alt,
+                    sensitiveContent,
+                    serverBaseUrl,
+                    okHttpClient,
+                    httpAuth,
+                    context,
+                )
+            }
+
+        return localMetadata?.let { (blur, dim) ->
+            serverResult.copy(
+                dimension = dim ?: serverResult.dimension,
+                blurHash = blur ?: serverResult.blurHash,
             )
-        }
+        } ?: serverResult
     }
 
     fun encodeAuth(event: BlossomAuthorizationEvent): String {
