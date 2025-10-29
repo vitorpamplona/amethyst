@@ -463,6 +463,8 @@
     <string name="follow_set_private_presence_indicator">%1$s egy privát tag</string>
     <string name="follow_set_public_member_add_label">Hozzáadás mint nyílvános tag</string>
     <string name="follow_set_private_member_add_label">Hozzáadás mint privát tag</string>
+    <string name="follow_set_public_members_header_label2">Publikus Tagok</string>
+    <string name="follow_set_private_members_header_label2">Privát Tagok</string>
     <string name="follow_set_public_members_header_label">Nyílvános profilok</string>
     <string name="follow_set_private_members_header_label">Privát profilok</string>
     <string name="follow_set_single_member_label">tag</string>
@@ -707,6 +709,17 @@
     <string name="paste_from_clipboard">Beszúrás vágólapról</string>
     <string name="invalid_nip47_uri_title">Érvénytelen NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">A(z) %1$s URI nem egy érvényes NIP-47 bejelentkezési URI.</string>
+    <string name="connect_to_new_nwc_wallet">Csatlakozás az új NWC tárcához</string>
+    <string name="couldnt_find_nwc_wallets">Tárca nem található</string>
+    <string name="couldnt_find_nwc_wallets_description">Az Amethyst nem talált olyan pénztárcaalkalmazást, amely támogatja a Nostr Wallet Connect (NWC) szolgáltatást.
+\n\nAmit tehet:
+\n\t1. NWC támogatás ellenőrzése: Ellenőrizze, hogy a kívánt pénztárcaalkalmazás kompatibilis-e a Nostr Wallet Connect szolgáltatással.
+\n\t2. Kapcsolat létrehozása: Nyissa meg a pénztárcaalkalmazást, és hozzon létre egy új NWC-kapcsolatot.
+\n\t3. Kapcsolódás az Amethysthez: A pénztárcája általában három lehetőséget kínál:
+\n\t\t3.1 Automatikus kapcsolódás: Egy gomb az Amethyst automatikus megnyitásához és csatlakoztatásához. Ha igen, kattintson erre a gombra, nyissa meg az Amethyst alkalmazást, és mentse el az új képernyőn.
+\n\t\t3.2 Manuális kapcsolódás: Egy kapcsolat URl, amelyet kimásolhat, és a képernyőn található beillesztés ikonra kattintva közvetlenül beírhatja.
+\n\t\t3.3 QR-kód: A pénztárca létrehoz egy QR-kódot, amelyet a képernyőn található QR-kód gombról olvashat be.
+    </string>
     <string name="language_description">Az alkalmazás felületéhez</string>
     <string name="theme_description">Sötét, világos vagy a rendszer által használt téma</string>
     <string name="automatically_load_images_gifs_description">Képek és GIF-ek automatikus betöltése</string>
