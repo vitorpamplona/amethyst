@@ -26,13 +26,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.RandomInstance
 
-class NostrClientDynamicFilterRequest(
+class NostrClientDynamicReq(
     val client: INostrClient,
     val filter: () -> Map<NormalizedRelayUrl, List<Filter>>,
     val onEvent: (event: Event) -> Unit = {},
 ) : IRequestListener,
     IOpenNostrRequest {
-    private val subId = RandomInstance.randomChars(10)
+    val subId = RandomInstance.randomChars(10)
 
     override fun onEvent(
         event: Event,
@@ -59,4 +59,4 @@ class NostrClientDynamicFilterRequest(
 fun INostrClient.req(
     filters: () -> Map<NormalizedRelayUrl, List<Filter>>,
     onEvent: (event: Event) -> Unit = {},
-): IOpenNostrRequest = NostrClientDynamicFilterRequest(this, filters, onEvent)
+): IOpenNostrRequest = NostrClientDynamicReq(this, filters, onEvent)
