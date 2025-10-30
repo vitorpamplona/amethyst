@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
-import kotlin.collections.forEach
 
 class BunkerRequestSerializer : StdSerializer<BunkerRequest>(BunkerRequest::class.java) {
     override fun serialize(

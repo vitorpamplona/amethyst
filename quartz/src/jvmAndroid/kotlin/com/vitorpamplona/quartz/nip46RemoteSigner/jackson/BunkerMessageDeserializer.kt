@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import kotlin.jvm.java
 
 class BunkerMessageDeserializer : StdDeserializer<BunkerMessage>(BunkerMessage::class.java) {
     override fun deserialize(
