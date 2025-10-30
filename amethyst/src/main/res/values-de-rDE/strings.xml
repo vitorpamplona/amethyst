@@ -1087,4 +1087,32 @@ anz der Bedingungen ist erforderlich</string>
     <string name="crashreport_found_send">Senden</string>
     <string name="this_message_will_disappear_in_days">Diese Nachricht verschwindet in %1$d Tagen</string>
     <string name="select_signer">Signierer auswählen</string>
+
+    <string name="outbox_relays_title">Ausgehende Relays</string>
+    <string name="outbox_relays_not_found">Richte deine öffentlichen Ausgehenden Relays zum Posten ein</string>
+    <string name="outbox_relays_not_found_description">Das Erstellen einer Relay-Liste, die speziell zum Empfangen deiner Inhalte gedacht ist, ist entscheidend für dein Nostr-Erlebnis und der einzige Weg, wie dich deine Follower finden können.</string>
+    <string name="outbox_relays_not_found_editing">Füge 1–3 Relays hinzu, die deine Beiträge empfangen. Stelle sicher, dass sie keine Zahlung verlangen, wenn du nicht für das Einfügen zahlst.</string>
+    <string name="outbox_relays_not_found_examples">Gute Optionen sind:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+
+    <string name="inbox_relays_title">Eingehende Relays</string>
+    <string name="inbox_relays_not_found">Richte deine öffentlichen Eingehenden Relays zum Empfangen von Benachrichtigungen ein</string>
+    <string name="inbox_relays_not_found_description">Das Erstellen einer Relay-Liste, die speziell zum Empfangen von Benachrichtigungen gedacht ist, ist entscheidend für dein Nostr-Erlebnis.</string>
+    <string name="inbox_relays_not_found_editing">Füge 1–3 Relays hinzu, die Benachrichtigungen für dich empfangen. Stelle sicher, dass sie keine Zahlung oder Web of Trust vom Absender verlangen, sonst erhältst du nur Benachrichtigungen von zahlenden oder langjährigen Nutzern.</string>
+    <string name="inbox_relays_not_found_examples">Gute Optionen sind:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+
+    <string name="follow_set_public_members_header_label2">Öffentliche Mitglieder</string>
+    <string name="follow_set_private_members_header_label2">Private Mitglieder</string>
+
+    <string name="connect_to_new_nwc_wallet">Mit neuer NWC-Wallet verbinden</string>
+    <string name="couldnt_find_nwc_wallets">Wallet nicht gefunden</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst konnte keine Wallet-Apps finden, die Nostr Wallet Connect (NWC) unterstützen.
+\n\nWas du tun kannst:
+\n\t1. NWC-Unterstützung überprüfen: Stelle sicher, dass deine bevorzugte Wallet-App mit Nostr Wallet Connect kompatibel ist.
+\n\t2. Verbindung erstellen: Öffne deine Wallet-App und erstelle eine neue NWC-Verbindung.
+\n\t3. Mit Amethyst verknüpfen: Deine Wallet bietet normalerweise drei Optionen:
+\n\t\t3.1 Automatische Verknüpfung: Eine Schaltfläche zum automatischen Öffnen und Verbinden mit Amethyst. Klicke darauf, öffne Amethyst und speichere auf dem neuen Bildschirm.
+\n\t\t3.2 Manuelle Verknüpfung: Eine Verbindungs-URI, die du kopieren und über das Einfügesymbol auf diesem Bildschirm einfügen kannst.
+\n\t\t3.3 QR-Code: Die Wallet erstellt einen QR-Code, den du über die QR-Schaltfläche auf diesem Bildschirm scannen kannst.
+</string>
+
 </resources>
