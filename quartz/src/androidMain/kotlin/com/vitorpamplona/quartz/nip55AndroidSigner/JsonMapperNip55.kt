@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.PermissionDeserializer
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.PermissionSerializer
 import java.io.InputStream
-import kotlin.jvm.java
 
 object JsonMapperNip55 {
     val defaultMapper: ObjectMapper =

@@ -33,8 +33,6 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.forEach
-import kotlin.collections.plus
 
 val UserMetadataForKeyKinds =
     listOf(

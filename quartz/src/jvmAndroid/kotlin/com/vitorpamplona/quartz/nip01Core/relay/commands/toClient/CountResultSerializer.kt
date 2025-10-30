@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import kotlin.jvm.java
 
 class CountResultSerializer : StdSerializer<CountResult>(CountResult::class.java) {
     override fun serialize(

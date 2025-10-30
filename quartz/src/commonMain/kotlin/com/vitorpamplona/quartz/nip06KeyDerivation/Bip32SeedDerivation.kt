@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
-import androidx.compose.runtime.key
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import com.vitorpamplona.quartz.utils.mac.MacInstance
 
@@ -77,9 +76,9 @@ class Bip32SeedDerivation {
         return ExtendedPrivateKey(key, ir)
     }
 
-    public fun writeInt32BE(n: Int): ByteArray = ByteArray(Int.SIZE_BYTES).also { writeInt32BE(n, it) }
+    fun writeInt32BE(n: Int): ByteArray = ByteArray(Int.SIZE_BYTES).also { writeInt32BE(n, it) }
 
-    public fun writeInt32BE(
+    fun writeInt32BE(
         n: Int,
         bs: ByteArray,
         off: Int = 0,

@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import kotlinx.serialization.Transient
 
 @Immutable
 class NIP90ContentDiscoveryResponseEvent(

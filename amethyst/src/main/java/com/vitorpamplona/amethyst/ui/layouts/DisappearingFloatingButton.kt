@@ -22,14 +22,12 @@ package com.vitorpamplona.myapplication
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
-import com.vitorpamplona.myapplication.ResetDisappearingOnResume
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
