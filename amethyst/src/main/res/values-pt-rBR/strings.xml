@@ -459,6 +459,8 @@
     <string name="follow_set_private_presence_indicator">%1$s é um membro privado</string>
     <string name="follow_set_public_member_add_label">Adicionar como membro público</string>
     <string name="follow_set_private_member_add_label">Adicionar como membro privado</string>
+    <string name="follow_set_public_members_header_label2">Membros Públicos</string>
+    <string name="follow_set_private_members_header_label2">Membros Privados</string>
     <string name="follow_set_public_members_header_label">Perfis públicos</string>
     <string name="follow_set_private_members_header_label">Perfis privados</string>
     <string name="follow_set_single_member_label">membro</string>
@@ -703,6 +705,16 @@
     <string name="paste_from_clipboard">Colar da área de transferência</string>
     <string name="invalid_nip47_uri_title">URI NIP-47 inválido</string>
     <string name="invalid_nip47_uri_description">O URI %1$s não é um URI de login NIP-47 válido.</string>
+    <string name="connect_to_new_nwc_wallet">Conectar a nova carteira NWC</string>
+    <string name="couldnt_find_nwc_wallets">Carteira não encontrada</string>
+    <string name="couldnt_find_nwc_wallets_description">O Amethyst não conseguiu encontrar nenhum aplicativo de carteira que suporte Nostr Wallet Connect (NWC).
+\n\nO que você pode fazer:
+\n\t1. Verifique o suporte NWC: Confirme se o aplicativo da sua carteira é compatível com o Nostr Wallet Connect.
+\n\t2. Criar conexão: Vá até o aplicativo da sua carteira e crie uma nova conexão NWC.
+\n\t3. Vincular ao Amethyst: Sua carteira geralmente oferece três opções:
+\n\t\t3.1 Link Automático: Um botão para abrir e conectar automaticamente ao Amethyst. Clique nele, abra o Amethyst e salve na nova tela.
+\n\t\t3.2 Link Manual: Um URI de conexão que você pode copiar e colar usando o ícone de colar nesta tela.
+\n\t\t3.3 Código QR: A carteira gera um código QR que você pode ler usando o botão de código QR nesta tela.</string>
     <string name="language_description">Para a interface do aplicativo</string>
     <string name="theme_description">Tema Escuro, Claro ou Padrão</string>
     <string name="automatically_load_images_gifs_description">Carregar automaticamente imagens e GIFs</string>
@@ -934,6 +946,16 @@
     <string name="search_relays_not_found_description">Criar uma lista de relés especificamente projetada para pesquisa e marcação de usuários melhorará esses resultados.</string>
     <string name="search_relays_not_found_editing">Insira entre 1–3 relés para usar ao pesquisar conteúdo ou marcar usuários. Certifique-se de que seus relés escolhidos implementem o NIP-50</string>
     <string name="search_relays_not_found_examples">Boas opções são:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Relays de Saída</string>
+    <string name="outbox_relays_not_found">Configure seus relays públicos de saída para postar</string>
+    <string name="outbox_relays_not_found_description">Criar uma lista de relays especificamente projetada para receber seu conteúdo é essencial para sua experiência no Nostr e a única forma de seus seguidores encontrarem você.</string>
+    <string name="outbox_relays_not_found_editing">Insira entre 1–3 relays que recebam suas postagens. Certifique-se de que eles não exijam pagamento se você não estiver pagando para inserir.</string>
+    <string name="outbox_relays_not_found_examples">Boas opções são:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">Relays de Entrada</string>
+    <string name="inbox_relays_not_found">Configure seus relays públicos de entrada para receber notificações</string>
+    <string name="inbox_relays_not_found_description">Criar uma lista de relays especificamente projetada para receber notificações é essencial para sua experiência no Nostr.</string>
+    <string name="inbox_relays_not_found_editing">Insira entre 1–3 relays que recebam notificações para você. Certifique-se de que eles não exijam pagamento ou rede de confiança do remetente, caso contrário você receberá notificações apenas de pagadores ou usuários de longo prazo.</string>
+    <string name="inbox_relays_not_found_examples">Boas opções são:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Envio de DM</string>
     <string name="relay_settings">Configurações de Relay</string>
     <string name="public_home_section">Relés Públicos de Casa</string>
@@ -1082,32 +1104,4 @@
     <string name="crashreport_found_send">Enviar</string>
     <string name="this_message_will_disappear_in_days">Esta mensagem desaparecerá em %1$d dias</string>
     <string name="select_signer">Selecionar assinador</string>
-
-    <string name="outbox_relays_title">Relays de Saída</string>
-    <string name="outbox_relays_not_found">Configure seus relays públicos de saída para postar</string>
-    <string name="outbox_relays_not_found_description">Criar uma lista de relays especificamente projetada para receber seu conteúdo é essencial para sua experiência no Nostr e a única forma de seus seguidores encontrarem você.</string>
-    <string name="outbox_relays_not_found_editing">Insira entre 1–3 relays que recebam suas postagens. Certifique-se de que eles não exijam pagamento se você não estiver pagando para inserir.</string>
-    <string name="outbox_relays_not_found_examples">Boas opções são:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
-
-    <string name="inbox_relays_title">Relays de Entrada</string>
-    <string name="inbox_relays_not_found">Configure seus relays públicos de entrada para receber notificações</string>
-    <string name="inbox_relays_not_found_description">Criar uma lista de relays especificamente projetada para receber notificações é essencial para sua experiência no Nostr.</string>
-    <string name="inbox_relays_not_found_editing">Insira entre 1–3 relays que recebam notificações para você. Certifique-se de que eles não exijam pagamento ou rede de confiança do remetente, caso contrário você receberá notificações apenas de pagadores ou usuários de longo prazo.</string>
-    <string name="inbox_relays_not_found_examples">Boas opções são:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
-
-    <string name="follow_set_public_members_header_label2">Membros Públicos</string>
-    <string name="follow_set_private_members_header_label2">Membros Privados</string>
-
-    <string name="connect_to_new_nwc_wallet">Conectar a nova carteira NWC</string>
-    <string name="couldnt_find_nwc_wallets">Carteira não encontrada</string>
-    <string name="couldnt_find_nwc_wallets_description">O Amethyst não conseguiu encontrar nenhum aplicativo de carteira que suporte Nostr Wallet Connect (NWC).
-\n\nO que você pode fazer:
-\n\t1. Verifique o suporte NWC: Confirme se o aplicativo da sua carteira é compatível com o Nostr Wallet Connect.
-\n\t2. Criar conexão: Vá até o aplicativo da sua carteira e crie uma nova conexão NWC.
-\n\t3. Vincular ao Amethyst: Sua carteira geralmente oferece três opções:
-\n\t\t3.1 Link Automático: Um botão para abrir e conectar automaticamente ao Amethyst. Clique nele, abra o Amethyst e salve na nova tela.
-\n\t\t3.2 Link Manual: Um URI de conexão que você pode copiar e colar usando o ícone de colar nesta tela.
-\n\t\t3.3 Código QR: A carteira gera um código QR que você pode ler usando o botão de código QR nesta tela.
-</string>
-
 </resources>
