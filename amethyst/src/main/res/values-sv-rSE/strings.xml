@@ -459,6 +459,8 @@
     <string name="follow_set_private_presence_indicator">%1$s är en privat medlem</string>
     <string name="follow_set_public_member_add_label">Lägg till som offentlig medlem</string>
     <string name="follow_set_private_member_add_label">Lägg till som privat medlem</string>
+    <string name="follow_set_public_members_header_label2">Offentliga medlemmar</string>
+    <string name="follow_set_private_members_header_label2">Privata medlemmar</string>
     <string name="follow_set_public_members_header_label">Offentliga profiler</string>
     <string name="follow_set_private_members_header_label">Privata profiler</string>
     <string name="follow_set_single_member_label">medlem</string>
@@ -702,6 +704,16 @@
     <string name="paste_from_clipboard">Klistra in från urklipp</string>
     <string name="invalid_nip47_uri_title">Ogiltig NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">URI %1$s är inte en giltig NIP-47 inloggnings-URI.</string>
+    <string name="connect_to_new_nwc_wallet">Anslut till ny NWC-plånbok</string>
+    <string name="couldnt_find_nwc_wallets">Plånbok hittades inte</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst kunde inte hitta några plånboksappar som stöder Nostr Wallet Connect (NWC).
+\n\nVad du kan göra:
+\n\t1. Verifiera NWC-stöd: Kontrollera att din föredragna plånbok stöder Nostr Wallet Connect.
+\n\t2. Skapa anslutning: Gå till din plånbok och skapa en ny NWC-anslutning.
+\n\t3. Länka till Amethyst: Din plånbok erbjuder vanligtvis tre alternativ:
+\n\t\t3.1 Automatisk länk: En knapp för att automatiskt öppna och ansluta till Amethyst. Klicka på den, öppna Amethyst och spara på den nya skärmen.
+\n\t\t3.2 Manuell länk: En anslutnings-URI som du kan kopiera och klistra in via klistra-ikonen på den här skärmen.
+\n\t\t3.3 QR-kod: Plånboken skapar en QR-kod som du kan skanna med QR-knappens funktion på den här skärmen.</string>
     <string name="language_description">För appens gränssnitt</string>
     <string name="theme_description">Mörkt, Ljust eller Systemtema</string>
     <string name="automatically_load_images_gifs_description">Ladda automatiskt bilder och GIFs</string>
@@ -933,6 +945,16 @@
     <string name="search_relays_not_found_description">Att skapa en relälista speciellt utformad för sökning och användartaggning kommer att förbättra dessa resultat.</string>
     <string name="search_relays_not_found_editing">Sätt in mellan 1–3 reläer att använda när du söker efter innehåll eller taggar användare. Se till att dina valda reläer implementerar NIP-50</string>
     <string name="search_relays_not_found_examples">Bra alternativ är:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Utgående reläer</string>
+    <string name="outbox_relays_not_found">Ställ in dina offentliga utgående reläer för att kunna posta</string>
+    <string name="outbox_relays_not_found_description">Att skapa en relälista specifikt för att ta emot ditt innehåll är avgörande för din Nostr-upplevelse och det enda sättet dina följare kan hitta dig.</string>
+    <string name="outbox_relays_not_found_editing">Lägg till mellan 1–3 reläer som tar emot dina inlägg. Se till att de inte kräver betalning om du inte betalar för att lägga till dem.</string>
+    <string name="outbox_relays_not_found_examples">Bra alternativ är:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">Inkommande reläer</string>
+    <string name="inbox_relays_not_found">Ställ in dina offentliga inkommande reläer för att ta emot aviseringar</string>
+    <string name="inbox_relays_not_found_description">Att skapa en relälista specifikt för att ta emot aviseringar är avgörande för din Nostr-upplevelse.</string>
+    <string name="inbox_relays_not_found_editing">Lägg till mellan 1–3 reläer som tar emot aviseringar åt dig. Se till att de inte kräver betalning eller web of trust från avsändaren, annars får du bara aviseringar från betalande eller långsiktiga användare.</string>
+    <string name="inbox_relays_not_found_examples">Bra alternativ är:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">DM uppladdning</string>
     <string name="relay_settings">Relä inställningar</string>
     <string name="public_home_section">Offentliga hemreläer</string>
@@ -1081,32 +1103,4 @@
     <string name="crashreport_found_send">Skicka</string>
     <string name="this_message_will_disappear_in_days">Detta meddelande försvinner om %1$d dagar</string>
     <string name="select_signer">Välj signatör</string>
-
-    <string name="outbox_relays_title">Utgående reläer</string>
-    <string name="outbox_relays_not_found">Ställ in dina offentliga utgående reläer för att kunna posta</string>
-    <string name="outbox_relays_not_found_description">Att skapa en relälista specifikt för att ta emot ditt innehåll är avgörande för din Nostr-upplevelse och det enda sättet dina följare kan hitta dig.</string>
-    <string name="outbox_relays_not_found_editing">Lägg till mellan 1–3 reläer som tar emot dina inlägg. Se till att de inte kräver betalning om du inte betalar för att lägga till dem.</string>
-    <string name="outbox_relays_not_found_examples">Bra alternativ är:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
-
-    <string name="inbox_relays_title">Inkommande reläer</string>
-    <string name="inbox_relays_not_found">Ställ in dina offentliga inkommande reläer för att ta emot aviseringar</string>
-    <string name="inbox_relays_not_found_description">Att skapa en relälista specifikt för att ta emot aviseringar är avgörande för din Nostr-upplevelse.</string>
-    <string name="inbox_relays_not_found_editing">Lägg till mellan 1–3 reläer som tar emot aviseringar åt dig. Se till att de inte kräver betalning eller web of trust från avsändaren, annars får du bara aviseringar från betalande eller långsiktiga användare.</string>
-    <string name="inbox_relays_not_found_examples">Bra alternativ är:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
-
-    <string name="follow_set_public_members_header_label2">Offentliga medlemmar</string>
-    <string name="follow_set_private_members_header_label2">Privata medlemmar</string>
-
-    <string name="connect_to_new_nwc_wallet">Anslut till ny NWC-plånbok</string>
-    <string name="couldnt_find_nwc_wallets">Plånbok hittades inte</string>
-    <string name="couldnt_find_nwc_wallets_description">Amethyst kunde inte hitta några plånboksappar som stöder Nostr Wallet Connect (NWC).
-\n\nVad du kan göra:
-\n\t1. Verifiera NWC-stöd: Kontrollera att din föredragna plånbok stöder Nostr Wallet Connect.
-\n\t2. Skapa anslutning: Gå till din plånbok och skapa en ny NWC-anslutning.
-\n\t3. Länka till Amethyst: Din plånbok erbjuder vanligtvis tre alternativ:
-\n\t\t3.1 Automatisk länk: En knapp för att automatiskt öppna och ansluta till Amethyst. Klicka på den, öppna Amethyst och spara på den nya skärmen.
-\n\t\t3.2 Manuell länk: En anslutnings-URI som du kan kopiera och klistra in via klistra-ikonen på den här skärmen.
-\n\t\t3.3 QR-kod: Plånboken skapar en QR-kod som du kan skanna med QR-knappens funktion på den här skärmen.
-</string>
-
 </resources>
