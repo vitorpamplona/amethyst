@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutabl
 import com.vitorpamplona.ammolite.relays.BasicBundledInsert
 import com.vitorpamplona.ammolite.relays.BasicBundledUpdate
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -212,7 +213,7 @@ class FeedContentState(
 
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
-            refreshFromOldState(it.flatten().toSet())
+            refreshFromOldState(it.flattenToSet())
         }
     }
 

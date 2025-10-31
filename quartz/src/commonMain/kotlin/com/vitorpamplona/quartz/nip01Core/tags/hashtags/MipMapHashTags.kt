@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 
+import com.vitorpamplona.quartz.utils.flattenToSet
+
 fun hashtagAlts(tag: String): Set<String> =
     setOf(
         tag,
@@ -30,6 +32,6 @@ fun hashtagAlts(tag: String): Set<String> =
         },
     )
 
-fun hashtagAlts(tags: List<String>): Set<String> = tags.map { hashtagAlts(it) }.flatten().toSet()
+fun hashtagAlts(tags: List<String>): Set<String> = tags.map { hashtagAlts(it) }.flattenToSet()
 
-fun hashtagAlts(tags: Set<String>): Set<String> = tags.map { hashtagAlts(it) }.flatten().toSet()
+fun hashtagAlts(tags: Set<String>): Set<String> = tags.map { hashtagAlts(it) }.flattenToSet()

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutabl
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -160,7 +161,7 @@ class ChannelFeedContentState(
     }
 
     fun invalidateInsertData(newItems: Set<Note>) {
-        bundlerInsert.invalidateList(newItems) { refreshFromOldState(it.flatten().toSet()) }
+        bundlerInsert.invalidateList(newItems) { refreshFromOldState(it.flattenToSet()) }
     }
 
     fun updateFeedWith(newNotes: Set<Note>) {

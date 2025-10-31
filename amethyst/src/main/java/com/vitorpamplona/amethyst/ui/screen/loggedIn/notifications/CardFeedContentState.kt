@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -426,7 +427,7 @@ class CardFeedContentState(
 
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
-            val newObjects = it.flatten().toSet()
+            val newObjects = it.flattenToSet()
             logTime("${this.javaClass.simpleName} Card additive receiving ${newObjects.size} items into ${it.size} items") {
                 if (newObjects.isNotEmpty()) {
                     refreshFromOldState(newObjects)

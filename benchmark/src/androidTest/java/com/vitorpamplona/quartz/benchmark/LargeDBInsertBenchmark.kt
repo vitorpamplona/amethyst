@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.flattenToSet
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,8 +73,8 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
     fun bench40DeletionRequestsEvents() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val deletions = allEvents.filterIsInstance<DeletionEvent>()
-        val deletionIds = deletions.map { it.deleteEventIds() }.flatten().toSet()
-        val deletionAddresses = deletions.map { it.deleteAddressIds() }.flatten().toSet()
+        val deletionIds = deletions.map { it.deleteEventIds() }.flattenToSet()
+        val deletionAddresses = deletions.map { it.deleteAddressIds() }.flattenToSet()
 
         val toBeDeletedEvents =
             allEvents.filter {

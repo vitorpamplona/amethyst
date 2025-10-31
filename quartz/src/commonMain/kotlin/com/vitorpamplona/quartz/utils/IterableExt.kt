@@ -46,3 +46,11 @@ fun <T> Iterable<T>.joinToStringLimited(
     buffer.append(postfix)
     return buffer.toString()
 }
+
+public fun <T> Iterable<Iterable<T>>.flattenToSet(): Set<T> {
+    val result = mutableSetOf<T>()
+    for (element in this) {
+        result.addAll(element)
+    }
+    return result
+}

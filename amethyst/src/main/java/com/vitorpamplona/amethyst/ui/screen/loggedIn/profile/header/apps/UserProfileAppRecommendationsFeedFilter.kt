@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
+import com.vitorpamplona.quartz.utils.flattenToSet
 
 class UserProfileAppRecommendationsFeedFilter(
     val user: User,
@@ -43,7 +44,7 @@ class UserProfileAppRecommendationsFeedFilter(
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.mapNotNull { filterMap(it) }.flatten().toSet()
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.mapNotNull { filterMap(it) }.flattenToSet()
 
     fun filterMap(it: Note): List<Note>? {
         val noteEvent = it.event
