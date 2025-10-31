@@ -34,3 +34,5 @@ fun Event.taggedEventIds() = tags.taggedEventIds()
 fun Event.firstTaggedEvent() = tags.firstTaggedEvent()
 
 fun Event.isTaggedEvent(idHex: String) = tags.isTaggedEvent(idHex)
+
+fun Event.isTaggedEvents(idHexes: Set<HexKey>) = tags.isTaggedEvents(idHexes)

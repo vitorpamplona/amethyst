@@ -36,4 +36,6 @@ fun TagArray.taggedEventIds() = this.mapNotNull(ETag::parseId)
 
 fun TagArray.firstTaggedEvent() = this.firstNotNullOfOrNull(ETag::parse)
 
-fun TagArray.isTaggedEvent(idHex: String) = this.any(ETag::isTagged, idHex)
+fun TagArray.isTaggedEvent(idHex: HexKey) = this.any(ETag::isTagged, idHex)
+
+fun TagArray.isTaggedEvents(idHexes: Set<HexKey>) = this.any(ETag::isTagged, idHexes)

@@ -30,9 +30,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
@@ -64,6 +66,10 @@ class DeletionEvent(
     fun deleteEvents() = taggedEvents()
 
     fun deleteEventIds() = taggedEventIds()
+
+    fun deletesAnyEventIn(eventIds: Set<HexKey>) = isTaggedEvents(eventIds)
+
+    fun deleteAddressesWithKind(kind: Int) = isTaggedAddressableKind(kind)
 
     fun deleteAddresses() = taggedAddresses()
 

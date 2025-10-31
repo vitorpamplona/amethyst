@@ -66,6 +66,11 @@ data class ETag(
             eventId: HexKey,
         ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == eventId
 
+        fun isTagged(
+            tag: Array<String>,
+            eventIds: Set<HexKey>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in eventIds
+
         fun parse(tag: Array<String>): ETag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
