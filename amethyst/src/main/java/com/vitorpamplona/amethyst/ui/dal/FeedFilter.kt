@@ -32,16 +32,3 @@ abstract class FeedFilter<T> : IFeedFilter<T> {
         return feed.take(limit())
     }
 }
-
-interface IFeedFilter<T> {
-    fun loadTop(): List<T>
-
-    fun limit(): Int = 500
-
-    /** Returns a string that serves as the key to invalidate the list if it changes. */
-    fun feedKey(): Any
-
-    fun showHiddenKey(): Boolean = false
-
-    fun feed(): List<T>
-}

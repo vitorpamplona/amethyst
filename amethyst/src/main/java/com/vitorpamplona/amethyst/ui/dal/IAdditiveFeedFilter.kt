@@ -20,24 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.vitorpamplona.amethyst.logTime
+interface IAdditiveFeedFilter<T> : IFeedFilter<T> {
+    fun applyFilter(newItems: Set<T>): Set<T>
 
-abstract class AdditiveFeedFilter<T> :
-    FeedFilter<T>(),
-    IAdditiveFeedFilter<T> {
-    open fun updateListWith(
-        oldList: List<T>,
-        newItems: Set<T>,
-    ): List<T> =
-        logTime(
-            debugMessage = { "${this.javaClass.simpleName} AdditiveFeedFilter updating ${newItems.size} new items to ${it.size} items" },
-        ) {
-            val newItemsToBeAdded = applyFilter(newItems)
-            if (newItemsToBeAdded.isNotEmpty()) {
-                val newList = oldList.toSet() + newItemsToBeAdded
-                sort(newList).take(limit())
-            } else {
-                oldList
-            }
-        }
+    fun sort(items: Set<T>): List<T>
 }
