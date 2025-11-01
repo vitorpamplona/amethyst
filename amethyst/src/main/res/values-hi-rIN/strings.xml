@@ -951,6 +951,16 @@
     <string name="search_relays_not_found_description">खोज तथा उपयोगकर्ता सूचक जोडने के लिए स्पष्टतः रूपांकित पुनःप्रसारक सूची बनाने से इन परिणामों में शोधन होगा।</string>
     <string name="search_relays_not_found_editing">विषयवस्तु खोजने के लिए अथवा उपयोगकर्ता सूचक जोडने में उपयोग करनें के लिए १ - ३ पुनःप्रसारकों को जोडें। सुनिश्चित करें कि आपके चयनित पुनःप्रसारक निप॰-५० को कार्यान्वित किये हैं।</string>
     <string name="search_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">निर्गतपेटिका पुनःप्रसारक सूची</string>
+    <string name="outbox_relays_not_found">अपने सार्वजनिक निर्गतपेटिका पुनःप्रसारकों की स्थापना करें पत्र प्रकाशन के लिए</string>
+    <string name="outbox_relays_not_found_description">आपके विषयवस्तु प्राप्त करने के लिए पुनःप्रसारक सूची की विशिष्ट रचना आवश्यक है नोस्टर में। तथा आपके अनुचरों के लिए आपको ढूँढने की एकमात्र विधि। </string>
+    <string name="outbox_relays_not_found_editing">१ - ३ पुनःप्रसारकों को जोडें जो आपके पत्र स्वीकारते हैं। सुनिश्चित करें कि इनके लिए भुगतान अनावश्यक हैं यदि आप भुगतान नहीं कर रहे हैं अभिलेखन के लिए</string>
+    <string name="outbox_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">आगतपेटिका पुनःप्रसारक सूची</string>
+    <string name="inbox_relays_not_found">आपके सार्वजनिक आगतपेटिका पुनःप्रसारकों की स्थापना करें सूचनाएँ प्राप्त करने के लिए</string>
+    <string name="inbox_relays_not_found_description">सूचनाएँ प्राप्त करने के लिए पुनःप्रसारक सूची की विशिष्ट रचना आवश्यक है नोस्टर में। </string>
+    <string name="inbox_relays_not_found_editing">१ - ३ पुनःप्रसारकों को जोडें जो आपके लिए सूचनाएँ स्वीकारते हैं। सुनिश्चित करें कि इनके लिए भुगतान अथवा विश्वासजाल अनुमति अनावश्यक हैं अन्यथा आप केवल भुगतान करनेवालों से अथवा दीर्घकालिक प्रयोक्ताओं से सूचनाएँ प्राप्त करेंगे</string>
+    <string name="inbox_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">सीधा संदेश आरोहण</string>
     <string name="relay_settings">पुनःप्रसारक स्थापना विकल्प</string>
     <string name="public_home_section">सार्वजनिक मुख्य पुनःप्रसारक</string>
