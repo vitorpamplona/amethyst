@@ -37,6 +37,7 @@ class GalleryParser {
         paragraph.words.forEach { word ->
             when (word) {
                 is ImageSegment, is Base64Segment -> imageCount++
+                is VideoSegment -> hasNonWhitespaceNonImageContent = true // Videos are not images
                 is RegularTextSegment -> {
                     if (word.segmentText.isNotBlank()) {
                         hasNonWhitespaceNonImageContent = true
@@ -146,13 +147,18 @@ class GalleryParser {
             val word = paragraph.words[i]
 
             if (word is ImageSegment || word is Base64Segment) {
-                // Collect consecutive image/whitespace segments without extra list allocations
+                // Collect consecutive image/whitespace segments (but not videos)
                 val imageSegments = mutableListOf<Segment>()
                 var j = i
+                var hasVideo = false
 
                 while (j < n) {
                     val seg = paragraph.words[j]
                     when {
+                        seg is VideoSegment -> {
+                            hasVideo = true
+                            break
+                        }
                         seg is ImageSegment || seg is Base64Segment -> imageSegments.add(seg)
                         seg is RegularTextSegment && seg.segmentText.isBlank() -> { /* skip whitespace */ }
                         else -> break
@@ -160,8 +166,9 @@ class GalleryParser {
                     j++
                 }
 
-                if (imageSegments.size <= 1) {
-                    currentParagraphSegments.add(word)
+                // If we found a video, don't create a gallery - render images individually
+                if (hasVideo || imageSegments.size <= 1) {
+                    currentParagraphSegments.addAll(imageSegments)
                 } else {
                     if (currentParagraphSegments.isNotEmpty()) {
                         resultingParagraphs.add(ParagraphState(currentParagraphSegments.toImmutableList(), paragraph.isRTL))

@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
+import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -92,7 +93,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -112,7 +112,6 @@ import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlin.text.Typography.paragraph
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -416,6 +415,8 @@ private fun RenderWordWithoutPreview(
     when (word) {
         // Don't preview Images
         is ImageSegment -> ClickableUrl(word.segmentText, word.segmentText)
+        // Don't preview Videos
+        is VideoSegment -> ClickableUrl(word.segmentText, word.segmentText)
         is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         // Don't offer to pay invoices
@@ -447,6 +448,7 @@ private fun RenderWordWithPreview(
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is VideoSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)

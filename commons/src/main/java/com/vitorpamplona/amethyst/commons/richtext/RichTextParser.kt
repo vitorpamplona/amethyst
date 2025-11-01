@@ -139,9 +139,12 @@ class RichTextParser {
         val imagesForPager =
             urlSet.mapNotNull { fullUrl -> createMediaContent(fullUrl, imetas, content, callbackUri) }.associateBy { it.url }
 
+        val imageUrls = imagesForPager.filterValues { it is MediaUrlImage }.keys
+        val videoUrls = imagesForPager.filterValues { it is MediaUrlVideo }.keys
+
         val emojiMap = CustomEmoji.createEmojiMap(tags)
 
-        val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags)
+        val segments = findTextSegments(content, imageUrls, videoUrls, urlSet, emojiMap, tags)
 
         val base64Images = segments.map { it.words.filterIsInstance<Base64Segment>() }.flatten()
 
@@ -164,6 +167,7 @@ class RichTextParser {
     private fun findTextSegments(
         content: String,
         images: Set<String>,
+        videos: Set<String>,
         urls: Set<String>,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -177,7 +181,7 @@ class RichTextParser {
             val wordList = paragraph.trimEnd().split(' ')
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, urls, emojis, tags))
+                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
             }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
@@ -229,6 +233,7 @@ class RichTextParser {
     private fun wordIdentifier(
         word: String,
         images: Set<String>,
+        videos: Set<String>,
         urls: Set<String>,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -238,6 +243,8 @@ class RichTextParser {
         if (word.startsWith("data:image/") && Base64Image.isBase64(word)) return Base64Segment(word)
 
         if (images.contains(word)) return ImageSegment(word)
+
+        if (videos.contains(word)) return VideoSegment(word)
 
         if (urls.contains(word)) return LinkSegment(word)
 
