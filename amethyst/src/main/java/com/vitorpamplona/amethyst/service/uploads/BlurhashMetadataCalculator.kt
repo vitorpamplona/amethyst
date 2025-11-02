@@ -31,10 +31,24 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
 
 object BlurhashMetadataCalculator {
-    fun shouldAttempt(mimeType: String?): Boolean =
-        mimeType?.let {
-            it.startsWith("image/", ignoreCase = true) || it.startsWith("video/", ignoreCase = true)
-        } ?: false
+    private fun isImage(mimeType: String?) = mimeType?.startsWith("image/", ignoreCase = true) == true
+
+    private fun isVideo(mimeType: String?) = mimeType?.startsWith("video/", ignoreCase = true) == true
+
+    fun shouldAttempt(mimeType: String?): Boolean = isImage(mimeType) || isVideo(mimeType)
+
+    private fun createBitmapOptions() =
+        BitmapFactory.Options().apply {
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+
+    private fun processImage(
+        bitmap: Bitmap?,
+        dimPrecomputed: DimensionTag?,
+    ): Pair<BlurhashWrapper?, DimensionTag?> {
+        val (blur, dim) = processBitmap(bitmap)
+        return blur to (dim ?: dimPrecomputed)
+    }
 
     fun computeFromBytes(
         data: ByteArray,
@@ -42,14 +56,11 @@ object BlurhashMetadataCalculator {
         dimPrecomputed: DimensionTag?,
     ): Pair<BlurhashWrapper?, DimensionTag?> =
         when {
-            mimeType?.startsWith("image/", ignoreCase = true) == true -> {
-                val options = BitmapFactory.Options()
-                options.inPreferredConfig = Bitmap.Config.ARGB_8888
-                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, options)
-                val (blur, dim) = processBitmap(bitmap)
-                blur to (dim ?: dimPrecomputed)
+            isImage(mimeType) -> {
+                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
+                processImage(bitmap, dimPrecomputed)
             }
-            mimeType?.startsWith("video/", ignoreCase = true) == true -> {
+            isVideo(mimeType) -> {
                 val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(ByteArrayMediaDataSource(data))
@@ -71,16 +82,13 @@ object BlurhashMetadataCalculator {
 
         return try {
             when {
-                mimeType?.startsWith("image/", ignoreCase = true) == true ->
+                isImage(mimeType) ->
                     context.contentResolver.openInputStream(uri)?.use { stream ->
-                        val options = BitmapFactory.Options()
-                        options.inPreferredConfig = Bitmap.Config.ARGB_8888
-                        val bitmap = BitmapFactory.decodeStream(stream, null, options)
-                        val (blur, dim) = processBitmap(bitmap)
-                        blur to (dim ?: dimPrecomputed)
+                        val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
+                        processImage(bitmap, dimPrecomputed)
                     } ?: (null to dimPrecomputed)
 
-                mimeType?.startsWith("video/", ignoreCase = true) == true -> {
+                isVideo(mimeType) -> {
                     val retriever = MediaMetadataRetriever()
                     try {
                         retriever.setDataSource(context, uri)
@@ -89,6 +97,7 @@ object BlurhashMetadataCalculator {
                         retriever.release()
                     }
                 }
+
                 else -> null
             }
         } catch (e: Exception) {

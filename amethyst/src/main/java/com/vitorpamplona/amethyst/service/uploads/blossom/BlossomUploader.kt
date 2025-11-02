@@ -52,20 +52,6 @@ import java.io.InputStream
 import java.util.Base64
 
 class BlossomUploader {
-    data class StreamInfo(
-        val hash: HexKey,
-        val size: Long,
-    )
-
-    /**
-     * Calculate SHA256 hash and size of a file by streaming it in chunks
-     * to avoid loading the entire file into memory.
-     */
-    private fun calculateHashAndSize(inputStream: InputStream): StreamInfo {
-        val (hash, size) = sha256StreamWithCount(inputStream)
-        return StreamInfo(hash.toHexKey(), size)
-    }
-
     fun Context.getFileName(uri: Uri): String? =
         when (uri.scheme) {
             ContentResolver.SCHEME_CONTENT -> getContentFileName(uri)
@@ -100,23 +86,23 @@ class BlossomUploader {
         val imageInputStreamForHash = contentResolver.openInputStream(uri)
         checkNotNull(imageInputStreamForHash) { "Can't open the image input stream" }
 
-        val streamInfo =
-            imageInputStreamForHash.use {
-                calculateHashAndSize(it)
+        val (hash, size) =
+            imageInputStreamForHash.use { stream ->
+                val (hashBytes, totalBytes) = sha256StreamWithCount(stream)
+                hashBytes.toHexKey() to totalBytes
             }
 
         val localMetadata = BlurhashMetadataCalculator.computeFromUri(context, uri, myContentType)
 
         val imageInputStream = contentResolver.openInputStream(uri)
-
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
         val serverResult =
             imageInputStream.use { stream ->
                 upload(
                     stream,
-                    streamInfo.hash,
-                    streamInfo.size,
+                    hash,
+                    size,
                     fileName,
                     myContentType,
                     alt,

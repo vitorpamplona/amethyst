@@ -128,15 +128,12 @@ class Nip96Uploader {
                 )
             }
 
-        val merged =
-            localMetadata?.let { (blur, dim) ->
-                serverResult.copy(
-                    dimension = dim ?: serverResult.dimension,
-                    blurHash = blur ?: serverResult.blurHash,
-                )
-            } ?: serverResult
-
-        return merged
+        return localMetadata?.let { (blur, dim) ->
+            serverResult.copy(
+                dimension = dim ?: serverResult.dimension,
+                blurHash = blur ?: serverResult.blurHash,
+            )
+        } ?: serverResult
     }
 
     suspend fun upload(
