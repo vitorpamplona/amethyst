@@ -45,4 +45,12 @@ data class MediaUploadResult(
     val ipfs: String? = null,
     // blurhash value for previews
     val blurHash: BlurhashWrapper? = null,
-)
+) {
+    fun mergeLocalMetadata(localMetadata: Pair<BlurhashWrapper?, DimensionTag?>?): MediaUploadResult =
+        localMetadata?.let { (blur, dim) ->
+            copy(
+                dimension = dim ?: dimension,
+                blurHash = blur ?: blurHash,
+            )
+        } ?: this
+}

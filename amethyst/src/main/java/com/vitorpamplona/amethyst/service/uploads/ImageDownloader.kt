@@ -50,64 +50,54 @@ class ImageDownloader {
      * Stream download and calculate hash for verification without loading entire file into memory.
      * This is memory-efficient for large files (videos, high-res images, etc.)
      */
-    suspend fun waitAndVerifyStream(
-        imageUrl: String,
-        okHttpClient: (url: String) -> OkHttpClient,
-    ): StreamVerification? =
+    private suspend fun <T> retryWithDelay(
+        maxAttempts: Int = 15,
+        delayMs: Long = 1000,
+        operation: suspend () -> T?,
+    ): T? =
         withContext(Dispatchers.IO) {
-            var verification: StreamVerification? = null
+            var result: T? = null
             var tentatives = 0
 
             // Servers are usually not ready, so tries to download it for 15 times/seconds.
-            while (verification == null && tentatives < 15) {
-                verification =
+            while (result == null && tentatives < maxAttempts) {
+                result =
                     try {
-                        tryStreamAndVerify(imageUrl, okHttpClient)
+                        operation()
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         null
                     }
 
-                if (verification == null) {
+                if (result == null) {
                     tentatives++
-                    delay(1000)
+                    delay(delayMs)
                 }
             }
 
-            return@withContext verification
+            return@withContext result
         }
+
+    suspend fun waitAndVerifyStream(
+        imageUrl: String,
+        okHttpClient: (url: String) -> OkHttpClient,
+    ): StreamVerification? = retryWithDelay { tryStreamAndVerify(imageUrl, okHttpClient) }
 
     suspend fun waitAndGetImage(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): Blob? =
-        withContext(Dispatchers.IO) {
-            var imageData: Blob? = null
-            var tentatives = 0
+    ): Blob? = retryWithDelay { tryGetTheImage(imageUrl, okHttpClient) }
 
-            // Servers are usually not ready, so tries to download it for 15 times/seconds.
-            while (imageData == null && tentatives < 15) {
-                imageData =
-                    try {
-                        tryGetTheImage(imageUrl, okHttpClient)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        null
-                    }
+    private data class HttpConnection(
+        val connection: HttpURLConnection,
+        val responseCode: Int,
+        val contentType: String?,
+    )
 
-                if (imageData == null) {
-                    tentatives++
-                    delay(1000)
-                }
-            }
-
-            return@withContext imageData
-        }
-
-    private suspend fun tryStreamAndVerify(
+    private suspend fun openHttpConnection(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): StreamVerification? =
+    ): HttpConnection =
         withContext(Dispatchers.IO) {
             // TODO: Migrate to OkHttp
             HttpURLConnection.setFollowRedirects(true)
@@ -122,6 +112,7 @@ class ImageDownloader {
             huc.instanceFollowRedirects = true
             var responseCode = huc.responseCode
 
+            // Handle redirects
             if (responseCode in 300..400) {
                 val newUrl: String = huc.getHeaderField("Location")
 
@@ -137,24 +128,38 @@ class ImageDownloader {
                 responseCode = huc.responseCode
             }
 
+            return@withContext HttpConnection(
+                connection = huc,
+                responseCode = responseCode,
+                contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
+            )
+        }
+
+    private suspend fun tryStreamAndVerify(
+        imageUrl: String,
+        okHttpClient: (url: String) -> OkHttpClient,
+    ): StreamVerification? =
+        withContext(Dispatchers.IO) {
+            val httpConn = openHttpConnection(imageUrl, okHttpClient)
+
             return@withContext try {
-                if (responseCode in 200..300) {
+                if (httpConn.responseCode in 200..300) {
                     val (hash, totalBytes) =
-                        huc.inputStream.use {
+                        httpConn.connection.inputStream.use {
                             sha256StreamWithCount(it)
                         }
 
                     StreamVerification(
                         hash = hash.toHexKey(),
                         size = totalBytes,
-                        contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
+                        contentType = httpConn.contentType,
                     )
                 } else {
                     null
                 }
             } finally {
                 // Always disconnect to release connection resources
-                huc.disconnect()
+                httpConn.connection.disconnect()
             }
         }
 
@@ -163,41 +168,19 @@ class ImageDownloader {
         okHttpClient: (url: String) -> OkHttpClient,
     ): Blob? =
         withContext(Dispatchers.IO) {
-            // TODO: Migrate to OkHttp
-            HttpURLConnection.setFollowRedirects(true)
-            var url = URL(imageUrl)
-            var clientProxy = okHttpClient(imageUrl).proxy
-            var huc =
-                if (clientProxy != null) {
-                    url.openConnection(clientProxy) as HttpURLConnection
+            val httpConn = openHttpConnection(imageUrl, okHttpClient)
+
+            return@withContext try {
+                if (httpConn.responseCode in 200..300) {
+                    Blob(
+                        httpConn.connection.inputStream.use { it.readBytes() },
+                        httpConn.contentType,
+                    )
                 } else {
-                    url.openConnection() as HttpURLConnection
+                    null
                 }
-            huc.instanceFollowRedirects = true
-            var responseCode = huc.responseCode
-
-            if (responseCode in 300..400) {
-                val newUrl: String = huc.getHeaderField("Location")
-
-                // open the new connnection again
-                url = URL(newUrl)
-                clientProxy = okHttpClient(newUrl).proxy
-                huc =
-                    if (clientProxy != null) {
-                        url.openConnection(clientProxy) as HttpURLConnection
-                    } else {
-                        url.openConnection() as HttpURLConnection
-                    }
-                responseCode = huc.responseCode
-            }
-
-            return@withContext if (responseCode in 200..300) {
-                Blob(
-                    huc.inputStream.use { it.readBytes() },
-                    huc.headerFields.get("Content-Type")?.firstOrNull(),
-                )
-            } else {
-                null
+            } finally {
+                httpConn.connection.disconnect()
             }
         }
 }

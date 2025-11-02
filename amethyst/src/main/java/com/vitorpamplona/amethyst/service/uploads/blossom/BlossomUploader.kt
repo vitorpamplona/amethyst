@@ -97,8 +97,8 @@ class BlossomUploader {
         val imageInputStream = contentResolver.openInputStream(uri)
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        val serverResult =
-            imageInputStream.use { stream ->
+        return imageInputStream
+            .use { stream ->
                 upload(
                     stream,
                     hash,
@@ -112,14 +112,7 @@ class BlossomUploader {
                     httpAuth,
                     context,
                 )
-            }
-
-        return localMetadata?.let { (blur, dim) ->
-            serverResult.copy(
-                dimension = dim ?: serverResult.dimension,
-                blurHash = blur ?: serverResult.blurHash,
-            )
-        } ?: serverResult
+            }.mergeLocalMetadata(localMetadata)
     }
 
     fun encodeAuth(event: BlossomAuthorizationEvent): String {

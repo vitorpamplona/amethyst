@@ -112,8 +112,8 @@ class Nip96Uploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        val serverResult =
-            imageInputStream.use { stream ->
+        return imageInputStream
+            .use { stream ->
                 upload(
                     stream,
                     length,
@@ -126,14 +126,7 @@ class Nip96Uploader {
                     httpAuth,
                     context,
                 )
-            }
-
-        return localMetadata?.let { (blur, dim) ->
-            serverResult.copy(
-                dimension = dim ?: serverResult.dimension,
-                blurHash = blur ?: serverResult.blurHash,
-            )
-        } ?: serverResult
+            }.mergeLocalMetadata(localMetadata)
     }
 
     suspend fun upload(
