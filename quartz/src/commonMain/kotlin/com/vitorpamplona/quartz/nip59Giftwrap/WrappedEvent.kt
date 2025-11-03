@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip59Giftwrap
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlinx.serialization.Transient
 
 @Immutable
 open class WrappedEvent(

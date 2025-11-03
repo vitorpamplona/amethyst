@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon

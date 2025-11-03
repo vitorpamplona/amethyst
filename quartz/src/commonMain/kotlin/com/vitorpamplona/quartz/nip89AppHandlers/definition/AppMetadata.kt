@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
-import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.serialization.SerialName

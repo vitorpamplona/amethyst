@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.theme
 
-import android.R.attr.fontFamily
-import android.R.id.primary
 import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context

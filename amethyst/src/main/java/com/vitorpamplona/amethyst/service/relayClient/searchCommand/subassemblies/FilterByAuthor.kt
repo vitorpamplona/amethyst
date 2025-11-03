@@ -27,8 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.ifEmpty
-import kotlin.collections.plus
 
 val MetadataKindList = listOf(MetadataEvent.KIND)
 

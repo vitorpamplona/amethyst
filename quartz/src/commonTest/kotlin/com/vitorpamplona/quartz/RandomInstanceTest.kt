@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz
 
 import com.vitorpamplona.quartz.utils.RandomInstance
-import kotlin.collections.all
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

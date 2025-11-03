@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.ifEmpty
 
 fun pickRelaysToLoadUsers(
     users: Set<User>,
