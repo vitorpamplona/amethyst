@@ -20,6 +20,26 @@
  */
 package com.vitorpamplona.quartz.utils.sha256
 
+import java.io.InputStream
+
 val pool = Sha256Pool(5) // max parallel operations
 
 actual fun sha256(data: ByteArray) = pool.hash(data)
+
+/**
+ * Calculate SHA256 hash while counting bytes read from the stream.
+ * Returns both the hash and the number of bytes processed.
+ * This is more efficient than reading the stream twice.
+ *
+ * @param inputStream The input stream to hash
+ * @param bufferSize Size of chunks to read (default 8KB)
+ * @return Pair of (hash bytes, bytes read count)
+ */
+fun sha256StreamWithCount(
+    inputStream: InputStream,
+    bufferSize: Int = 8192,
+): Pair<ByteArray, Long> {
+    val countingStream = CountingInputStream(inputStream)
+    val hash = pool.hashStream(countingStream, bufferSize)
+    return Pair(hash, countingStream.bytesRead)
+}

@@ -20,42 +20,34 @@
  */
 package com.vitorpamplona.quartz.utils.sha256
 
+import java.io.FilterInputStream
 import java.io.InputStream
-import java.security.MessageDigest
 
-class Sha256Hasher {
-    val digest = MessageDigest.getInstance("SHA-256")
+class CountingInputStream(
+    inputStream: InputStream,
+) : FilterInputStream(inputStream) {
+    var bytesRead: Long = 0
+        private set
 
-    fun hash(byteArray: ByteArray) = digest.digest(byteArray).also { digest.reset() }
+    override fun read(): Int {
+        val byte = super.read()
+        if (byte != -1) bytesRead++
+        return byte
+    }
 
-    fun digest(byteArray: ByteArray) = digest.digest(byteArray)
+    override fun read(
+        b: ByteArray,
+        off: Int,
+        len: Int,
+    ): Int {
+        val count = super.read(b, off, len)
+        if (count > 0) bytesRead += count
+        return count
+    }
 
-    fun reset() = digest.reset()
-
-    /**
-     * Calculate SHA256 hash by streaming the input in chunks.
-     * This avoids loading the entire input into memory at once.
-     *
-     * @param inputStream The input stream to hash
-     * @param bufferSize Size of chunks to read (default 8KB)
-     * @return SHA256 hash bytes
-     */
-    fun hashStream(
-        inputStream: InputStream,
-        bufferSize: Int = 8192,
-    ): ByteArray {
-        val buffer = ByteArray(bufferSize)
-        try {
-            var bytesRead: Int
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                digest.update(buffer, 0, bytesRead)
-            }
-
-            return digest.digest()
-        } finally {
-            // Always reset digest to prevent contaminating the pool on exceptions
-            digest.reset()
-        }
+    override fun skip(n: Long): Long {
+        val skipped = super.skip(n)
+        bytesRead += skipped
+        return skipped
     }
 }

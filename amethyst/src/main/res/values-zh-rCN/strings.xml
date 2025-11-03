@@ -455,9 +455,21 @@
     <string name="follow_set_empty_feed_msg">        似乎你还没有任何关注集。
         \n轻按下方刷新，或者轻按“+”按钮新建一个。
     </string>
+    <string name="follow_set_create_btn_label">新建</string>
     <string name="follow_set_add_author_from_note_action">添加作者到关注集</string>
     <string name="follow_set_profile_actions_menu_description">从列表中添加或删除用户，或用此用户创建一个新列表。</string>
-    <string name="follow_set_icon_description">%1$s 列表的图标</string>
+    <string name="follow_set_icon_description">关注集的图标</string>
+    <string name="follow_set_public_presence_indicator">%1$s 是公开成员</string>
+    <string name="follow_set_private_presence_indicator">%1$s 是私密成员</string>
+    <string name="follow_set_public_member_add_label">添加为公开成员</string>
+    <string name="follow_set_private_member_add_label">添加为私密成员</string>
+    <string name="follow_set_public_members_header_label2">公开成员</string>
+    <string name="follow_set_private_members_header_label2">私密成员</string>
+    <string name="follow_set_public_members_header_label">公开的个人资料</string>
+    <string name="follow_set_private_members_header_label">私密配置文件</string>
+    <string name="follow_set_single_member_label">成员</string>
+    <string name="follow_set_multiple_member_label">成员</string>
+    <string name="follow_set_empty_label">无成员</string>
     <string name="follow_set_absence_indicator">此列表中没有 %1$s</string>
     <string name="follow_set_man_dialog_title">您的关注集</string>
     <string name="follow_set_empty_dialog_msg">未找到关注集，或者你还没有任何关注集。轻按下方刷新，或使用按钮新建。</string>
@@ -466,10 +478,19 @@
     <string name="follow_set_creation_item_label">创建用户新的 %1$s 列表</string>
     <string name="follow_set_creation_item_description">创建 %1$s 关注集，并添加 %2$s 到其中。</string>
     <string name="follow_set_creation_dialog_title">新的 %1$s 列表</string>
+    <string name="follow_set_copy_dialog_title">复制/克隆关注集</string>
+    <string name="follow_set_desc_modify_label">修改描述</string>
+    <string name="follow_set_empty_desc_label">此列表没有描述</string>
+    <string name="follow_set_current_desc_label">当前描述：</string>
+    <string name="follow_set_copy_indicator_description">你可以为下方的克隆集合设置自定义名称、描述。</string>
     <string name="follow_set_creation_name_label">集合名</string>
+    <string name="follow_set_copy_name_label">(原始集合名称)</string>
     <string name="follow_set_creation_desc_label">集合描述（可选）</string>
+    <string name="follow_set_copy_desc_label">(原始集合描述)</string>
     <string name="follow_set_creation_action_btn_label">新建集</string>
+    <string name="follow_set_copy_action_btn_label">复制/克隆集</string>
     <string name="follow_set_rename_btn_label">重命名集</string>
+    <string name="follow_set_desc_modify_btn_label">修改</string>
     <string name="follow_set_rename_dialog_indicator_first_part">正将集合名称从 </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> 改为</string>
     <string name="connect_through_your_orbot_setup_short">默认端口为 9050</string>
@@ -688,6 +709,17 @@
     <string name="paste_from_clipboard">粘贴自剪贴板</string>
     <string name="invalid_nip47_uri_title">无效的 NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">URI %1$s 不是有效的 NIP-47 登录 URI。</string>
+    <string name="connect_to_new_nwc_wallet">连接到新的 NWC 钱包</string>
+    <string name="couldnt_find_nwc_wallets">未找到钱包</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst 找不到任何支持 Nostr Wallet Connect (NWC) 的钱包应用.
+\n\n你可以做的事情：
+\n\t1. 验证 NWC 支持：仔细确认偏好的钱包应用和 Nostr Wallet Connect 兼容。
+\n\t2. 创建连接：前往钱包应用并创建新的 NWC 连接。
+\n\t3.链接到 Amethyst: 你的钱包通常会给你三个选项：
+\n\t\t3.1 自动链接：自动打开并连接到 Amethyst 的按钮。如果是这样， 单击那个按钮，打开 Amethyst 并在新屏上按保存。
+\n\t\t3.2 手动链接: 你可以复制的连接 URI，单击这个屏幕上的粘贴图标直接输入它。
+\n\t\t3.3 二维码: 钱包会创建一个你可以从这个屏幕中的二维码按钮那里读取的二维码。
+    </string>
     <string name="language_description">用于应用程序界面</string>
     <string name="theme_description">暗色、亮色或系统主题</string>
     <string name="automatically_load_images_gifs_description">自动加载图像和 GIF</string>
@@ -919,6 +951,16 @@
     <string name="search_relays_not_found_description">通过创建专用于关键词和标签检索的中继列表能够改善搜索结果。</string>
     <string name="search_relays_not_found_editing">设置 1 ~ 3 个支持 NIP-50 的中继，用于关键词和标签检索。</string>
     <string name="search_relays_not_found_examples">示例：\n - nostr.wine\n - reiny.nostr.band\n - reliy.noswhere.com</string>
+    <string name="outbox_relays_title">发件箱中继</string>
+    <string name="outbox_relays_not_found">设置您的公共发件箱中继来发布内容</string>
+    <string name="outbox_relays_not_found_description">创建专为接收您的内容而设计的中继列表对于您的Nostr体验至关重要，也是您的关注者找到您的唯一途径。 </string>
+    <string name="outbox_relays_not_found_editing">插入 1-3 个接收你帖子的中继。确保它们不需要付款，如果你没有付费来插入</string>
+    <string name="outbox_relays_not_found_examples">好的选项是：\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">收件箱中继</string>
+    <string name="inbox_relays_not_found">设置您的公共收件箱中继来接收通知</string>
+    <string name="inbox_relays_not_found_description">创建专为接收通知而设计的中继列表对于您的 Nostr 体验至关重要。 </string>
+    <string name="inbox_relays_not_found_editing">插入 1-3 个为你接受通知的中继。确保它们不需要发送者的付款或 web of trust，否则你只能接收付款人或长期用户的通知</string>
+    <string name="inbox_relays_not_found_examples">好的选项是：\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">DM 上传</string>
     <string name="relay_settings">中继设置</string>
     <string name="public_home_section">公共时间线中继</string>

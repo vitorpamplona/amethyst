@@ -441,7 +441,7 @@ class ChatNewMessageViewModel :
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val message = message.text
 
         val contentWarningReason = if (wantsToMarkAsSensitive) "" else null

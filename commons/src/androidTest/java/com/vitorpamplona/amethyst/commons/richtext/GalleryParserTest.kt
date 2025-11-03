@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 class GalleryParserTest {
     @Test
     fun testMixedImageAndVideoRenderedIndividually() {
-        // Test the bug: when mixed image + video, both should be rendered individually
+        // Test that when image + video are in consecutive paragraphs, both should be rendered individually (not as gallery)
         val text =
             "Renfield (2023)\n" +
                 "https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg\n" +
@@ -38,19 +38,29 @@ class GalleryParserTest {
 
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
-        // Should have 2 image segments (image + video URLs)
-        Assert.assertEquals(2, state.paragraphs.size)
+        // Should have 3 paragraphs (text, image, video)
+        Assert.assertEquals(3, state.paragraphs.size)
 
+        // First paragraph is text
         Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
         Assert.assertEquals(1, state.paragraphs[0].words.size)
-        Assert.assertTrue(state.paragraphs[1] is ImageGalleryParagraph)
+
+        // Second paragraph is image (rendered individually, not as gallery)
+        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        Assert.assertEquals(1, state.paragraphs[1].words.size)
+        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
         Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[1].words[0].segmentText)
-        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[1].words[1].segmentText)
+
+        // Third paragraph is video (rendered individually)
+        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        Assert.assertEquals(1, state.paragraphs[2].words.size)
+        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[2].words[0].segmentText)
     }
 
     @Test
     fun testMixedImageAndVideoRenderedIndividuallyDoubled() {
-        // Test the bug: when mixed image + video, both should be rendered individually
+        // Test that when image + video are repeated, both should be rendered individually (not as gallery)
         val text =
             "Renfield (2023)\n" +
                 "https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg\n" +
@@ -61,19 +71,28 @@ class GalleryParserTest {
 
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
-        // Should have 2 image segments (image + video URLs)
-        Assert.assertEquals(4, state.paragraphs.size)
+        // Should have 6 paragraphs (text, image, video, text, image, video)
+        Assert.assertEquals(6, state.paragraphs.size)
 
+        // First set: text, image, video
         Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
         Assert.assertEquals(1, state.paragraphs[0].words.size)
-        Assert.assertTrue(state.paragraphs[1] is ImageGalleryParagraph)
+        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
         Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[1].words[0].segmentText)
-        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[1].words[1].segmentText)
         Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[2].words.size)
-        Assert.assertTrue(state.paragraphs[3] is ImageGalleryParagraph)
-        Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[3].words[0].segmentText)
-        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[3].words[1].segmentText)
+        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[2].words[0].segmentText)
+
+        // Second set: text, image, video
+        Assert.assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
+        Assert.assertEquals(1, state.paragraphs[3].words.size)
+        Assert.assertTrue(state.paragraphs[4] !is ImageGalleryParagraph)
+        Assert.assertTrue(state.paragraphs[4].words[0] is ImageSegment)
+        Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[4].words[0].segmentText)
+        Assert.assertTrue(state.paragraphs[5] !is ImageGalleryParagraph)
+        Assert.assertTrue(state.paragraphs[5].words[0] is VideoSegment)
+        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[5].words[0].segmentText)
     }
 
     @Test
@@ -139,5 +158,68 @@ class GalleryParserTest {
         Assert.assertTrue("Should render as gallery", state.paragraphs[1] is ImageGalleryParagraph)
         Assert.assertEquals("https://relay.dergigi.com/d6a3e33b101fe219ef251ac6261c10392c2af9918c3c252d4c202016b0b4ec83.jpg", state.paragraphs[1].words[0].segmentText)
         Assert.assertEquals("https://relay.dergigi.com/d60c9c562912573f214c2b1958cc20bf8913cd718d2ed9e020621e3e3120634b.jpg", state.paragraphs[1].words[1].segmentText)
+    }
+
+    @Test
+    fun testMixedImageAndVideoInSameParagraph() {
+        // Test the user's specific example: mixed image and video in same paragraph should render individually
+        val text =
+            "The Crow (1994)\n" +
+                "https://image.tmdb.org/t/p/original/1r7iOhXSbbuUTORNEUOvCUkQ86K.jpg\n" +
+                "https://archive.org/download/the-crow-1994_20231024/The%20Crow%201994.rar/The%20Crow%201994.1080p.BluRay.x264%20.%20NVEE%2FThe%20Crow%201994.1080p.BluRay.x264%20.%20NVEE.mp4\n" +
+                "#fantasy #action #thriller #film #movies #kinostr"
+        val state = RichTextParser().parseText(text, EmptyTagList, null)
+
+        // Should have 4 paragraphs (text, image, video, hashtags)
+        Assert.assertEquals(4, state.paragraphs.size)
+
+        // First paragraph is text
+        Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
+
+        // Second paragraph is image (rendered individually, not as gallery)
+        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
+        Assert.assertEquals("https://image.tmdb.org/t/p/original/1r7iOhXSbbuUTORNEUOvCUkQ86K.jpg", state.paragraphs[1].words[0].segmentText)
+
+        // Third paragraph is video (rendered individually)
+        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        Assert.assertEquals("https://archive.org/download/the-crow-1994_20231024/The%20Crow%201994.rar/The%20Crow%201994.1080p.BluRay.x264%20.%20NVEE%2FThe%20Crow%201994.1080p.BluRay.x264%20.%20NVEE.mp4", state.paragraphs[2].words[0].segmentText)
+
+        // Fourth paragraph is hashtags
+        Assert.assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
+    }
+
+    @Test
+    fun testDesperadoExample() {
+        // Test the exact example provided by the user
+        val text =
+            "Desperado (1995)\n" +
+                "https://media.themoviedb.org/t/p/w440_and_h660_face/e3gwpBeXpvGZsxUya9zNym5QXrw.jpg\n" +
+                "https://archive.org/download/desperado.-1995.1080p.-blu-ray.x-264.-yify/Desperado.1995.1080p.BluRay.x264.YIFY.mp4\n" +
+                "#action #crime #film #movies #kinostr"
+        val state = RichTextParser().parseText(text, EmptyTagList, null)
+
+        // Should have 4 paragraphs (text, image, video, hashtags)
+        Assert.assertEquals(4, state.paragraphs.size)
+
+        // First paragraph is text
+        Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
+        Assert.assertEquals("Desperado (1995)", state.paragraphs[0].words[0].segmentText)
+
+        // Second paragraph is image (rendered individually, not as gallery)
+        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        Assert.assertEquals(1, state.paragraphs[1].words.size)
+        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
+        Assert.assertEquals("https://media.themoviedb.org/t/p/w440_and_h660_face/e3gwpBeXpvGZsxUya9zNym5QXrw.jpg", state.paragraphs[1].words[0].segmentText)
+
+        // Third paragraph is video (rendered individually)
+        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        Assert.assertEquals(1, state.paragraphs[2].words.size)
+        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        Assert.assertEquals("https://archive.org/download/desperado.-1995.1080p.-blu-ray.x-264.-yify/Desperado.1995.1080p.BluRay.x264.YIFY.mp4", state.paragraphs[2].words[0].segmentText)
+
+        // Fourth paragraph is hashtags
+        Assert.assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
     }
 }

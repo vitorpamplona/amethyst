@@ -59,6 +59,11 @@ class ImageSegment(
 ) : Segment(segment)
 
 @Immutable
+class VideoSegment(
+    segment: String,
+) : Segment(segment)
+
+@Immutable
 class LinkSegment(
     segment: String,
 ) : Segment(segment)
