@@ -30,6 +30,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -106,24 +107,26 @@ class Nip96Uploader {
         val myContentType = contentType ?: contentResolver.getType(uri)
         val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
 
+        val localMetadata = BlurhashMetadataCalculator.computeFromUri(context, uri, myContentType)
         val imageInputStream = contentResolver.openInputStream(uri)
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return imageInputStream.use { stream ->
-            upload(
-                stream,
-                length,
-                myContentType,
-                alt,
-                sensitiveContent,
-                server,
-                okHttpClient,
-                onProgress,
-                httpAuth,
-                context,
-            )
-        }
+        return imageInputStream
+            .use { stream ->
+                upload(
+                    stream,
+                    length,
+                    myContentType,
+                    alt,
+                    sensitiveContent,
+                    server,
+                    okHttpClient,
+                    onProgress,
+                    httpAuth,
+                    context,
+                )
+            }.mergeLocalMetadata(localMetadata)
     }
 
     suspend fun upload(
