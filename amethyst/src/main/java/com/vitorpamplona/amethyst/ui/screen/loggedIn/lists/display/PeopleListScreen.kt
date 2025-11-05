@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display
 
-import android.annotation.SuppressLint
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,7 +76,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -258,7 +259,30 @@ private fun RenderAddUserFieldAndSuggestions(
 
     Spacer(HalfVertSpacer)
 
-    UserSearchField(viewModel.userSuggestions)
+    var userName by remember(viewModel) { mutableStateOf(TextFieldValue(viewModel.userSuggestions.currentWord.value)) }
+    val focusManager = LocalFocusManager.current
+
+    OutlinedTextField(
+        label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+        modifier = Modifier.padding(horizontal = Size10dp).fillMaxWidth(),
+        value = userName,
+        onValueChange = {
+            userName = it
+            viewModel.userSuggestions.processCurrentWord(it.text)
+        },
+        singleLine = true,
+        trailingIcon = {
+            IconButton(
+                onClick = {
+                    userName = TextFieldValue("")
+                    viewModel.userSuggestions.processCurrentWord("")
+                    focusManager.clearFocus()
+                },
+            ) {
+                ClearTextIcon()
+            }
+        },
+    )
 
     ShowUserSuggestions(
         userSuggestions = viewModel.userSuggestions,
@@ -269,11 +293,19 @@ private fun RenderAddUserFieldAndSuggestions(
             accountViewModel.runIOCatching {
                 viewModel.addUserToSet(user, pagerState.currentPage == 0)
             }
+            userName =
+                userName.copy(
+                    selection = TextRange(0, userName.text.length),
+                )
         },
         onDelete = { user ->
             accountViewModel.runIOCatching {
                 viewModel.removeUserFromSet(user, pagerState.currentPage == 0)
             }
+            userName =
+                userName.copy(
+                    selection = TextRange(0, userName.text.length),
+                )
         },
         accountViewModel = accountViewModel,
     )
@@ -663,39 +695,4 @@ fun ListActionsMenu(
             },
         )
     }
-}
-
-@SuppressLint("StateFlowValueCalledInComposition")
-@Composable
-fun UserSearchField(
-    userSuggestions: UserSuggestionState,
-    modifier: Modifier = Modifier,
-) {
-    var userName by remember(userSuggestions) { mutableStateOf(userSuggestions.currentWord.value) }
-    val focusManager = LocalFocusManager.current
-
-    OutlinedTextField(
-        label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
-        modifier =
-            modifier
-                .padding(horizontal = Size10dp)
-                .fillMaxWidth(),
-        value = userName,
-        onValueChange = {
-            userName = it
-            userSuggestions.processCurrentWord(it)
-        },
-        singleLine = true,
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    userName = ""
-                    userSuggestions.processCurrentWord("")
-                    focusManager.clearFocus()
-                },
-            ) {
-                ClearTextIcon()
-            }
-        },
-    )
 }
