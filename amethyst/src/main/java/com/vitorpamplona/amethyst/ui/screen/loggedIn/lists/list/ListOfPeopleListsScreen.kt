@@ -61,10 +61,10 @@ fun ListOfPeopleListsScreen(
     nav: INav,
 ) {
     ListOfPeopleListsScreen(
-        listFlow = accountViewModel.account.peopleListsState.uiListFlow,
+        listFlow = accountViewModel.account.peopleLists.uiListFlow,
         addItem = { title: String, description: String? ->
             accountViewModel.runIOCatching {
-                accountViewModel.account.peopleListsState.addFollowList(
+                accountViewModel.account.peopleLists.addFollowList(
                     listName = title,
                     listDescription = description,
                     account = accountViewModel.account,
@@ -76,7 +76,7 @@ fun ListOfPeopleListsScreen(
         },
         renameItem = { followSet, newValue ->
             accountViewModel.runIOCatching {
-                accountViewModel.account.peopleListsState.renameFollowList(
+                accountViewModel.account.peopleLists.renameFollowList(
                     newName = newValue,
                     peopleList = followSet,
                     account = accountViewModel.account,
@@ -85,7 +85,7 @@ fun ListOfPeopleListsScreen(
         },
         changeItemDescription = { followSet, newDescription ->
             accountViewModel.runIOCatching {
-                accountViewModel.account.peopleListsState.modifyFollowSetDescription(
+                accountViewModel.account.peopleLists.modifyFollowSetDescription(
                     newDescription = newDescription,
                     peopleList = followSet,
                     account = accountViewModel.account,
@@ -94,7 +94,7 @@ fun ListOfPeopleListsScreen(
         },
         cloneItem = { followSet, customName, customDescription ->
             accountViewModel.runIOCatching {
-                accountViewModel.account.peopleListsState.cloneFollowSet(
+                accountViewModel.account.peopleLists.cloneFollowSet(
                     currentPeopleList = followSet,
                     customCloneName = customName,
                     customCloneDescription = customDescription,
@@ -104,7 +104,7 @@ fun ListOfPeopleListsScreen(
         },
         deleteItem = { followSet ->
             accountViewModel.runIOCatching {
-                accountViewModel.account.peopleListsState.deleteFollowSet(
+                accountViewModel.account.peopleLists.deleteFollowSet(
                     identifierTag = followSet.identifierTag,
                     account = accountViewModel.account,
                 )

@@ -24,8 +24,10 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
@@ -41,7 +43,8 @@ import kotlinx.coroutines.flow.stateIn
 
 class MergedFollowListsState(
     val kind3List: Kind3FollowListState,
-    val followSetList: PeopleListsState,
+    val peopleList: PeopleListsState,
+    val followList: FollowListsState,
     val hashtagList: HashtagListState,
     val geohashList: GeohashListState,
     val communityList: CommunityListState,
@@ -63,13 +66,14 @@ class MergedFollowListsState(
 
     fun mergeLists(
         kind3: Kind3FollowListState.Kind3Follows,
-        followSetProfiles: Set<String>,
+        peopleListProfiles: Set<String>,
+        followListProfiles: Set<String>,
         hashtags: Set<String>,
         geohashes: Set<String>,
         community: Set<CommunityTag>,
     ): AllFollows =
         AllFollows(
-            authors = kind3.authors + followSetProfiles,
+            authors = kind3.authors + peopleListProfiles + followListProfiles,
             hashtags = hashtags,
             geotags = geohashes,
             communities = community.mapTo(mutableSetOf()) { it.address.toValue() },
@@ -77,17 +81,29 @@ class MergedFollowListsState(
 
     val flow: StateFlow<AllFollows> =
         combine(
-            kind3List.flow,
-            followSetList.allPeopleListProfiles,
-            hashtagList.flow,
-            geohashList.flow,
-            communityList.flow,
-            ::mergeLists,
-        ).onStart {
+            listOf(
+                kind3List.flow,
+                peopleList.allGoodPeopleListProfiles,
+                followList.allPeopleListProfiles,
+                hashtagList.flow,
+                geohashList.flow,
+                communityList.flow,
+            ),
+        ) { args ->
+            mergeLists(
+                args[0] as Kind3FollowListState.Kind3Follows,
+                args[1] as Set<HexKey>,
+                args[2] as Set<HexKey>,
+                args[3] as Set<String>,
+                args[4] as Set<String>,
+                args[5] as Set<CommunityTag>,
+            )
+        }.onStart {
             emit(
                 mergeLists(
                     kind3List.flow.value,
-                    followSetList.allPeopleListProfiles.value,
+                    peopleList.allGoodPeopleListProfiles.value,
+                    followList.allPeopleListProfiles.value,
                     hashtagList.flow.value,
                     geohashList.flow.value,
                     communityList.flow.value,
@@ -100,7 +116,8 @@ class MergedFollowListsState(
                 SharingStarted.Eagerly,
                 mergeLists(
                     kind3List.flow.value,
-                    followSetList.allPeopleListProfiles.value,
+                    peopleList.allGoodPeopleListProfiles.value,
+                    followList.allPeopleListProfiles.value,
                     hashtagList.flow.value,
                     geohashList.flow.value,
                     communityList.flow.value,

@@ -286,8 +286,8 @@ class Account(
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
-    val peopleListsState = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
-    val followListsState = FollowListsState(signer, cache, scope)
+    val peopleLists = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
+    val followLists = FollowListsState(signer, cache, scope)
 
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
@@ -325,7 +325,7 @@ class Account(
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
-    val allFollows = MergedFollowListsState(kind3FollowList, peopleListsState, hashtagList, geohashList, communityList, scope)
+    val allFollows = MergedFollowListsState(kind3FollowList, peopleLists, followLists, hashtagList, geohashList, communityList, scope)
 
     val privateDMDecryptionCache = PrivateDMCache(signer)
     val privateZapsDecryptionCache = PrivateZapCache(signer)
@@ -1780,8 +1780,8 @@ class Account(
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
                     newNotesPreProcessor.runNew(newNotes)
-                    peopleListsState.newNotes(newNotes)
-                    followListsState.newNotes(newNotes)
+                    peopleLists.newNotes(newNotes)
+                    followLists.newNotes(newNotes)
                 }
             }
         }
@@ -1790,8 +1790,8 @@ class Account(
             cache.live.deletedEventBundles.collect { deletedNotes ->
                 logTime("Account ${userProfile().toBestDisplayName()} deletedEventBundle Update with ${deletedNotes.size} new notes") {
                     newNotesPreProcessor.runDeleted(deletedNotes)
-                    peopleListsState.deletedNotes(deletedNotes)
-                    followListsState.deletedNotes(deletedNotes)
+                    peopleLists.deletedNotes(deletedNotes)
+                    followLists.deletedNotes(deletedNotes)
                 }
             }
         }
