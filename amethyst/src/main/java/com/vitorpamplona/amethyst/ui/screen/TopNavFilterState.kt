@@ -148,14 +148,14 @@ class TopNavFilterState(
 
     val livePeopleListsFlow: Flow<List<FeedDefinition>> =
         combine(
-            account.peopleListsState.peopleListNotes,
-            account.followListsState.followListNotes,
+            account.peopleLists.peopleListNotes,
+            account.followLists.followListNotes,
             ::mergePeopleLists,
         ).onStart {
             emit(
                 mergePeopleLists(
-                    account.peopleListsState.peopleListNotes.value,
-                    account.followListsState.followListNotes.value,
+                    account.peopleLists.peopleListNotes.value,
+                    account.followLists.followListNotes.value,
                 ),
             )
         }

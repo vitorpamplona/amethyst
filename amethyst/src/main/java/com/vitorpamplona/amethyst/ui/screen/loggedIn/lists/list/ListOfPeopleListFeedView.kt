@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import kotlinx.coroutines.flow.StateFlow
 
@@ -83,7 +83,7 @@ fun AllPeopleListFeedView(
 @Composable
 fun AllPeopleListFeedEmpty(message: String = stringRes(R.string.feed_is_empty)) {
     Column(
-        Modifier.fillMaxSize().padding(horizontal = Size30dp),
+        Modifier.fillMaxSize().padding(horizontal = Size40dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

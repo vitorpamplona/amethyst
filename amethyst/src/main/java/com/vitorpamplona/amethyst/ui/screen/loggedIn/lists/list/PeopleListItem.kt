@@ -22,18 +22,21 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -41,7 +44,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -49,19 +51,110 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
+import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size50ModifierOffset10
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+
+@Preview()
+@Composable
+private fun PeopleListItemPreview() {
+    val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val user2: User = LocalCache.getOrCreateUser("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+    val user3: User = LocalCache.getOrCreateUser("7eb29c126b3628077e2e3d863b917a56b74293aa9d8a9abc26a40ba3f2866baf")
+
+    val samplePeopleList1 =
+        PeopleList(
+            identifierTag = "00001-2222",
+            title = "Sample List Title",
+            description = "Sample List Description",
+            emptySet(),
+            emptySet(),
+        )
+
+    val samplePeopleList2 =
+        PeopleList(
+            identifierTag = "00001-2222",
+            title = "Sample List Title",
+            description = "Sample List Description",
+            setOf(user1, user3),
+            emptySet(),
+        )
+
+    val samplePeopleList3 =
+        PeopleList(
+            identifierTag = "00001-2222",
+            title = "Sample List Title",
+            description = "Sample List Description",
+            emptySet(),
+            setOf(user1, user3),
+        )
+
+    val samplePeopleList4 =
+        PeopleList(
+            identifierTag = "00001-2222",
+            title = "Sample List Title",
+            description = "Sample List Description",
+            setOf(user3),
+            setOf(user1, user2, user3),
+        )
+
+    ThemeComparisonColumn {
+        Column {
+            PeopleListItem(
+                modifier = Modifier,
+                peopleList = samplePeopleList1,
+                onClick = {},
+                onRename = {},
+                onDescriptionChange = { },
+                onClone = { newName, newDesc -> },
+                onDelete = {},
+            )
+            PeopleListItem(
+                modifier = Modifier,
+                peopleList = samplePeopleList2,
+                onClick = {},
+                onRename = {},
+                onDescriptionChange = { },
+                onClone = { newName, newDesc -> },
+                onDelete = {},
+            )
+            PeopleListItem(
+                modifier = Modifier,
+                peopleList = samplePeopleList3,
+                onClick = {},
+                onRename = {},
+                onDescriptionChange = { },
+                onClone = { newName, newDesc -> },
+                onDelete = {},
+            )
+            PeopleListItem(
+                modifier = Modifier,
+                peopleList = samplePeopleList4,
+                onClick = {},
+                onRename = {},
+                onDescriptionChange = { },
+                onClone = { newName, newDesc -> },
+                onDelete = {},
+            )
+        }
+    }
+}
 
 @Composable
 fun PeopleListItem(
@@ -73,112 +166,93 @@ fun PeopleListItem(
     onClone: (customName: String?, customDescription: String?) -> Unit,
     onDelete: () -> Unit,
 ) {
-    val context = LocalContext.current
-    Row(
-        modifier =
-            modifier
-                .clickable(onClick = onClick),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .padding(bottom = 12.dp)
-                    .weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
+    ListItem(
+        modifier = modifier.clickable(onClick = onClick),
+        headlineContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
+                Text(peopleList.title)
+
+                Column(
+                    modifier = NoSoTinyBorders,
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    PeopleListOptionsButton(
+                        peopleListName = peopleList.title,
+                        peopleListDescription = peopleList.description,
+                        onListRename = onRename,
+                        onListDescriptionChange = onDescriptionChange,
+                        onListCloneCreate = onClone,
+                        onListDelete = onDelete,
+                    )
+                }
+            }
+        },
+        supportingContent = {
+            Text(
+                peopleList.description ?: "",
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
+            )
+        },
+        leadingContent = {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Outlined.Groups,
+                    contentDescription = stringRes(R.string.follow_set_icon_description),
+                    modifier = Size50ModifierOffset10,
+                )
                 Row(
+                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-5).dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = SpacedBy5dp,
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.format_list_bulleted_type),
-                        contentDescription = stringRes(R.string.follow_set_icon_description),
-                    )
-                    Text(peopleList.title, fontWeight = FontWeight.Bold)
                     if (peopleList.publicMembers.isEmpty() && peopleList.privateMembers.isEmpty()) {
-                        FilterChip(
-                            selected = true,
-                            onClick = {},
-                            label = {
-                                Text(text = stringRes(R.string.follow_set_empty_label))
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.People,
-                                    contentDescription = null,
-                                )
-                            },
-                            shape = ButtonBorder,
+                        Text(
+                            text = stringRes(R.string.follow_set_empty_label2),
+                            fontSize = Font10SP,
                         )
-                    }
-                    if (peopleList.publicMembers.isNotEmpty()) {
-                        val publicMemberSize = peopleList.publicMembers.size
-                        FilterChip(
-                            selected = true,
-                            onClick = {},
-                            label = {
-                                Text(text = "$publicMemberSize")
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    painterResource(R.drawable.ic_public),
-                                    contentDescription = null,
-                                )
-                            },
-                            shape = ButtonBorder,
-                        )
-                        Spacer(modifier = StdHorzSpacer)
-                    }
-                    if (peopleList.privateMembers.isNotEmpty()) {
-                        val privateMemberSize = peopleList.privateMembers.size
-                        FilterChip(
-                            selected = true,
-                            onClick = {},
-                            label = {
-                                Text(text = "$privateMemberSize")
-                            },
-                            leadingIcon = {
+                    } else {
+                        if (peopleList.privateMembers.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = SpacedBy2dp,
+                            ) {
                                 Icon(
                                     painterResource(R.drawable.lock),
+                                    modifier = Size10Modifier,
                                     contentDescription = null,
                                 )
-                            },
-                            shape = ButtonBorder,
-                        )
+                                Text(
+                                    text = peopleList.privateMembers.size.toString(),
+                                    fontSize = Font10SP,
+                                )
+                            }
+                        }
+                        if (peopleList.publicMembers.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = SpacedBy2dp,
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.ic_public),
+                                    modifier = Size10Modifier,
+                                    contentDescription = null,
+                                )
+                                Text(
+                                    text = peopleList.publicMembers.size.toString(),
+                                    fontSize = Font10SP,
+                                )
+                            }
+                        }
                     }
                 }
-                Spacer(modifier = StdVertSpacer)
-                Text(
-                    peopleList.description ?: "",
-                    fontWeight = FontWeight.Light,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 2,
-                )
             }
-        }
-
-        Column(
-            modifier =
-                Modifier
-                    .padding(start = 5.dp)
-                    .padding(vertical = 7.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.End,
-        ) {
-            PeopleListOptionsButton(
-                peopleListName = peopleList.title,
-                peopleListDescription = peopleList.description,
-                onListRename = onRename,
-                onListDescriptionChange = onDescriptionChange,
-                onListCloneCreate = onClone,
-                onListDelete = onDelete,
-            )
-        }
-    }
+        },
+    )
 }
 
 @Composable

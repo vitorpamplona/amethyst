@@ -150,7 +150,7 @@ private fun FollowSetManagementScreenBody(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsState by accountViewModel.account.peopleListsState.uiListFlow
+    val followSetsState by accountViewModel.account.peopleLists.uiListFlow
         .collectAsStateWithLifecycle()
 
     if (followSetsState.isEmpty()) {
@@ -168,7 +168,7 @@ private fun FollowSetManagementScreenBody(
                     userIsPublicMember = list.publicMembers.contains(userToAddOrRemove),
                     onRemoveUser = {
                         accountViewModel.runIOCatching {
-                            accountViewModel.account.peopleListsState.removeUserFromSet(
+                            accountViewModel.account.peopleLists.removeUserFromSet(
                                 userToAddOrRemove,
                                 isPrivate = list.privateMembers.contains(userToAddOrRemove),
                                 list.identifierTag,
@@ -178,7 +178,7 @@ private fun FollowSetManagementScreenBody(
                     },
                     onAddUserToList = { userShouldBePrivate ->
                         accountViewModel.runIOCatching {
-                            accountViewModel.account.peopleListsState.addUserToSet(
+                            accountViewModel.account.peopleLists.addUserToSet(
                                 userToAddOrRemove,
                                 list.identifierTag,
                                 userShouldBePrivate,
@@ -196,7 +196,7 @@ private fun FollowSetManagementScreenBody(
         userName = userToAddOrRemove.toBestDisplayName(),
         onSetCreate = { setName, memberShouldBePrivate, description ->
             accountViewModel.runIOCatching {
-                accountViewModel.account.peopleListsState.addFollowList(
+                accountViewModel.account.peopleLists.addFollowList(
                     listName = setName,
                     listDescription = description,
                     isPrivate = memberShouldBePrivate,

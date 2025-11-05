@@ -94,10 +94,20 @@ class PeopleListsState(
 
     suspend fun List<PeopleListEvent>.mapToUserIdSet() = this.map { it.userIdSet() }.flattenToSet()
 
-    val allPeopleListProfiles: StateFlow<Set<HexKey>> =
+    suspend fun List<PeopleListEvent>.mapGoodUsersToIdSet() =
+        this
+            .mapNotNull {
+                if (it.dTag() != PeopleListEvent.BLOCK_LIST_D_TAG) {
+                    it.userIdSet()
+                } else {
+                    null
+                }
+            }.flattenToSet()
+
+    val allGoodPeopleListProfiles: StateFlow<Set<HexKey>> =
         latestLists
-            .map { it.mapToUserIdSet() }
-            .onStart { emit(latestLists.value.mapToUserIdSet()) }
+            .map { it.mapGoodUsersToIdSet() }
+            .onStart { emit(latestLists.value.mapGoodUsersToIdSet()) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
@@ -130,8 +140,6 @@ class PeopleListsState(
                     uiListFlow.value.firstOrNull { it.identifierTag == selectedDTag },
                 )
             }
-
-    fun isUserInFollowSets(user: User): Boolean = allPeopleListProfiles.value.contains(user.pubkeyHex)
 
     fun DeletionEvent.hasDeletedAnyPeopleList() = deleteAddressesWithKind(PeopleListEvent.KIND) || deletesAnyEventIn(peopleListsEventIds.value)
 

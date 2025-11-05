@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -371,3 +372,5 @@ val SpacedBy5dp = Arrangement.spacedBy(Size5dp)
 val SpacedBy10dp = Arrangement.spacedBy(Size10dp)
 
 val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
+
+val Size50ModifierOffset10 = Modifier.size(50.dp).offset(y = (-10).dp)

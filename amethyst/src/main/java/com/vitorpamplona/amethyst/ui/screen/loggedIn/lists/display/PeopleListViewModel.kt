@@ -55,7 +55,7 @@ class PeopleListViewModel : ViewModel() {
         selectedDTag
             .transformLatest {
                 emitAll(
-                    account.peopleListsState.selectListFlow(it).flowOn(Dispatchers.IO),
+                    account.peopleLists.selectListFlow(it).flowOn(Dispatchers.IO),
                 )
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -73,23 +73,23 @@ class PeopleListViewModel : ViewModel() {
     }
 
     suspend fun deleteFollowSet() {
-        account.peopleListsState.deleteFollowSet(selectedDTag.value, account)
+        account.peopleLists.deleteFollowSet(selectedDTag.value, account)
     }
 
-    fun loadNote(): AddressableNote? = account.peopleListsState.getPeopleListNote(selectedDTag.value)
+    fun loadNote(): AddressableNote? = account.peopleLists.getPeopleListNote(selectedDTag.value)
 
     suspend fun removeUserFromSet(
         user: User,
         isPrivate: Boolean,
     ) {
-        account.peopleListsState.removeUserFromSet(user, isPrivate, selectedDTag.value, account)
+        account.peopleLists.removeUserFromSet(user, isPrivate, selectedDTag.value, account)
     }
 
     suspend fun addUserToSet(
         user: User,
         isPrivate: Boolean,
     ) {
-        account.peopleListsState.addUserToSet(user, selectedDTag.value, isPrivate, account)
+        account.peopleLists.addUserToSet(user, selectedDTag.value, isPrivate, account)
     }
 
     fun hasUserFlow(
