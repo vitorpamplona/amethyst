@@ -77,7 +77,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -107,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
@@ -203,37 +201,11 @@ fun PeopleListScreen(
 fun TitleAndDescription(viewModel: PeopleListViewModel) {
     val selectedSetState = viewModel.selectedList.collectAsStateWithLifecycle()
     selectedSetState.value?.let { selectedSet ->
-        TitleAndDescription(selectedSet.title, selectedSet.description)
-    }
-}
-
-@Composable
-fun TitleAndDescription(
-    title: String,
-    description: String?,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(title)
-            Spacer(DoubleHorzSpacer)
-            Icon(
-                painter = painterResource(R.drawable.format_list_bulleted_type),
-                contentDescription = null,
-            )
-        }
-
-        if (description != null) {
-            Text(
-                text = description,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Thin,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            text = selectedSet.title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
