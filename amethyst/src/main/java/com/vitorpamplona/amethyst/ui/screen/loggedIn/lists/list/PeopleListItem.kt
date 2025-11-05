@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -44,7 +46,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -222,7 +223,7 @@ fun PeopleListItem(
                                 horizontalArrangement = SpacedBy2dp,
                             ) {
                                 Icon(
-                                    painterResource(R.drawable.lock),
+                                    imageVector = Icons.Outlined.Lock,
                                     modifier = Size10Modifier,
                                     contentDescription = null,
                                 )
@@ -238,7 +239,7 @@ fun PeopleListItem(
                                 horizontalArrangement = SpacedBy2dp,
                             ) {
                                 Icon(
-                                    painterResource(R.drawable.ic_public),
+                                    imageVector = Icons.Outlined.Public,
                                     modifier = Size10Modifier,
                                     contentDescription = null,
                                 )
