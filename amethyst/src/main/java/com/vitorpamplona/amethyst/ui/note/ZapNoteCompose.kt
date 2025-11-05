@@ -177,7 +177,7 @@ fun ShowFollowingOrUnfollowingButton(
     baseAuthor: User,
     accountViewModel: AccountViewModel,
 ) {
-    var isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor, accountViewModel)
+    val isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor, accountViewModel)
 
     if (isFollowing.value) {
         UnfollowButton {

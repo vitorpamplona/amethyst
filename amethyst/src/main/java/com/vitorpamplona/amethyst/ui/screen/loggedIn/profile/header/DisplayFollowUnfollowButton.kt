@@ -61,7 +61,7 @@ fun DisplayFollowUnfollowButton(
                 }
             }
         } else {
-            FollowButton(R.string.follow, true) {
+            FollowButton(R.string.follow, isInProfileActions = true) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toastManager.toast(
                         R.string.read_only_user,

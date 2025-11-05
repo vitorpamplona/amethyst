@@ -411,15 +411,6 @@ fun observeUserIsFollowing(
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user1, accountViewModel)
-    val isUserInFollowSets =
-        remember(accountViewModel.account.peopleListsState) {
-            // Only check follow sets if user1 is the logged-in user
-            if (user1 == accountViewModel.account.userProfile()) {
-                accountViewModel.account.peopleListsState.isUserInFollowSets(user2)
-            } else {
-                false
-            }
-        }
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -429,13 +420,13 @@ fun observeUserIsFollowing(
                 .follows.stateFlow
                 .sample(1000)
                 .mapLatest { userState ->
-                    userState.user.isFollowing(user2) || isUserInFollowSets
+                    userState.user.isFollowing(user2)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
 
     return flow.collectAsStateWithLifecycle(
-        user1.isFollowing(user2) || isUserInFollowSets,
+        user1.isFollowing(user2),
     )
 }
 

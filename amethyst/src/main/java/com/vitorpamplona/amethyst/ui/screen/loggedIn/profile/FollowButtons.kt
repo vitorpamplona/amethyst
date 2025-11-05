@@ -41,7 +41,7 @@ fun FollowButton(
     onClick: () -> Unit,
 ) {
     FilledTonalButton(
-        modifier = Modifier.padding(start = 3.dp),
+        modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = if (isInProfileActions) LeftHalfCircleButtonBorder else ButtonBorder,
         contentPadding = ButtonPadding,
