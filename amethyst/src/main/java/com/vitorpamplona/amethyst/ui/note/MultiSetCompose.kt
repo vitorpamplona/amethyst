@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size19dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -622,7 +622,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     WatchUserFollows(author.pubkeyHex, accountViewModel) { isFollowing ->
         if (isFollowing) {
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
-                FollowingIcon(Size10dp)
+                FollowingIcon(Size10Modifier)
             }
         }
     }

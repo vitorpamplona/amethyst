@@ -82,11 +82,6 @@ fun AmethystIcon(iconSize: Dp) {
 }
 
 @Composable
-fun FollowingIcon(iconSize: Dp) {
-    FollowingIcon(Modifier.size(iconSize))
-}
-
-@Composable
 fun FollowingIcon(modifier: Modifier) {
     Icon(
         imageVector = Following,

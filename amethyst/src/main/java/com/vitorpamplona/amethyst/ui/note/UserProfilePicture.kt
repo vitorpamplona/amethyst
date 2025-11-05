@@ -372,7 +372,7 @@ fun WatchUserFollows(
     if (accountViewModel.isLoggedUser(userHex)) {
         onFollowChanges(true)
     } else {
-        val state by accountViewModel.account.kind3FollowList.flow
+        val state by accountViewModel.account.allFollows.flow
             .collectAsStateWithLifecycle()
 
         onFollowChanges(state.authors.contains(userHex))
