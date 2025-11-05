@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,11 +29,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 
 class EmojiSuggestionState(
-    val accountViewModel: AccountViewModel,
+    val account: Account,
 ) {
     val search: MutableStateFlow<String> = MutableStateFlow("")
     val results: Flow<List<EmojiPackState.EmojiMedia>> =
-        accountViewModel.account
+        account
             .emoji.myEmojis
             .combine(search) { list, search ->
                 if (search.length == 1) {

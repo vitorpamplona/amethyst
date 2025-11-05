@@ -188,10 +188,10 @@ class ChatNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM)
+        this.userSuggestions = UserSuggestionState(accountVM.account)
 
         this.emojiSuggestions?.reset()
-        this.emojiSuggestions = EmojiSuggestionState(accountVM)
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
 
         this.uploadState =
             ChatFileUploadState(

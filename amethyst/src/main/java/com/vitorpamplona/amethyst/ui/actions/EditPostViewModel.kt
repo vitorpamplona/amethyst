@@ -104,7 +104,7 @@ open class EditPostViewModel : ViewModel() {
         this.editedFromNote = edit
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountViewModel)
+        this.userSuggestions = UserSuggestionState(accountViewModel.account)
     }
 
     open fun load(

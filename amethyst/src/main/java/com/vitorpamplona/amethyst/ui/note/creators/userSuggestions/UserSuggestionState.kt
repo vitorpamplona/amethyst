@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.logTime
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,11 +38,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
 class UserSuggestionState(
-    val accountViewModel: AccountViewModel,
+    val account: Account,
+    val requireAtSymbol: Boolean = true,
 ) {
     val invalidations = MutableStateFlow<Int>(0)
     val currentWord = MutableStateFlow("")
-    val searchDataSourceState = SearchQueryState(MutableStateFlow(""), accountViewModel.account)
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(""), account)
 
     @OptIn(FlowPreview::class)
     val searchTerm =
@@ -57,7 +58,7 @@ class UserSuggestionState(
         combine(searchTerm, invalidations.debounce(100)) { prefix, version ->
             if (prefix != null) {
                 logTime("UserSuggestionState Search $prefix version $version") {
-                    accountViewModel.findUsersStartingWithSync(prefix)
+                    account.cache.findUsersStartingWith(prefix, account)
                 }
             } else {
                 emptyList()
@@ -78,10 +79,18 @@ class UserSuggestionState(
     }
 
     fun userSearchTermOrNull(currentWord: String): String? =
-        if (currentWord.startsWith("@") && currentWord.length > 2) {
-            currentWord.removePrefix("@")
+        if (requireAtSymbol) {
+            if (currentWord.startsWith("@") && currentWord.length > 2) {
+                currentWord.removePrefix("@")
+            } else {
+                null
+            }
         } else {
-            null
+            if (currentWord.length > 1) {
+                currentWord
+            } else {
+                null
+            }
         }
 
     fun updateDataSource(searchTerm: String?) {
