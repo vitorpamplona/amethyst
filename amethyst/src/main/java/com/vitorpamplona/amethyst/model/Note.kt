@@ -71,7 +71,9 @@ import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import java.math.BigDecimal
 
@@ -994,3 +996,38 @@ class NoteBundledRefresherFlow(
 class NoteState(
     val note: Note,
 )
+
+fun List<AddressableNote>.eventIdSet() = mapNotNullTo(mutableSetOf<HexKey>()) { it.event?.id }
+
+fun <T : Event> Array<NoteState>.events() = mapNotNull { it.note.event as? T }
+
+fun <T : Event> List<AddressableNote>.events() = mapNotNull { it.event as? T }
+
+fun <T : Event> List<AddressableNote>.updateFlow(): Flow<List<T>> =
+    if (this.isEmpty()) {
+        MutableStateFlow(emptyList())
+    } else {
+        combine(
+            flows = this.map { it.flow().metadata.stateFlow },
+        ) {
+            it.events()
+        }
+    }
+
+public inline fun <T> Iterable<Note>.anyEvent(predicate: (T) -> Boolean): Boolean {
+    if (this is Collection && isEmpty()) return false
+    for (note in this) {
+        val noteEvent = note.event as? T
+        if (noteEvent != null && predicate(noteEvent)) return true
+    }
+    return false
+}
+
+public inline fun Iterable<Note>.anyNotNullEvent(predicate: (Event) -> Boolean): Boolean {
+    if (this is Collection && isEmpty()) return false
+    for (note in this) {
+        val noteEvent = note.event
+        if (noteEvent != null && predicate(noteEvent)) return true
+    }
+    return false
+}

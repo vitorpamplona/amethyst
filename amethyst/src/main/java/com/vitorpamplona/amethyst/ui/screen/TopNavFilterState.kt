@@ -30,8 +30,6 @@ import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -40,7 +38,6 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -63,16 +60,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 @Stable
-class FollowListState(
+class TopNavFilterState(
     val account: Account,
-    val viewModelScope: CoroutineScope,
+    val scope: CoroutineScope,
 ) {
     val kind3Follow =
         PeopleListOutBoxFeedDefinition(
@@ -119,10 +117,12 @@ class FollowListState(
 
     val defaultLists = persistentListOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow, muteListFollow)
 
-    fun getPeopleLists(): List<FeedDefinition> =
-        account
-            .getAllPeopleLists()
-            .map {
+    fun mergePeopleLists(
+        peopleLists: List<AddressableNote>,
+        followLists: List<AddressableNote>,
+    ): List<FeedDefinition> {
+        val peopleListsDefs =
+            peopleLists.map {
                 PeopleListOutBoxFeedDefinition(
                     it.idHex,
                     PeopleListName(it),
@@ -130,100 +130,101 @@ class FollowListState(
                     kinds = DEFAULT_FEED_KINDS,
                     listOf(it.idHex),
                 )
-            }.sortedBy { it.name.name() }
+            }
 
-    val livePeopleListsFlow = MutableStateFlow(emptyList<FeedDefinition>())
-
-    fun hasItemInNoteList(notes: Set<Note>): Boolean =
-        notes.any { it ->
-            val noteEvent = it.event
-
-            noteEvent?.pubKey == account.userProfile().pubkeyHex &&
-                (
-                    (
-                        noteEvent is PeopleListEvent ||
-                            noteEvent is FollowListEvent ||
-                            noteEvent is MuteListEvent ||
-                            noteEvent is ContactListEvent
-                    ) ||
-                        (
-                            noteEvent is DeletionEvent &&
-                                (
-                                    noteEvent.deleteEventIds().any { LocalCache.getNoteIfExists(it)?.event is PeopleListEvent } ||
-                                        noteEvent.deleteAddresses().any { it.kind == PeopleListEvent.KIND }
-                                )
-                        )
+        val followListsDefs =
+            followLists.map {
+                PeopleListOutBoxFeedDefinition(
+                    it.idHex,
+                    PeopleListName(it),
+                    CodeNameType.PEOPLE_LIST,
+                    kinds = DEFAULT_FEED_KINDS,
+                    listOf(it.idHex),
                 )
-        }
+            }
 
-    fun deleteFromFeed(deletedNotes: Set<Note>) {
-        checkNotInMainThread()
-
-        if (hasItemInNoteList(deletedNotes)) {
-            livePeopleListsFlow.tryEmit(getPeopleLists())
-        }
+        return (peopleListsDefs + followListsDefs).sortedBy { it.name.name() }
     }
 
-    fun updateFeedWith(newNotes: Set<Note>) {
-        checkNotInMainThread()
-
-        if (hasItemInNoteList(newNotes)) {
-            livePeopleListsFlow.tryEmit(getPeopleLists())
+    val livePeopleListsFlow: Flow<List<FeedDefinition>> =
+        combine(
+            account.peopleListsState.peopleListNotes,
+            account.followListsState.followListNotes,
+            ::mergePeopleLists,
+        ).onStart {
+            emit(
+                mergePeopleLists(
+                    account.peopleListsState.peopleListNotes.value,
+                    account.followListsState.followListNotes.value,
+                ),
+            )
         }
+
+    fun mergeInterests(
+        hashtagList: Set<String>,
+        geotagList: Set<String>,
+        communityList: List<AddressableNote>,
+    ): List<FeedDefinition> {
+        val hashtags =
+            hashtagList.map {
+                TagFeedDefinition(
+                    "Hashtag/$it",
+                    HashtagName(it),
+                    CodeNameType.ROUTE,
+                    route = Route.Hashtag(it),
+                    kinds = DEFAULT_FEED_KINDS,
+                    tTags = listOf(it),
+                )
+            }
+
+        val geotags =
+            geotagList.map {
+                TagFeedDefinition(
+                    "Geohash/$it",
+                    GeoHashName(it),
+                    CodeNameType.ROUTE,
+                    route = Route.Geohash(it),
+                    kinds = DEFAULT_FEED_KINDS,
+                    gTags = listOf(it),
+                )
+            }
+
+        val communities =
+            communityList.map { communityNote ->
+                TagFeedDefinition(
+                    "Community/${communityNote.idHex}",
+                    CommunityName(communityNote),
+                    CodeNameType.ROUTE,
+                    route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
+                    kinds = DEFAULT_COMMUNITY_FEEDS,
+                    aTags = listOf(communityNote.idHex),
+                )
+            }
+
+        return (communities + hashtags + geotags).sortedBy { it.name.name() }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveKind3FollowsFlow: Flow<List<FeedDefinition>> =
-        combineTransform(account.kind3FollowList.flow, account.hashtagList.flow, account.geohashList.flow, account.communityList.flow) { kind3List, hashtagList, geotagList, communityList ->
-            checkNotInMainThread()
-
-            val communities =
-                communityList.map {
-                    LocalCache.getOrCreateAddressableNote(it.address).let { communityNote ->
-                        TagFeedDefinition(
-                            "Community/${communityNote.idHex}",
-                            CommunityName(communityNote),
-                            CodeNameType.ROUTE,
-                            route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
-                            kinds = DEFAULT_COMMUNITY_FEEDS,
-                            aTags = listOf(communityNote.idHex),
-                        )
-                    }
-                }
-
-            val hashtags =
-                hashtagList.map {
-                    TagFeedDefinition(
-                        "Hashtag/$it",
-                        HashtagName(it),
-                        CodeNameType.ROUTE,
-                        route = Route.Hashtag(it),
-                        kinds = DEFAULT_FEED_KINDS,
-                        tTags = listOf(it),
-                    )
-                }
-
-            val geotags =
-                geotagList.map {
-                    TagFeedDefinition(
-                        "Geohash/$it",
-                        GeoHashName(it),
-                        CodeNameType.ROUTE,
-                        route = Route.Geohash(it),
-                        kinds = DEFAULT_FEED_KINDS,
-                        gTags = listOf(it),
-                    )
-                }
-
+    val liveInterestFlows: Flow<List<FeedDefinition>> =
+        combine(
+            account.hashtagList.flow,
+            account.geohashList.flow,
+            account.communityList.flowNotes,
+            ::mergeInterests,
+        ).onStart {
             emit(
-                (communities + hashtags + geotags).sortedBy { it.name.name() },
+                mergeInterests(
+                    account.hashtagList.flow.value,
+                    account.geohashList.flow.value,
+                    account.communityList.flowNotes.value,
+                ),
             )
         }
 
     private val _kind3GlobalPeopleRoutes =
         combineTransform(
             livePeopleListsFlow,
-            liveKind3FollowsFlow,
+            liveInterestFlows,
         ) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
             checkNotInMainThread()
             emit(
@@ -239,7 +240,7 @@ class FollowListState(
     private val _kind3GlobalPeople =
         combineTransform(
             livePeopleListsFlow,
-            liveKind3FollowsFlow,
+            liveInterestFlows,
         ) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
             checkNotInMainThread()
             emit(
@@ -254,17 +255,12 @@ class FollowListState(
     val kind3GlobalPeopleRoutes =
         _kind3GlobalPeopleRoutes
             .flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+            .stateIn(scope, SharingStarted.Eagerly, defaultLists)
+
     val kind3GlobalPeople =
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
-
-    suspend fun initializeSuspend() {
-        checkNotInMainThread()
-
-        livePeopleListsFlow.emit(getPeopleLists())
-    }
+            .stateIn(scope, SharingStarted.Eagerly, defaultLists)
 
     fun destroy() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")

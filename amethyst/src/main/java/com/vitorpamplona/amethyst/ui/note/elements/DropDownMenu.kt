@@ -187,7 +187,7 @@ fun NoteDropDownMenu(
             text = { Text(text = stringRes(R.string.follow_set_add_author_from_note_action)) },
             onClick = {
                 val authorHexKey = note.author?.pubkeyHex ?: return@DropdownMenuItem
-                nav.nav(Route.FollowSetManagement(authorHexKey))
+                nav.nav(Route.PeopleListManagement(authorHexKey))
                 onDismiss()
             },
         )

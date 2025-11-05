@@ -156,7 +156,7 @@ fun GroupMembersHeader(
                 if (it != null) {
                     UserCompose(
                         baseUser = it,
-                        overallModifier = lineModifier,
+                        modifier = lineModifier,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

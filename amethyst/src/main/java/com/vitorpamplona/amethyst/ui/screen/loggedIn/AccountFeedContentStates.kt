@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.screen.FollowListState
+import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
@@ -69,13 +69,12 @@ class AccountFeedContentStates(
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationSummary = NotificationSummaryState(account)
 
-    val feedListOptions = FollowListState(account, scope)
+    val feedListOptions = TopNavFilterState(account, scope)
 
     val drafts = FeedContentState(DraftEventsFeedFilter(account), scope)
 
     suspend fun init() {
         notificationSummary.initializeSuspend()
-        feedListOptions.initializeSuspend()
     }
 
     fun updateFeedsWith(newNotes: Set<Note>) {
@@ -100,8 +99,6 @@ class AccountFeedContentStates(
 
         notifications.updateFeedWith(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
-
-        feedListOptions.updateFeedWith(newNotes)
 
         drafts.updateFeedWith(newNotes)
     }
@@ -128,8 +125,6 @@ class AccountFeedContentStates(
 
         notifications.deleteFromFeed(newNotes)
         notificationSummary.invalidateInsertData(newNotes)
-
-        feedListOptions.deleteFromFeed(newNotes)
 
         drafts.deleteFromFeed(newNotes)
     }

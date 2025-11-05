@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
-import com.vitorpamplona.amethyst.ui.screen.FollowListState
+import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -41,7 +41,7 @@ fun DiscoveryTopBar(
         val list by accountViewModel.account.settings.defaultDiscoveryFollowList
             .collectAsStateWithLifecycle()
 
-        FollowList(
+        TopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
@@ -51,8 +51,8 @@ fun DiscoveryTopBar(
 }
 
 @Composable
-private fun FollowList(
-    followListsModel: FollowListState,
+private fun TopNavFilterBar(
+    followListsModel: TopNavFilterState,
     listName: String,
     accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,

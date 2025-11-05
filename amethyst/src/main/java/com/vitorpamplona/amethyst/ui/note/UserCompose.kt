@@ -39,15 +39,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 @Composable
 fun UserCompose(
     baseUser: User,
-    overallModifier: Modifier = StdPadding,
+    modifier: Modifier = StdPadding,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Row(
-        modifier =
-            overallModifier.clickable(
-                onClick = { nav.nav(routeFor(baseUser)) },
-            ),
+        modifier = modifier.clickable { nav.nav(routeFor(baseUser)) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
@@ -62,6 +59,29 @@ fun UserCompose(
 
         Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
             UserActionOptions(baseUser, accountViewModel)
+        }
+    }
+}
+
+@Composable
+fun UserComposeNoAction(
+    baseUser: User,
+    modifier: Modifier = StdPadding,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(
+        modifier = modifier.clickable { nav.nav(routeFor(baseUser)) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
+
+        Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UsernameDisplay(baseUser, accountViewModel = accountViewModel)
+            }
+
+            AboutDisplay(baseUser, accountViewModel)
         }
     }
 }

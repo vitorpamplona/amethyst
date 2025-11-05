@@ -65,7 +65,7 @@ fun ProfileActions(
     }
 
     TextButton(
-        onClick = { nav.nav(Route.FollowSetManagement(baseUser.pubkeyHex)) },
+        onClick = { nav.nav(Route.PeopleListManagement(baseUser.pubkeyHex)) },
         shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
         colors = ButtonDefaults.filledTonalButtonColors(),
         contentPadding = ZeroPadding,

@@ -54,12 +54,10 @@ import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
-import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -68,6 +66,9 @@ import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
@@ -133,7 +134,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
@@ -165,8 +165,6 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -267,7 +265,6 @@ class Account(
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
     val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
-    val followSetsState = FollowSetState(signer, cache, scope)
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
     val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
@@ -289,6 +286,8 @@ class Account(
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
+    val peopleListsState = PeopleListsState(signer, cache, peopleListDecryptionCache, scope)
+    val followListsState = FollowListsState(signer, cache, scope)
 
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
@@ -326,7 +325,7 @@ class Account(
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
-    val allFollows = MergedFollowListsState(kind3FollowList, followSetsState, hashtagList, geohashList, communityList, scope)
+    val allFollows = MergedFollowListsState(kind3FollowList, peopleListsState, hashtagList, geohashList, communityList, scope)
 
     val privateDMDecryptionCache = PrivateDMCache(signer)
     val privateZapsDecryptionCache = PrivateZapCache(signer)
@@ -1742,22 +1741,6 @@ class Account(
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
-    fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(signer.pubKey)
-
-    fun getAllPeopleLists(pubkey: HexKey): List<AddressableNote> =
-        cache.addressables
-            .filter { _, addressableNote ->
-                val noteEvent = addressableNote.event
-
-                if (noteEvent is PeopleListEvent) {
-                    noteEvent.pubKey == pubkey && (noteEvent.hasAnyTaggedUser() || peopleListDecryptionCache.cachedUserIdSet(noteEvent).isNotEmpty())
-                } else if (noteEvent is FollowListEvent) {
-                    noteEvent.pubKey == pubkey && noteEvent.hasAnyTaggedUser()
-                } else {
-                    false
-                }
-            }
-
     fun markAsRead(
         route: String,
         timestampInSecs: Long,
@@ -1797,14 +1780,18 @@ class Account(
                 logTime("Account ${userProfile().toBestDisplayName()} newEventBundle Update with ${newNotes.size} new notes") {
                     upgradeAttestations()
                     newNotesPreProcessor.runNew(newNotes)
+                    peopleListsState.newNotes(newNotes)
+                    followListsState.newNotes(newNotes)
                 }
             }
         }
 
         scope.launch {
-            cache.live.deletedEventBundles.collect { newNotes ->
-                logTime("Account ${userProfile().toBestDisplayName()} deletedEventBundle Update with ${newNotes.size} new notes") {
-                    newNotesPreProcessor.runDeleted(newNotes)
+            cache.live.deletedEventBundles.collect { deletedNotes ->
+                logTime("Account ${userProfile().toBestDisplayName()} deletedEventBundle Update with ${deletedNotes.size} new notes") {
+                    newNotesPreProcessor.runDeleted(deletedNotes)
+                    peopleListsState.deletedNotes(deletedNotes)
+                    followListsState.deletedNotes(deletedNotes)
                 }
             }
         }

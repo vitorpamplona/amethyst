@@ -92,6 +92,7 @@ val Height100Modifier = Modifier.height(100.dp)
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
 val Size0dp = 0.dp
+val Size2dp = 2.dp
 val Size5dp = 5.dp
 val Size6dp = 6.dp
 val Size8dp = 8.dp
@@ -364,3 +365,9 @@ val VoiceHeightModifier = Modifier.fillMaxWidth().height(100.dp)
 val PaddingHorizontal12Modifier = Modifier.padding(horizontal = 12.dp)
 
 val QuickActionPopupShadow = Modifier.shadow(elevation = Size6dp, shape = SmallestBorder)
+
+val SpacedBy2dp = Arrangement.spacedBy(Size2dp)
+val SpacedBy5dp = Arrangement.spacedBy(Size5dp)
+val SpacedBy10dp = Arrangement.spacedBy(Size10dp)
+
+val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)

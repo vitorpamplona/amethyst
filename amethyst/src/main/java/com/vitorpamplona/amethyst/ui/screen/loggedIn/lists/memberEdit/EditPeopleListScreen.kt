@@ -18,11 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit
 
-import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,16 +33,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,17 +49,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,91 +67,70 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NewSetCreationDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewPeopleListCreationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FollowSetsManagementDialog(
-    userHex: String,
+fun EditPeopleListScreen(
+    userToAddOrRemove: HexKey,
     accountViewModel: AccountViewModel,
-    navigator: INav,
+    nav: INav,
 ) {
-    val followSetViewModel: FollowSetFeedViewModel =
-        viewModel(
-            key = "FollowSetFeedViewModel",
-            factory = FollowSetFeedViewModel.Factory(accountViewModel.account),
-        )
+    var userBase by remember { mutableStateOf(LocalCache.getUserIfExists(userToAddOrRemove)) }
 
-    FollowSetsManagementDialog(userHex, followSetViewModel, accountViewModel.account, navigator)
+    if (userBase == null) {
+        LaunchedEffect(userToAddOrRemove) {
+            val newUserBase = LocalCache.checkGetOrCreateUser(userToAddOrRemove)
+            if (newUserBase != userBase) {
+                userBase = newUserBase
+            }
+        }
+    }
+
+    userBase?.let {
+        EditPeopleListScreen(it, accountViewModel, nav)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FollowSetsManagementDialog(
-    userHex: String,
-    followSetsViewModel: FollowSetFeedViewModel,
-    account: Account,
-    navigator: INav,
+fun EditPeopleListScreen(
+    userToAddOrRemove: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    val followSetsState by followSetsViewModel.feedContent.collectAsState()
-    val userInfo by remember { derivedStateOf { LocalCache.getOrCreateUser(userHex) } }
-
     Scaffold(
         modifier =
             Modifier
                 .fillMaxSize()
                 .recalculateWindowInsets(),
-        containerColor = AlertDialogDefaults.containerColor,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = stringRes(R.string.follow_set_man_dialog_title),
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { navigator.popBack() },
-                    ) {
-                        ArrowBackIcon()
-                    }
-                },
-                colors =
-                    TopAppBarDefaults
-                        .topAppBarColors(
-                            containerColor = AlertDialogDefaults.containerColor,
-                        ),
-            )
-        },
-        floatingActionButton = {
-            BackActionButton { navigator.popBack() }
+            TopBarWithBackButton(stringRes(id = R.string.follow_set_man_dialog_title), nav::popBack)
         },
     ) { contentPadding ->
         Column(
             modifier =
                 Modifier
-                    .verticalScroll(rememberScrollState())
                     .padding(
                         start = 10.dp,
                         end = 10.dp,
@@ -167,122 +139,77 @@ fun FollowSetsManagementDialog(
                     ).consumeWindowInsets(contentPadding)
                     .imePadding(),
         ) {
-            when (followSetsState) {
-                is FollowSetFeedState.Loaded -> {
-                    val sets = (followSetsState as FollowSetFeedState.Loaded).feed
-
-                    sets.forEachIndexed { index, set ->
-
-                        Spacer(StdVertSpacer)
-                        FollowSetItem(
-                            modifier = Modifier.fillMaxWidth(),
-                            listHeader = set.title,
-                            setVisibility = set.visibility,
-                            userName = userInfo.toBestDisplayName(),
-                            userIsPrivateMember = set.privateProfiles.contains(userHex),
-                            userIsPublicMember = set.publicProfiles.contains(userHex),
-                            onRemoveUser = {
-                                Log.d(
-                                    "Amethyst",
-                                    "ProfileActions: Removing item from list ...",
-                                )
-                                followSetsViewModel.removeUserFromSet(
-                                    userHex,
-                                    userIsPrivate = set.privateProfiles.contains(userHex),
-                                    set,
-                                    account,
-                                )
-                                Log.d(
-                                    "Amethyst",
-                                    "Updated List. Private profiles size: ${set.privateProfiles.size}," +
-                                        "Public profiles size: ${set.publicProfiles.size}",
-                                )
-                            },
-                            onAddUserToList = { userShouldBePrivate ->
-                                Log.d(
-                                    "Amethyst",
-                                    "ProfileActions: Adding item to list ...",
-                                )
-                                followSetsViewModel.addUserToSet(
-                                    userHex,
-                                    set,
-                                    userShouldBePrivate,
-                                    account,
-                                )
-                                Log.d(
-                                    "Amethyst",
-                                    "Updated List. Private profiles size: ${set.privateProfiles.size}," +
-                                        "Public profiles size: ${set.publicProfiles.size}",
-                                )
-                            },
-                        )
-                    }
-                }
-
-                FollowSetFeedState.Empty -> {
-                    EmptyOrNoneFound { followSetsViewModel.refresh() }
-                }
-
-                is FollowSetFeedState.FeedError -> {
-                    val errorMsg = (followSetsState as FollowSetFeedState.FeedError).errorMessage
-                    ErrorMessage(errorMsg) { followSetsViewModel.refresh() }
-                }
-
-                FollowSetFeedState.Loading -> {
-                    Loading()
-                }
-            }
-
-            if (followSetsState != FollowSetFeedState.Loading) {
-                FollowSetsCreationMenu(
-                    userName = userInfo.toBestDisplayName(),
-                    onSetCreate = { setName, memberShouldBePrivate, description ->
-                        followSetsViewModel.addFollowSet(
-                            setName = setName,
-                            setDescription = description,
-                            firstMemberShouldBePrivate = memberShouldBePrivate,
-                            optionalFirstMemberHex = userHex,
-                            account = account,
-                        )
-                    },
-                )
-            }
+            FollowSetManagementScreenBody(userToAddOrRemove, accountViewModel, nav)
         }
     }
 }
 
 @Composable
-fun BackActionButton(
-    modifier: Modifier = Modifier,
-    onBack: () -> Unit,
+private fun FollowSetManagementScreenBody(
+    userToAddOrRemove: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    OutlinedButton(
-        onClick = onBack,
-        shape = ButtonBorder,
-        colors = ButtonDefaults.buttonColors(),
-        border = ButtonDefaults.outlinedButtonBorder(false),
-        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 6.0.dp),
-    ) {
-        Text(text = stringRes(R.string.back), fontWeight = FontWeight.Bold, color = Color.White)
+    val followSetsState by accountViewModel.account.peopleListsState.uiListFlow
+        .collectAsStateWithLifecycle()
+
+    if (followSetsState.isEmpty()) {
+        EmptyOrNoneFound()
+    } else {
+        val userName by observeUserName(userToAddOrRemove, accountViewModel)
+
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            itemsIndexed(followSetsState, key = { _, item -> item.identifierTag }) { _, list ->
+                FollowSetItem(
+                    modifier = Modifier.fillMaxWidth(),
+                    listHeader = list.title,
+                    userName = userName,
+                    userIsPrivateMember = list.privateMembers.contains(userToAddOrRemove),
+                    userIsPublicMember = list.publicMembers.contains(userToAddOrRemove),
+                    onRemoveUser = {
+                        accountViewModel.runIOCatching {
+                            accountViewModel.account.peopleListsState.removeUserFromSet(
+                                userToAddOrRemove,
+                                isPrivate = list.privateMembers.contains(userToAddOrRemove),
+                                list.identifierTag,
+                                accountViewModel.account,
+                            )
+                        }
+                    },
+                    onAddUserToList = { userShouldBePrivate ->
+                        accountViewModel.runIOCatching {
+                            accountViewModel.account.peopleListsState.addUserToSet(
+                                userToAddOrRemove,
+                                list.identifierTag,
+                                userShouldBePrivate,
+                                accountViewModel.account,
+                            )
+                        }
+                    },
+                )
+                HorizontalDivider(thickness = DividerThickness)
+            }
+        }
     }
+
+    FollowSetsCreationMenu(
+        userName = userToAddOrRemove.toBestDisplayName(),
+        onSetCreate = { setName, memberShouldBePrivate, description ->
+            accountViewModel.runIOCatching {
+                accountViewModel.account.peopleListsState.addFollowList(
+                    listName = setName,
+                    listDescription = description,
+                    isPrivate = memberShouldBePrivate,
+                    member = userToAddOrRemove,
+                    account = accountViewModel.account,
+                )
+            }
+        },
+    )
 }
 
 @Composable
-private fun Loading() {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.5f),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Text(stringRes(R.string.loading_feed))
-    }
-}
-
-@Composable
-private fun EmptyOrNoneFound(onRefresh: () -> Unit) {
+private fun EmptyOrNoneFound() {
     Column(
         Modifier
             .fillMaxWidth()
@@ -292,25 +219,38 @@ private fun EmptyOrNoneFound(onRefresh: () -> Unit) {
     ) {
         Text(text = stringRes(R.string.follow_set_empty_dialog_msg))
         Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
 }
 
+@Preview
 @Composable
-private fun ErrorMessage(
-    errorMsg: String,
-    onRefresh: () -> Unit,
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.5f),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(text = stringRes(R.string.follow_set_error_dialog_msg, errorMsg))
-        Spacer(modifier = StdVertSpacer)
-        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
+fun FollowSetItemMemberPreview() {
+    ThemeComparisonColumn {
+        FollowSetItem(
+            modifier = Modifier.fillMaxWidth(),
+            listHeader = "list title",
+            userName = "User",
+            userIsPrivateMember = true,
+            userIsPublicMember = true,
+            onAddUserToList = {},
+            onRemoveUser = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun FollowSetItemNotMemberPreview() {
+    ThemeComparisonColumn {
+        FollowSetItem(
+            modifier = Modifier.fillMaxWidth(),
+            listHeader = "list title",
+            userName = "User",
+            userIsPrivateMember = false,
+            userIsPublicMember = false,
+            onAddUserToList = {},
+            onRemoveUser = {},
+        )
     }
 }
 
@@ -318,75 +258,63 @@ private fun ErrorMessage(
 fun FollowSetItem(
     modifier: Modifier = Modifier,
     listHeader: String,
-    setVisibility: SetVisibility,
     userName: String,
     userIsPrivateMember: Boolean,
     userIsPublicMember: Boolean,
     onAddUserToList: (shouldBePrivateMember: Boolean) -> Unit,
     onRemoveUser: () -> Unit,
 ) {
-    val context = LocalContext.current
     val isUserInList = userIsPrivateMember || userIsPublicMember
     Row(
-        modifier =
-            modifier
-                .border(
-                    width = Dp.Hairline,
-                    color = Color.Gray,
-                    shape = RoundedCornerShape(percent = 20),
-                ).padding(all = 10.dp),
+        modifier = modifier.padding(all = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = SpacedBy10dp,
     ) {
         Column(
             modifier = modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = SpacedBy5dp,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = SpacedBy5dp,
             ) {
-                Text(listHeader, fontWeight = FontWeight.Bold)
-                Spacer(modifier = StdHorzSpacer)
                 Icon(
                     painter = painterResource(R.drawable.format_list_bulleted_type),
                     contentDescription = stringRes(R.string.follow_set_icon_description),
                 )
+                Text(listHeader, fontWeight = FontWeight.Bold)
             }
 
-            Spacer(modifier = StdVertSpacer)
-            Row {
-                FilterChip(
-                    selected = isUserInList,
-                    enabled = isUserInList,
-                    onClick = {},
-                    label = {
-                        Text(
-                            text =
-                                if (isUserInList) {
-                                    if (userIsPublicMember) {
-                                        stringRes(R.string.follow_set_public_presence_indicator, userName)
-                                    } else {
-                                        stringRes(R.string.follow_set_private_presence_indicator, userName)
-                                    }
+            FilterChip(
+                selected = true,
+                onClick = {},
+                label = {
+                    Text(
+                        text =
+                            if (isUserInList) {
+                                if (userIsPublicMember) {
+                                    stringRes(R.string.follow_set_public_presence_indicator, userName)
                                 } else {
-                                    stringRes(R.string.follow_set_absence_indicator, userName)
-                                },
-                        )
+                                    stringRes(R.string.follow_set_private_presence_indicator, userName)
+                                }
+                            } else {
+                                stringRes(R.string.follow_set_absence_indicator, userName)
+                            },
+                    )
+                },
+                leadingIcon =
+                    if (isUserInList) {
+                        {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
+                                contentDescription = null,
+                            )
+                        }
+                    } else {
+                        null
                     },
-                    leadingIcon =
-                        if (isUserInList) {
-                            {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
-                                    contentDescription = null,
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                    shape = ButtonBorder,
-                )
-                Spacer(modifier = StdHorzSpacer)
-            }
+                shape = ButtonBorder,
+            )
         }
 
         Column(
@@ -416,22 +344,18 @@ fun FollowSetItem(
             ) {
                 if (isUserInList) {
                     Icon(
-                        imageVector = Icons.Filled.Delete,
+                        imageVector = Icons.Filled.PersonRemove,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onBackground,
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Filled.Add,
+                        imageVector = Icons.Filled.PersonAdd,
                         contentDescription = null,
                         tint = Color.White,
                     )
                 }
             }
-            Text(
-                text = stringRes(if (isUserInList) R.string.remove else R.string.add),
-                color = MaterialTheme.colorScheme.onBackground,
-            )
 
             UserAdditionOptionsMenu(
                 isExpanded = isUserAddTapped.value,
@@ -446,7 +370,6 @@ fun FollowSetItem(
 
 @Composable
 private fun UserAdditionOptionsMenu(
-    modifier: Modifier = Modifier,
     isExpanded: Boolean,
     onUserAdd: (asPrivateMember: Boolean) -> Unit,
     onDismiss: () -> Unit,
@@ -518,7 +441,7 @@ fun FollowSetsCreationMenu(
     }
 
     if (isListAdditionDialogOpen.value) {
-        NewSetCreationDialog(
+        NewPeopleListCreationDialog(
             onDismiss = {
                 isListAdditionDialogOpen.value = false
                 isPrivateOptionTapped.value = false

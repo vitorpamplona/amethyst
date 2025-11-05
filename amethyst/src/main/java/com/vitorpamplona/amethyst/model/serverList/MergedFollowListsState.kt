@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.model.serverList
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSetState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.stateIn
 
 class MergedFollowListsState(
     val kind3List: Kind3FollowListState,
-    val followSetList: FollowSetState,
+    val followSetList: PeopleListsState,
     val hashtagList: HashtagListState,
     val geohashList: GeohashListState,
     val communityList: CommunityListState,
@@ -78,7 +78,7 @@ class MergedFollowListsState(
     val flow: StateFlow<AllFollows> =
         combine(
             kind3List.flow,
-            followSetList.profilesFlow,
+            followSetList.allPeopleListProfiles,
             hashtagList.flow,
             geohashList.flow,
             communityList.flow,
@@ -87,7 +87,7 @@ class MergedFollowListsState(
             emit(
                 mergeLists(
                     kind3List.flow.value,
-                    followSetList.profilesFlow.value,
+                    followSetList.allPeopleListProfiles.value,
                     hashtagList.flow.value,
                     geohashList.flow.value,
                     communityList.flow.value,
@@ -100,7 +100,7 @@ class MergedFollowListsState(
                 SharingStarted.Eagerly,
                 mergeLists(
                     kind3List.flow.value,
-                    followSetList.profilesFlow.value,
+                    followSetList.allPeopleListProfiles.value,
                     hashtagList.flow.value,
                     geohashList.flow.value,
                     communityList.flow.value,

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList
+package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
@@ -53,4 +53,8 @@ class PeopleListDecryptionCache(
     suspend fun words(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedWords()
 
     suspend fun wordSet(event: PeopleListEvent) = cachedPrivateLists.mergeTagList(event).mutedWordSet()
+
+    suspend fun privateUsers(event: PeopleListEvent) = cachedPrivateLists.privateTags(event)?.mutedUsers() ?: emptyList()
+
+    suspend fun privateUserIdSet(event: PeopleListEvent) = cachedPrivateLists.privateTags(event)?.mutedUserIdSet() ?: emptySet()
 }

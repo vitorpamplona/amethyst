@@ -1,0 +1,303 @@
+/**
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
+
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.anyNotNullEvent
+import com.vitorpamplona.amethyst.model.eventIdSet
+import com.vitorpamplona.amethyst.model.events
+import com.vitorpamplona.amethyst.model.filter
+import com.vitorpamplona.amethyst.model.updateFlow
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.utils.flattenToSet
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.update
+import java.util.UUID
+
+/**
+ * Maintains several stateflows for each step in processing PeopleLists
+ *
+ * This class must receive updates from Large Cache as it receives new events.
+ */
+class PeopleListsState(
+    val signer: NostrSigner,
+    val cache: LocalCache,
+    val decryptionCache: PeopleListDecryptionCache,
+    val scope: CoroutineScope,
+) {
+    val user = cache.getOrCreateUser(signer.pubKey)
+
+    fun existingPeopleListNotes() = cache.addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
+
+    val peopleListVersions = MutableStateFlow(0)
+
+    val peopleListNotes =
+        peopleListVersions
+            .map { existingPeopleListNotes() }
+            .onStart { emit(existingPeopleListNotes()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val peopleListsEventIds =
+        peopleListNotes
+            .map { it.eventIdSet() }
+            .onStart { emit(peopleListNotes.value.eventIdSet()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val latestLists: StateFlow<List<PeopleListEvent>> =
+        peopleListNotes
+            .transformLatest { emitAll(it.updateFlow<PeopleListEvent>()) }
+            .onStart { emit(peopleListNotes.value.events()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    suspend fun PeopleListEvent.userIdSet() = decryptionCache.userIdSet(this)
+
+    suspend fun List<PeopleListEvent>.mapToUserIdSet() = this.map { it.userIdSet() }.flattenToSet()
+
+    val allPeopleListProfiles: StateFlow<Set<HexKey>> =
+        latestLists
+            .map { it.mapToUserIdSet() }
+            .onStart { emit(latestLists.value.mapToUserIdSet()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    suspend fun PeopleListEvent.toUI() =
+        PeopleList(
+            identifierTag = this.dTag(),
+            title = this.nameOrTitle() ?: this.dTag(),
+            description = this.description(),
+            privateMembers = cache.load(decryptionCache.privateUserIdSet(this)),
+            publicMembers = cache.load(this.publicUsersIdSet()),
+        )
+
+    suspend fun List<PeopleListEvent>.toUI() = this.map { it.toUI() }
+
+    val uiListFlow =
+        latestLists
+            .map { it.toUI() }
+            .onStart { emit(latestLists.value.toUI()) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    fun selectListFlow(selectedDTag: String) =
+        uiListFlow
+            .map { peopleLists ->
+                peopleLists.firstOrNull { list ->
+                    list.identifierTag == selectedDTag
+                }
+            }.onStart {
+                emit(
+                    uiListFlow.value.firstOrNull { it.identifierTag == selectedDTag },
+                )
+            }
+
+    fun isUserInFollowSets(user: User): Boolean = allPeopleListProfiles.value.contains(user.pubkeyHex)
+
+    fun DeletionEvent.hasDeletedAnyPeopleList() = deleteAddressesWithKind(PeopleListEvent.KIND) || deletesAnyEventIn(peopleListsEventIds.value)
+
+    fun hasItemInNoteList(notes: Set<Note>): Boolean =
+        notes.anyNotNullEvent { event ->
+            if (event.pubKey == signer.pubKey) {
+                event is PeopleListEvent || (event is DeletionEvent && event.hasDeletedAnyPeopleList())
+            } else {
+                false
+            }
+        }
+
+    fun newNotes(newNotes: Set<Note>) {
+        if (hasItemInNoteList(newNotes)) {
+            forceRefresh()
+        }
+    }
+
+    fun deletedNotes(deletedNotes: Set<Note>) {
+        if (hasItemInNoteList(deletedNotes)) {
+            forceRefresh()
+        }
+    }
+
+    fun forceRefresh() {
+        peopleListVersions.update { it + 1 }
+    }
+
+    // --------------
+    // Updating Lists
+    // --------------
+
+    fun getPeopleListNote(noteIdentifier: String): AddressableNote? = existingPeopleListNotes().find { it.dTag() == noteIdentifier }
+
+    fun getPeopleList(noteIdentifier: String): PeopleListEvent = getPeopleListNote(noteIdentifier)?.event as PeopleListEvent
+
+    fun User.toUserTag() = UserTag(this.pubkeyHex, this.bestRelayHint())
+
+    fun Set<User>.toUserTags() = map { it.toUserTag() }
+
+    suspend fun addFollowList(
+        listName: String,
+        listDescription: String?,
+        member: User? = null,
+        isPrivate: Boolean = false,
+        account: Account,
+    ) {
+        val newList =
+            PeopleListEvent.createListWithDescription(
+                dTag = UUID.randomUUID().toString(),
+                title = listName,
+                description = listDescription,
+                publicMembers = if (!isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
+                privateMembers = if (isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun renameFollowList(
+        newName: String,
+        peopleList: PeopleList,
+        account: Account,
+    ) {
+        val listEvent = getPeopleList(peopleList.identifierTag)
+        val newList =
+            PeopleListEvent.modifyListName(
+                earlierVersion = listEvent,
+                newName = newName,
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun modifyFollowSetDescription(
+        newDescription: String?,
+        peopleList: PeopleList,
+        account: Account,
+    ) {
+        val listEvent = getPeopleList(peopleList.identifierTag)
+        val newList =
+            PeopleListEvent.modifyDescription(
+                earlierVersion = listEvent,
+                newDescription = newDescription,
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun cloneFollowSet(
+        currentPeopleList: PeopleList,
+        customCloneName: String?,
+        customCloneDescription: String?,
+        account: Account,
+    ) {
+        val newList =
+            PeopleListEvent.createListWithDescription(
+                dTag = UUID.randomUUID().toString(),
+                title = customCloneName ?: currentPeopleList.title,
+                description = customCloneDescription ?: currentPeopleList.description,
+                publicMembers = currentPeopleList.publicMembers.toUserTags(),
+                privateMembers = currentPeopleList.privateMembers.toUserTags(),
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun deleteFollowSet(
+        identifierTag: String,
+        account: Account,
+    ) {
+        val followListEvent = getPeopleList(identifierTag)
+        val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(followListEvent)))
+        account.sendMyPublicAndPrivateOutbox(deletionEvent)
+    }
+
+    suspend fun addUserToSet(
+        user: User,
+        identifierTag: String,
+        shouldBePrivateMember: Boolean,
+        account: Account,
+    ) {
+        val followListEvent = getPeopleList(identifierTag)
+        val newList =
+            PeopleListEvent.addUser(
+                earlierVersion = followListEvent,
+                pubKeyHex = user.pubkeyHex,
+                relayHint = user.bestRelayHint(),
+                isPrivate = shouldBePrivateMember,
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun addUserFirstToSet(
+        user: User,
+        identifierTag: String,
+        shouldBePrivateMember: Boolean,
+        account: Account,
+    ) {
+        val followListEvent = getPeopleList(identifierTag)
+        val newList =
+            PeopleListEvent.addUserFirst(
+                earlierVersion = followListEvent,
+                pubKeyHex = user.pubkeyHex,
+                relayHint = user.bestRelayHint(),
+                isPrivate = shouldBePrivateMember,
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun removeUserFromSet(
+        user: User,
+        isPrivate: Boolean,
+        identifierTag: String,
+        account: Account,
+    ) {
+        val followListEvent = getPeopleList(identifierTag)
+        val newList =
+            PeopleListEvent.removeUser(
+                earlierVersion = followListEvent,
+                pubKeyHex = user.pubkeyHex,
+                isUserPrivate = isPrivate,
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+}

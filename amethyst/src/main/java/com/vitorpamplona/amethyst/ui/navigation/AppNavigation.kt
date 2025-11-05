@@ -78,9 +78,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsAndSetsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetsManagementDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.PeopleListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.EditPeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -125,13 +125,9 @@ fun AppNavigation(
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
 
-            composableFromEnd<Route.Lists> { ListsAndSetsScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.FollowSetRoute> {
-                FollowSetScreen(it.setIdentifier, accountViewModel, nav)
-            }
-            composableFromEndArgs<Route.FollowSetManagement> {
-                FollowSetsManagementDialog(it.userHexKey, accountViewModel, nav)
-            }
+            composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
+            composableFromEndArgs<Route.PeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
+            composableFromEndArgs<Route.PeopleListManagement> { EditPeopleListScreen(it.userToAdd, accountViewModel, nav) }
 
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }

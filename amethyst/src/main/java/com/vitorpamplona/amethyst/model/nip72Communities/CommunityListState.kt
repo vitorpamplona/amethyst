@@ -80,6 +80,22 @@ class CommunityListState(
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    val flowNotes: StateFlow<List<AddressableNote>> =
+        flow
+            .map { hint ->
+                hint.map {
+                    cache.getOrCreateAddressableNote(it.address)
+                }
+            }.onStart {
+                emit(flow.value.map { cache.getOrCreateAddressableNote(it.address) })
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptyList(),
+            )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     val flowSet: StateFlow<Set<String>> =
         flow
             .map { hint ->

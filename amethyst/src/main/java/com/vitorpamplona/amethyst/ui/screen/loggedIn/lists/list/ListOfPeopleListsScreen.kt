@@ -18,17 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -37,176 +34,103 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.SetVisibility
-import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
-fun ListsAndSetsScreen(
+fun ListOfPeopleListsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsViewModel: FollowSetFeedViewModel =
-        viewModel(
-            key = "FollowSetFeedViewModel",
-            factory = FollowSetFeedViewModel.Factory(accountViewModel.account),
-        )
-
-    ListsAndSetsScreen(
-        followSetsViewModel,
-        accountViewModel,
-        nav,
-    )
-}
-
-@Composable
-fun ListsAndSetsScreen(
-    followSetsViewModel: FollowSetFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Custom Lists Start")
-                    followSetsViewModel.invalidateData()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    val followSetsFlow by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
-
-    CustomListsScreen(
-        followSetsFlow,
-        refresh = {
-            followSetsViewModel.invalidateData()
-        },
+    ListOfPeopleListsScreen(
+        listFlow = accountViewModel.account.peopleListsState.uiListFlow,
         addItem = { title: String, description: String? ->
-
-            followSetsViewModel.addFollowSet(
-                setName = title,
-                setDescription = description,
-                account = accountViewModel.account,
-            )
+            accountViewModel.runIOCatching {
+                accountViewModel.account.peopleListsState.addFollowList(
+                    listName = title,
+                    listDescription = description,
+                    account = accountViewModel.account,
+                )
+            }
         },
         openItem = {
-            nav.nav(Route.FollowSetRoute(it))
+            nav.nav(Route.PeopleListView(it))
         },
         renameItem = { followSet, newValue ->
-            followSetsViewModel.renameFollowSet(
-                newName = newValue,
-                followSet = followSet,
-                account = accountViewModel.account,
-            )
+            accountViewModel.runIOCatching {
+                accountViewModel.account.peopleListsState.renameFollowList(
+                    newName = newValue,
+                    peopleList = followSet,
+                    account = accountViewModel.account,
+                )
+            }
         },
         changeItemDescription = { followSet, newDescription ->
-            followSetsViewModel.modifyFollowSetDescription(
-                newDescription = newDescription,
-                followSet = followSet,
-                account = accountViewModel.account,
-            )
+            accountViewModel.runIOCatching {
+                accountViewModel.account.peopleListsState.modifyFollowSetDescription(
+                    newDescription = newDescription,
+                    peopleList = followSet,
+                    account = accountViewModel.account,
+                )
+            }
         },
         cloneItem = { followSet, customName, customDescription ->
-            followSetsViewModel.cloneFollowSet(
-                currentFollowSet = followSet,
-                customCloneName = customName,
-                customCloneDescription = customDescription,
-                account = accountViewModel.account,
-            )
+            accountViewModel.runIOCatching {
+                accountViewModel.account.peopleListsState.cloneFollowSet(
+                    currentPeopleList = followSet,
+                    customCloneName = customName,
+                    customCloneDescription = customDescription,
+                    account = accountViewModel.account,
+                )
+            }
         },
         deleteItem = { followSet ->
-            followSetsViewModel.deleteFollowSet(
-                followSet = followSet,
-                account = accountViewModel.account,
-            )
+            accountViewModel.runIOCatching {
+                accountViewModel.account.peopleListsState.deleteFollowSet(
+                    identifierTag = followSet.identifierTag,
+                    account = accountViewModel.account,
+                )
+            }
         },
-        accountViewModel,
         nav,
     )
 }
 
 @Composable
-fun CustomListsScreen(
-    followSetFeedState: FollowSetFeedState,
-    refresh: () -> Unit,
+fun ListOfPeopleListsScreen(
+    listFlow: StateFlow<List<PeopleList>>,
     addItem: (title: String, description: String?) -> Unit,
     openItem: (identifier: String) -> Unit,
-    renameItem: (followSet: FollowSet, newName: String) -> Unit,
-    changeItemDescription: (followSet: FollowSet, newDescription: String?) -> Unit,
-    cloneItem: (followSet: FollowSet, customName: String?, customDesc: String?) -> Unit,
-    deleteItem: (followSet: FollowSet) -> Unit,
-    accountViewModel: AccountViewModel,
+    renameItem: (peopleList: PeopleList, newName: String) -> Unit,
+    changeItemDescription: (peopleList: PeopleList, newDescription: String?) -> Unit,
+    cloneItem: (peopleList: PeopleList, customName: String?, customDesc: String?) -> Unit,
+    deleteItem: (peopleList: PeopleList) -> Unit,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 2 }
-    val coroutineScope = rememberCoroutineScope()
-
-    DisappearingScaffold(
-        isInvertedLayout = false,
-        accountViewModel = accountViewModel,
+    Scaffold(
         topBar = {
-            Column {
-                TopBarWithBackButton(stringRes(R.string.my_lists_and_sets), nav::popBack)
-                TabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    modifier = TabRowHeight,
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                ) {
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = stringRes(R.string.follow_sets), overflow = TextOverflow.Visible) },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = stringRes(R.string.labeled_bookmarks), overflow = TextOverflow.Visible) },
-                    )
-                }
-            }
+            TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
         },
-        floatingButton = {
-            // TODO: Show components based on current tab
-            FollowSetFabsAndMenu(
+        floatingActionButton = {
+            PeopleListFabsAndMenu(
                 onAddSet = { name: String, description: String? ->
                     addItem(name, description)
                 },
@@ -222,32 +146,20 @@ fun CustomListsScreen(
                     end = 10.dp,
                 ).fillMaxHeight(),
         ) {
-            HorizontalPager(state = pagerState) { page ->
-                when (page) {
-                    0 ->
-                        FollowSetFeedView(
-                            followSetFeedState = followSetFeedState,
-                            onRefresh = refresh,
-                            onOpenItem = openItem,
-                            onRenameItem = renameItem,
-                            onItemDescriptionChange = changeItemDescription,
-                            onItemClone = cloneItem,
-                            onDeleteItem = deleteItem,
-                        )
-
-                    1 -> LabeledBookmarksFeedView()
-//                    2 -> GeneralBookmarksFeedView()
-                }
-            }
+            AllPeopleListFeedView(
+                listFlow = listFlow,
+                onOpenItem = openItem,
+                onRenameItem = renameItem,
+                onItemDescriptionChange = changeItemDescription,
+                onItemClone = cloneItem,
+                onDeleteItem = deleteItem,
+            )
         }
     }
 }
 
 @Composable
-private fun FollowSetFabsAndMenu(
-    modifier: Modifier = Modifier,
-    onAddSet: (name: String, description: String?) -> Unit,
-) {
+private fun PeopleListFabsAndMenu(onAddSet: (name: String, description: String?) -> Unit) {
     val isSetAdditionDialogOpen = remember { mutableStateOf(false) }
 
     ExtendedFloatingActionButton(
@@ -268,7 +180,7 @@ private fun FollowSetFabsAndMenu(
     )
 
     if (isSetAdditionDialogOpen.value) {
-        NewSetCreationDialog(
+        NewPeopleListCreationDialog(
             onDismiss = {
                 isSetAdditionDialogOpen.value = false
             },
@@ -280,7 +192,7 @@ private fun FollowSetFabsAndMenu(
 }
 
 @Composable
-fun NewSetCreationDialog(
+fun NewPeopleListCreationDialog(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onCreateList: (name: String, description: String?) -> Unit,
@@ -346,59 +258,35 @@ fun NewSetCreationDialog(
     )
 }
 
-@Composable
-fun LabeledBookmarksFeedView() {
-    Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(text = "Not implemented yet.")
-        Spacer(modifier = StdVertSpacer)
-    }
-}
-
-@Composable
-fun GeneralBookmarksFeedView() {
-    Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(text = "Not implemented yet.")
-        Spacer(modifier = StdVertSpacer)
-    }
-}
-
 @Preview(showSystemUi = true)
 @Composable
-private fun SetItemPreview() {
-    val sampleFollowSet =
-        FollowSet(
+private fun PeopleListItemPreview() {
+    val samplePeopleList =
+        PeopleList(
             identifierTag = "00001-2222",
             title = "Sample List Title",
             description = "Sample List Description",
-            visibility = SetVisibility.Mixed,
+            emptySet(),
             emptySet(),
         )
     ThemeComparisonColumn {
-        CustomSetItem(
+        PeopleListItem(
             modifier = Modifier,
-            sampleFollowSet,
-            onFollowSetClick = {
-                println("follow set: ${sampleFollowSet.identifierTag}")
+            samplePeopleList,
+            onClick = {
+                println("follow set: ${samplePeopleList.identifierTag}")
             },
-            onFollowSetRename = {
+            onRename = {
                 println("Follow set new name: $it")
             },
-            onFollowSetDescriptionChange = { description ->
+            onDescriptionChange = { description ->
                 println("The follow set's description has been changed to $description")
             },
-            onFollowSetClone = { newName, newDesc ->
+            onClone = { newName, newDesc ->
                 println("The follow set has been cloned, and has custom name: $newName, Desc: $newDesc")
             },
-            onFollowSetDelete = {
-                println(" The follow set ${sampleFollowSet.title} has been deleted.")
+            onDelete = {
+                println(" The follow set ${samplePeopleList.title} has been deleted.")
             },
         )
     }

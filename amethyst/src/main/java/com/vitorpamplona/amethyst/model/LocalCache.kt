@@ -300,6 +300,10 @@ object LocalCache : ILocalCache {
 
     fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
+    fun load(keys: List<String>): List<User> = keys.mapNotNull(::checkGetOrCreateUser)
+
+    fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
+
     fun getOrCreateUser(key: HexKey): User {
         require(isValidHex(key = key)) { "$key is not a valid hex" }
 

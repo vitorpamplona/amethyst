@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,31 +52,32 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.nip51Lists.followSets.FollowSet
+import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
-fun CustomSetItem(
+fun PeopleListItem(
     modifier: Modifier = Modifier,
-    followSet: FollowSet,
-    onFollowSetClick: () -> Unit,
-    onFollowSetRename: (String) -> Unit,
-    onFollowSetDescriptionChange: (String?) -> Unit,
-    onFollowSetClone: (customName: String?, customDescription: String?) -> Unit,
-    onFollowSetDelete: () -> Unit,
+    peopleList: PeopleList,
+    onClick: () -> Unit,
+    onRename: (String) -> Unit,
+    onDescriptionChange: (String?) -> Unit,
+    onClone: (customName: String?, customDescription: String?) -> Unit,
+    onDelete: () -> Unit,
 ) {
     val context = LocalContext.current
     Row(
         modifier =
             modifier
-                .clickable(onClick = onFollowSetClick),
+                .clickable(onClick = onClick),
     ) {
         Row(
             modifier =
@@ -91,10 +92,14 @@ fun CustomSetItem(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy5dp,
                 ) {
-                    Text(followSet.title, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = StdHorzSpacer)
-                    if (followSet.publicProfiles.isEmpty() && followSet.privateProfiles.isEmpty()) {
+                    Icon(
+                        painter = painterResource(R.drawable.format_list_bulleted_type),
+                        contentDescription = stringRes(R.string.follow_set_icon_description),
+                    )
+                    Text(peopleList.title, fontWeight = FontWeight.Bold)
+                    if (peopleList.publicMembers.isEmpty() && peopleList.privateMembers.isEmpty()) {
                         FilterChip(
                             selected = true,
                             onClick = {},
@@ -110,17 +115,8 @@ fun CustomSetItem(
                             shape = ButtonBorder,
                         )
                     }
-                    if (followSet.publicProfiles.isNotEmpty()) {
-                        val publicMemberSize = followSet.publicProfiles.size
-                        val membersLabel =
-                            stringRes(
-                                context,
-                                if (publicMemberSize == 1) {
-                                    R.string.follow_set_single_member_label
-                                } else {
-                                    R.string.follow_set_multiple_member_label
-                                },
-                            )
+                    if (peopleList.publicMembers.isNotEmpty()) {
+                        val publicMemberSize = peopleList.publicMembers.size
                         FilterChip(
                             selected = true,
                             onClick = {},
@@ -137,17 +133,8 @@ fun CustomSetItem(
                         )
                         Spacer(modifier = StdHorzSpacer)
                     }
-                    if (followSet.privateProfiles.isNotEmpty()) {
-                        val privateMemberSize = followSet.privateProfiles.size
-                        val membersLabel =
-                            stringRes(
-                                context,
-                                if (privateMemberSize == 1) {
-                                    R.string.follow_set_single_member_label
-                                } else {
-                                    R.string.follow_set_multiple_member_label
-                                },
-                            )
+                    if (peopleList.privateMembers.isNotEmpty()) {
+                        val privateMemberSize = peopleList.privateMembers.size
                         FilterChip(
                             selected = true,
                             onClick = {},
@@ -166,7 +153,7 @@ fun CustomSetItem(
                 }
                 Spacer(modifier = StdVertSpacer)
                 Text(
-                    followSet.description ?: "",
+                    peopleList.description ?: "",
                     fontWeight = FontWeight.Light,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
@@ -182,26 +169,26 @@ fun CustomSetItem(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.End,
         ) {
-            SetOptionsButton(
-                followSetName = followSet.title,
-                followSetDescription = followSet.description,
-                onSetRename = onFollowSetRename,
-                onSetDescriptionChange = onFollowSetDescriptionChange,
-                onSetCloneCreate = onFollowSetClone,
-                onListDelete = onFollowSetDelete,
+            PeopleListOptionsButton(
+                peopleListName = peopleList.title,
+                peopleListDescription = peopleList.description,
+                onListRename = onRename,
+                onListDescriptionChange = onDescriptionChange,
+                onListCloneCreate = onClone,
+                onListDelete = onDelete,
             )
         }
     }
 }
 
 @Composable
-private fun SetOptionsButton(
+private fun PeopleListOptionsButton(
     modifier: Modifier = Modifier,
-    followSetName: String,
-    followSetDescription: String?,
-    onSetRename: (String) -> Unit,
-    onSetDescriptionChange: (String?) -> Unit,
-    onSetCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
+    peopleListName: String,
+    peopleListDescription: String?,
+    onListRename: (String) -> Unit,
+    onListDescriptionChange: (String?) -> Unit,
+    onListCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onListDelete: () -> Unit,
 ) {
     val isMenuOpen = remember { mutableStateOf(false) }
@@ -211,28 +198,28 @@ private fun SetOptionsButton(
     ) {
         VerticalDotsIcon()
 
-        SetOptionsMenu(
-            setName = followSetName,
-            setDescription = followSetDescription,
+        ListOptionsMenu(
+            setName = peopleListName,
+            setDescription = peopleListDescription,
             isExpanded = isMenuOpen.value,
             onDismiss = { isMenuOpen.value = false },
-            onSetRename = onSetRename,
-            onSetDescriptionChange = onSetDescriptionChange,
-            onSetClone = onSetCloneCreate,
+            onListRename = onListRename,
+            onListDescriptionChange = onListDescriptionChange,
+            onListClone = onListCloneCreate,
             onDelete = onListDelete,
         )
     }
 }
 
 @Composable
-private fun SetOptionsMenu(
+private fun ListOptionsMenu(
     modifier: Modifier = Modifier,
     isExpanded: Boolean,
     setName: String,
     setDescription: String?,
-    onSetRename: (String) -> Unit,
-    onSetDescriptionChange: (String?) -> Unit,
-    onSetClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
+    onListRename: (String) -> Unit,
+    onListDescriptionChange: (String?) -> Unit,
+    onListClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -287,7 +274,7 @@ private fun SetOptionsMenu(
     }
 
     if (isRenameDialogOpen.value) {
-        SetRenameDialog(
+        ListRenameDialog(
             currentName = setName,
             newName = renameString.value,
             onStringRenameChange = {
@@ -295,21 +282,21 @@ private fun SetOptionsMenu(
             },
             onDismissDialog = { isRenameDialogOpen.value = false },
             onListRename = {
-                onSetRename(renameString.value)
+                onListRename(renameString.value)
             },
         )
     }
 
     if (isDescriptionModDialogOpen.value) {
-        SetModifyDescriptionDialog(
+        ListModifyDescriptionDialog(
             currentDescription = setDescription,
             onDismissDialog = { isDescriptionModDialogOpen.value = false },
-            onModifyDescription = onSetDescriptionChange,
+            onModifyDescription = onListDescriptionChange,
         )
     }
 
     if (isCopyDialogOpen.value) {
-        SetCloneDialog(
+        ListCloneDialog(
             optionalNewName = optionalCloneName.value,
             optionalNewDesc = optionalCloneDescription.value,
             onCloneNameChange = {
@@ -319,7 +306,7 @@ private fun SetOptionsMenu(
                 optionalCloneDescription.value = it
             },
             onCloneCreate = { name, description ->
-                onSetClone(optionalCloneName.value, optionalCloneDescription.value)
+                onListClone(optionalCloneName.value, optionalCloneDescription.value)
             },
             onDismiss = { isCopyDialogOpen.value = false },
         )
@@ -327,7 +314,7 @@ private fun SetOptionsMenu(
 }
 
 @Composable
-private fun SetRenameDialog(
+private fun ListRenameDialog(
     modifier: Modifier = Modifier,
     currentName: String,
     newName: String,
@@ -387,7 +374,7 @@ private fun SetRenameDialog(
 }
 
 @Composable
-private fun SetModifyDescriptionDialog(
+private fun ListModifyDescriptionDialog(
     modifier: Modifier = Modifier,
     currentDescription: String?,
     onDismissDialog: () -> Unit,
@@ -450,7 +437,7 @@ private fun SetModifyDescriptionDialog(
 }
 
 @Composable
-private fun SetCloneDialog(
+private fun ListCloneDialog(
     modifier: Modifier = Modifier,
     optionalNewName: String?,
     optionalNewDesc: String?,

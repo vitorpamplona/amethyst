@@ -125,12 +125,15 @@ fun UserLine(
 ) {
     Row(
         modifier =
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp,
-                bottom = 10.dp,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 10.dp,
+                    bottom = 10.dp,
+                ),
     ) {
         ClickableUserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
 
