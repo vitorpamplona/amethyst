@@ -59,7 +59,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorSerializer
 import java.io.InputStream
-import kotlin.jvm.java
 
 class JacksonMapper {
     companion object {

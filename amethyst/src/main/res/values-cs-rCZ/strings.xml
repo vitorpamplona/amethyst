@@ -459,6 +459,8 @@
     <string name="follow_set_private_presence_indicator">%1$s je soukromý člen</string>
     <string name="follow_set_public_member_add_label">Přidat jako veřejného člena</string>
     <string name="follow_set_private_member_add_label">Přidat jako soukromého člena</string>
+    <string name="follow_set_public_members_header_label2">Veřejní členové</string>
+    <string name="follow_set_private_members_header_label2">Soukromí členové</string>
     <string name="follow_set_public_members_header_label">Veřejné profily</string>
     <string name="follow_set_private_members_header_label">Soukromé profily</string>
     <string name="follow_set_single_member_label">člen</string>
@@ -703,6 +705,16 @@
     <string name="paste_from_clipboard">Vložit ze schránky</string>
     <string name="invalid_nip47_uri_title">Neplatné NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">URI %1$s není platné přihlašovací URI NIP-47.</string>
+    <string name="connect_to_new_nwc_wallet">Připojit novou NWC peněženku</string>
+    <string name="couldnt_find_nwc_wallets">Peněženka nebyla nalezená</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst nenašel žádné aplikace peněženek, které podporují Nostr Wallet Connect (NWC).
+\n\nCo můžete udělat:
+\n\t1. Ověřte podporu NWC: Zkontrolujte, že vaše oblíbená peněženka podporuje Nostr Wallet Connect.
+\n\t2. Vytvořte připojení: Otevřete svou peněženku a vytvořte nové NWC připojení.
+\n\t3. Propojte s Amethyst: Vaše peněženka obvykle nabídne tři možnosti:
+\n\t\t3.1 Automatické propojení: Tlačítko pro automatické otevření a připojení k Amethyst. Klikněte na něj, otevřete Amethyst a uložte na nové obrazovce.
+\n\t\t3.2 Ruční propojení: URI připojení, které můžete zkopírovat a vložit přes ikonu vložení na této obrazovce.
+\n\t\t3.3 QR kód: Peněženka vytvoří QR kód, který můžete naskenovat pomocí tlačítka QR kódu na této obrazovce.</string>
     <string name="language_description">Pro rozhraní aplikace</string>
     <string name="theme_description">Tmavé, světlé nebo systémové téma</string>
     <string name="automatically_load_images_gifs_description">Automaticky načítat obrázky a GIFy</string>
@@ -934,6 +946,16 @@
     <string name="search_relays_not_found_description">Vytvoření seznamu relé speciálně navržených pro vyhledávání a označování uživatelů zlepší tyto výsledky.</string>
     <string name="search_relays_not_found_editing">Vložte mezi 1–3 relé, která chcete použít při vyhledávání obsahu nebo označování uživatelů. Ujistěte se, že vaše vybraná relé implementují NIP-50</string>
     <string name="search_relays_not_found_examples">Dobré možnosti jsou:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Relaye pro odesílání</string>
+    <string name="outbox_relays_not_found">Nastavte své veřejné relaye pro odesílání příspěvků</string>
+    <string name="outbox_relays_not_found_description">Vytvoření seznamu relayů určených pro přijímání vašeho obsahu je zásadní pro váš zážitek z Nostr a jediný způsob, jak vás mohou vaši sledující najít.</string>
+    <string name="outbox_relays_not_found_editing">Vložte 1–3 relaye, které přijímají vaše příspěvky. Ujistěte se, že nevyžadují platbu, pokud neplatíte za vložení.</string>
+    <string name="outbox_relays_not_found_examples">Dobré možnosti jsou:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">Relaye pro přijímání</string>
+    <string name="inbox_relays_not_found">Nastavte své veřejné relaye pro přijímání oznámení</string>
+    <string name="inbox_relays_not_found_description">Vytvoření seznamu relayů určených pro přijímání oznámení je zásadní pro váš zážitek z Nostr.</string>
+    <string name="inbox_relays_not_found_editing">Vložte 1–3 relaye, které přijímají oznámení pro vás. Ujistěte se, že nevyžadují platbu ani web of trust od odesílatele, jinak budete dostávat oznámení pouze od plátců nebo dlouhodobých uživatelů.</string>
+    <string name="inbox_relays_not_found_examples">Dobré možnosti jsou:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Nahrát v DM</string>
     <string name="relay_settings">Nastavení relé</string>
     <string name="public_home_section">Veřejná domácí relé</string>

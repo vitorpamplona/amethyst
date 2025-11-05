@@ -385,7 +385,7 @@ open class ChannelNewMessageViewModel :
         val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
 
         val channelRelays = channel.relays()
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
 
         return if (channel is PublicChatChannel) {
             val replyingToEvent = replyTo.value?.toEventHint<ChannelMessageEvent>()

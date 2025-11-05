@@ -951,6 +951,16 @@
     <string name="search_relays_not_found_description">A kifejezetten a kereséshez és a felhasználói címkézéshez tervezett átjátszólista létrehozása javítani fogja ezeket az eredményeket.</string>
     <string name="search_relays_not_found_editing">Adjon hozzá 1–3 átjátszót a tartalom kereséshez vagy a felhasználók címkézéséhez. Győződjön meg arról, hogy a kiválasztott átjátszók alkalmazzák a NIP-50-et</string>
     <string name="search_relays_not_found_examples">Jó választási lehetőségek:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Átjátszók a kimenő üzenetkhez</string>
+    <string name="outbox_relays_not_found">Állítsa be a nyilvános kimenő üzenetek átjátszóit a bejegyzéshez</string>
+    <string name="outbox_relays_not_found_description">A tartalom fogadására kifejezetten kialakított átjátszólista létrehozása elengedhetetlen a Nostr élményhez, és ez az egyetlen módja annak, hogy a követői megtalálják Önt. </string>
+    <string name="outbox_relays_not_found_editing">Adjon meg 1-3 átjátszót, amelyek fogadják az Ön bejegyzéseit. Győződjön meg arról, hogy nem kérnek fizetést, ha Ön nem fizet a használatukért</string>
+    <string name="outbox_relays_not_found_examples">Jó választási lehetőségek:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">Átjátszók a bejövő üzenetkhez</string>
+    <string name="inbox_relays_not_found">Állítsa be a nyilvános bejövő üzenetek átjátszóit az értesítések fogadásához</string>
+    <string name="inbox_relays_not_found_description">Az értesítések fogadásához kifejezetten kialakított átjátszólista létrehozása elengedhetetlen a Nostr élményhez. </string>
+    <string name="inbox_relays_not_found_editing">Adjon meg 1-3 átjátszót, amelyeken keresztül fogadni tudja az értesítéseket. Győződjön meg arról, hogy azok nem igényelnek fizetést vagy bizalmi hálózatot a feladótól, különben csak a fizetősektől vagy a hosszú távú felhasználóktól fog értesítéseket kapni</string>
+    <string name="inbox_relays_not_found_examples">Jó választási lehetőségek:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Feltöltés közvetlen üzenetbe</string>
     <string name="relay_settings">Átjátszók beállításai</string>
     <string name="public_home_section">Nyilvános kimenő és saját átjátszók</string>

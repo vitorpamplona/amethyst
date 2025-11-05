@@ -38,8 +38,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
-import kotlin.sequences.forEach
-import kotlin.text.Regex
 
 object Nip19Parser {
     private val nip19PlusNip46regex: Regex =

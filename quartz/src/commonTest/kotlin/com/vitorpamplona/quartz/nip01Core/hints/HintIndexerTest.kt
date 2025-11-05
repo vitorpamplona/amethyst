@@ -24,10 +24,6 @@ import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexerTest.Companion.addresses
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexerTest.Companion.eventIds
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexerTest.Companion.indexer
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexerTest.Companion.keys
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.utils.RandomInstance

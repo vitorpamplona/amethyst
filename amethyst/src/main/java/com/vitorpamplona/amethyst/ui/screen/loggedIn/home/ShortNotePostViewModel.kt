@@ -515,7 +515,7 @@ open class ShortNotePostViewModel :
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val geoHash = if (wantsToAddGeoHash) (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString() else null
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
         val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)

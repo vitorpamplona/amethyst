@@ -28,6 +28,7 @@ import android.webkit.MimeTypeMap
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.BlurhashMetadataCalculator
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -36,7 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -83,34 +84,35 @@ class BlossomUploader {
         val fileName = context.getFileName(uri)
 
         val imageInputStreamForHash = contentResolver.openInputStream(uri)
-        val payload =
-            imageInputStreamForHash?.use {
-                it.readBytes()
+        checkNotNull(imageInputStreamForHash) { "Can't open the image input stream" }
+
+        val (hash, size) =
+            imageInputStreamForHash.use { stream ->
+                val (hashBytes, totalBytes) = sha256StreamWithCount(stream)
+                hashBytes.toHexKey() to totalBytes
             }
 
-        checkNotNull(payload) { "Can't open the image input stream" }
-
-        val hash = sha256(payload).toHexKey()
+        val localMetadata = BlurhashMetadataCalculator.computeFromUri(context, uri, myContentType)
 
         val imageInputStream = contentResolver.openInputStream(uri)
-
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return imageInputStream.use { stream ->
-            upload(
-                stream,
-                hash,
-                payload.size,
-                fileName,
-                myContentType,
-                alt,
-                sensitiveContent,
-                serverBaseUrl,
-                okHttpClient,
-                httpAuth,
-                context,
-            )
-        }
+        return imageInputStream
+            .use { stream ->
+                upload(
+                    stream,
+                    hash,
+                    size,
+                    fileName,
+                    myContentType,
+                    alt,
+                    sensitiveContent,
+                    serverBaseUrl,
+                    okHttpClient,
+                    httpAuth,
+                    context,
+                )
+            }.mergeLocalMetadata(localMetadata)
     }
 
     fun encodeAuth(event: BlossomAuthorizationEvent): String {
@@ -121,7 +123,7 @@ class BlossomUploader {
     suspend fun upload(
         inputStream: InputStream,
         hash: HexKey,
-        length: Int,
+        length: Long,
         baseFileName: String?,
         contentType: String?,
         alt: String?,
@@ -146,14 +148,14 @@ class BlossomUploader {
             object : RequestBody() {
                 override fun contentType() = contentType?.toMediaType()
 
-                override fun contentLength() = length.toLong()
+                override fun contentLength() = length
 
                 override fun writeTo(sink: BufferedSink) {
                     inputStream.source().use(sink::writeAll)
                 }
             }
 
-        httpAuth(hash, length.toLong(), alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
+        httpAuth(hash, length, alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
             requestBuilder.addHeader("Authorization", encodeAuth(it))
         }
 

@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.tags.Nip05Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.PictureTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.PronounsTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.WebsiteTag
-import com.vitorpamplona.quartz.nip01Core.metadata.website
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
