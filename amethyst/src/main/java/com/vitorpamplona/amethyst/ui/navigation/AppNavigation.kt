@@ -127,9 +127,9 @@ fun AppNavigation(
 
             composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.PeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
-            composableFromEndArgs<Route.PeopleListManagement> { EditPeopleListScreen(it.userToAdd, accountViewModel, nav) }
+            composableFromBottomArgs<Route.PeopleListManagement> { EditPeopleListScreen(it.userToAdd, accountViewModel, nav) }
 
-            composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
+            composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
