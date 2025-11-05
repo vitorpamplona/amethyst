@@ -186,11 +186,11 @@ class AccountFollowsLoaderSubAssembler(
         }
 
         // removes accounts that are not being subscribed anymore.
-        accountUpdatesJobMap.forEach {
-            if (it.key !in uniqueSubscribedAccounts.keys) {
-                endWatcher(it.key)
-            }
-        }
+        // Cancel watchers for accounts no longer observed using a snapshot to avoid CME
+        accountUpdatesJobMap.keys
+            .toList()
+            .filter { it !in uniqueSubscribedAccounts.keys }
+            .forEach { endWatcher(it) }
     }
 
     private val accountUpdatesJobMap = mutableMapOf<User, Job>()
