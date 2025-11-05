@@ -166,6 +166,11 @@ class EOSEAccountFast<T : Any>(
             users[key]?.relayList?.toMutableMap()
         }
 
+    fun sinceRelaySet(key: T): Set<NormalizedRelayUrl>? =
+        synchronized(lock) {
+            users[key]?.relayList?.keys?.toSet()
+        }
+
     fun newEose(
         user: T,
         relayUrl: NormalizedRelayUrl,
