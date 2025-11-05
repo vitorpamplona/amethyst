@@ -125,36 +125,46 @@ class EOSEAccountFast<T : Any>(
     cacheSize: Int = 20,
 ) {
     private val users: LruCache<T, EOSERelayList> = LruCache<T, EOSERelayList>(cacheSize)
+    private val lock = Any()
 
     fun addOrUpdate(
         user: T,
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
-        val relayList = users[user]
-        if (relayList == null) {
-            val newList = EOSERelayList()
-            users.put(user, newList)
+        synchronized(lock) {
+            val relayList = users[user]
+            if (relayList == null) {
+                val newList = EOSERelayList()
+                users.put(user, newList)
 
-            newList.addOrUpdate(relayUrl, time)
-        } else {
-            relayList.addOrUpdate(relayUrl, time)
+                newList.addOrUpdate(relayUrl, time)
+            } else {
+                relayList.addOrUpdate(relayUrl, time)
+            }
         }
     }
 
     fun removeEveryoneBut(list: Set<T>) {
-        users.snapshot().forEach {
-            if (it.key !in list) {
-                users.remove(it.key)
+        synchronized(lock) {
+            users.snapshot().forEach {
+                if (it.key !in list) {
+                    users.remove(it.key)
+                }
             }
         }
     }
 
     fun removeDataFor(user: T) {
-        users.remove(user)
+        synchronized(lock) {
+            users.remove(user)
+        }
     }
 
-    fun since(key: T) = users[key]?.relayList
+    fun since(key: T): SincePerRelayMap? =
+        synchronized(lock) {
+            users[key]?.relayList?.toMutableMap()
+        }
 
     fun newEose(
         user: T,
