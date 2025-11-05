@@ -536,6 +536,7 @@
     <string name="follow_set_single_member_label">member</string>
     <string name="follow_set_multiple_member_label">members</string>
     <string name="follow_set_empty_label">No members</string>
+    <string name="follow_set_empty_label2">Empty</string>
     <string name="follow_set_absence_indicator">%1$s is not in this list</string>
     <string name="follow_set_man_dialog_title">Your Lists</string>
     <string name="follow_set_empty_dialog_msg">No follow lists were found, or you don\'t have any follow lists. Tap below to refresh, or use the menu to create one.</string>

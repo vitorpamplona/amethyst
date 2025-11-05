@@ -42,7 +42,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
@@ -52,7 +51,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -131,9 +129,7 @@ fun ListOfPeopleListsScreen(
         },
         floatingActionButton = {
             PeopleListFabsAndMenu(
-                onAddSet = { name: String, description: String? ->
-                    addItem(name, description)
-                },
+                onAddSet = addItem,
             )
         },
     ) { paddingValues ->
@@ -142,8 +138,6 @@ fun ListOfPeopleListsScreen(
                 .padding(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding(),
-                    start = 10.dp,
-                    end = 10.dp,
                 ).fillMaxHeight(),
         ) {
             AllPeopleListFeedView(
@@ -256,38 +250,4 @@ fun NewPeopleListCreationDialog(
             }
         },
     )
-}
-
-@Preview(showSystemUi = true)
-@Composable
-private fun PeopleListItemPreview() {
-    val samplePeopleList =
-        PeopleList(
-            identifierTag = "00001-2222",
-            title = "Sample List Title",
-            description = "Sample List Description",
-            emptySet(),
-            emptySet(),
-        )
-    ThemeComparisonColumn {
-        PeopleListItem(
-            modifier = Modifier,
-            samplePeopleList,
-            onClick = {
-                println("follow set: ${samplePeopleList.identifierTag}")
-            },
-            onRename = {
-                println("Follow set new name: $it")
-            },
-            onDescriptionChange = { description ->
-                println("The follow set's description has been changed to $description")
-            },
-            onClone = { newName, newDesc ->
-                println("The follow set has been cloned, and has custom name: $newName, Desc: $newDesc")
-            },
-            onDelete = {
-                println(" The follow set ${samplePeopleList.title} has been deleted.")
-            },
-        )
-    }
 }
