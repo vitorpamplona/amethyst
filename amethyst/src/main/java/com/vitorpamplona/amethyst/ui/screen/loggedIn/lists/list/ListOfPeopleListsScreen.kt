@@ -20,29 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -50,7 +42,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -183,71 +174,4 @@ private fun PeopleListFabsAndMenu(onAddSet: (name: String, description: String?)
             },
         )
     }
-}
-
-@Composable
-fun NewPeopleListCreationDialog(
-    modifier: Modifier = Modifier,
-    onDismiss: () -> Unit,
-    onCreateList: (name: String, description: String?) -> Unit,
-) {
-    val newListName = remember { mutableStateOf("") }
-    val newListDescription = remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringRes(R.string.follow_set_creation_dialog_title),
-                )
-            }
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                // For the new list name
-                TextField(
-                    value = newListName.value,
-                    onValueChange = { newListName.value = it },
-                    label = {
-                        Text(text = stringRes(R.string.follow_set_creation_name_label))
-                    },
-                )
-                Spacer(modifier = DoubleVertSpacer)
-                // For the set description
-                TextField(
-                    value =
-                        (
-                            if (newListDescription.value != null) newListDescription.value else ""
-                        ).toString(),
-                    onValueChange = { newListDescription.value = it },
-                    label = {
-                        Text(text = stringRes(R.string.follow_set_creation_desc_label))
-                    },
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onCreateList(newListName.value, newListDescription.value)
-                    onDismiss()
-                },
-            ) {
-                Text(stringRes(R.string.follow_set_creation_action_btn_label))
-            }
-        },
-        dismissButton = {
-            Button(
-                onClick = onDismiss,
-            ) {
-                Text(stringRes(R.string.cancel))
-            }
-        },
-    )
 }

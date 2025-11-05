@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,10 +42,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
@@ -97,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.AnimateOnNewSearch
@@ -107,9 +103,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
@@ -120,13 +113,11 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import java.lang.reflect.Modifier.isPrivate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -219,7 +210,7 @@ private fun ListViewAndEditColumn(
     nav: INav,
 ) {
     Column(modifier = modifier) {
-        FollowSetListView(
+        PeopleListPager(
             viewModel = viewModel,
             pagerState = pagerState,
             modifier = Modifier.weight(1f),
@@ -312,7 +303,7 @@ private fun RenderAddUserFieldAndSuggestions(
 }
 
 @Composable
-private fun FollowSetListView(
+private fun PeopleListPager(
     viewModel: PeopleListViewModel,
     pagerState: PagerState,
     modifier: Modifier,
@@ -325,7 +316,7 @@ private fun FollowSetListView(
         HorizontalPager(state = pagerState, modifier) { page ->
             when (page) {
                 0 ->
-                    FollowSetListView(
+                    PeopleListView(
                         memberList = selectedSet.privateMembersList,
                         onDeleteUser = { user ->
                             onDeleteUser(user, true)
@@ -336,7 +327,7 @@ private fun FollowSetListView(
                     )
 
                 1 ->
-                    FollowSetListView(
+                    PeopleListView(
                         memberList = selectedSet.publicMembersList,
                         onDeleteUser = { user ->
                             onDeleteUser(user, false)
@@ -361,7 +352,7 @@ fun FollowSetListViewPreview() {
 
     ThemeComparisonRow {
         Column {
-            FollowSetListView(
+            PeopleListView(
                 memberList = persistentListOf(user1, user2, user3),
                 onDeleteUser = { user -> },
                 accountViewModel = accountViewModel,
@@ -415,33 +406,6 @@ fun FollowSetListViewPreview() {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun FollowSetListView(
-    memberList: ImmutableList<User>,
-    modifier: Modifier = Modifier,
-    onDeleteUser: (User) -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val listState = rememberLazyListState()
-
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = FeedPadding,
-        state = listState,
-    ) {
-        itemsIndexed(memberList, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
-            FollowSetListItem(
-                modifier = Modifier.animateContentSize(),
-                user = item,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onDeleteUser = onDeleteUser,
-            )
         }
     }
 }
@@ -566,47 +530,6 @@ fun RowScope.HasUserTag(
                 tint = LightRedColor,
             )
         }
-    }
-}
-
-@Composable
-fun FollowSetListItem(
-    modifier: Modifier = Modifier,
-    user: User,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onDeleteUser: (User) -> Unit,
-) {
-    Column(
-        modifier = modifier,
-    ) {
-        Row(HalfHalfHorzModifier) {
-            UserComposeNoAction(
-                user,
-                modifier = HalfPadding.weight(1f, fill = false),
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-            IconButton(
-                onClick = {
-                    onDeleteUser(user)
-                },
-                modifier =
-                    HalfPadding
-                        .align(Alignment.CenterVertically)
-                        .background(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(percent = 80),
-                        ),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-        HorizontalDivider(thickness = DividerThickness)
     }
 }
 
