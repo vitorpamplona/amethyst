@@ -173,7 +173,7 @@ fun PeopleListItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(peopleList.title)
+                Text(peopleList.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
                 Column(
                     modifier = NoSoTinyBorders,
