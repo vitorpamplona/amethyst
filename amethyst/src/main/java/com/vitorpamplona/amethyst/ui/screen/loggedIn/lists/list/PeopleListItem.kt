@@ -206,54 +206,67 @@ fun PeopleListItem(
                     contentDescription = stringRes(R.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
-                Row(
-                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-5).dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = SpacedBy5dp,
-                ) {
-                    if (peopleList.publicMembers.isEmpty() && peopleList.privateMembers.isEmpty()) {
-                        Text(
-                            text = stringRes(R.string.follow_set_empty_label2),
-                            fontSize = Font10SP,
-                        )
-                    } else {
-                        if (peopleList.privateMembers.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = SpacedBy2dp,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Lock,
-                                    modifier = Size10Modifier,
-                                    contentDescription = null,
-                                )
-                                Text(
-                                    text = peopleList.privateMembers.size.toString(),
-                                    fontSize = Font10SP,
-                                )
-                            }
-                        }
-                        if (peopleList.publicMembers.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = SpacedBy2dp,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Public,
-                                    modifier = Size10Modifier,
-                                    contentDescription = null,
-                                )
-                                Text(
-                                    text = peopleList.publicMembers.size.toString(),
-                                    fontSize = Font10SP,
-                                )
-                            }
-                        }
-                    }
-                }
+                DisplayParticipantNumberAndStatus(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    privateMembersSize = peopleList.privateMembersList.size,
+                    publicMembersSize = peopleList.publicMembersList.size,
+                )
             }
         },
     )
+}
+
+@Composable
+fun DisplayParticipantNumberAndStatus(
+    modifier: Modifier,
+    privateMembersSize: Int,
+    publicMembersSize: Int,
+) {
+    Row(
+        modifier = modifier.offset(y = (-5).dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = SpacedBy5dp,
+    ) {
+        if (privateMembersSize <= 0 && publicMembersSize <= 0) {
+            Text(
+                text = stringRes(R.string.follow_set_empty_label2),
+                fontSize = Font10SP,
+            )
+        } else {
+            if (privateMembersSize > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy2dp,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        modifier = Size10Modifier,
+                        contentDescription = null,
+                    )
+                    Text(
+                        text = privateMembersSize.toString(),
+                        fontSize = Font10SP,
+                    )
+                }
+            }
+            if (publicMembersSize > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy2dp,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Public,
+                        modifier = Size10Modifier,
+                        contentDescription = null,
+                    )
+                    Text(
+                        text = publicMembersSize.toString(),
+                        fontSize = Font10SP,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
