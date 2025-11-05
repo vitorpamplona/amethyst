@@ -69,7 +69,7 @@ fun DrawBanner(
         AsyncImage(
             model = banner,
             contentDescription = stringRes(id = R.string.profile_image),
-            contentScale = ContentScale.FillWidth,
+            contentScale = ContentScale.Crop,
             placeholder = painterRes(R.drawable.profile_banner, 1),
             modifier =
                 Modifier
