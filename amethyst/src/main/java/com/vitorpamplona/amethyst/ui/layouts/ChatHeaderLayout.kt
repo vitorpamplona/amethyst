@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.NewItemsBubble
@@ -47,57 +48,86 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Composable
 @Preview
 fun ChannelNamePreview() {
-    Column {
-        ChatHeaderLayout(
-            channelPicture = {
-                Image(
-                    painter = painterRes(R.drawable.github, 1),
-                    contentDescription = stringRes(id = R.string.profile_banner),
-                    contentScale = ContentScale.FillWidth,
-                )
-            },
-            firstRow = {
-                Text("This is my author", Modifier.weight(1f))
-                TimeAgo(TimeUtils.now())
-            },
-            secondRow = {
-                Text("This is a message from this person", Modifier.weight(1f))
-                NewItemsBubble()
-            },
-            onClick = {},
-        )
-
-        HorizontalDivider(thickness = DividerThickness)
-
-        ListItem(
-            headlineContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+    ThemeComparisonColumn {
+        Column {
+            ChatHeaderLayout(
+                channelPicture = {
+                    Image(
+                        painter = painterRes(R.drawable.github, 1),
+                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentScale = ContentScale.FillWidth,
+                    )
+                },
+                firstRow = {
                     Text("This is my author", Modifier.weight(1f))
                     TimeAgo(TimeUtils.now())
-                }
-            },
-            supportingContent = {
-                Row {
+                },
+                secondRow = {
                     Text("This is a message from this person", Modifier.weight(1f))
+                    Spacer(modifier = Height4dpModifier)
                     NewItemsBubble()
-                }
-            },
-            leadingContent = {
-                Image(
-                    painter = painterRes(R.drawable.github, 2),
-                    contentDescription = stringRes(id = R.string.profile_banner),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Size55Modifier,
-                )
-            },
-        )
+                },
+                onClick = {},
+            )
 
-        HorizontalDivider(thickness = DividerThickness)
+            HorizontalDivider(thickness = DividerThickness)
+
+            ListItem(
+                headlineContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("This is my author", Modifier.weight(1f))
+                        TimeAgo(TimeUtils.now())
+                    }
+                },
+                supportingContent = {
+                    Row {
+                        Text("This is a message from this person", Modifier.weight(1f))
+                        NewItemsBubble()
+                    }
+                },
+                leadingContent = {
+                    Image(
+                        painter = painterRes(R.drawable.github, 2),
+                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Size55Modifier,
+                    )
+                },
+            )
+
+            HorizontalDivider(thickness = DividerThickness)
+
+            SlimListItem(
+                headlineContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("This is my author", Modifier.weight(1f))
+                        TimeAgo(TimeUtils.now())
+                    }
+                },
+                supportingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("This is a message from this person", Modifier.weight(1f))
+                        NewItemsBubble()
+                    }
+                },
+                leadingContent = {
+                    Image(
+                        painter = painterRes(R.drawable.github, 2),
+                        contentDescription = stringRes(id = R.string.profile_banner),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Size55Modifier,
+                    )
+                },
+            )
+
+            HorizontalDivider(thickness = DividerThickness)
+        }
     }
 }
 

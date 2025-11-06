@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
+import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -45,33 +46,31 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 
 @Composable
 fun UserCompose(
     baseUser: User,
-    modifier: Modifier = StdPadding,
+    modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Row(
+    SlimListItem(
         modifier = modifier.clickable { nav.nav(routeFor(baseUser)) },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
-
-        Column(modifier = remember { StdStartPadding.weight(1f) }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                UsernameDisplay(baseUser, accountViewModel = accountViewModel)
-            }
-
+        leadingContent = {
+            UserPicture(baseUser, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        },
+        headlineContent = {
+            UsernameDisplay(baseUser, accountViewModel = accountViewModel)
+        },
+        supportingContent = {
             AboutDisplay(baseUser, accountViewModel)
-        }
-
-        Row(modifier = StdStartPadding) {
-            UserActionOptions(baseUser, accountViewModel, nav)
-        }
-    }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UserActionOptions(baseUser, accountViewModel, nav)
+            }
+        },
+    )
 }
 
 @Composable
