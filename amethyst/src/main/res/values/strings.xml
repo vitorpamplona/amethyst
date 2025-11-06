@@ -538,6 +538,8 @@
     <string name="follow_set_empty_label">No members</string>
     <string name="follow_set_empty_label2">Empty</string>
     <string name="follow_set_absence_indicator">%1$s is not in this list</string>
+    <string name="follow_set_absence_indicator2">%1$s is not a member</string>
+    <string name="follow_set_man_dialog_title2">Your Lists and %1$s</string>
     <string name="follow_set_man_dialog_title">Your Lists</string>
     <string name="follow_set_empty_dialog_msg">No follow lists were found, or you don\'t have any follow lists. Tap below to refresh, or use the menu to create one.</string>
     <string name="follow_set_error_dialog_msg">There was a problem while fetching: %1$s</string>
@@ -1344,4 +1346,6 @@
     <string name="in_the_list">Already in the list</string>
     <string name="private_members">Private Members</string>
     <string name="public_members">Public Members</string>
+    <string name="add_user_to_the_list">Add user to the list</string>
+    <string name="remove_user_from_the_list">Add user to the list</string>
 </resources>

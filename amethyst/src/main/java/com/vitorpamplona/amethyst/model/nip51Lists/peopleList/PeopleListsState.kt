@@ -120,7 +120,7 @@ class PeopleListsState(
             publicMembers = cache.load(this.publicUsersIdSet()),
         )
 
-    suspend fun List<PeopleListEvent>.toUI() = this.map { it.toUI() }
+    suspend fun List<PeopleListEvent>.toUI() = this.map { it.toUI() }.sortedBy { it.title }
 
     val uiListFlow =
         latestLists

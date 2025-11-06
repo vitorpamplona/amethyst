@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -44,7 +46,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -89,7 +90,7 @@ private fun PeopleListItemPreview() {
 
     val samplePeopleList2 =
         PeopleList(
-            identifierTag = "00001-2222",
+            identifierTag = "00001-2223",
             title = "Sample List Title",
             description = "Sample List Description",
             setOf(user1, user3),
@@ -98,7 +99,7 @@ private fun PeopleListItemPreview() {
 
     val samplePeopleList3 =
         PeopleList(
-            identifierTag = "00001-2222",
+            identifierTag = "00001-2224",
             title = "Sample List Title",
             description = "Sample List Description",
             emptySet(),
@@ -107,7 +108,7 @@ private fun PeopleListItemPreview() {
 
     val samplePeopleList4 =
         PeopleList(
-            identifierTag = "00001-2222",
+            identifierTag = "00001-2225",
             title = "Sample List Title",
             description = "Sample List Description",
             setOf(user3),
@@ -173,7 +174,7 @@ fun PeopleListItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(peopleList.title)
+                Text(peopleList.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
                 Column(
                     modifier = NoSoTinyBorders,
@@ -205,54 +206,67 @@ fun PeopleListItem(
                     contentDescription = stringRes(R.string.follow_set_icon_description),
                     modifier = Size50ModifierOffset10,
                 )
-                Row(
-                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-5).dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = SpacedBy5dp,
-                ) {
-                    if (peopleList.publicMembers.isEmpty() && peopleList.privateMembers.isEmpty()) {
-                        Text(
-                            text = stringRes(R.string.follow_set_empty_label2),
-                            fontSize = Font10SP,
-                        )
-                    } else {
-                        if (peopleList.privateMembers.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = SpacedBy2dp,
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.lock),
-                                    modifier = Size10Modifier,
-                                    contentDescription = null,
-                                )
-                                Text(
-                                    text = peopleList.privateMembers.size.toString(),
-                                    fontSize = Font10SP,
-                                )
-                            }
-                        }
-                        if (peopleList.publicMembers.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = SpacedBy2dp,
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_public),
-                                    modifier = Size10Modifier,
-                                    contentDescription = null,
-                                )
-                                Text(
-                                    text = peopleList.publicMembers.size.toString(),
-                                    fontSize = Font10SP,
-                                )
-                            }
-                        }
-                    }
-                }
+                DisplayParticipantNumberAndStatus(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    privateMembersSize = peopleList.privateMembersList.size,
+                    publicMembersSize = peopleList.publicMembersList.size,
+                )
             }
         },
     )
+}
+
+@Composable
+fun DisplayParticipantNumberAndStatus(
+    modifier: Modifier,
+    privateMembersSize: Int,
+    publicMembersSize: Int,
+) {
+    Row(
+        modifier = modifier.offset(y = (-5).dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = SpacedBy5dp,
+    ) {
+        if (privateMembersSize <= 0 && publicMembersSize <= 0) {
+            Text(
+                text = stringRes(R.string.follow_set_empty_label2),
+                fontSize = Font10SP,
+            )
+        } else {
+            if (privateMembersSize > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy2dp,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        modifier = Size10Modifier,
+                        contentDescription = null,
+                    )
+                    Text(
+                        text = privateMembersSize.toString(),
+                        fontSize = Font10SP,
+                    )
+                }
+            }
+            if (publicMembersSize > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy2dp,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Public,
+                        modifier = Size10Modifier,
+                        contentDescription = null,
+                    )
+                    Text(
+                        text = publicMembersSize.toString(),
+                        fontSize = Font10SP,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

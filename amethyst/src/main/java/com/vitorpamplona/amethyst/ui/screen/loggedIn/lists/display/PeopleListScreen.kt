@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display
 
-import android.annotation.SuppressLint
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,10 +42,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
@@ -77,8 +73,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -97,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.AnimateOnNewSearch
@@ -107,10 +103,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
@@ -121,13 +113,11 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import java.lang.reflect.Modifier.isPrivate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -203,37 +193,11 @@ fun PeopleListScreen(
 fun TitleAndDescription(viewModel: PeopleListViewModel) {
     val selectedSetState = viewModel.selectedList.collectAsStateWithLifecycle()
     selectedSetState.value?.let { selectedSet ->
-        TitleAndDescription(selectedSet.title, selectedSet.description)
-    }
-}
-
-@Composable
-fun TitleAndDescription(
-    title: String,
-    description: String?,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(title)
-            Spacer(DoubleHorzSpacer)
-            Icon(
-                painter = painterResource(R.drawable.format_list_bulleted_type),
-                contentDescription = null,
-            )
-        }
-
-        if (description != null) {
-            Text(
-                text = description,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Thin,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            text = selectedSet.title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -246,7 +210,7 @@ private fun ListViewAndEditColumn(
     nav: INav,
 ) {
     Column(modifier = modifier) {
-        FollowSetListView(
+        PeopleListPager(
             viewModel = viewModel,
             pagerState = pagerState,
             modifier = Modifier.weight(1f),
@@ -286,7 +250,30 @@ private fun RenderAddUserFieldAndSuggestions(
 
     Spacer(HalfVertSpacer)
 
-    UserSearchField(viewModel.userSuggestions)
+    var userName by remember(viewModel) { mutableStateOf(TextFieldValue(viewModel.userSuggestions.currentWord.value)) }
+    val focusManager = LocalFocusManager.current
+
+    OutlinedTextField(
+        label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
+        modifier = Modifier.padding(horizontal = Size10dp).fillMaxWidth(),
+        value = userName,
+        onValueChange = {
+            userName = it
+            viewModel.userSuggestions.processCurrentWord(it.text)
+        },
+        singleLine = true,
+        trailingIcon = {
+            IconButton(
+                onClick = {
+                    userName = TextFieldValue("")
+                    viewModel.userSuggestions.processCurrentWord("")
+                    focusManager.clearFocus()
+                },
+            ) {
+                ClearTextIcon()
+            }
+        },
+    )
 
     ShowUserSuggestions(
         userSuggestions = viewModel.userSuggestions,
@@ -297,18 +284,26 @@ private fun RenderAddUserFieldAndSuggestions(
             accountViewModel.runIOCatching {
                 viewModel.addUserToSet(user, pagerState.currentPage == 0)
             }
+            userName =
+                userName.copy(
+                    selection = TextRange(0, userName.text.length),
+                )
         },
         onDelete = { user ->
             accountViewModel.runIOCatching {
                 viewModel.removeUserFromSet(user, pagerState.currentPage == 0)
             }
+            userName =
+                userName.copy(
+                    selection = TextRange(0, userName.text.length),
+                )
         },
         accountViewModel = accountViewModel,
     )
 }
 
 @Composable
-private fun FollowSetListView(
+private fun PeopleListPager(
     viewModel: PeopleListViewModel,
     pagerState: PagerState,
     modifier: Modifier,
@@ -321,7 +316,7 @@ private fun FollowSetListView(
         HorizontalPager(state = pagerState, modifier) { page ->
             when (page) {
                 0 ->
-                    FollowSetListView(
+                    PeopleListView(
                         memberList = selectedSet.privateMembersList,
                         onDeleteUser = { user ->
                             onDeleteUser(user, true)
@@ -332,7 +327,7 @@ private fun FollowSetListView(
                     )
 
                 1 ->
-                    FollowSetListView(
+                    PeopleListView(
                         memberList = selectedSet.publicMembersList,
                         onDeleteUser = { user ->
                             onDeleteUser(user, false)
@@ -357,7 +352,7 @@ fun FollowSetListViewPreview() {
 
     ThemeComparisonRow {
         Column {
-            FollowSetListView(
+            PeopleListView(
                 memberList = persistentListOf(user1, user2, user3),
                 onDeleteUser = { user -> },
                 accountViewModel = accountViewModel,
@@ -411,33 +406,6 @@ fun FollowSetListViewPreview() {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun FollowSetListView(
-    memberList: ImmutableList<User>,
-    modifier: Modifier = Modifier,
-    onDeleteUser: (User) -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val listState = rememberLazyListState()
-
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = FeedPadding,
-        state = listState,
-    ) {
-        itemsIndexed(memberList, key = { _, item -> "u" + item.pubkeyHex }) { _, item ->
-            FollowSetListItem(
-                modifier = Modifier.animateContentSize(),
-                user = item,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                onDeleteUser = onDeleteUser,
-            )
         }
     }
 }
@@ -566,47 +534,6 @@ fun RowScope.HasUserTag(
 }
 
 @Composable
-fun FollowSetListItem(
-    modifier: Modifier = Modifier,
-    user: User,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onDeleteUser: (User) -> Unit,
-) {
-    Column(
-        modifier = modifier,
-    ) {
-        Row(HalfHalfHorzModifier) {
-            UserComposeNoAction(
-                user,
-                modifier = HalfPadding.weight(1f, fill = false),
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-            IconButton(
-                onClick = {
-                    onDeleteUser(user)
-                },
-                modifier =
-                    HalfPadding
-                        .align(Alignment.CenterVertically)
-                        .background(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(percent = 80),
-                        ),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-        HorizontalDivider(thickness = DividerThickness)
-    }
-}
-
-@Composable
 fun ListActionsMenuButton(
     viewModel: PeopleListViewModel,
     accountViewModel: AccountViewModel,
@@ -691,39 +618,4 @@ fun ListActionsMenu(
             },
         )
     }
-}
-
-@SuppressLint("StateFlowValueCalledInComposition")
-@Composable
-fun UserSearchField(
-    userSuggestions: UserSuggestionState,
-    modifier: Modifier = Modifier,
-) {
-    var userName by remember(userSuggestions) { mutableStateOf(userSuggestions.currentWord.value) }
-    val focusManager = LocalFocusManager.current
-
-    OutlinedTextField(
-        label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
-        modifier =
-            modifier
-                .padding(horizontal = Size10dp)
-                .fillMaxWidth(),
-        value = userName,
-        onValueChange = {
-            userName = it
-            userSuggestions.processCurrentWord(it)
-        },
-        singleLine = true,
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    userName = ""
-                    userSuggestions.processCurrentWord("")
-                    focusManager.clearFocus()
-                },
-            ) {
-                ClearTextIcon()
-            }
-        },
-    )
 }
