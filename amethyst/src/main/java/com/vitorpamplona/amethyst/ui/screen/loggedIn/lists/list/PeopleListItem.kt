@@ -81,7 +81,7 @@ private fun PeopleListItemPreview() {
     val samplePeopleList1 =
         PeopleList(
             identifierTag = "00001-2222",
-            title = "Sample List Title",
+            title = "Sample List Title, Very long title, very very very long",
             description = "Sample List Description",
             emptySet(),
             emptySet(),
@@ -173,7 +173,12 @@ fun PeopleListItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(peopleList.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    modifier = Modifier.weight(1f),
+                    text = peopleList.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
                 Column(
                     modifier = NoSoTinyBorders,
