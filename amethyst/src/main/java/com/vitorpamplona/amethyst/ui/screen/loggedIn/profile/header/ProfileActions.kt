@@ -62,17 +62,17 @@ fun ProfileActions(
         ShowUserButton { accountViewModel.showUser(baseUser.pubkeyHex) }
     } else {
         DisplayFollowUnfollowButton(baseUser, accountViewModel)
-    }
-
-    TextButton(
-        onClick = { nav.nav(Route.PeopleListManagement(baseUser.pubkeyHex)) },
-        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-        colors = ButtonDefaults.filledTonalButtonColors(),
-        contentPadding = ZeroPadding,
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.List,
-            contentDescription = stringRes(R.string.follow_set_profile_actions_menu_description),
-        )
+        
+        TextButton(
+            onClick = { nav.nav(Route.PeopleListManagement(baseUser.pubkeyHex)) },
+            shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+            colors = ButtonDefaults.filledTonalButtonColors(),
+            contentPadding = ZeroPadding,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.List,
+                contentDescription = stringRes(R.string.follow_set_profile_actions_menu_description),
+            )
+        }
     }
 }
