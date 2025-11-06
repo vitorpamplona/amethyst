@@ -20,26 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ListButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
 fun ProfileActions(
@@ -62,17 +53,7 @@ fun ProfileActions(
         ShowUserButton { accountViewModel.showUser(baseUser.pubkeyHex) }
     } else {
         DisplayFollowUnfollowButton(baseUser, accountViewModel)
-        
-        TextButton(
-            onClick = { nav.nav(Route.PeopleListManagement(baseUser.pubkeyHex)) },
-            shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
-            colors = ButtonDefaults.filledTonalButtonColors(),
-            contentPadding = ZeroPadding,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = stringRes(R.string.follow_set_profile_actions_menu_description),
-            )
-        }
+
+        ListButton { nav.nav(Route.PeopleListManagement(baseUser.pubkeyHex)) }
     }
 }

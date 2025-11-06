@@ -21,8 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
 fun FollowButton(
@@ -62,5 +69,20 @@ fun UnfollowButton(
         contentPadding = ButtonPadding,
     ) {
         Text(text = stringRes(R.string.unfollow))
+    }
+}
+
+@Composable
+fun ListButton(onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+        colors = ButtonDefaults.filledTonalButtonColors(),
+        contentPadding = ZeroPadding,
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.List,
+            contentDescription = stringRes(R.string.follow_set_profile_actions_menu_description),
+        )
     }
 }

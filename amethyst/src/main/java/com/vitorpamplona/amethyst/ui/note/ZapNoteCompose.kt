@@ -39,22 +39,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.Dispatchers
@@ -112,21 +107,21 @@ private fun RenderZapNote(
         UserPicture(baseAuthor, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
         Column(
-            modifier = remember { Modifier.padding(start = 10.dp).weight(1f) },
+            modifier = remember { StdStartPadding.weight(1f) },
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseAuthor, accountViewModel = accountViewModel) }
             Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor, accountViewModel) }
         }
 
         Column(
-            modifier = remember { Modifier.padding(start = 10.dp) },
+            modifier = StdStartPadding,
             verticalArrangement = Arrangement.Center,
         ) {
             ZapAmount(zapNote, accountViewModel)
         }
 
-        Column(modifier = Modifier.padding(start = 10.dp)) {
-            UserActionOptions(baseAuthor, accountViewModel)
+        Row(modifier = StdStartPadding) {
+            UserActionOptions(baseAuthor, accountViewModel, nav)
         }
     }
 }
@@ -156,51 +151,6 @@ private fun ZapAmount(
             fontSize = 20.sp,
             fontWeight = FontWeight.W500,
         )
-    }
-}
-
-@Composable
-fun UserActionOptions(
-    baseAuthor: User,
-    accountViewModel: AccountViewModel,
-) {
-    val isHidden by observeAccountIsHiddenUser(accountViewModel.account, baseAuthor)
-    if (isHidden) {
-        ShowUserButton { accountViewModel.show(baseAuthor) }
-    } else {
-        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
-    }
-}
-
-@Composable
-fun ShowFollowingOrUnfollowingButton(
-    baseAuthor: User,
-    accountViewModel: AccountViewModel,
-) {
-    val isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor, accountViewModel)
-
-    if (isFollowing.value) {
-        UnfollowButton {
-            if (!accountViewModel.isWriteable()) {
-                accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_unfollow,
-                )
-            } else {
-                accountViewModel.unfollow(baseAuthor)
-            }
-        }
-    } else {
-        FollowButton {
-            if (!accountViewModel.isWriteable()) {
-                accountViewModel.toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_follow,
-                )
-            } else {
-                accountViewModel.follow(baseAuthor)
-            }
-        }
     }
 }
 
