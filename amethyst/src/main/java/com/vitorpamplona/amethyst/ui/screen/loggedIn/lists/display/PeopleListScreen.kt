@@ -151,24 +151,7 @@ fun PeopleListScreen(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                 )
-                TabRow(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    selectedTabIndex = pagerState.currentPage,
-                    modifier = TabRowHeight,
-                ) {
-                    val scope = rememberCoroutineScope()
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = stringRes(R.string.private_members)) },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = stringRes(R.string.public_members)) },
-                    )
-                }
+                TopAppTabs(viewModel, pagerState)
             }
         },
     ) { padding ->
@@ -185,6 +168,45 @@ fun PeopleListScreen(
                     .imePadding(),
             accountViewModel = accountViewModel,
             nav = nav,
+        )
+    }
+}
+
+@Composable
+fun TopAppTabs(
+    viewModel: PeopleListViewModel,
+    pagerState: PagerState,
+) {
+    TabRow(
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight,
+    ) {
+        val scope = rememberCoroutineScope()
+        Tab(
+            selected = pagerState.currentPage == 0,
+            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+            text = {
+                val list = viewModel.selectedList.collectAsStateWithLifecycle()
+                val labelPublic =
+                    list.value?.let {
+                        stringRes(R.string.public_members_count, it.publicMembers.size)
+                    } ?: stringRes(R.string.public_members)
+                Text(labelPublic)
+            },
+        )
+        Tab(
+            selected = pagerState.currentPage == 1,
+            onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+            text = {
+                val list = viewModel.selectedList.collectAsStateWithLifecycle()
+                val labelPrivate =
+                    list.value?.let {
+                        stringRes(R.string.private_members_count, it.privateMembersList.size)
+                    } ?: stringRes(R.string.private_members)
+                Text(labelPrivate)
+            },
         )
     }
 }
@@ -278,11 +300,11 @@ private fun RenderAddUserFieldAndSuggestions(
     ShowUserSuggestions(
         userSuggestions = viewModel.userSuggestions,
         hasUserFlow = { user ->
-            viewModel.hasUserFlow(user, pagerState.currentPage == 0)
+            viewModel.hasUserFlow(user, pagerState.currentPage == 1)
         },
         onSelect = { user ->
             accountViewModel.runIOCatching {
-                viewModel.addUserToSet(user, pagerState.currentPage == 0)
+                viewModel.addUserToSet(user, pagerState.currentPage == 1)
             }
             userName =
                 userName.copy(
@@ -291,7 +313,7 @@ private fun RenderAddUserFieldAndSuggestions(
         },
         onDelete = { user ->
             accountViewModel.runIOCatching {
-                viewModel.removeUserFromSet(user, pagerState.currentPage == 0)
+                viewModel.removeUserFromSet(user, pagerState.currentPage == 1)
             }
             userName =
                 userName.copy(
@@ -317,9 +339,9 @@ private fun PeopleListPager(
             when (page) {
                 0 ->
                     PeopleListView(
-                        memberList = selectedSet.privateMembersList,
+                        memberList = selectedSet.publicMembersList,
                         onDeleteUser = { user ->
-                            onDeleteUser(user, true)
+                            onDeleteUser(user, false)
                         },
                         modifier = Modifier.fillMaxSize(),
                         accountViewModel = accountViewModel,
@@ -328,9 +350,9 @@ private fun PeopleListPager(
 
                 1 ->
                     PeopleListView(
-                        memberList = selectedSet.publicMembersList,
+                        memberList = selectedSet.privateMembersList,
                         onDeleteUser = { user ->
-                            onDeleteUser(user, false)
+                            onDeleteUser(user, true)
                         },
                         modifier = Modifier.fillMaxSize(),
                         accountViewModel = accountViewModel,

@@ -1346,6 +1346,8 @@
     <string name="in_the_list">Already in the list</string>
     <string name="private_members">Private Members</string>
     <string name="public_members">Public Members</string>
+    <string name="private_members_count">Private Members (%1$s)</string>
+    <string name="public_members_count">Public Members (%1$s)</string>
     <string name="add_user_to_the_list">Add user to the list</string>
     <string name="remove_user_from_the_list">Add user to the list</string>
 </resources>
