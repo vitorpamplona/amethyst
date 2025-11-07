@@ -107,7 +107,7 @@ fun <T> observeNoteAndMap(
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("UNCHECKED_CAST")
 @Composable
-fun <T, U> observeNoteEventAndMap(
+fun <T, U> observeNoteEventAndMapNotNull(
     note: Note,
     accountViewModel: AccountViewModel,
     map: (T) -> U,
