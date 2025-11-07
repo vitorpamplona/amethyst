@@ -26,6 +26,7 @@ import android.net.Uri
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.IResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 
 fun <T : IResult> ContentResolver.query(
     uri: Uri,
@@ -51,6 +52,7 @@ fun <T : IResult> ContentResolver.query(
             }
         }
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         Log.e("ExternalSignerLauncher", "Failed to query the Signer app in the background", e)
         SignerResult.RequestIncomplete.ErrorExceptionCallingContentResolver(e)
     }

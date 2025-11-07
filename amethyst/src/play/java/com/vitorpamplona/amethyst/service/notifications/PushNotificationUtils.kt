@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import okhttp3.OkHttpClient
+import kotlin.coroutines.cancellation.CancellationException
 
 object PushNotificationUtils {
     var lastToken: String? = null
@@ -44,6 +45,7 @@ object PushNotificationUtils {
 
             registerToken(token, accounts, okHttpClient)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e("PushNotificationUtils", "Failed to get Firebase token", e)
         }
     }
