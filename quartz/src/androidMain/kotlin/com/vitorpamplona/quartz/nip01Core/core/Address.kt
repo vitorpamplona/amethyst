@@ -22,9 +22,11 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import android.os.Parcel
 import android.os.Parcelable
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
+@Stable
 actual data class Address actual constructor(
     actual val kind: Kind,
     actual val pubKeyHex: HexKey,
