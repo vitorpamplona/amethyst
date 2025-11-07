@@ -131,6 +131,32 @@ fun <T, U> observeNoteEventAndMapNotNull(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("UNCHECKED_CAST")
+@Composable
+fun <T, U> observeNoteEventAndMap(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    map: (T?) -> U,
+): State<U> {
+    // Subscribe in the relay for changes in this note.
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { map(it.note.event as? T) }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return flow.collectAsStateWithLifecycle(map(note.event as? T))
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeNoteHasEvent(
     note: Note,
