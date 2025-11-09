@@ -24,7 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,19 +37,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
+import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
-import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.Dispatchers
@@ -63,11 +68,11 @@ fun ZapNoteCompose(
 ) {
     val baseNoteRequest by observeNote(baseReqResponse.zapRequest, accountViewModel)
 
-    var baseAuthor by remember { mutableStateOf<User?>(null) }
+    var baseAuthor by remember { mutableStateOf<User?>(baseReqResponse.zapRequest.author) }
 
     LaunchedEffect(baseNoteRequest) {
-        baseNoteRequest?.note?.let {
-            accountViewModel.decryptAmountMessage(it, baseReqResponse.zapEvent) { baseAuthor = it?.user }
+        accountViewModel.decryptAmountMessage(baseNoteRequest.note, baseReqResponse.zapEvent) {
+            baseAuthor = it?.user
         }
     }
 
@@ -81,8 +86,44 @@ fun ZapNoteCompose(
                 ),
             verticalArrangement = Arrangement.Center,
         ) {
-            baseAuthor?.let { RenderZapNote(it, baseReqResponse.zapEvent, nav, accountViewModel) }
+            baseAuthor?.let { RenderZapNoteSlim(it, baseReqResponse.zapEvent, accountViewModel, nav) }
         }
+    }
+}
+
+@Preview
+@Composable
+fun RenderZapNotePreview() {
+    val accountViewModel = mockAccountViewModel()
+
+    val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val note1: Note = LocalCache.getOrCreateNote("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+
+    ThemeComparisonColumn {
+        RenderZapNote(
+            user1,
+            note1,
+            accountViewModel,
+            EmptyNav,
+        )
+    }
+}
+
+@Preview
+@Composable
+fun RenderZapNoteSlimPreview() {
+    val accountViewModel = mockAccountViewModel()
+
+    val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+    val note1: Note = LocalCache.getOrCreateNote("ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b")
+
+    ThemeComparisonColumn {
+        RenderZapNoteSlim(
+            user1,
+            note1,
+            accountViewModel,
+            EmptyNav,
+        )
     }
 }
 
@@ -90,40 +131,50 @@ fun ZapNoteCompose(
 private fun RenderZapNote(
     baseAuthor: User,
     zapNote: Note,
-    nav: INav,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    Row(
-        modifier =
-            remember {
-                Modifier.padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                )
-            },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        UserPicture(baseAuthor, Size55dp, accountViewModel = accountViewModel, nav = nav)
-
-        Column(
-            modifier = remember { StdStartPadding.weight(1f) },
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseAuthor, accountViewModel = accountViewModel) }
-            Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor, accountViewModel) }
-        }
-
-        Column(
-            modifier = StdStartPadding,
-            verticalArrangement = Arrangement.Center,
-        ) {
+    ListItem(
+        leadingContent = {
+            UserPicture(baseAuthor, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        },
+        headlineContent = {
+            UsernameDisplay(baseAuthor, accountViewModel = accountViewModel)
+        },
+        supportingContent = {
             ZapAmount(zapNote, accountViewModel)
-        }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UserActionOptions(baseAuthor, accountViewModel, nav)
+            }
+        },
+    )
+}
 
-        Row(modifier = StdStartPadding) {
-            UserActionOptions(baseAuthor, accountViewModel, nav)
-        }
-    }
+@Composable
+private fun RenderZapNoteSlim(
+    baseAuthor: User,
+    zapNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    SlimListItem(
+        leadingContent = {
+            UserPicture(baseAuthor, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        },
+        headlineContent = {
+            UsernameDisplay(baseAuthor, accountViewModel = accountViewModel)
+        },
+        supportingContent = {
+            ZapAmount(zapNote, accountViewModel)
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UserActionOptions(baseAuthor, accountViewModel, nav)
+            }
+        },
+    )
 }
 
 @Composable
@@ -152,6 +203,20 @@ private fun ZapAmount(
             fontWeight = FontWeight.W500,
         )
     }
+}
+
+@Composable
+fun AboutDisplayNoFormat(
+    baseAuthor: User,
+    accountViewModel: AccountViewModel,
+) {
+    val aboutMe by observeUserAboutMe(baseAuthor, accountViewModel)
+
+    Text(
+        aboutMe,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

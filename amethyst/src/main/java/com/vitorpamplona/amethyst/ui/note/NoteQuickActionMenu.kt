@@ -114,7 +114,7 @@ val externalLinkForUser = { user: User ->
 }
 
 val njumpLink = { nip19BechAddress: String ->
-    "https://njump.me/$nip19BechAddress"
+    "https://njump.to/$nip19BechAddress"
 }
 
 val externalLinkForNote = { note: Note ->

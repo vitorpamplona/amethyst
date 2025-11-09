@@ -90,19 +90,30 @@ class UserReportsSubAssembler(
         users: Iterable<User>,
         eoseCache: EOSEAccountFast<User>,
         inRelays: Set<NormalizedRelayUrl>,
-    ): Collection<List<User>> =
-        users
-            .groupBy {
-                eoseCache
-                    .since(it)
-                    ?.keys
-                    ?.intersect(inRelays)
-                    ?.hashCode()
+    ): Collection<List<User>> {
+        if (users.none()) return emptyList()
+
+        val relaySnapshot = inRelays.toSet()
+
+        return users
+            .groupBy { user ->
+                val relaysForUser = eoseCache.sinceRelaySet(user)
+                if (relaysForUser.isNullOrEmpty() || relaySnapshot.isEmpty()) {
+                    null
+                } else {
+                    val intersection = relaysForUser.filter { it in relaySnapshot }.sorted()
+                    if (intersection.isEmpty()) {
+                        null
+                    } else {
+                        intersection.hashCode()
+                    }
+                }
             }.values
             .map {
                 // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
                 it.sortedBy { it.pubkeyHex }
             }
+    }
 
     fun findMinimumEOSEsForUsers(
         users: List<User>,
