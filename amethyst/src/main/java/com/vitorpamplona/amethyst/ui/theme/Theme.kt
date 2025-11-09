@@ -27,10 +27,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -253,17 +251,27 @@ val DarkRelayIconModifier =
 
 val darkLargeProfilePictureModifier =
     Modifier
-        .width(120.dp)
-        .height(120.dp)
+        .size(120.dp)
         .clip(shape = CircleShape)
         .border(3.dp, DarkColorPalette.onBackground, CircleShape)
 
 val lightLargeProfilePictureModifier =
     Modifier
-        .width(120.dp)
-        .height(120.dp)
+        .size(120.dp)
         .clip(shape = CircleShape)
         .border(3.dp, LightColorPalette.onBackground, CircleShape)
+
+val darkNewItemBubbleModifier =
+    Modifier
+        .size(10.dp)
+        .clip(shape = CircleShape)
+        .background(DarkColorPalette.primary)
+
+val lightNewItemBubbleModifier =
+    Modifier
+        .size(10.dp)
+        .clip(shape = CircleShape)
+        .background(LightColorPalette.primary)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
@@ -461,6 +469,10 @@ val ColorScheme.selectedReactionBoxModifier: Modifier
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.largeProfilePictureModifier: Modifier
     get() = if (isLight) lightLargeProfilePictureModifier else darkLargeProfilePictureModifier
+
+@Suppress("ModifierFactoryExtensionFunction")
+val ColorScheme.newItemBubbleModifier: Modifier
+    get() = if (isLight) lightNewItemBubbleModifier else darkNewItemBubbleModifier
 
 val chartLightColors =
     VicoTheme(
