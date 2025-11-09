@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.replaceAll
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
@@ -89,13 +90,17 @@ class LabeledBookmarkListEvent(
         fun createBookmarkAddress(pubKey: HexKey) = Address(KIND, pubKey, Uuid.random().toString())
 
         suspend fun create(
+            name: String = "",
             bookmarkIdTag: BookmarkIdTag,
             isPrivate: Boolean,
+            optionalListDescription: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): LabeledBookmarkListEvent =
             if (isPrivate) {
                 create(
+                    name = name,
+                    description = optionalListDescription,
                     publicBookmarks = emptyList(),
                     privateBookmarks = listOf(bookmarkIdTag),
                     signer = signer,
@@ -103,6 +108,8 @@ class LabeledBookmarkListEvent(
                 )
             } else {
                 create(
+                    name = name,
+                    description = optionalListDescription,
                     publicBookmarks = listOf(bookmarkIdTag),
                     privateBookmarks = emptyList(),
                     signer = signer,
@@ -110,7 +117,7 @@ class LabeledBookmarkListEvent(
                 )
             }
 
-        suspend fun add(
+        suspend fun addBookmark(
             earlierVersion: LabeledBookmarkListEvent,
             bookmarkIdTag: BookmarkIdTag,
             isPrivate: Boolean,
@@ -134,7 +141,7 @@ class LabeledBookmarkListEvent(
                 )
             }
 
-        suspend fun remove(
+        suspend fun removeBookmark(
             earlierVersion: LabeledBookmarkListEvent,
             bookmarkIdTag: BookmarkIdTag,
             isPrivate: Boolean,
@@ -157,6 +164,70 @@ class LabeledBookmarkListEvent(
                     createdAt = createdAt,
                 )
             }
+
+        suspend fun modifyName(
+            earlierVersion: LabeledBookmarkListEvent,
+            newName: String,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): LabeledBookmarkListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val currentTitle = earlierVersion.tags.first { it[0] == NameTag.TAG_NAME || it[0] == TitleTag.TAG_NAME }
+            val newTitleTag =
+                if (currentTitle[0] == NameTag.TAG_NAME) {
+                    NameTag.assemble(newName)
+                } else {
+                    TitleTag.assemble(newName)
+                }
+
+            return resign(
+                tags = earlierVersion.tags.replaceAll(currentTitle, newTitleTag),
+                privateTags = privateTags.replaceAll(currentTitle, newTitleTag),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
+        suspend fun modifyDescription(
+            earlierVersion: LabeledBookmarkListEvent,
+            newDescription: String?,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): LabeledBookmarkListEvent? {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            val currentDescriptionTag = earlierVersion.tags.firstOrNull { it[0] == DescriptionTag.TAG_NAME }
+            val currentDescription = currentDescriptionTag?.get(1)
+            if (currentDescription.equals(newDescription)) {
+                // Do nothing
+                return null
+            } else {
+                if (newDescription == null || newDescription.isEmpty()) {
+                    return resign(
+                        tags = earlierVersion.tags.remove { it[0] == DescriptionTag.TAG_NAME },
+                        privateTags = privateTags.remove { it[0] == DescriptionTag.TAG_NAME },
+                        signer = signer,
+                        createdAt = createdAt,
+                    )
+                } else {
+                    val newDescriptionTag = DescriptionTag.assemble(newDescription)
+                    return if (currentDescriptionTag == null) {
+                        resign(
+                            tags = earlierVersion.tags.plusElement(newDescriptionTag),
+                            privateTags = privateTags,
+                            signer = signer,
+                            createdAt = createdAt,
+                        )
+                    } else {
+                        resign(
+                            tags = earlierVersion.tags.replaceAll(currentDescriptionTag, newDescriptionTag),
+                            privateTags = privateTags.replaceAll(currentDescriptionTag, newDescriptionTag),
+                            signer = signer,
+                            createdAt = createdAt,
+                        )
+                    }
+                }
+            }
+        }
 
         suspend fun resign(
             tags: TagArray,
@@ -189,13 +260,17 @@ class LabeledBookmarkListEvent(
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(
             name: String = "",
+            description: String? = null,
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
             dTag: String = Uuid.random().toString(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): LabeledBookmarkListEvent {
-            val template = build(name, publicBookmarks, privateBookmarks, signer, dTag, createdAt)
+            val template =
+                build(name, publicBookmarks, privateBookmarks, signer, dTag, createdAt) {
+                    if (description != null) addUnique(DescriptionTag.assemble(description))
+                }
             return signer.sign(template)
         }
 
