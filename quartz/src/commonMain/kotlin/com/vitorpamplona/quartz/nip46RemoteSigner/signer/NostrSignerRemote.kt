@@ -22,31 +22,44 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
 class NostrSignerRemote(
-    signer: NostrSignerInternal,
+    val signer: NostrSignerInternal,
     val remotePubkey: HexKey,
-    val relays: List<NormalizedRelayUrl>,
+    val relays: Set<NormalizedRelayUrl>,
     val client: INostrClient,
+    val permissions: String? = null,
+    val secret: String? = null,
 ) : NostrSigner(signer.pubKey) {
     val subscription =
         client.req(
-            relays = relays,
+            relays = relays.toList(),
             filter =
                 Filter(
                     kinds = listOf(NostrConnectEvent.KIND),
                     tags = mapOf("p" to listOf(remotePubkey)),
                 ),
         ) { event ->
+
         }
 
     fun openSubscription() {
@@ -65,6 +78,20 @@ class NostrSignerRemote(
         tags: Array<Array<String>>,
         content: String,
     ): T {
+        val template = EventTemplate<Event>(
+            createdAt = createdAt,
+            kind = kind,
+            tags = tags,
+            content = content,
+        )
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestSign(
+                event = template,
+            ),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
         TODO("Not yet implemented")
     }
 
@@ -72,6 +99,15 @@ class NostrSignerRemote(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestNip04Encrypt(
+                message = plaintext,
+                pubKey = toPublicKey,
+            ),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
         TODO("Not yet implemented")
     }
 
@@ -79,6 +115,15 @@ class NostrSignerRemote(
         ciphertext: String,
         fromPublicKey: HexKey,
     ): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestNip04Decrypt(
+                ciphertext = ciphertext,
+                pubKey = fromPublicKey,
+            ),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
         TODO("Not yet implemented")
     }
 
@@ -86,6 +131,15 @@ class NostrSignerRemote(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestNip44Encrypt(
+                message = plaintext,
+                pubKey = toPublicKey,
+            ),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
         TODO("Not yet implemented")
     }
 
@@ -93,6 +147,49 @@ class NostrSignerRemote(
         ciphertext: String,
         fromPublicKey: HexKey,
     ): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestNip44Decrypt(
+                ciphertext = ciphertext,
+                pubKey = fromPublicKey,
+            ),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
+        TODO("Not yet implemented")
+    }
+
+    suspend fun ping(): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestPing(),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
+        TODO("Not yet implemented")
+    }
+
+    suspend fun connect(): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestConnect(
+                remoteKey = remotePubkey,
+                permissions = permissions,
+                secret = secret,
+            ),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
+        TODO("Not yet implemented")
+    }
+
+    suspend fun getPublicKey(): String {
+        val event = NostrConnectEvent.create(
+            message = BunkerRequestGetPublicKey(),
+            remoteKey = remotePubkey,
+            signer = signer
+        )
+        client.send(event, relayList = relays)
         TODO("Not yet implemented")
     }
 
