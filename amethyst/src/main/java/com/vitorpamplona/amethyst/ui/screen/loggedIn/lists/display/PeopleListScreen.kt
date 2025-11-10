@@ -378,7 +378,7 @@ fun FollowSetListViewPreview() {
                 memberList = persistentListOf(user1, user2, user3),
                 onDeleteUser = { user -> },
                 accountViewModel = accountViewModel,
-                nav = EmptyNav,
+                nav = EmptyNav(),
             )
 
             Spacer(HalfVertSpacer)

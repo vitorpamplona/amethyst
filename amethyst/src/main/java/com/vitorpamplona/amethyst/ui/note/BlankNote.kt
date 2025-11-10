@@ -95,16 +95,13 @@ fun BlankNote(
 @Composable
 @Preview
 fun HiddenNotePreview() {
-    val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
-
     ThemeComparisonColumn(
         toPreview = {
             HiddenNote(
                 reports = persistentSetOf<Note>(),
                 isHiddenAuthor = true,
-                accountViewModel = accountViewModel,
-                nav = nav,
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
             ) {}
         },
     )

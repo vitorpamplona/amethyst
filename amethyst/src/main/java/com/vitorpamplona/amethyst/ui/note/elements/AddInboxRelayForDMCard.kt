@@ -60,7 +60,7 @@ fun AddInboxRelayForDMCardPreview() {
     ThemeComparisonColumn {
         AddInboxRelayForDMCard(
             accountViewModel = mockAccountViewModel(),
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

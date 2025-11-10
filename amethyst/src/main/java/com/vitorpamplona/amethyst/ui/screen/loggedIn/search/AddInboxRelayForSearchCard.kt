@@ -56,7 +56,7 @@ fun AddInboxRelayForSearchCardPreview() {
     ThemeComparisonColumn {
         AddInboxRelayForSearchCard(
             accountViewModel = mockAccountViewModel(),
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

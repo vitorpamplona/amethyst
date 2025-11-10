@@ -192,11 +192,11 @@ fun RenderRegularPreview() {
                             "",
                             1,
                             route = Route.EventRedirect(word.segmentText),
-                            nav = EmptyNav,
+                            nav = EmptyNav(),
                         )
                     }
 
-                    is HashTagSegment -> HashTag(word, EmptyNav)
+                    is HashTagSegment -> HashTag(word, EmptyNav())
                     // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                     // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                     is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -225,7 +225,7 @@ fun RenderRegularPreview2() {
                 is EmailSegment -> ClickableEmail(word.segmentText)
                 is PhoneSegment -> ClickablePhone(word.segmentText)
                 // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-                is HashTagSegment -> HashTag(word, EmptyNav)
+                is HashTagSegment -> HashTag(word, EmptyNav())
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -267,7 +267,7 @@ fun RenderRegularPreview3() {
                 is EmailSegment -> ClickableEmail(word.segmentText)
                 is PhoneSegment -> ClickablePhone(word.segmentText)
                 // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-                is HashTagSegment -> HashTag(word, EmptyNav)
+                is HashTagSegment -> HashTag(word, EmptyNav())
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)

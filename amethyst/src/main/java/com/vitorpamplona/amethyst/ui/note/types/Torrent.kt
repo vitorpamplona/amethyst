@@ -76,7 +76,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @Composable
 fun TorrentPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     val torrent =
         runBlocking {

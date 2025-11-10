@@ -64,7 +64,7 @@ fun RenderHashTagIconsPreview() {
         ) { paragraph, state, spaceWidth, modifier ->
             RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
                 when (word) {
-                    is HashTagSegment -> HashTag(word, EmptyNav)
+                    is HashTagSegment -> HashTag(word, EmptyNav())
                     is RegularTextSegment -> Text(word.segmentText)
                 }
             }

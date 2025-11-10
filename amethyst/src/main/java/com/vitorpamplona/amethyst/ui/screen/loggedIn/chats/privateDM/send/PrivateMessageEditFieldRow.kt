@@ -72,7 +72,7 @@ fun PrivateMessageEditFieldRowPreview() {
             channelScreenModel = channelScreenModel,
             accountViewModel = accountViewModel,
             onSendNewMessage = {},
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

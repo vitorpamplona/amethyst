@@ -63,7 +63,7 @@ import java.util.Locale as JavaLocale
 @Composable
 fun UserSettingsScreenPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
     ThemeComparisonRow {
         UserSettingsScreen(accountViewModel, nav)
     }

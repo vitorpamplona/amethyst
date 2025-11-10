@@ -108,7 +108,7 @@ fun RenderFollowSetThumb(
 @Composable
 fun RenderFollowSetThumbPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     ThemeComparisonColumn(
         toPreview = {

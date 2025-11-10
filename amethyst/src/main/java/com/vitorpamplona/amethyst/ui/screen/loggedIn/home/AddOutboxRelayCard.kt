@@ -57,7 +57,7 @@ fun AddOutboxRelayCardPreview() {
     ThemeComparisonColumn {
         AddInboxRelayCard(
             accountViewModel = mockAccountViewModel(),
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

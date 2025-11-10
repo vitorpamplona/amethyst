@@ -69,7 +69,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun TorrentCommentPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     val comment =
         runBlocking {
