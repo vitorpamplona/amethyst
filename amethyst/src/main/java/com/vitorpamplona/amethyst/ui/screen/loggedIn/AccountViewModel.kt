@@ -1076,11 +1076,12 @@ class AccountViewModel(
         }
     }
 
+    fun sortUsersSync(hexList: List<HexKey>): List<HexKey> = hexList.sortedByDescending { account.isKnown(it) }
+
     fun loadUsersSync(hexList: List<String>): List<User> =
         hexList
             .mapNotNull { hex -> checkGetOrCreateUser(hex) }
-            .sortedBy { account.isFollowing(it) }
-            .reversed()
+            .sortedByDescending { account.isKnown(it) }
 
     suspend fun checkVideoIsOnline(videoUrl: String): Boolean =
         withContext(Dispatchers.IO) {

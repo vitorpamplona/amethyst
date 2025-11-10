@@ -1691,6 +1691,10 @@ class Account(
 
     fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
 
+    fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
+
+    fun isKnown(user: HexKey): Boolean = user in allFollows.flow.value.authors
+
     fun isAcceptable(note: Note): Boolean {
         return note.author?.let { isAcceptable(it) } ?: true &&
             // if user hasn't hided this author

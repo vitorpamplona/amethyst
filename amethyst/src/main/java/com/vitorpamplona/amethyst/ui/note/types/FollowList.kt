@@ -21,139 +21,163 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.GalleryUnloaded
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
-import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.FollowSetCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.blackTagModifier
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayFollowList(
     baseNote: Note,
-    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? FollowListEvent ?: return
-
-    var members by remember { mutableStateOf<ImmutableList<User>>(persistentListOf()) }
-
-    var expanded by remember { mutableStateOf(false) }
-
-    val toMembersShow =
-        if (expanded) {
-            members
-        } else {
-            members.take(3)
+    val card =
+        observeNoteEventAndMap(baseNote, accountViewModel) { event: FollowListEvent? ->
+            if (event == null) {
+                FollowSetCard(
+                    name = "",
+                    media = "",
+                    description = "",
+                    users = persistentListOf(),
+                )
+            } else {
+                FollowSetCard(
+                    name = event.title()?.ifBlank { null } ?: event.dTag(),
+                    media = event.image()?.ifBlank { null },
+                    description = event.description(),
+                    users = accountViewModel.sortUsersSync(event.followIds()).toImmutableList(),
+                )
+            }
         }
 
-    val image = noteEvent.image()
-
-    image?.let {
-        MyAsyncImage(
-            imageUrl = it,
-            contentDescription =
-                stringRes(
-                    R.string.preview_card_image_for,
-                    it,
-                ),
-            contentScale = ContentScale.Crop,
-            mainImageModifier = Modifier.fillMaxWidth(),
-            loadedImageModifier = FollowSetImageModifier,
-            accountViewModel = accountViewModel,
-            onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
-            onError = { DefaultImageHeader(baseNote, accountViewModel) },
-        )
-    } ?: run {
-        DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier)
-    }
-
-    Text(
-        text = noteEvent.title() ?: noteEvent.dTag(),
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp),
-        textAlign = TextAlign.Center,
+    RenderFollowSetThumbEmbed(
+        card.value,
+        baseNote,
+        accountViewModel,
+        nav,
     )
+}
 
-    LaunchedEffect(Unit) {
-        accountViewModel.loadUsers(noteEvent.taggedUserIds()) {
-            members = it
+@Composable
+fun RenderFollowSetThumbEmbed(
+    card: FollowSetCard,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth().clickable {
+                nav.nav { routeFor(baseNote, accountViewModel.account) }
+            },
+        verticalArrangement = SpacedBy5dp,
+    ) {
+        Box(
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            card.media?.let {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentScale = ContentScale.Crop,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = FollowSetImageModifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                )
+            } ?: run { DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier) }
+
+            GalleryUnloaded(card.users, StdPadding, accountViewModel, nav)
+        }
+
+        Row(
+            verticalAlignment = CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = card.name,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringRes(R.string.follow_list_item_label),
+                color = MaterialTheme.colorScheme.background,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = MaterialTheme.colorScheme.blackTagModifier,
+            )
         }
     }
+}
 
-    Box {
-        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-            toMembersShow.forEach { user ->
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    UserCompose(
-                        user,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+@Preview
+@Composable
+fun RenderFollowSetThumbPreview() {
+    val accountViewModel = mockAccountViewModel()
 
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
-                }
-            }
-        }
-
-        if (members.size > 3 && !expanded) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(getGradient(backgroundColor)),
-            ) {
-                ShowMoreButton { expanded = !expanded }
-            }
-        }
+    ThemeComparisonColumn {
+        RenderFollowSetThumbEmbed(
+            card =
+                FollowSetCard(
+                    "Orange Pill Perú",
+                    "https://i.postimg.cc/GtDgGY5v/5062563795762785335.jpg",
+                    "Desc",
+                    persistentListOf(
+                        accountViewModel.userProfile().pubkeyHex,
+                        accountViewModel.userProfile().pubkeyHex,
+                        accountViewModel.userProfile().pubkeyHex,
+                        accountViewModel.userProfile().pubkeyHex,
+                        accountViewModel.userProfile().pubkeyHex,
+                    ),
+                ),
+            baseNote = Note(""),
+            accountViewModel = accountViewModel,
+            nav = EmptyNav(),
+        )
     }
 }

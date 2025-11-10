@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,12 +39,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.Gallery
+import com.vitorpamplona.amethyst.ui.note.GalleryUnloaded
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -58,10 +56,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -72,7 +71,7 @@ data class FollowSetCard(
     val name: String,
     val media: String?,
     val description: String?,
-    val users: ImmutableList<User>,
+    val users: ImmutableList<HexKey>,
 )
 
 @Composable
@@ -90,7 +89,7 @@ fun RenderFollowSetThumb(
             description = noteEvent?.description(),
             users =
                 accountViewModel
-                    .loadUsersSync(
+                    .sortUsersSync(
                         noteEvent?.followIds() ?: emptyList(),
                     ).toImmutableList(),
         )
@@ -119,11 +118,11 @@ fun RenderFollowSetThumbPreview() {
                         "https://i.postimg.cc/GtDgGY5v/5062563795762785335.jpg",
                         "Desc",
                         persistentListOf(
-                            accountViewModel.userProfile(),
-                            accountViewModel.userProfile(),
-                            accountViewModel.userProfile(),
-                            accountViewModel.userProfile(),
-                            accountViewModel.userProfile(),
+                            accountViewModel.userProfile().pubkeyHex,
+                            accountViewModel.userProfile().pubkeyHex,
+                            accountViewModel.userProfile().pubkeyHex,
+                            accountViewModel.userProfile().pubkeyHex,
+                            accountViewModel.userProfile().pubkeyHex,
                         ),
                     ),
                 baseNote = Note(""),
@@ -164,7 +163,7 @@ fun RenderFollowSetThumb(
                 )
             } ?: run { DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier) }
 
-            Gallery(card.users, Modifier.padding(Size10dp), accountViewModel, nav)
+            GalleryUnloaded(card.users, StdPadding, accountViewModel, nav)
         }
 
         Spacer(modifier = DoubleVertSpacer)

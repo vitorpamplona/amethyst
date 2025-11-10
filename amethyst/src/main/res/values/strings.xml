@@ -1350,4 +1350,7 @@
     <string name="public_members_count">Public Members (%1$s)</string>
     <string name="add_user_to_the_list">Add user to the list</string>
     <string name="remove_user_from_the_list">Add user to the list</string>
+
+    <string name="follow_list_item_label">Follow Pack</string>
+    <string name="members">Members</string>
 </resources>

@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
@@ -65,73 +66,82 @@ fun routeFor(
 fun routeFor(
     noteEvent: Event,
     loggedIn: Account,
-): Route? {
+): Route? =
     if (noteEvent is DraftWrapEvent) {
         val innerEvent = loggedIn.draftsDecryptionCache.preCachedDraft(noteEvent)
 
-        if (innerEvent is IsInPublicChatChannel) {
-            innerEvent.channelId()?.let {
-                return Route.PublicChatChannel(it)
-            }
-        } else if (innerEvent is LiveActivitiesEvent) {
-            innerEvent.address().let {
-                return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
-            }
-        } else if (innerEvent is LiveActivitiesChatMessageEvent) {
-            innerEvent.activityAddress()?.let {
-                return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
-            }
-        } else if (innerEvent is EphemeralChatEvent) {
-            innerEvent.roomId()?.let {
-                return Route.EphemeralChat(it.id, it.relayUrl.url)
-            }
-        } else if (innerEvent is ChatroomKeyable) {
-            val room = innerEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
-            loggedIn.chatroomList.getOrCreatePrivateChatroom(room)
-            return Route.Room(room)
-        } else if (innerEvent is AddressableEvent) {
-            return Route.Note(noteEvent.aTag().toTag())
+        if (innerEvent != null) {
+            routeForInner(innerEvent, loggedIn)
         } else {
-            return Route.Note(noteEvent.id)
+            Route.Note(noteEvent.id)
         }
-    } else if (noteEvent is AppDefinitionEvent) {
-        return Route.ContentDiscovery(noteEvent.id)
-    } else if (noteEvent is IsInPublicChatChannel) {
-        noteEvent.channelId()?.let {
-            return Route.PublicChatChannel(it)
-        }
-    } else if (noteEvent is ChannelCreateEvent) {
-        return Route.PublicChatChannel(noteEvent.id)
-    } else if (noteEvent is LiveActivitiesEvent) {
-        noteEvent.address().let {
-            return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
-        }
-    } else if (noteEvent is LiveActivitiesChatMessageEvent) {
-        noteEvent.activityAddress()?.let {
-            return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
-        }
-    } else if (noteEvent is ChatroomKeyable) {
-        val room = noteEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
-        loggedIn.chatroomList.getOrCreatePrivateChatroom(room)
-        return Route.Room(room)
-    } else if (noteEvent is CommunityDefinitionEvent) {
-        return Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
-    } else if (noteEvent is GiftWrapEvent) {
-        noteEvent.innerEventId?.let {
-            return routeFor(LocalCache.getOrCreateNote(it), loggedIn)
-        }
-    } else if (noteEvent is SealedRumorEvent) {
-        noteEvent.innerEventId?.let {
-            return routeFor(LocalCache.getOrCreateNote(it), loggedIn)
-        }
-    } else if (noteEvent is AddressableEvent) {
-        return Route.Note(noteEvent.aTag().toTag())
     } else {
-        return Route.Note(noteEvent.id)
+        routeForInner(noteEvent, loggedIn)
     }
 
-    return null
-}
+fun routeForInner(
+    noteEvent: Event,
+    loggedIn: Account,
+): Route? =
+    when (noteEvent) {
+        is AppDefinitionEvent -> {
+            Route.ContentDiscovery(noteEvent.id)
+        }
+        is IsInPublicChatChannel -> {
+            noteEvent.channelId()?.let {
+                Route.PublicChatChannel(it)
+            }
+        }
+        is ChannelCreateEvent -> {
+            Route.PublicChatChannel(noteEvent.id)
+        }
+        is LiveActivitiesEvent -> {
+            noteEvent.address().let {
+                Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
+            }
+        }
+        is LiveActivitiesChatMessageEvent -> {
+            noteEvent.activityAddress()?.let {
+                Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
+            }
+        }
+        is EphemeralChatEvent -> {
+            noteEvent.roomId()?.let {
+                Route.EphemeralChat(it.id, it.relayUrl.url)
+            }
+        }
+
+        is FollowListEvent -> {
+            Route.FollowPack(noteEvent.address())
+        }
+
+        is ChatroomKeyable -> {
+            val room = noteEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
+            loggedIn.chatroomList.getOrCreatePrivateChatroom(room)
+            Route.Room(room)
+        }
+
+        is CommunityDefinitionEvent -> {
+            Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+        is GiftWrapEvent -> {
+            noteEvent.innerEventId?.let {
+                routeFor(LocalCache.getOrCreateNote(it), loggedIn)
+            }
+        }
+        is SealedRumorEvent -> {
+            noteEvent.innerEventId?.let {
+                routeFor(LocalCache.getOrCreateNote(it), loggedIn)
+            }
+        }
+        is AddressableEvent -> {
+            Route.Note(noteEvent.aTag().toTag())
+        }
+
+        else -> {
+            Route.Note(noteEvent.id)
+        }
+    }
 
 fun routeToMessage(
     user: HexKey,
@@ -206,6 +216,8 @@ fun routeFor(note: LiveActivitiesChannel): Route = Route.LiveActivityChannel(not
 fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.relayUrl.url)
 
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
+
+fun routeForUser(userHex: HexKey): Route.Profile = Route.Profile(userHex)
 
 fun authorRouteFor(note: Note): Route.Profile? = note.author?.pubkeyHex?.let { Route.Profile(it) }
 
