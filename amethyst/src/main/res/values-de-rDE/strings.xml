@@ -450,7 +450,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_list_aroundme">In der Nähe</string>
     <string name="follow_list_global">Weltweit</string>
     <string name="follow_list_mute_list">Stummliste</string>
-    <string name="follow_sets">Folge-Sets</string>
     <string name="labeled_bookmarks">Markierte Lesezeichen</string>
     <string name="general_bookmarks">Allgemeine Lesezeichen</string>
     <string name="follow_set_type_public">Öffentlich</string>
@@ -458,7 +457,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_type_mixed">Gemischt</string>
     <string name="follow_set_empty_feed_msg">Es scheint, dass du noch keine Folge-Sets hast.\nTippe unten zum Aktualisieren oder verwende die Plus-Taste, um ein neues zu erstellen.</string>
     <string name="follow_set_create_btn_label">Neu</string>
-    <string name="follow_set_add_author_from_note_action">Autor zum Folge-Set hinzufügen</string>
     <string name="follow_set_profile_actions_menu_description">Benutzer zu Listen hinzufügen oder entfernen, oder eine neue Liste mit diesem Benutzer erstellen.</string>
     <string name="follow_set_icon_description">Symbol für %1$s-Liste</string>
     <string name="follow_set_public_presence_indicator">%1$s ist ein öffentliches Mitglied</string>
@@ -473,25 +471,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_multiple_member_label">Mitglieder</string>
     <string name="follow_set_empty_label">Keine Mitglieder</string>
     <string name="follow_set_absence_indicator">%1$s ist nicht in dieser Liste</string>
-    <string name="follow_set_man_dialog_title">Deine Folge-Sets</string>
-    <string name="follow_set_empty_dialog_msg">Keine Folge-Sets gefunden oder du hast keine. Tippe unten zum Aktualisieren oder verwende das Menü, um eines zu erstellen.</string>
     <string name="follow_set_error_dialog_msg">Beim Abrufen ist ein Problem aufgetreten: %1$s</string>
     <string name="follow_set_creation_menu_title">Neue Liste erstellen</string>
     <string name="follow_set_creation_item_label">Neue %1$s-Liste mit Benutzer erstellen</string>
     <string name="follow_set_creation_item_description">Erstellt ein %1$s-Folge-Set und fügt %2$s hinzu.</string>
-    <string name="follow_set_creation_dialog_title">Neue %1$s-Liste</string>
-    <string name="follow_set_copy_dialog_title">Follow-Set kopieren/klonen</string>
     <string name="follow_set_desc_modify_label">Beschreibung bearbeiten</string>
     <string name="follow_set_empty_desc_label">Diese Liste hat keine Beschreibung</string>
     <string name="follow_set_current_desc_label">Aktuelle Beschreibung:</string>
-    <string name="follow_set_copy_indicator_description">Unten kannst du einen eigenen Namen/Beschreibung für diesen Klon festlegen.</string>
-    <string name="follow_set_creation_name_label">Set-Name</string>
-    <string name="follow_set_copy_name_label">(Original-Set-Name)</string>
-    <string name="follow_set_creation_desc_label">Set-Beschreibung (optional)</string>
-    <string name="follow_set_copy_desc_label">(Original-Set-Beschreibung)</string>
-    <string name="follow_set_creation_action_btn_label">Set erstellen</string>
-    <string name="follow_set_copy_action_btn_label">Set kopieren/klonen</string>
-    <string name="follow_set_rename_btn_label">Set umbenennen</string>
     <string name="follow_set_desc_modify_btn_label">Bearbeiten</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Du benennst um von </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> zu..</string>
@@ -1109,4 +1095,27 @@ anz der Bedingungen ist erforderlich</string>
     <string name="crashreport_found_send">Senden</string>
     <string name="this_message_will_disappear_in_days">Diese Nachricht verschwindet in %1$d Tagen</string>
     <string name="select_signer">Signierer auswählen</string>
+
+    <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
+    <string name="follow_set_absence_indicator2">%1$s ist kein Mitglied</string>
+    <string name="follow_set_man_dialog_title2">Deine Listen und %1$s</string>
+    <string name="add_user_to_the_list">Benutzer zur Liste hinzufügen</string>
+    <string name="follow_set_empty_label2">Leer</string>
+    <string name="search_and_add_a_user">Benutzer suchen und hinzufügen</string>
+    <string name="add_a_user">Benutzer hinzufügen</string>
+    <string name="follow_sets">Follower-Listen</string>
+    <string name="follow_set_add_author_from_note_action">Autor zur Follower-Liste hinzufügen</string>
+    <string name="follow_set_man_dialog_title">Deine Listen</string>
+    <string name="follow_set_empty_dialog_msg">Keine Follower-Listen gefunden oder du hast keine. Tippe unten, um zu aktualisieren, oder verwende das Menü, um eine zu erstellen.</string>
+    <string name="follow_set_creation_dialog_title">Neue Follower-Liste</string>
+    <string name="follow_set_copy_dialog_title">Follower-Liste kopieren/klonen</string>
+    <string name="follow_set_copy_indicator_description">Lege unten einen neuen Namen/Beschreibung für die geklonte Liste fest.</string>
+    <string name="follow_set_creation_name_label">Listenname</string>
+    <string name="follow_set_copy_name_label">Neuer Listenname</string>
+    <string name="follow_set_creation_desc_label">Listenbeschreibung (optional)</string>
+    <string name="follow_set_copy_desc_label">Beschreibung der neuen Liste</string>
+    <string name="follow_set_creation_action_btn_label">Liste erstellen</string>
+    <string name="follow_set_copy_action_btn_label">Liste kopieren/klonen</string>
+    <string name="follow_set_rename_btn_label">Liste umbenennen</string>
+
 </resources>
