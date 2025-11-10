@@ -78,7 +78,7 @@ fun RenderHighlight(
         comment = noteEvent.comment(),
         highlight = noteEvent.quote(),
         context = noteEvent.context(),
-        authorHex = noteEvent.pubKey,
+        authorHex = noteEvent.author(),
         url = noteEvent.inUrl(),
         postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
@@ -124,7 +124,7 @@ fun DisplayHighlight(
     }
 
     val quote =
-        remember {
+        remember(highlight) {
             highlight.split("\n").joinToString("\n") { "> *${it.removeSuffix(" ")}*" }
         }
 
