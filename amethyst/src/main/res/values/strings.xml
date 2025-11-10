@@ -1347,5 +1347,5 @@
     <string name="private_members">Private Members</string>
     <string name="public_members">Public Members</string>
     <string name="add_user_to_the_list">Add user to the list</string>
-    <string name="remove_user_from_the_list">Add user to the list</string>
+    <string name="remove_user_from_the_list">Remove user from the list</string>
 </resources>
