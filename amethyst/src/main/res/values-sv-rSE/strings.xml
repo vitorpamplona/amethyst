@@ -125,6 +125,8 @@
     <string name="public_chat_feed">Publik Chat Flöde</string>
     <string name="global_feed">Globalt Flöde</string>
     <string name="search_feed">Sök i Flödet</string>
+    <string name="search_and_add_a_user">Sök och lägg till användare</string>
+    <string name="add_a_user">Lägg till en användare</string>
     <string name="add_a_relay">Lägg till Relä</string>
     <string name="profile_name">Namn</string>
     <string name="display_name">Visningsnamn</string>
@@ -444,6 +446,7 @@
     <string name="follow_list_aroundme">Runt mig</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Tyst listan</string>
+    <string name="follow_sets">Följelistor</string>
     <string name="labeled_bookmarks">Märkta bokmärken</string>
     <string name="general_bookmarks">Allmänna bokmärken</string>
     <string name="follow_set_type_public">Offentlig</string>
@@ -451,6 +454,7 @@
     <string name="follow_set_type_mixed">Blandad</string>
     <string name="follow_set_empty_feed_msg">Det verkar som att du inte har några följ-set ännu.\nTryck nedan för att uppdatera eller använd plusknappen för att skapa ett nytt.</string>
     <string name="follow_set_create_btn_label">Ny</string>
+    <string name="follow_set_add_author_from_note_action">Lägg till författare i följelista</string>
     <string name="follow_set_profile_actions_menu_description">Lägg till eller ta bort användare från listor, eller skapa en ny lista med denna användare.</string>
     <string name="follow_set_icon_description">Ikon för %1$s-lista</string>
     <string name="follow_set_public_presence_indicator">%1$s är en offentlig medlem</string>
@@ -464,14 +468,29 @@
     <string name="follow_set_single_member_label">medlem</string>
     <string name="follow_set_multiple_member_label">medlemmar</string>
     <string name="follow_set_empty_label">Inga medlemmar</string>
+    <string name="follow_set_empty_label2">Tom</string>
     <string name="follow_set_absence_indicator">%1$s finns inte i denna lista</string>
+    <string name="follow_set_absence_indicator2">%1$s är inte medlem</string>
+    <string name="follow_set_man_dialog_title2">Dina listor och %1$s</string>
+    <string name="follow_set_man_dialog_title">Dina listor</string>
+    <string name="follow_set_empty_dialog_msg">Inga följelistor hittades, eller så har du inga. Tryck nedan för att uppdatera eller använd menyn för att skapa en ny.</string>
     <string name="follow_set_error_dialog_msg">Ett problem uppstod vid hämtning: %1$s</string>
     <string name="follow_set_creation_menu_title">Skapa ny lista</string>
     <string name="follow_set_creation_item_label">Skapa ny %1$s-lista med användare</string>
     <string name="follow_set_creation_item_description">Skapar ett %1$s-följ-set och lägger till %2$s i det.</string>
+    <string name="follow_set_creation_dialog_title">Ny följelista</string>
+    <string name="follow_set_copy_dialog_title">Kopiera/Klona följelista</string>
     <string name="follow_set_desc_modify_label">Ändra beskrivning</string>
     <string name="follow_set_empty_desc_label">Den här listan har ingen beskrivning</string>
     <string name="follow_set_current_desc_label">Nuvarande beskrivning:</string>
+    <string name="follow_set_copy_indicator_description">Ange ett nytt namn/beskrivning för den klonade listan nedan.</string>
+    <string name="follow_set_creation_name_label">Listnamn</string>
+    <string name="follow_set_copy_name_label">Nytt listnamn</string>
+    <string name="follow_set_creation_desc_label">Listbeskrivning (valfritt)</string>
+    <string name="follow_set_copy_desc_label">Beskrivning av ny lista</string>
+    <string name="follow_set_creation_action_btn_label">Skapa lista</string>
+    <string name="follow_set_copy_action_btn_label">Kopiera/Klona lista</string>
+    <string name="follow_set_rename_btn_label">Byt namn på lista</string>
     <string name="follow_set_desc_modify_btn_label">Ändra</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Du byter namn från </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> till..</string>
@@ -1089,27 +1108,6 @@
     <string name="crashreport_found_send">Skicka</string>
     <string name="this_message_will_disappear_in_days">Detta meddelande försvinner om %1$d dagar</string>
     <string name="select_signer">Välj signatör</string>
-
-    <string name="remove_user_from_the_list">Ta bort användare från listan</string>
-    <string name="follow_set_absence_indicator2">%1$s är inte medlem</string>
-    <string name="follow_set_man_dialog_title2">Dina listor och %1$s</string>
     <string name="add_user_to_the_list">Lägg till användare i listan</string>
-    <string name="follow_set_empty_label2">Tom</string>
-    <string name="search_and_add_a_user">Sök och lägg till användare</string>
-    <string name="add_a_user">Lägg till en användare</string>
-    <string name="follow_sets">Följelistor</string>
-    <string name="follow_set_add_author_from_note_action">Lägg till författare i följelista</string>
-    <string name="follow_set_man_dialog_title">Dina listor</string>
-    <string name="follow_set_empty_dialog_msg">Inga följelistor hittades, eller så har du inga. Tryck nedan för att uppdatera eller använd menyn för att skapa en ny.</string>
-    <string name="follow_set_creation_dialog_title">Ny följelista</string>
-    <string name="follow_set_copy_dialog_title">Kopiera/Klona följelista</string>
-    <string name="follow_set_copy_indicator_description">Ange ett nytt namn/beskrivning för den klonade listan nedan.</string>
-    <string name="follow_set_creation_name_label">Listnamn</string>
-    <string name="follow_set_copy_name_label">Nytt listnamn</string>
-    <string name="follow_set_creation_desc_label">Listbeskrivning (valfritt)</string>
-    <string name="follow_set_copy_desc_label">Beskrivning av ny lista</string>
-    <string name="follow_set_creation_action_btn_label">Skapa lista</string>
-    <string name="follow_set_copy_action_btn_label">Kopiera/Klona lista</string>
-    <string name="follow_set_rename_btn_label">Byt namn på lista</string>
-
+    <string name="remove_user_from_the_list">Ta bort användare från listan</string>
 </resources>
