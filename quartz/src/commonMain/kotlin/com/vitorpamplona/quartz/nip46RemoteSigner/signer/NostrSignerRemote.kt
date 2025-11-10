@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -37,9 +38,14 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.utils.cache.LargeCache
+import com.vitorpamplona.quartz.utils.tryAndWait
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
 
 class NostrSignerRemote(
     val signer: NostrSignerInternal,
@@ -49,15 +55,23 @@ class NostrSignerRemote(
     val permissions: String? = null,
     val secret: String? = null,
 ) : NostrSigner(signer.pubKey) {
+    private val timeout = 30_000L
+    private val awaitingRequests = LargeCache<String, Continuation<BunkerResponse>>()
+
     val subscription =
         client.req(
             relays = relays.toList(),
             filter =
                 Filter(
                     kinds = listOf(NostrConnectEvent.KIND),
-                    tags = mapOf("p" to listOf(remotePubkey)),
+                    tags = mapOf("p" to listOf(signer.pubKey)),
                 ),
         ) { event ->
+            val message = signer.signerSync.nip44Decrypt(event.content, remotePubkey)
+            val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(message)
+
+            awaitingRequests.get(bunkerResponse.id)?.resume(bunkerResponse)
+            awaitingRequests.remove(bunkerResponse.id)
         }
 
     fun openSubscription() {
@@ -83,16 +97,21 @@ class NostrSignerRemote(
                 tags = tags,
                 content = content,
             )
+
+        val request =
+            BunkerRequestSign(
+                event = template,
+            )
+
         val event =
             NostrConnectEvent.create(
-                message =
-                    BunkerRequestSign(
-                        event = template,
-                    ),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
+
         client.send(event, relayList = relays)
+
         TODO("Not yet implemented")
     }
 
@@ -179,20 +198,32 @@ class NostrSignerRemote(
         TODO("Not yet implemented")
     }
 
-    suspend fun connect(): String {
+    suspend fun connect(): BunkerResponse? {
+        val request =
+            BunkerRequestConnect(
+                remoteKey = remotePubkey,
+                permissions = permissions,
+                secret = secret,
+            )
         val event =
             NostrConnectEvent.create(
-                message =
-                    BunkerRequestConnect(
-                        remoteKey = remotePubkey,
-                        permissions = permissions,
-                        secret = secret,
-                    ),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+
+        return result
     }
 
     suspend fun getPublicKey(): String {
