@@ -125,6 +125,8 @@
     <string name="public_chat_feed">Nyilvános csevegési hírfolyam</string>
     <string name="global_feed">Globális hírfolyam</string>
     <string name="search_feed">Hírfolyam keresése</string>
+    <string name="search_and_add_a_user">Felhasználó keresése és hozzáadása</string>
+    <string name="add_a_user">Felhasználó ozzáadása</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
     <string name="profile_name">Név</string>
     <string name="display_name">Megjelenítendő név</string>
@@ -470,7 +472,10 @@
     <string name="follow_set_single_member_label">tag</string>
     <string name="follow_set_multiple_member_label">tagok</string>
     <string name="follow_set_empty_label">Nincsenek tagok</string>
+    <string name="follow_set_empty_label2">Üres</string>
     <string name="follow_set_absence_indicator">A(z) %1$s nincs a listában</string>
+    <string name="follow_set_absence_indicator2">%1$s nem tag</string>
+    <string name="follow_set_man_dialog_title2">Saját listák és %1$s</string>
     <string name="follow_set_man_dialog_title">Saját követési gyüjtemények</string>
     <string name="follow_set_empty_dialog_msg">Nem találhatók követési gyüjtemények, vagy nincs követési gyüjteménye. Érintse meg az alábbi gombot a frissítéshez vagy használja a menüt egy gyüjtemény létrehozásához.</string>
     <string name="follow_set_error_dialog_msg">Probléma történt a következő lekérdezésekor: %1$s</string>
@@ -693,7 +698,7 @@
     <string name="new_feature_nip17_might_not_be_available_title">Új funkció</string>
     <string name="new_feature_nip17_might_not_be_available_description">Ennek az üzemmódnak az aktiválásához az Amethystnek NIP-17 üzenetet kell küldenie (GiftWrapped, Sealed Direct és csoport-üzenetek). A NIP-17 új, és a legtöbb kliens még nem implementálta. Győződjön meg arról is, hogy a kedvezményezett kompatibilis klienst használ.</string>
     <string name="new_feature_nip17_activate">Aktiválás</string>
-    <string name="messages_create_public_chat">Nyílvános</string>
+    <string name="messages_create_public_chat">Nyilvános</string>
     <string name="messages_create_public_private_chat_description">Új nyilvános vagy privát csoport</string>
     <string name="messages_relay_based">Átjátszó</string>
     <string name="messages_new_message">Privát</string>
@@ -1087,6 +1092,8 @@
     <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrent-alkalmazások telepítve.</string>
     <string name="torrent_no_info">Az esemény nem tartalmaz elegendő információt a mágneshivatkozás létrehozásához</string>
     <string name="my_lists_and_sets">Saját lista/gyüjtemény</string>
+    <string name="my_lists">Saját listák</string>
+    <string name="people_list_label">Felhasználók</string>
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="private_message">Privát üzenet</string>
@@ -1109,4 +1116,8 @@
     <string name="crashreport_found_send">Küldés</string>
     <string name="this_message_will_disappear_in_days">Ez az üzenet %1$d nap múlva eltűnik</string>
     <string name="select_signer">Aláíró kiválasztása</string>
+    <string name="in_the_list">Már rajta van a listán</string>
+    <string name="private_members">Privát tagok</string>
+    <string name="public_members">Nyilvános tagok</string>
+    <string name="add_user_to_the_list">Felhasználó hozzáadása a listához</string>
 </resources>
