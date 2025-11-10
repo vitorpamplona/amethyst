@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -63,7 +64,6 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 @Immutable
@@ -109,28 +109,47 @@ fun RenderFollowSetThumbPreview() {
     val accountViewModel = mockAccountViewModel()
     val nav = EmptyNav()
 
-    ThemeComparisonColumn(
-        toPreview = {
-            RenderFollowSetThumb(
-                card =
-                    FollowSetCard(
-                        "Orange Pill Perú",
-                        "https://i.postimg.cc/GtDgGY5v/5062563795762785335.jpg",
-                        "Desc",
-                        persistentListOf(
-                            accountViewModel.userProfile().pubkeyHex,
-                            accountViewModel.userProfile().pubkeyHex,
-                            accountViewModel.userProfile().pubkeyHex,
-                            accountViewModel.userProfile().pubkeyHex,
-                            accountViewModel.userProfile().pubkeyHex,
-                        ),
-                    ),
-                baseNote = Note(""),
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        },
-    )
+    val followCard =
+        FollowListEvent(
+            id = "eca31634fce7c9068b56fa8db9f387da70bdcceb3986a77ca1a9844f3128eb5f",
+            pubKey = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da",
+            createdAt = 1761736286,
+            tags =
+                arrayOf(
+                    arrayOf("title", "Retro Computer Fans"),
+                    arrayOf("d", "xmbspe8rddsq"),
+                    arrayOf("image", "https://blog.johnnovak.net/2022/04/15/achieving-period-correct-graphics-in-personal-computer-emulators-part-1-the-amiga/img/dream-setup.jpg"),
+                    arrayOf("p", "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da"),
+                    arrayOf("p", "9a9a4aa0e43e57873380ab22e8a3df12f3c4cf5bb3a804c6e3fed0069a6e2740"),
+                    arrayOf("p", "4f5dd82517b11088ce00f23d99f06fe8f3e2e45ecf47bc9c2f90f34d5c6f7382"),
+                    arrayOf("p", "ac92102a2ecb873c488e0125354ef5a97075a16198668c360eda050007ed42cd"),
+                    arrayOf("p", "47f54409a4620eb35208a3bc1b53555bf3d0656b246bf0471a93208e20672f6f"),
+                    arrayOf("p", "2624911545afb7a2b440cf10f5c69308afa33aae26fca664d8c94623dc0f1baf"),
+                    arrayOf("p", "6641f26f5c59f7010dbe3e42e4593398e27c087497cb7d20e0e7633a17e48a94"),
+                    arrayOf("description", "Retro computer fans and enthusiasts "),
+                ),
+            content = "",
+            sig = "3aa388edafad151e81cb0228fe04e115dbbcaa851c666bfe3c8740b6cd99575f0fc3ba2d47acda86f7626564a05e9dbc05ef452a7bd0ac00f828dbad0e1bae6c",
+        )
+
+    LocalCache.justConsume(followCard, null, false)
+
+    val card =
+        FollowSetCard(
+            name = followCard.title()?.ifBlank { null } ?: followCard.dTag(),
+            media = followCard.image()?.ifBlank { null },
+            description = followCard.description(),
+            users = followCard.followIds().toImmutableList(),
+        )
+
+    ThemeComparisonColumn {
+        RenderFollowSetThumb(
+            card = card,
+            baseNote = LocalCache.getOrCreateNote(followCard.id),
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 }
 
 @Composable

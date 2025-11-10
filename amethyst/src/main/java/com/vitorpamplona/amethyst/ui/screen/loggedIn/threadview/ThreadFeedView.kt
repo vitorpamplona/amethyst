@@ -578,7 +578,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is PeopleListEvent) {
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is FollowListEvent) {
-                    DisplayFollowList(baseNote, accountViewModel, nav)
+                    DisplayFollowList(baseNote, false, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
                     AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
