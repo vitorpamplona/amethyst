@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.draftTags
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+@Stable
 class DraftTagState {
     var current: String by mutableStateOf(newTag())
     var usedDraftTags by mutableStateOf(setOf<String>(current))
