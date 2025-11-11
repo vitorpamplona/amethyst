@@ -1111,4 +1111,10 @@
     <string name="select_signer">Vybrat podepisovatele</string>
     <string name="add_user_to_the_list">Přidat uživatele do seznamu</string>
     <string name="remove_user_from_the_list">Odebrat uživatele ze seznamu</string>
+
+    <string name="my_lists">Moje seznamy</string>
+    <string name="people_list_label">Uživatelé</string>
+    <string name="in_the_list">Již v seznamu</string>
+    <string name="private_members">Soukromí členové</string>
+    <string name="public_members">Veřejní členové</string>
 </resources>

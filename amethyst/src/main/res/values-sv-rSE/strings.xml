@@ -1110,4 +1110,11 @@
     <string name="select_signer">Välj signatör</string>
     <string name="add_user_to_the_list">Lägg till användare i listan</string>
     <string name="remove_user_from_the_list">Ta bort användare från listan</string>
+
+    <string name="my_lists">Mina listor</string>
+    <string name="people_list_label">Användare</string>
+    <string name="in_the_list">Redan i listan</string>
+    <string name="private_members">Privata medlemmar</string>
+    <string name="public_members">Offentliga medlemmar</string>
+
 </resources>

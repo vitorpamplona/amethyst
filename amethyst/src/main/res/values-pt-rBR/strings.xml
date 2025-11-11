@@ -1111,4 +1111,12 @@
     <string name="select_signer">Selecionar assinador</string>
     <string name="add_user_to_the_list">Adicionar usuário à lista</string>
     <string name="remove_user_from_the_list">Remover usuário da lista</string>
+
+    <string name="my_lists">Minhas listas</string>
+    <string name="people_list_label">Usuários</string>
+    <string name="in_the_list">Já está na lista</string>
+    <string name="private_members">Membros privados</string>
+    <string name="public_members">Membros públicos</string>
+
+
 </resources>
