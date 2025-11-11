@@ -237,7 +237,7 @@ private fun ListViewAndEditColumn(
             pagerState = pagerState,
             modifier = Modifier.weight(1f),
             onDeleteUser = { user, isPrivate ->
-                accountViewModel.runIOCatching {
+                accountViewModel.launchSigner {
                     viewModel.removeUserFromSet(user, isPrivate)
                 }
             },
@@ -303,7 +303,7 @@ private fun RenderAddUserFieldAndSuggestions(
             viewModel.hasUserFlow(user, pagerState.currentPage == 1)
         },
         onSelect = { user ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 viewModel.addUserToSet(user, pagerState.currentPage == 1)
             }
             userName =
@@ -312,7 +312,7 @@ private fun RenderAddUserFieldAndSuggestions(
                 )
         },
         onDelete = { user ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 viewModel.removeUserFromSet(user, pagerState.currentPage == 1)
             }
             userName =
@@ -563,14 +563,14 @@ fun ListActionsMenuButton(
 ) {
     ListActionsMenuButton(
         onBroadcastList = {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 viewModel.loadNote()?.let { updatedSetNote ->
                     accountViewModel.broadcast(updatedSetNote)
                 }
             }
         },
         onDeleteList = {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 viewModel.deleteFollowSet()
             }
             nav.popBack()

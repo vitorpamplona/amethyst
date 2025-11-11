@@ -119,7 +119,7 @@ class NIP96ServersViewModel : ViewModel() {
 
     fun saveFileServers() {
         if (isModified) {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 val serverList = _fileServers.value.map { it.baseUrl }
                 account.sendFileServersList(serverList)
                 refresh()

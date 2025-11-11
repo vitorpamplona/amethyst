@@ -75,7 +75,7 @@ fun PeopleListAndUserView(
                     userIsPrivateMember = list.privateMembers.contains(userToAddOrRemove),
                     userIsPublicMember = list.publicMembers.contains(userToAddOrRemove),
                     onRemoveUser = {
-                        accountViewModel.runIOCatching {
+                        accountViewModel.launchSigner {
                             accountViewModel.account.peopleLists.removeUserFromSet(
                                 userToAddOrRemove,
                                 isPrivate = list.privateMembers.contains(userToAddOrRemove),
@@ -87,7 +87,7 @@ fun PeopleListAndUserView(
                     privateMemberSize = list.privateMembers.size,
                     publicMemberSize = list.publicMembers.size,
                     onAddUserToList = { userShouldBePrivate ->
-                        accountViewModel.runIOCatching {
+                        accountViewModel.launchSigner {
                             accountViewModel.account.peopleLists.addUserToSet(
                                 userToAddOrRemove,
                                 list.identifierTag,

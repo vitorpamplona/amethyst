@@ -85,7 +85,7 @@ fun PrivateMessageEditFieldRow(
     nav: INav,
 ) {
     BackHandler {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             channelScreenModel.sendDraftSync()
             channelScreenModel.cancel()
         }
@@ -170,7 +170,7 @@ fun EditField(
                 isActive = channelScreenModel.canPost(),
                 modifier = EditFieldTrailingIconModifier,
             ) {
-                accountViewModel.runIOCatching {
+                accountViewModel.launchSigner {
                     channelScreenModel.sendPostSync()
                     onSendNewMessage()
                 }

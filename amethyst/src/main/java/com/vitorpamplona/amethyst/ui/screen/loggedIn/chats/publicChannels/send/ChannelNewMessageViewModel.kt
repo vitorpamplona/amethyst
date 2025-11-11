@@ -107,7 +107,7 @@ open class ChannelNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         sendDraftSync()
                     }
                 }
@@ -263,7 +263,7 @@ open class ChannelNewMessageViewModel :
     }
 
     fun sendPost(onDone: suspend () -> Unit) {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             sendPostSync()
             onDone()
         }

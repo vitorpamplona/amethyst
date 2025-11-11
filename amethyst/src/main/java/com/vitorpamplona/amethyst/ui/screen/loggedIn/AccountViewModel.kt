@@ -313,7 +313,7 @@ class AccountViewModel(
         note: Note,
         reaction: String,
     ) {
-        runIOCatching {
+        launchSigner {
             val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
@@ -679,7 +679,7 @@ class AccountViewModel(
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
-    ) = runIOCatching {
+    ) = launchSigner {
         ZapPaymentHandler(account).zap(
             note = note,
             amountMilliSats = amountInMillisats,
@@ -699,23 +699,23 @@ class AccountViewModel(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = runIOCatching { account.report(note, type, content) }
+    ) = launchSigner { account.report(note, type, content) }
 
     fun report(
         user: User,
         type: ReportType,
     ) {
-        runIOCatching {
+        launchSigner {
             account.report(user, type)
             account.hideUser(user.pubkeyHex)
         }
     }
 
-    fun boost(note: Note) = runIOCatching { account.boost(note) }
+    fun boost(note: Note) = launchSigner { account.boost(note) }
 
-    fun removeEmojiPack(emojiPack: Note) = runIOCatching { account.removeEmojiPack(emojiPack) }
+    fun removeEmojiPack(emojiPack: Note) = launchSigner { account.removeEmojiPack(emojiPack) }
 
-    fun addEmojiPack(emojiPack: Note) = runIOCatching { account.addEmojiPack(emojiPack) }
+    fun addEmojiPack(emojiPack: Note) = launchSigner { account.addEmojiPack(emojiPack) }
 
     fun addMediaToGallery(
         hex: String,
@@ -725,40 +725,40 @@ class AccountViewModel(
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
-    ) = runIOCatching { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
+    ) = launchSigner { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
 
-    fun removeFromMediaGallery(note: Note) = runIOCatching { account.removeFromGallery(note) }
+    fun removeFromMediaGallery(note: Note) = launchSigner { account.removeFromGallery(note) }
 
     fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
-    fun addPrivateBookmark(note: Note) = runIOCatching { account.addBookmark(note, true) }
+    fun addPrivateBookmark(note: Note) = launchSigner { account.addBookmark(note, true) }
 
-    fun addPublicBookmark(note: Note) = runIOCatching { account.addBookmark(note, false) }
+    fun addPublicBookmark(note: Note) = launchSigner { account.addBookmark(note, false) }
 
-    fun removePrivateBookmark(note: Note) = runIOCatching { account.removeBookmark(note, true) }
+    fun removePrivateBookmark(note: Note) = launchSigner { account.removeBookmark(note, true) }
 
-    fun removePublicBookmark(note: Note) = runIOCatching { account.removeBookmark(note, false) }
+    fun removePublicBookmark(note: Note) = launchSigner { account.removeBookmark(note, false) }
 
-    fun broadcast(note: Note) = runIOCatching { account.broadcast(note) }
+    fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
-    fun timestamp(note: Note) = runIOCatching { account.otsState.timestamp(note) }
+    fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
-    fun delete(notes: List<Note>) = runIOCatching { account.delete(notes) }
+    fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
 
-    fun delete(note: Note) = runIOCatching { account.delete(note) }
+    fun delete(note: Note) = launchSigner { account.delete(note) }
 
     fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
 
     fun decrypt(
         note: Note,
         onReady: (String) -> Unit,
-    ) = runIOCatching {
+    ) = launchSigner {
         account.decryptContent(note)?.let { onReady(it) }
     }
 
-    inline fun runIOCatching(crossinline action: suspend () -> Unit) {
+    inline fun launchSigner(crossinline action: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 action()
@@ -796,35 +796,35 @@ class AccountViewModel(
     fun approveCommunityPost(
         post: Note,
         community: AddressableNote,
-    ) = runIOCatching { account.approveCommunityPost(post, community) }
+    ) = launchSigner { account.approveCommunityPost(post, community) }
 
-    fun follow(community: AddressableNote) = runIOCatching { account.follow(community) }
+    fun follow(community: AddressableNote) = launchSigner { account.follow(community) }
 
-    fun follow(channel: PublicChatChannel) = runIOCatching { account.follow(channel) }
+    fun follow(channel: PublicChatChannel) = launchSigner { account.follow(channel) }
 
-    fun follow(channel: EphemeralChatChannel) = runIOCatching { account.follow(channel) }
+    fun follow(channel: EphemeralChatChannel) = launchSigner { account.follow(channel) }
 
-    fun unfollow(community: AddressableNote) = runIOCatching { account.unfollow(community) }
+    fun unfollow(community: AddressableNote) = launchSigner { account.unfollow(community) }
 
-    fun unfollow(channel: PublicChatChannel) = runIOCatching { account.unfollow(channel) }
+    fun unfollow(channel: PublicChatChannel) = launchSigner { account.unfollow(channel) }
 
-    fun unfollow(channel: EphemeralChatChannel) = runIOCatching { account.unfollow(channel) }
+    fun unfollow(channel: EphemeralChatChannel) = launchSigner { account.unfollow(channel) }
 
-    fun follow(user: User) = runIOCatching { account.follow(user) }
+    fun follow(user: User) = launchSigner { account.follow(user) }
 
-    fun unfollow(user: User) = runIOCatching { account.unfollow(user) }
+    fun unfollow(user: User) = launchSigner { account.unfollow(user) }
 
-    fun followGeohash(tag: String) = runIOCatching { account.followGeohash(tag) }
+    fun followGeohash(tag: String) = launchSigner { account.followGeohash(tag) }
 
-    fun unfollowGeohash(tag: String) = runIOCatching { account.unfollowGeohash(tag) }
+    fun unfollowGeohash(tag: String) = launchSigner { account.unfollowGeohash(tag) }
 
-    fun followHashtag(tag: String) = runIOCatching { account.followHashtag(tag) }
+    fun followHashtag(tag: String) = launchSigner { account.followHashtag(tag) }
 
-    fun unfollowHashtag(tag: String) = runIOCatching { account.unfollowHashtag(tag) }
+    fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
 
-    fun showWord(word: String) = runIOCatching { account.showWord(word) }
+    fun showWord(word: String) = launchSigner { account.showWord(word) }
 
-    fun hideWord(word: String) = runIOCatching { account.hideWord(word) }
+    fun hideWord(word: String) = launchSigner { account.hideWord(word) }
 
     fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
 
@@ -859,21 +859,21 @@ class AccountViewModel(
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
-    fun updateWarnReports(warnReports: Boolean) = runIOCatching { account.updateWarnReports(warnReports) }
+    fun updateWarnReports(warnReports: Boolean) = launchSigner { account.updateWarnReports(warnReports) }
 
     fun updateFilterSpam(filterSpam: Boolean) =
-        runIOCatching {
+        launchSigner {
             if (account.updateFilterSpam(filterSpam)) {
                 LocalCache.antiSpam.active = filterSpamFromStrangers().value
             }
         }
 
-    fun updateShowSensitiveContent(show: Boolean?) = runIOCatching { account.updateShowSensitiveContent(show) }
+    fun updateShowSensitiveContent(show: Boolean?) = launchSigner { account.updateShowSensitiveContent(show) }
 
     fun changeReactionTypes(
         reactionSet: List<String>,
         onDone: () -> Unit,
-    ) = runIOCatching {
+    ) = launchSigner {
         account.changeReactionTypes(reactionSet)
         onDone()
     }
@@ -882,37 +882,37 @@ class AccountViewModel(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
-    ) = runIOCatching { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
+    ) = launchSigner { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
 
-    fun toggleDontTranslateFrom(languageCode: String) = runIOCatching { account.toggleDontTranslateFrom(languageCode) }
+    fun toggleDontTranslateFrom(languageCode: String) = launchSigner { account.toggleDontTranslateFrom(languageCode) }
 
-    fun updateTranslateTo(languageCode: Locale) = runIOCatching { account.updateTranslateTo(languageCode) }
+    fun updateTranslateTo(languageCode: Locale) = launchSigner { account.updateTranslateTo(languageCode) }
 
     fun prefer(
         source: String,
         target: String,
         preference: String,
-    ) = runIOCatching { account.prefer(source, target, preference) }
+    ) = launchSigner { account.prefer(source, target, preference) }
 
-    fun show(user: User) = runIOCatching { account.showUser(user.pubkeyHex) }
+    fun show(user: User) = launchSigner { account.showUser(user.pubkeyHex) }
 
-    fun hide(user: User) = runIOCatching { account.hideUser(user.pubkeyHex) }
+    fun hide(user: User) = launchSigner { account.hideUser(user.pubkeyHex) }
 
-    fun hide(word: String) = runIOCatching { account.hideWord(word) }
+    fun hide(word: String) = launchSigner { account.hideWord(word) }
 
-    fun showUser(pubkeyHex: String) = runIOCatching { account.showUser(pubkeyHex) }
+    fun showUser(pubkeyHex: String) = launchSigner { account.showUser(pubkeyHex) }
 
-    fun createStatus(newStatus: String) = runIOCatching { account.createStatus(newStatus) }
+    fun createStatus(newStatus: String) = launchSigner { account.createStatus(newStatus) }
 
     fun updateStatus(
         address: Address,
         newStatus: String,
-    ) = runIOCatching {
+    ) = launchSigner {
         account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
     }
 
     fun deleteStatus(address: Address) =
-        runIOCatching {
+        launchSigner {
             account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
         }
 
@@ -1181,7 +1181,7 @@ class AccountViewModel(
             val hint = note.toEventHint<VoiceEvent>()
             if (hint == null) return
 
-            runIOCatching {
+            launchSigner {
                 val uploader = UploadOrchestrator()
                 val result =
                     uploader.upload(
@@ -1274,7 +1274,7 @@ class AccountViewModel(
         if (isWriteable()) {
             val boosts = baseNote.boostedBy(userProfile())
             if (boosts.isNotEmpty()) {
-                runIOCatching {
+                launchSigner {
                     account.delete(boosts)
                 }
             } else {
@@ -1404,7 +1404,7 @@ class AccountViewModel(
     fun unwrapIfNeeded(
         note: Note?,
         onReady: (Note) -> Unit = {},
-    ) = runIOCatching {
+    ) = launchSigner {
         val noteEvent = note?.event
         if (noteEvent != null) {
             val resultingNote = unwrapIfNeeded(noteEvent)
@@ -1436,7 +1436,7 @@ class AccountViewModel(
         dvmPublicKey: User,
         onReady: (event: Note) -> Unit,
     ) {
-        runIOCatching {
+        launchSigner {
             account.requestDVMContentDiscovery(dvmPublicKey) {
                 onReady(LocalCache.getOrCreateNote(it.id))
             }
@@ -1470,7 +1470,7 @@ class AccountViewModel(
         zappedNote: Note?,
         onSent: () -> Unit = {},
         onResponse: (Response?) -> Unit,
-    ) = runIOCatching {
+    ) = launchSigner {
         account.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
         onSent()
     }
@@ -1481,7 +1481,7 @@ class AccountViewModel(
         root: InteractiveStoryBaseEvent,
         readingScene: InteractiveStoryBaseEvent,
     ) {
-        runIOCatching {
+        launchSigner {
             val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
 
             val readingState = getInteractiveStoryReadingState(root.addressTag())

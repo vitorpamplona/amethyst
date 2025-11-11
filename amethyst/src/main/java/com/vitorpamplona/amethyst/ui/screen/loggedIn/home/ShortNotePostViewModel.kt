@@ -146,7 +146,7 @@ open class ShortNotePostViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         sendDraftSync()
                     }
                 }

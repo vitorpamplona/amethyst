@@ -52,7 +52,7 @@ fun ListOfPeopleListsScreen(
     ListOfPeopleListsScreen(
         listFlow = accountViewModel.account.peopleLists.uiListFlow,
         addItem = { title: String, description: String? ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.peopleLists.addFollowList(
                     listName = title,
                     listDescription = description,
@@ -64,7 +64,7 @@ fun ListOfPeopleListsScreen(
             nav.nav(Route.PeopleListView(it))
         },
         renameItem = { followSet, newValue ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.peopleLists.renameFollowList(
                     newName = newValue,
                     peopleList = followSet,
@@ -73,7 +73,7 @@ fun ListOfPeopleListsScreen(
             }
         },
         changeItemDescription = { followSet, newDescription ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.peopleLists.modifyFollowSetDescription(
                     newDescription = newDescription,
                     peopleList = followSet,
@@ -82,7 +82,7 @@ fun ListOfPeopleListsScreen(
             }
         },
         cloneItem = { followSet, customName, customDescription ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.peopleLists.cloneFollowSet(
                     currentPeopleList = followSet,
                     customCloneName = customName,
@@ -92,7 +92,7 @@ fun ListOfPeopleListsScreen(
             }
         },
         deleteItem = { followSet ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.peopleLists.deleteFollowSet(
                     identifierTag = followSet.identifierTag,
                     account = accountViewModel.account,

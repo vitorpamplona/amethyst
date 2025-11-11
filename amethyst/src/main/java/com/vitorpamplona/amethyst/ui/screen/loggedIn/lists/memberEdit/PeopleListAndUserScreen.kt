@@ -135,7 +135,7 @@ private fun PeopleListAndUserFab(accountViewModel: AccountViewModel) {
                 isOpen = false
             },
             onCreateList = { name, description ->
-                accountViewModel.runIOCatching {
+                accountViewModel.launchSigner {
                     accountViewModel.account.peopleLists.addFollowList(
                         listName = name,
                         listDescription = description,
