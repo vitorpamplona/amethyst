@@ -472,6 +472,7 @@
     <string name="follow_set_empty_label2">Pusty</string>
     <string name="follow_set_absence_indicator">%1$s nie jest na liście</string>
     <string name="follow_set_absence_indicator2">%1$s nie jest uczestnikiem</string>
+    <string name="follow_set_man_dialog_title2">Twoje listy oraz %1$s</string>
     <string name="follow_set_man_dialog_title">Twój zbiór obserwowanych</string>
     <string name="follow_set_empty_dialog_msg">Nie znaleziono zbiorów obserwowanych lub nie masz żadnych zbiorów obserwowanych. Dotknij poniżej, aby odświeżyć lub użyj menu, aby go utworzyć.</string>
     <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>
@@ -1116,4 +1117,5 @@
     <string name="private_members">Prywatni uczestnicy</string>
     <string name="public_members">Uczestnicy publiczni</string>
     <string name="add_user_to_the_list">Dodaj użytkownika do listy</string>
+    <string name="remove_user_from_the_list">Usuń użytkownika z listy</string>
 </resources>

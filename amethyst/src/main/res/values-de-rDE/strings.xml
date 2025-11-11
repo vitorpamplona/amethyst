@@ -1092,6 +1092,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
     <string name="torrent_no_info">Das Ereignis enthält nicht genügend Informationen, um einen Magnetlink zu erstellen</string>
     <string name="my_lists_and_sets">Meine Listen/Sets</string>
+    <string name="my_lists">Meine Listen</string>
+    <string name="people_list_label">Benutzer</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
     <string name="private_message">Private Nachricht</string>
@@ -1114,12 +1116,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="crashreport_found_send">Senden</string>
     <string name="this_message_will_disappear_in_days">Diese Nachricht verschwindet in %1$d Tagen</string>
     <string name="select_signer">Signierer auswählen</string>
-    <string name="add_user_to_the_list">Benutzer zur Liste hinzufügen</string>
-    <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
-
-    <string name="my_lists">Meine Listen</string>
-    <string name="people_list_label">Benutzer</string>
     <string name="in_the_list">Bereits in der Liste</string>
     <string name="private_members">Private Mitglieder</string>
     <string name="public_members">Öffentliche Mitglieder</string>
+    <string name="add_user_to_the_list">Benutzer zur Liste hinzufügen</string>
+    <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
 </resources>

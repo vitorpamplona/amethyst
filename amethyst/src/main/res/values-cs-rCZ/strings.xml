@@ -1087,6 +1087,8 @@
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
     <string name="torrent_no_info">Událost nemá dostatek informací pro vytvoření magnet odkazu</string>
     <string name="my_lists_and_sets">Moje seznamy/sady</string>
+    <string name="my_lists">Moje seznamy</string>
+    <string name="people_list_label">Uživatelé</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
     <string name="private_message">Soukromá zpráva</string>
@@ -1109,12 +1111,9 @@
     <string name="crashreport_found_send">Odeslat</string>
     <string name="this_message_will_disappear_in_days">Tato zpráva zmizí za %1$d dní</string>
     <string name="select_signer">Vybrat podepisovatele</string>
-    <string name="add_user_to_the_list">Přidat uživatele do seznamu</string>
-    <string name="remove_user_from_the_list">Odebrat uživatele ze seznamu</string>
-
-    <string name="my_lists">Moje seznamy</string>
-    <string name="people_list_label">Uživatelé</string>
     <string name="in_the_list">Již v seznamu</string>
     <string name="private_members">Soukromí členové</string>
     <string name="public_members">Veřejní členové</string>
+    <string name="add_user_to_the_list">Přidat uživatele do seznamu</string>
+    <string name="remove_user_from_the_list">Odebrat uživatele ze seznamu</string>
 </resources>
