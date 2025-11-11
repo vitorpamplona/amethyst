@@ -442,6 +442,7 @@
     <string name="follow_list_selection">Följ lista</string>
     <string name="follow_list_kind3follows">Alla följare</string>
     <string name="follow_list_kind3follows_users_only">Alla Användare Följare</string>
+    <string name="follow_list_kind3_follows_users_only">Standard Följ-Lista</string>
     <string name="follow_list_kind3follows_proxy">Följer via proxy</string>
     <string name="follow_list_aroundme">Runt mig</string>
     <string name="follow_list_global">Global</string>
@@ -1113,6 +1114,10 @@
     <string name="in_the_list">Redan i listan</string>
     <string name="private_members">Privata medlemmar</string>
     <string name="public_members">Offentliga medlemmar</string>
+    <string name="private_members_count">Privata medlemmar (%1$s)</string>
+    <string name="public_members_count">Offentliga medlemmar (%1$s)</string>
     <string name="add_user_to_the_list">Lägg till användare i listan</string>
     <string name="remove_user_from_the_list">Ta bort användare från listan</string>
+    <string name="follow_list_item_label">Följpaket</string>
+    <string name="members">Medlemmar</string>
 </resources>

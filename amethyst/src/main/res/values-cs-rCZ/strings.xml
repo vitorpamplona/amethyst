@@ -442,6 +442,7 @@
     <string name="follow_list_selection">Seznam sledovaných</string>
     <string name="follow_list_kind3follows">Všechna sledování</string>
     <string name="follow_list_kind3follows_users_only">Všech Uživatelů Sledování</string>
+    <string name="follow_list_kind3_follows_users_only">Výchozí seznam sledování</string>
     <string name="follow_list_kind3follows_proxy">Sleduje přes proxy</string>
     <string name="follow_list_aroundme">Kolem mě</string>
     <string name="follow_list_global">Globální</string>
@@ -1114,6 +1115,10 @@
     <string name="in_the_list">Již v seznamu</string>
     <string name="private_members">Soukromí členové</string>
     <string name="public_members">Veřejní členové</string>
+    <string name="private_members_count">Soukromí členové (%1$s)</string>
+    <string name="public_members_count">Veřejní členové (%1$s)</string>
     <string name="add_user_to_the_list">Přidat uživatele do seznamu</string>
     <string name="remove_user_from_the_list">Odebrat uživatele ze seznamu</string>
+    <string name="follow_list_item_label">Balíček Sledování</string>
+    <string name="members">Členové</string>
 </resources>
