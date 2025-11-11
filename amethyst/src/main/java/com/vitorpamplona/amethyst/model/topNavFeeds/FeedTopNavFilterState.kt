@@ -24,10 +24,13 @@ import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
@@ -42,6 +45,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -49,6 +53,7 @@ import kotlinx.coroutines.flow.transformLatest
 
 class FeedTopNavFilterState(
     val feedFilterListName: MutableStateFlow<String>,
+    val kind3Follows: StateFlow<Kind3FollowListState.Kind3Follows>,
     val allFollows: StateFlow<MergedFollowListsState.AllFollows>,
     val locationFlow: StateFlow<LocationState.LocationResult>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
@@ -63,6 +68,7 @@ class FeedTopNavFilterState(
             GLOBAL_FOLLOWS -> GlobalFeedFlow(followsRelays, proxyRelays)
             ALL_FOLLOWS -> AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
             ALL_USER_FOLLOWS -> AllUserFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+            KIND3_FOLLOWS -> Kind3UserFollowsFeedFlow(kind3Follows, followsRelays, blockedRelays, proxyRelays)
             AROUND_ME -> AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)

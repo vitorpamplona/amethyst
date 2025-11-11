@@ -350,6 +350,7 @@ class Account(
     val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultHomeFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -365,6 +366,7 @@ class Account(
     val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultStoriesFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -380,6 +382,7 @@ class Account(
     val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultDiscoveryFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -395,6 +398,7 @@ class Account(
     val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultNotificationFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,

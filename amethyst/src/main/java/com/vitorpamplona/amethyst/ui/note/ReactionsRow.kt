@@ -933,7 +933,7 @@ fun ObserveLikeText(
     inner: @Composable (Int) -> Unit,
 ) {
     val reactionCount by observeNoteReactionCount(baseNote, accountViewModel)
-    println("AABBCC $reactionCount ${baseNote.idHex}")
+
     inner(reactionCount)
 }
 
