@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
     override fun deserialize(
@@ -34,7 +35,7 @@ class ResponseDeserializer : StdDeserializer<Response>(Response::class.java) {
         ctxt: DeserializationContext,
     ): Response? {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
-        val resultType = jsonObject.get("result_type")?.asText()
+        val resultType = jsonObject.get("result_type")?.asTextOrNull()
 
         if (resultType == "pay_invoice") {
             val result = jsonObject.get("result")

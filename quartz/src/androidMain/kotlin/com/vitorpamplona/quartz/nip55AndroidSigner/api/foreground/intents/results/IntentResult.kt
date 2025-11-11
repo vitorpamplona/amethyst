@@ -31,16 +31,17 @@ data class IntentResult(
     val result: String? = null,
     val event: String? = null,
     val id: String? = null,
-    val rejected: Boolean = false,
+    val rejected: Boolean? = false,
 ) : OptimizedSerializable {
     fun toJson(): String = JsonMapperNip55.toJson(this)
 
     fun toIntent(): Intent {
         val intent = Intent()
-        intent.putExtra("id", id)
-        intent.putExtra("result", result)
-        intent.putExtra("event", event)
-        intent.putExtra("package", `package`)
+        if (id != null) intent.putExtra("id", id)
+        if (result != null) intent.putExtra("result", result)
+        if (event != null) intent.putExtra("event", event)
+        if (`package` != null) intent.putExtra("package", `package`)
+        if (rejected != null) intent.putExtra("rejected", rejected)
         return intent
     }
 
@@ -51,7 +52,12 @@ data class IntentResult(
                 result = data.getStringExtra("result"),
                 event = data.getStringExtra("event"),
                 `package` = data.getStringExtra("package"),
-                rejected = data.extras?.containsKey("rejected") == true,
+                rejected =
+                    if (data.extras?.containsKey("rejected") == true) {
+                        data.getBooleanExtra("rejected", false)
+                    } else {
+                        null
+                    },
             )
 
         fun fromJson(json: String): IntentResult = JsonMapperNip55.fromJsonTo<IntentResult>(json)

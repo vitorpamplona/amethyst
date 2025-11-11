@@ -18,30 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
+import com.fasterxml.jackson.databind.JsonNode
 
-class DeriveKeyResponse {
-    companion object {
-        fun assemble(newPrivateKey: HexKey): IntentResult =
-            IntentResult(
-                result = newPrivateKey,
-            )
+fun JsonNode.asBooleanOrNull() = if (!this.isNull && this.isBoolean) this.booleanValue() else null
 
-        fun parse(intent: IntentResult): SignerResult.RequestAddressed<DerivationResult> {
-            if (intent.rejected == true) {
-                return SignerResult.RequestAddressed.ManuallyRejected()
-            }
-            val newPrivateKey = intent.result
-            return if (newPrivateKey != null) {
-                SignerResult.RequestAddressed.Successful(DerivationResult(newPrivateKey))
-            } else {
-                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-            }
-        }
-    }
-}
+fun JsonNode.asTextOrNull() = if (!this.isNull && this.isTextual) this.textValue() else null
+
+fun JsonNode.asLongOrNull() = if (!this.isNull && this.isNumber) this.longValue() else null
+
+fun JsonNode.asIntOrNull() = if (!this.isNull && this.isNumber) this.intValue() else null

@@ -102,7 +102,7 @@ class BlossomServersViewModel : ViewModel() {
         serverUrl: String,
     ) {
         viewModelScope.launch {
-            val serverName = if (name.isNotBlank()) name else Rfc3986.host(serverUrl)
+            val serverName = name.ifBlank { Rfc3986.host(serverUrl) }
             _fileServers.update {
                 it.minus(
                     ServerName(serverName, serverUrl, ServerType.Blossom),
@@ -127,5 +127,5 @@ class BlossomServersViewModel : ViewModel() {
         }
     }
 
-    private fun obtainFileServers(): List<String>? = account.blossomServers.flow.value
+    private fun obtainFileServers(): List<String> = account.blossomServers.flow.value
 }

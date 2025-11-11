@@ -24,6 +24,9 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.vitorpamplona.quartz.utils.asIntOrNull
+import com.vitorpamplona.quartz.utils.asLongOrNull
+import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class FilterDeserializer : StdDeserializer<Filter>(Filter::class.java) {
     override fun deserialize(
@@ -43,14 +46,14 @@ class ManualFilterDeserializer {
             }
 
             return Filter(
-                ids = jsonObject.get("ids").map { it.asText() },
-                authors = jsonObject.get("authors").map { it.asText() },
-                kinds = jsonObject.get("kinds").map { it.asInt() },
-                tags = tags.associateWith { jsonObject.get(it).map { it.asText() } },
-                since = jsonObject.get("since").asLong(),
-                until = jsonObject.get("until").asLong(),
-                limit = jsonObject.get("limit").asInt(),
-                search = jsonObject.get("search").asText(),
+                ids = jsonObject.get("ids").mapNotNull { it.asTextOrNull() },
+                authors = jsonObject.get("authors").mapNotNull { it.asTextOrNull() },
+                kinds = jsonObject.get("kinds").mapNotNull { it.asIntOrNull() },
+                tags = tags.associateWith { jsonObject.get(it).mapNotNull { it.asTextOrNull() } },
+                since = jsonObject.get("since").asLongOrNull(),
+                until = jsonObject.get("until").asLongOrNull(),
+                limit = jsonObject.get("limit").asIntOrNull(),
+                search = jsonObject.get("search").asTextOrNull(),
             )
         }
     }

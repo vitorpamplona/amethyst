@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
@@ -43,8 +44,7 @@ class BunkerResponseDeserializer : StdDeserializer<BunkerResponse>(BunkerRespons
         val error = jsonObject.get("error")?.asText()
 
         if (error != null) {
-            return com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
-                .parse(id, result, error)
+            return BunkerResponseError.parse(id, result, error)
         }
 
         if (result != null) {
