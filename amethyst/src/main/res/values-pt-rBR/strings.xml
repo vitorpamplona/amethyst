@@ -442,6 +442,7 @@
     <string name="follow_list_selection">Lista de seguidores</string>
     <string name="follow_list_kind3follows">Seguindo</string>
     <string name="follow_list_kind3follows_users_only">Seguindo do Usuários</string>
+    <string name="follow_list_kind3_follows_users_only">Lista Padrão de Seguir</string>
     <string name="follow_list_kind3follows_proxy">Segue via proxy</string>
     <string name="follow_list_aroundme">Perto de mim</string>
     <string name="follow_list_global">Global</string>
@@ -1114,6 +1115,10 @@
     <string name="in_the_list">Já está na lista</string>
     <string name="private_members">Membros privados</string>
     <string name="public_members">Membros públicos</string>
+    <string name="private_members_count">Membros privados (%1$s)</string>
+    <string name="public_members_count">Membros públicos (%1$s)</string>
     <string name="add_user_to_the_list">Adicionar usuário à lista</string>
     <string name="remove_user_from_the_list">Remover usuário da lista</string>
+    <string name="follow_list_item_label">Pacote Seguir</string>
+    <string name="members">Membros</string>
 </resources>
