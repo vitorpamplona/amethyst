@@ -243,9 +243,7 @@ private fun DisplayQuoteAuthor(
 
     if (userBase == null && authorHex != null) {
         LaunchedEffect(authorHex) {
-            accountViewModel.checkGetOrCreateUser(authorHex) { newUserBase ->
-                userBase = newUserBase
-            }
+            userBase = accountViewModel.checkGetOrCreateUser(authorHex)
         }
     }
 

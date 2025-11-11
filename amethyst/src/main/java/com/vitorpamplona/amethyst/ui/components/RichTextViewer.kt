@@ -746,7 +746,7 @@ fun LoadNote(
 
     if (note == null) {
         LaunchedEffect(key1 = baseNoteHex) {
-            accountViewModel.checkGetOrCreateNote(baseNoteHex) { note = it }
+            note = accountViewModel.checkGetOrCreateNote(baseNoteHex)
         }
     }
 

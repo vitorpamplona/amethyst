@@ -977,52 +977,26 @@ class AccountViewModel(
 
     override suspend fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
 
-    fun checkGetOrCreateUser(
-        key: HexKey,
-        onResult: (User?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateUser(key)) }
-    }
-
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
     fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(hex: HexKey): Note = LocalCache.getOrCreateNote(hex)
 
-    fun checkGetOrCreateNote(
-        key: HexKey,
-        onResult: (Note?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateNote(key)) }
-    }
+    fun noteFromEvent(event: Event): Note? {
+        var note = checkGetOrCreateNote(event.id)
 
-    fun checkGetOrCreateNote(
-        event: Event,
-        onResult: (Note?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            var note = checkGetOrCreateNote(event.id)
-
-            if (note == null) {
-                LocalCache.justConsume(event, null, false)
-                note = checkGetOrCreateNote(event.id)
-            }
-
-            onResult(note)
+        if (note == null) {
+            LocalCache.justConsume(event, null, false)
+            note = checkGetOrCreateNote(event.id)
         }
+
+        return note
     }
 
     fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
     override suspend fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
-
-    fun getOrCreateAddressableNote(
-        key: Address,
-        onResult: (AddressableNote?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(getOrCreateAddressableNote(key)) }
-    }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
@@ -1178,8 +1152,7 @@ class AccountViewModel(
         context: Context,
     ) {
         if (isWriteable()) {
-            val hint = note.toEventHint<VoiceEvent>()
-            if (hint == null) return
+            val hint = note.toEventHint<VoiceEvent>() ?: return
 
             launchSigner {
                 val uploader = UploadOrchestrator()

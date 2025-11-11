@@ -483,7 +483,7 @@ open class ShortNotePostViewModel :
         cancel()
 
         accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+        accountViewModel.launchSigner {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }

@@ -45,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -81,11 +80,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -161,16 +158,9 @@ fun NewProductScreen(
                     nav.popBack()
                 },
                 onPost = {
-                    try {
-                        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                            postViewModel.sendPostSync()
-                            nav.popBack()
-                        }
-                    } catch (e: SignerExceptions.ReadOnlyException) {
-                        accountViewModel.toastManager.toast(
-                            R.string.read_only_user,
-                            R.string.login_with_a_private_key_to_be_able_to_sign_events,
-                        )
+                    accountViewModel.launchSigner {
+                        postViewModel.sendPostSync()
+                        nav.popBack()
                     }
                 },
             )

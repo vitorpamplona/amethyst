@@ -242,16 +242,12 @@ open class ChannelNewMessageViewModel :
         if (draftEvent as? ChannelMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                accountViewModel.checkGetOrCreateNote(replyId) {
-                    replyTo.value = it
-                }
+                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
             }
         } else if (draftEvent as? LiveActivitiesChatMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                accountViewModel.checkGetOrCreateNote(replyId) {
-                    replyTo.value = it
-                }
+                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
             }
         }
 
