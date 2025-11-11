@@ -1086,6 +1086,8 @@
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
     <string name="torrent_no_info">Händelsen har inte tillräcklig information för att skapa en magnetlänk</string>
     <string name="my_lists_and_sets">Mina listor/set</string>
+    <string name="my_lists">Mina listor</string>
+    <string name="people_list_label">Användare</string>
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
     <string name="private_message">Privat meddelande</string>
@@ -1108,6 +1110,9 @@
     <string name="crashreport_found_send">Skicka</string>
     <string name="this_message_will_disappear_in_days">Detta meddelande försvinner om %1$d dagar</string>
     <string name="select_signer">Välj signatör</string>
+    <string name="in_the_list">Redan i listan</string>
+    <string name="private_members">Privata medlemmar</string>
+    <string name="public_members">Offentliga medlemmar</string>
     <string name="add_user_to_the_list">Lägg till användare i listan</string>
     <string name="remove_user_from_the_list">Ta bort användare från listan</string>
 </resources>

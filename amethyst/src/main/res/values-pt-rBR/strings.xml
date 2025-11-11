@@ -1087,6 +1087,8 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="torrent_no_info">O evento não tem informações suficientes para criar um link magnético</string>
     <string name="my_lists_and_sets">Minhas listas/conjuntos</string>
+    <string name="my_lists">Minhas listas</string>
+    <string name="people_list_label">Usuários</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
     <string name="private_message">Mensagem Privada</string>
@@ -1109,6 +1111,9 @@
     <string name="crashreport_found_send">Enviar</string>
     <string name="this_message_will_disappear_in_days">Esta mensagem desaparecerá em %1$d dias</string>
     <string name="select_signer">Selecionar assinador</string>
+    <string name="in_the_list">Já está na lista</string>
+    <string name="private_members">Membros privados</string>
+    <string name="public_members">Membros públicos</string>
     <string name="add_user_to_the_list">Adicionar usuário à lista</string>
     <string name="remove_user_from_the_list">Remover usuário da lista</string>
 </resources>
