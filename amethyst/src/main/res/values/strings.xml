@@ -513,6 +513,7 @@
     <string name="follow_list_mute_list">Mute List</string>
 
     <string name="follow_sets">Follow Lists</string>
+    <string name="follow_sets_explainer">These are follow lists designed for your own usage. You can follow users privately or publicly</string>
     <string name="labeled_bookmarks">Labeled Bookmarks</string>
     <string name="general_bookmarks">General Bookmarks</string>
     <string name="follow_set_type_public">Public</string>
@@ -741,6 +742,7 @@
     <string name="relay_setup">Relays</string>
 
     <string name="discover_follows">Follow Packs</string>
+    <string name="discover_follows_explainer">These are lists of users that you recommend to other people. Only public users are allowed.</string>
     <string name="discover_reads">Reads</string>
     <string name="discover_content_v2">Feed Algorithms</string>
     <string name="discover_marketplace">Marketplace</string>
