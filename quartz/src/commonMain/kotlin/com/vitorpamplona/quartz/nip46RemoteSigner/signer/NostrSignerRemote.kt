@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlin.coroutines.Continuation
@@ -320,4 +321,39 @@ class NostrSignerRemote(
     }
 
     override fun hasForegroundSupport(): Boolean = true
+
+    companion object {
+        fun fromBunkerUri(
+            bunkerUri: String,
+            signer: NostrSignerInternal,
+            client: INostrClient,
+            permissions: String? = null,
+        ): NostrSignerRemote {
+            if (!bunkerUri.startsWith("bunker://")) throw Exception("Invalid bunker uri")
+            val splitData = bunkerUri.split("?")
+            val remotePubkey = splitData[0].removePrefix("bunker://")
+            if (!Hex.isHex(remotePubkey)) throw Exception("Invalid pubkey in bunker uri")
+            val params = splitData[1].split("&")
+            val relays = mutableSetOf<NormalizedRelayUrl>()
+            var secret: String? = null
+            for (param in params) {
+                val splitParam = param.split("=")
+                if (splitParam.size < 2) continue
+                if (splitParam.first() == "relay") {
+                    relays.add(NormalizedRelayUrl(splitParam[1]))
+                }
+                if (splitParam.first() == "secret") {
+                    secret = splitParam[1]
+                }
+            }
+            return NostrSignerRemote(
+                signer = signer,
+                remotePubkey = remotePubkey,
+                relays = relays,
+                client = client,
+                permissions = permissions,
+                secret = secret,
+            )
+        }
+    }
 }
