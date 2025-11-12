@@ -65,7 +65,7 @@ fun INostrClient.reqResultsInOrderAsFlow(
         val subId = RandomInstance.randomChars(10)
         var hasBeenLive = false
         val eventIds = mutableSetOf<HexKey>()
-        val events = mutableListOf<Event>()
+        var currentEvents = listOf<Event>()
 
         val listener =
             object : IRequestListener {
@@ -77,12 +77,16 @@ fun INostrClient.reqResultsInOrderAsFlow(
                 ) {
                     if (event.id !in eventIds) {
                         if (hasBeenLive) {
-                            events.add(0, event)
+                            // faster
+                            val list = ArrayList<Event>(1 + currentEvents.size)
+                            list.add(event)
+                            list.addAll(currentEvents)
+                            currentEvents = list
                         } else {
-                            events.add(event)
+                            currentEvents = currentEvents + event
                         }
                         eventIds.add(event.id)
-                        trySend(events.toList())
+                        trySend(currentEvents)
                     }
                 }
 
