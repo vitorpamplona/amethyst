@@ -175,7 +175,6 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -1470,18 +1469,6 @@ class Account(
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
-            val gift = giftWrap.unwrapOrNull(signer)
-            if (gift is SealedRumorEvent) {
-                val rumor = gift.unsealOrNull(signer)
-                if (rumor != null) {
-                    cache.justConsumeMyOwnEvent(rumor)
-                }
-            }
-
-            if (gift != null) {
-                cache.justConsumeMyOwnEvent(gift)
-            }
-
             cache.justConsumeMyOwnEvent(giftWrap)
         }
 
