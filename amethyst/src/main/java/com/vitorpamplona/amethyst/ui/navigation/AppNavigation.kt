@@ -79,9 +79,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.PeopleListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.EditPeopleListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -127,8 +128,9 @@ fun AppNavigation(
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
-            composableFromEndArgs<Route.PeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
-            composableFromBottomArgs<Route.PeopleListManagement> { EditPeopleListScreen(it.userToAdd, accountViewModel, nav) }
+            composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
+            composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
+            composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
 
             composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }

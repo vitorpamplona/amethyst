@@ -31,19 +31,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,16 +54,14 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Preview
 @Composable
-fun PeopleListAndUserMemberPreview() {
+fun FollowPackAndUserMemberPreview() {
     ThemeComparisonColumn {
-        PeopleListAndUserItem(
+        FollowPackAndUserItem(
             modifier = Modifier.fillMaxWidth(),
             listHeader = "list title",
             userName = "User",
-            userIsPrivateMember = true,
-            userIsPublicMember = true,
-            privateMemberSize = 3,
-            publicMemberSize = 2,
+            isMember = true,
+            memberSize = 2,
             onAddUserToList = {},
             onRemoveUser = {},
         )
@@ -77,16 +70,14 @@ fun PeopleListAndUserMemberPreview() {
 
 @Preview
 @Composable
-fun PeopleListAndUserNotMemberPreview() {
+fun FollowPackAndUserNotMemberPreview() {
     ThemeComparisonColumn {
-        PeopleListAndUserItem(
+        FollowPackAndUserItem(
             modifier = Modifier.fillMaxWidth(),
             listHeader = "list title",
             userName = "User",
-            userIsPrivateMember = false,
-            userIsPublicMember = false,
-            privateMemberSize = 3,
-            publicMemberSize = 2,
+            isMember = false,
+            memberSize = 2,
             onAddUserToList = {},
             onRemoveUser = {},
         )
@@ -94,15 +85,13 @@ fun PeopleListAndUserNotMemberPreview() {
 }
 
 @Composable
-fun PeopleListAndUserItem(
+fun FollowPackAndUserItem(
     modifier: Modifier = Modifier,
     listHeader: String,
     userName: String,
-    userIsPrivateMember: Boolean,
-    userIsPublicMember: Boolean,
-    publicMemberSize: Int,
-    privateMemberSize: Int,
-    onAddUserToList: (shouldBePrivateMember: Boolean) -> Unit,
+    isMember: Boolean,
+    memberSize: Int,
+    onAddUserToList: () -> Unit,
     onRemoveUser: () -> Unit,
 ) {
     ListItem(
@@ -115,7 +104,7 @@ fun PeopleListAndUserItem(
             )
         },
         supportingContent = {
-            UserStatusInList(userName, userIsPrivateMember, userIsPublicMember)
+            UserStatusInList(userName, isMember)
         },
         leadingContent = {
             Box(contentAlignment = Alignment.Center) {
@@ -126,14 +115,13 @@ fun PeopleListAndUserItem(
                 )
                 DisplayParticipantNumberAndStatus(
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    privateMembersSize = privateMemberSize,
-                    publicMembersSize = publicMemberSize,
+                    privateMembersSize = 0,
+                    publicMembersSize = memberSize,
                 )
             }
         },
         trailingContent = {
-            val isUserInList = userIsPrivateMember || userIsPublicMember
-            UserAdditionOptions(isUserInList, onAddUserToList, onRemoveUser)
+            UserAdditionOptions(isMember, onAddUserToList, onRemoveUser)
         },
     )
 }
@@ -141,8 +129,7 @@ fun PeopleListAndUserItem(
 @Composable
 private fun UserStatusInList(
     userName: String,
-    userIsPrivateMember: Boolean,
-    userIsPublicMember: Boolean,
+    isMember: Boolean,
 ) {
     Row(
         modifier = HalfHalfVertPadding,
@@ -150,19 +137,15 @@ private fun UserStatusInList(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val text =
-            if (userIsPublicMember) {
+            if (isMember) {
                 stringRes(R.string.follow_set_public_presence_indicator, userName)
-            } else if (userIsPrivateMember) {
-                stringRes(R.string.follow_set_private_presence_indicator, userName)
             } else {
                 stringRes(R.string.follow_set_absence_indicator2, userName)
             }
 
         val icon =
-            if (userIsPublicMember) {
+            if (isMember) {
                 Icons.Outlined.Public
-            } else if (userIsPrivateMember) {
-                Icons.Outlined.Lock
             } else {
                 Icons.Outlined.RemoveCircleOutline
             }
@@ -184,11 +167,9 @@ private fun UserStatusInList(
 @Composable
 private fun UserAdditionOptions(
     isUserInList: Boolean,
-    onAddUserToList: (asPrivateMember: Boolean) -> Unit,
+    onAddUserToList: () -> Unit,
     onRemoveUser: () -> Unit,
 ) {
-    val isUserAddTapped = remember { mutableStateOf(false) }
-
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -198,7 +179,7 @@ private fun UserAdditionOptions(
                 if (isUserInList) {
                     onRemoveUser()
                 } else {
-                    isUserAddTapped.value = true
+                    onAddUserToList()
                 }
             },
             modifier =
@@ -226,30 +207,6 @@ private fun UserAdditionOptions(
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
-        }
-
-        DropdownMenu(
-            expanded = isUserAddTapped.value,
-            onDismissRequest = { isUserAddTapped.value = false },
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringRes(R.string.follow_set_public_member_add_label))
-                },
-                onClick = {
-                    onAddUserToList(false)
-                    isUserAddTapped.value = false
-                },
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringRes(R.string.follow_set_private_member_add_label))
-                },
-                onClick = {
-                    onAddUserToList(true)
-                    isUserAddTapped.value = false
-                },
-            )
         }
     }
 }

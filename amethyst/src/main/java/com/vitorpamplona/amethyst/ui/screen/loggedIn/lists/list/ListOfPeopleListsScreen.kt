@@ -21,107 +21,51 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.flow.StateFlow
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 
 @Composable
 fun ListOfPeopleListsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ListOfPeopleListsScreen(
-        listFlow = accountViewModel.account.peopleLists.uiListFlow,
-        addItem = { title: String, description: String? ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.peopleLists.addFollowList(
-                    listName = title,
-                    listDescription = description,
-                    account = accountViewModel.account,
-                )
-            }
-        },
-        openItem = {
-            nav.nav(Route.PeopleListView(it))
-        },
-        renameItem = { followSet, newValue ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.peopleLists.renameFollowList(
-                    newName = newValue,
-                    peopleList = followSet,
-                    account = accountViewModel.account,
-                )
-            }
-        },
-        changeItemDescription = { followSet, newDescription ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.peopleLists.modifyFollowSetDescription(
-                    newDescription = newDescription,
-                    peopleList = followSet,
-                    account = accountViewModel.account,
-                )
-            }
-        },
-        cloneItem = { followSet, customName, customDescription ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.peopleLists.cloneFollowSet(
-                    currentPeopleList = followSet,
-                    customCloneName = customName,
-                    customCloneDescription = customDescription,
-                    account = accountViewModel.account,
-                )
-            }
-        },
-        deleteItem = { followSet ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.peopleLists.deleteFollowSet(
-                    identifierTag = followSet.identifierTag,
-                    account = accountViewModel.account,
-                )
-            }
-        },
-        nav,
-    )
+    val list: PeopleListViewModel = viewModel()
+    list.init(accountViewModel)
+
+    val pack: FollowPackViewModel = viewModel()
+    pack.init(accountViewModel)
+
+    ListOfPeopleListsScreen(list, pack, nav)
 }
 
 @Composable
 fun ListOfPeopleListsScreen(
-    listFlow: StateFlow<List<PeopleList>>,
-    addItem: (title: String, description: String?) -> Unit,
-    openItem: (identifier: String) -> Unit,
-    renameItem: (peopleList: PeopleList, newName: String) -> Unit,
-    changeItemDescription: (peopleList: PeopleList, newDescription: String?) -> Unit,
-    cloneItem: (peopleList: PeopleList, customName: String?, customDesc: String?) -> Unit,
-    deleteItem: (peopleList: PeopleList) -> Unit,
+    list: PeopleListViewModel,
+    pack: FollowPackViewModel,
     nav: INav,
 ) {
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
-        },
-        floatingActionButton = {
-            PeopleListFabsAndMenu(
-                onAddSet = addItem,
-            )
         },
     ) { paddingValues ->
         Column(
@@ -131,41 +75,35 @@ fun ListOfPeopleListsScreen(
                     bottom = paddingValues.calculateBottomPadding(),
                 ).fillMaxHeight(),
         ) {
-            AllPeopleListFeedView(
-                listFlow = listFlow,
-                onOpenItem = openItem,
-                onRenameItem = renameItem,
-                onItemDescriptionChange = changeItemDescription,
-                onItemClone = cloneItem,
-                onDeleteItem = deleteItem,
-            )
+            AllPeopleListFeedView(list, pack, nav)
         }
     }
 }
 
 @Composable
-private fun PeopleListFabsAndMenu(onAddSet: (name: String, description: String?) -> Unit) {
+fun PeopleListFabsAndMenu(
+    title: Int = R.string.follow_set_creation_dialog_title,
+    onAddSet: (name: String, description: String?) -> Unit,
+) {
     val isSetAdditionDialogOpen = remember { mutableStateOf(false) }
 
-    ExtendedFloatingActionButton(
-        text = {
-            Text(text = stringRes(R.string.follow_set_create_btn_label))
+    OutlinedButton(
+        onClick = {
+            isSetAdditionDialogOpen.value = true
         },
-        icon = {
+    ) {
+        Row(horizontalArrangement = SpacedBy5dp, verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                 contentDescription = null,
             )
-        },
-        onClick = {
-            isSetAdditionDialogOpen.value = true
-        },
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    )
+            Text(stringRes(R.string.follow_set_create_btn_label))
+        }
+    }
 
     if (isSetAdditionDialogOpen.value) {
         NewPeopleListCreationDialog(
+            title = title,
             onDismiss = {
                 isSetAdditionDialogOpen.value = false
             },

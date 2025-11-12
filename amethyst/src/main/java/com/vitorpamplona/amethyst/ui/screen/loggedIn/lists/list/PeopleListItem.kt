@@ -162,7 +162,7 @@ fun PeopleListItem(
     peopleList: PeopleList,
     onClick: () -> Unit,
     onRename: (String) -> Unit,
-    onDescriptionChange: (String?) -> Unit,
+    onDescriptionChange: (String) -> Unit,
     onClone: (customName: String?, customDescription: String?) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -279,7 +279,7 @@ private fun PeopleListOptionsButton(
     peopleListName: String,
     peopleListDescription: String?,
     onListRename: (String) -> Unit,
-    onListDescriptionChange: (String?) -> Unit,
+    onListDescriptionChange: (String) -> Unit,
     onListCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onListDelete: () -> Unit,
 ) {
@@ -310,7 +310,7 @@ private fun ListOptionsMenu(
     setName: String,
     setDescription: String?,
     onListRename: (String) -> Unit,
-    onListDescriptionChange: (String?) -> Unit,
+    onListDescriptionChange: (String) -> Unit,
     onListClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -470,9 +470,9 @@ private fun ListModifyDescriptionDialog(
     modifier: Modifier = Modifier,
     currentDescription: String?,
     onDismissDialog: () -> Unit,
-    onModifyDescription: (String?) -> Unit,
+    onModifyDescription: (String) -> Unit,
 ) {
-    val updatedDescription = remember { mutableStateOf<String?>(null) }
+    val updatedDescription = remember { mutableStateOf<String>("") }
 
     val modifyIndicatorLabel =
         if (currentDescription == null) {
@@ -509,7 +509,7 @@ private fun ListModifyDescriptionDialog(
                     fontStyle = FontStyle.Italic,
                 )
                 TextField(
-                    value = updatedDescription.value ?: "",
+                    value = updatedDescription.value,
                     onValueChange = { updatedDescription.value = it },
                 )
             }

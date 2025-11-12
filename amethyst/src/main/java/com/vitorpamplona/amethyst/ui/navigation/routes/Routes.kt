@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route.Room
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -56,7 +55,11 @@ sealed class Route {
 
     @Serializable object Lists : Route()
 
-    @Serializable data class PeopleListView(
+    @Serializable data class MyPeopleListView(
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class MyFollowPackView(
         val dTag: String,
     ) : Route()
 

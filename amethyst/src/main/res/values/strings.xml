@@ -549,6 +549,7 @@
     <string name="follow_set_creation_item_label">New list with %1$s membership</string>
     <string name="follow_set_creation_item_description">Creates a new follow set, and adds %1$s as a %2$s member.</string>
     <string name="follow_set_creation_dialog_title">New Follow List</string>
+    <string name="follow_pack_creation_dialog_title">New Follow Pack</string>
     <string name="follow_set_copy_dialog_title">Copy/Clone Follow List</string>
     <string name="follow_set_desc_modify_label">Modify description</string>
     <string name="follow_set_empty_desc_label">This list doesn\'t have a description</string>

@@ -22,40 +22,44 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import kotlinx.coroutines.flow.StateFlow
+import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
 fun AllPeopleListFeedView(
-    listFlow: StateFlow<List<PeopleList>>,
-    onOpenItem: (String) -> Unit = {},
-    onRenameItem: (targetSet: PeopleList, newName: String) -> Unit,
-    onItemDescriptionChange: (peopleList: PeopleList, newDescription: String?) -> Unit,
-    onItemClone: (peopleList: PeopleList, customName: String?, customDesc: String?) -> Unit,
-    onDeleteItem: (peopleList: PeopleList) -> Unit,
+    peopleListModel: PeopleListViewModel,
+    followPackModel: FollowPackViewModel,
+    nav: INav,
 ) {
-    val followSetFeedState by listFlow.collectAsStateWithLifecycle()
+    val peopleListFeedState by peopleListModel.listFlow().collectAsStateWithLifecycle()
+    val followPackFeedState by followPackModel.listFlow().collectAsStateWithLifecycle()
 
-    if (followSetFeedState.isEmpty()) {
+    if (peopleListFeedState.isEmpty() && followPackFeedState.isEmpty()) {
         AllPeopleListFeedEmpty(
             message = stringRes(R.string.follow_set_empty_feed_msg),
         )
@@ -64,15 +68,75 @@ fun AllPeopleListFeedView(
             state = rememberLazyListState(),
             contentPadding = FeedPadding,
         ) {
-            itemsIndexed(followSetFeedState, key = { _, item -> item.identifierTag }) { _, list ->
+            stickyHeader {
+                Row(
+                    modifier = MaxWidthWithHorzPadding,
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy5dp,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringRes(R.string.follow_sets),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = stringRes(R.string.follow_sets_explainer),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.grayText,
+                        )
+                    }
+                    PeopleListFabsAndMenu(
+                        title = R.string.follow_set_creation_dialog_title,
+                        onAddSet = peopleListModel::addItem,
+                    )
+                }
+            }
+            itemsIndexed(peopleListFeedState, key = { _, item -> item.identifierTag }) { _, followSet ->
                 PeopleListItem(
                     modifier = Modifier.fillMaxSize().animateItem(),
-                    peopleList = list,
-                    onClick = { onOpenItem(list.identifierTag) },
-                    onRename = { onRenameItem(list, it) },
-                    onDescriptionChange = { newDescription -> onItemDescriptionChange(list, newDescription) },
-                    onClone = { cloneName, cloneDescription -> onItemClone(list, cloneName, cloneDescription) },
-                    onDelete = { onDeleteItem(list) },
+                    peopleList = followSet,
+                    onClick = { nav.nav(peopleListModel.openItem(followSet.identifierTag)) },
+                    onRename = { peopleListModel.renameItem(followSet, it) },
+                    onDescriptionChange = { newDescription -> peopleListModel.changeItemDescription(followSet, newDescription) },
+                    onClone = { cloneName, cloneDescription -> peopleListModel.cloneItem(followSet, cloneName, cloneDescription) },
+                    onDelete = { peopleListModel.deleteItem(followSet) },
+                )
+                HorizontalDivider(thickness = DividerThickness)
+            }
+            stickyHeader {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = SpacedBy5dp,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringRes(R.string.discover_follows),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = stringRes(R.string.discover_follows_explainer),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.grayText,
+                        )
+                    }
+                    PeopleListFabsAndMenu(
+                        title = R.string.follow_pack_creation_dialog_title,
+                        onAddSet = followPackModel::addItem,
+                    )
+                }
+            }
+            itemsIndexed(followPackFeedState, key = { _, item -> item.identifierTag }) { _, followSet ->
+                PeopleListItem(
+                    modifier = Modifier.fillMaxSize().animateItem(),
+                    peopleList = followSet,
+                    onClick = { nav.nav(followPackModel.openItem(followSet.identifierTag)) },
+                    onRename = { followPackModel.renameItem(followSet, it) },
+                    onDescriptionChange = { newDescription -> followPackModel.changeItemDescription(followSet, newDescription) },
+                    onClone = { cloneName, cloneDescription -> followPackModel.cloneItem(followSet, cloneName, cloneDescription) },
+                    onDelete = { followPackModel.deleteItem(followSet) },
                 )
                 HorizontalDivider(thickness = DividerThickness)
             }
