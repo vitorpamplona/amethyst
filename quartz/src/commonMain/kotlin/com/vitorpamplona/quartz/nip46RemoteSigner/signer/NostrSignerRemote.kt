@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
@@ -110,7 +111,7 @@ class NostrSignerRemote(
             }
         }
 
-        throw Exception("Could not sign")
+        throw convertExceptions("Could not sign", result)
     }
 
     override suspend fun nip04Encrypt(
@@ -132,7 +133,7 @@ class NostrSignerRemote(
             return result.result.ciphertext
         }
 
-        throw Exception("Could not encrypt")
+        throw convertExceptions("Could not encrypt", result)
     }
 
     override suspend fun nip04Decrypt(
@@ -154,7 +155,7 @@ class NostrSignerRemote(
             return result.result.plaintext
         }
 
-        throw Exception("Could not decrypt")
+        throw convertExceptions("Could not decrypt", result)
     }
 
     override suspend fun nip44Encrypt(
@@ -176,7 +177,7 @@ class NostrSignerRemote(
             return result.result.ciphertext
         }
 
-        throw Exception("Could not encrypt")
+        throw convertExceptions("Could not encrypt", result)
     }
 
     override suspend fun nip44Decrypt(
@@ -198,7 +199,7 @@ class NostrSignerRemote(
             return result.result.plaintext
         }
 
-        throw Exception("Could not decrypt")
+        throw convertExceptions("Could not decrypt", result)
     }
 
     suspend fun ping(): String {
@@ -214,7 +215,7 @@ class NostrSignerRemote(
             return result.result.pong
         }
 
-        throw Exception("Could not ping")
+        throw convertExceptions("Could not ping", result)
     }
 
     suspend fun connect(): HexKey {
@@ -234,7 +235,7 @@ class NostrSignerRemote(
             return result.result.pubkey
         }
 
-        throw Exception("Could not connect")
+        throw convertExceptions("Could not connect", result)
     }
 
     suspend fun getPublicKey(): HexKey {
@@ -250,7 +251,7 @@ class NostrSignerRemote(
             return result.result.pubkey
         }
 
-        throw Exception("Could not get public key")
+        throw convertExceptions("Could not get public key", result)
     }
 
     override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
@@ -262,6 +263,19 @@ class NostrSignerRemote(
     }
 
     override fun hasForegroundSupport(): Boolean = true
+
+    fun convertExceptions(
+        title: String,
+        result: SignerResult.RequestAddressed<*>,
+    ): Exception =
+        when (result) {
+            is SignerResult.RequestAddressed.Successful<*> -> IllegalStateException("$title: This should not happen. There is a bug on Quartz.")
+            is SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult<*> -> IllegalStateException("$title: Failed to parse event: ${result.eventJson}.")
+            is SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent<*> -> IllegalStateException("$title: Failed to verify event: ${result.invalidEvent.toJson()}.")
+            is SignerResult.RequestAddressed.ReceivedButCouldNotPerform<*> -> SignerExceptions.CouldNotPerformException("$title: ${result.message}")
+            is SignerResult.RequestAddressed.Rejected<*> -> SignerExceptions.ManuallyUnauthorizedException("$title: User has rejected the request.")
+            is SignerResult.RequestAddressed.TimedOut<*> -> SignerExceptions.TimedOutException("$title: User didn't accept or reject in time.")
+        }
 
     companion object {
         fun fromBunkerUri(
