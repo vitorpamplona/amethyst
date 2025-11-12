@@ -90,12 +90,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="following">" Sledi"</string>
     <string name="followers">" Sledilcev"</string>
     <string name="number_following">"%1$s Sledi"</string>
-    <string name="number_followers">"%1$s Sledi"</string>
+    <string name="number_followers">"%1$s Sledilcev"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Varnostni filtri</string>
     <string name="log_out">Odjavi se</string>
     <string name="show_more">Pokaži več</string>
-    <string name="lightning_invoice">Lightning faktura</string>
+    <string name="lightning_invoice">Lightning račun</string>
     <string name="pay">Plačaj</string>
     <string name="lightning_tips">Lightning napitnine</string>
     <string name="note_to_receiver">Sporočilo prejemniku</string>
@@ -131,11 +131,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="bytes">Bajti</string>
     <string name="errors">Napake</string>
     <string name="errors_description">Število napak pri povezovanju v tej seji</string>
-    <string name="home_feed">Domači vir novic</string>
-    <string name="private_message_feed">Vir privatnih sporočil</string>
-    <string name="public_chat_feed">Javni vir novic</string>
-    <string name="global_feed">Globalni vir</string>
-    <string name="search_feed">Išči vir</string>
+    <string name="home_feed">Domače vsebine</string>
+    <string name="private_message_feed">Vsebine privatnih sporočil</string>
+    <string name="public_chat_feed">Vsebina javnih novic</string>
+    <string name="global_feed">Globalne vsebine</string>
+    <string name="search_feed">Išči vsebine</string>
+    <string name="search_and_add_a_user">Išči in dodaj uporabnika</string>
+    <string name="add_a_user">Dodaj Uporabnika</string>
     <string name="add_a_relay">Dodaj rele</string>
     <string name="profile_name">Ime</string>
     <string name="display_name">Prikazano ime</string>
@@ -176,13 +178,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="blocked_users">Blokirani uporabniki</string>
     <string name="new_threads">Nove objave</string>
     <string name="conversations">Pogovori</string>
-    <string name="feed">Vir</string>
+    <string name="feed">Vsebine</string>
     <string name="mod_queue">Moderatorska vrsta</string>
     <string name="notes">Zapiski</string>
     <string name="replies">Pogovori</string>
     <string name="mutual">Vaše</string>
     <string name="gallery">Galerija</string>
-    <string name="follows">"Sledi"</string>
+    <string name="follows">"sledilcev"</string>
     <string name="reports">"Reportaže"</string>
     <string name="number_reports">"%1$s Prijave"</string>
     <string name="more_options">Več možnosti</string>
@@ -197,7 +199,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiraj javni ključ (NPub) v odložišče</string>
     <string name="send_a_direct_message">Pošlji direktno sporočilo</string>
     <string name="edits_the_user_s_metadata">Uredi uporabnikove metapodatke</string>
-    <string name="follow">Sledi</string>
+    <string name="follow">Sledim</string>
     <string name="follow_back">Sledi nazaj</string>
     <string name="unblock">Deblokiraj</string>
     <string name="copy_user_id">Kopiraj uporabnikov ID</string>
@@ -225,12 +227,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="already_have_an_account">Že imam Nostr račun?</string>
     <string name="create_a_new_account">Ustvari nov račun</string>
     <string name="generate_a_new_key">Zgeneriraj nov ključ</string>
-    <string name="loading_feed">Vir se nalaga</string>
+    <string name="loading_feed">Nalagam vsebine</string>
     <string name="loading_account">Račun se nalaga</string>
     <string name="error_loading_replies">"Napaka pri nalaganju odgovorov: "</string>
     <string name="try_again">Poskusi ponovno</string>
     <string name="notification_feed_is_empty">Ni še obvestil.</string>
-    <string name="feed_is_empty">Vir je prazen.</string>
+    <string name="feed_is_empty">Ni vsebin.</string>
     <string name="refresh">Osveži</string>
     <string name="created">ustvarjeno</string>
     <string name="with_description_of">z opisom</string>
@@ -453,17 +455,61 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_list_selection">Spisek komu sledimo</string>
     <string name="follow_list_kind3follows">Vse, čemur sledimo</string>
     <string name="follow_list_kind3follows_users_only">Vsi sledeni sledenih</string>
+    <string name="follow_list_kind3_follows_users_only">Privzeti seznam sledenih</string>
     <string name="follow_list_kind3follows_proxy">Sledi preko posrednika</string>
     <string name="follow_list_aroundme">V moji okolici</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
+    <string name="follow_sets">Seznam sledenih</string>
     <string name="labeled_bookmarks">Označeni zaznamki</string>
     <string name="general_bookmarks">Splošni zaznamki</string>
     <string name="follow_set_type_public">Javno</string>
     <string name="follow_set_type_private">Zasebno</string>
     <string name="follow_set_type_mixed">Mešano</string>
+    <string name="follow_set_empty_feed_msg">        Videti je, da še nimate setov sledenih.
+        \nTapnite spodaj za osvežitev ali dodajte nov seznam.
+    </string>
+    <string name="follow_set_create_btn_label">Nov</string>
+    <string name="follow_set_add_author_from_note_action">Dodaj avtorja v seznam sledenih</string>
     <string name="follow_set_profile_actions_menu_description">Dodaj ali odstrani uprabnika iz seznama, ali pa ustvari nov seznam s tem uporabnikom.</string>
+    <string name="follow_set_icon_description">Ikona za  set sledenih</string>
+    <string name="follow_set_public_presence_indicator">%1$s je javni član</string>
+    <string name="follow_set_private_presence_indicator">%1$s je zasebni član</string>
+    <string name="follow_set_public_member_add_label">Dodaj kot javni člana</string>
+    <string name="follow_set_private_member_add_label">Dodaj kot zasebni član</string>
+    <string name="follow_set_public_members_header_label2">Javni člani</string>
+    <string name="follow_set_private_members_header_label2">Zasebni člani</string>
+    <string name="follow_set_public_members_header_label">Javni profili</string>
+    <string name="follow_set_private_members_header_label">Zasebni profili</string>
+    <string name="follow_set_single_member_label">član</string>
+    <string name="follow_set_multiple_member_label">člani</string>
+    <string name="follow_set_empty_label">ni članov</string>
+    <string name="follow_set_empty_label2">Prazno</string>
+    <string name="follow_set_absence_indicator">%1$s ni v tem seznamu</string>
+    <string name="follow_set_absence_indicator2">%1$s ni član</string>
+    <string name="follow_set_man_dialog_title2">Tvoj seznam ter %1$s</string>
+    <string name="follow_set_man_dialog_title">Tvoji seznami</string>
+    <string name="follow_set_empty_dialog_msg">Ni bilo najdenih seznamov sledenih ali pa nimate nobenega. Tapnite spodaj za osvežitev ali pa uporabite meni da dodate novega.</string>
+    <string name="follow_set_error_dialog_msg">Pri pridobivanju podatkov je prišlo do napake: %1$s</string>
     <string name="follow_set_creation_menu_title">Ustvari nov seznam</string>
+    <string name="follow_set_creation_item_label">Nov seznam s  %1$s člani</string>
+    <string name="follow_set_creation_item_description">Ustvari nov set sledenih, ter doda %1$s kot %2$s člana.</string>
+    <string name="follow_set_creation_dialog_title">Nov seznam sledenih</string>
+    <string name="follow_set_copy_dialog_title">Kopiraj/Kloniraj seznam sledenih</string>
+    <string name="follow_set_desc_modify_label">Spremeni opis</string>
+    <string name="follow_set_empty_desc_label">Ta seznam nima opisa</string>
+    <string name="follow_set_current_desc_label">Trenutni opis:</string>
+    <string name="follow_set_copy_indicator_description">Nastavi novo ime/opis za kloniran seznam spodaj</string>
+    <string name="follow_set_creation_name_label">Ime seznama</string>
+    <string name="follow_set_copy_name_label">Novo ime seznama</string>
+    <string name="follow_set_creation_desc_label">Opis seznama (neobvezno)</string>
+    <string name="follow_set_copy_desc_label">Nov opis seznama</string>
+    <string name="follow_set_creation_action_btn_label">Ustvari seznam</string>
+    <string name="follow_set_copy_action_btn_label">Kopiraj/kloniraj seznam</string>
+    <string name="follow_set_rename_btn_label">Preimenuj seznam</string>
+    <string name="follow_set_desc_modify_btn_label">Uredi</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Preimenuješ iz </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> v..</string>
     <string name="connect_through_your_orbot_setup_short">Prevzeta vrata so 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Poveži se preko Tor omrežja z Orbot aplikacijo
         \n\n1. Namesti [Orbot aplikacijo](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -598,9 +644,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="are_you_sure_you_want_to_log_out">Odjava bo izbrisala vse vaše lokalne informacije. Poskrbite, da imate varnostno kopijo svojih zasebnih ključev, da se izognete izgubi računa. Ali želite nadaljevati?</string>
     <string name="followed_tags">Spremljana vsebina</string>
     <string name="relay_setup">Releji</string>
-    <string name="discover_follows">Sledi tropu</string>
+    <string name="discover_follows">Paketi sledenih</string>
     <string name="discover_reads">Branje</string>
-    <string name="discover_content_v2">Algoritemski viri</string>
+    <string name="discover_content_v2">Algoritmi vsebin</string>
     <string name="discover_marketplace">Tržnica</string>
     <string name="discover_live_v2">Prenos v živo</string>
     <string name="discover_community_v2">Skupnosti</string>
@@ -680,6 +726,17 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="paste_from_clipboard">Prilepi iz odložišča</string>
     <string name="invalid_nip47_uri_title">Napačen NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">URI %1$s ni veljaven NIP-47 vpis URI.</string>
+    <string name="connect_to_new_nwc_wallet">Poveži z novo NWC denarnico</string>
+    <string name="couldnt_find_nwc_wallets">Ne najdem denarnice</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst ni našel nobene denarnice, ki podpira Nostr Wallet Connect (NWC).
+\n\nKaj lahko storiš:
+\n\t1. Preverite podporo za NWC: Ponovno\t preverite, ali vaša priljubljena denarnica podpira Nostr Wallet Connect.
+\n\t2. Ustvari povezavo: Odprite svojo denarnico in ustvarite novo NWC povezavo.
+\n\t3. Povežite z Amethyst: Vaša denarnica vam bo ponavadi ponudila tri možnosti:
+\n\t\t3.1 Samodejna povezava: Gumb za samodejno odprtje in povezavo z Amethyst. Če je na voljo, kliknite ta gumb, odprite Amethyst in na novem zaslonu pritisnite shrani.
+\n\t\tRočna povezava: Povezovalni URI, ki ga lahko kopirate, nato pa na tem zaslonu kliknite ikono za lepljenje, da ga neposredno vnesete.
+\n\t\tQR koda: Denarnica ustvari QR-kodo, ki jo skenirajte z gumbom za QR na tem zaslonu.
+    </string>
     <string name="language_description">Za vmesnik aplikacije</string>
     <string name="theme_description">Temna, svetla ali sistemska tema</string>
     <string name="automatically_load_images_gifs_description">Samodejno naloži slike in GIF-e</string>
@@ -792,7 +849,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         Po namestitvi izberite aplikacijo, ki jo želite uporabljati, v nastavitvah.
     </string>
     <string name="payment_required_title">Sporočilo od %1$s</string>
-    <string name="thread_title">Nit</string>
+    <string name="thread_title">Niz objav</string>
     <string name="send_the_seller_a_message">Pošlji prodajalcu sporočilo</string>
     <string name="hi_seller_is_this_still_available">Živjo %1$s, je to še na voljo?</string>
     <string name="hi_there_is_this_still_available">Živjo, je to še na voljo?</string>
@@ -852,6 +909,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="media_compression_quality_high">Visoka</string>
     <string name="media_compression_quality_uncompressed">Nestisnjeno</string>
     <string name="video_codec_h265_label">Uporabi H.265/HEVC Codec</string>
+    <string name="video_codec_h265_description">Boljša kakovost pri manjših velikostih datotek, vendar predvajanja H.265 ne podpirajo vse naprave.</string>
     <string name="edit_draft">Uredi osnutek</string>
     <string name="login_with_qr_code">Vpiši se z QR kodo</string>
     <string name="route">Pot</string>
@@ -882,7 +940,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_list_selector">Izbirnik seznama relejev</string>
     <string name="poll">Anketa</string>
     <string name="disable_poll">Onemogoči anketo</string>
-    <string name="add_bitcoin_invoice">Bitcoin faktura</string>
+    <string name="add_bitcoin_invoice">Bitcoin račun</string>
     <string name="cancel_bitcoin_invoice">Prekliči Bitcoin fakturo</string>
     <string name="cancel_classifieds">Prekliči prodajo</string>
     <string name="add_zapraiser">Zapraiser</string>
@@ -911,6 +969,16 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="search_relays_not_found_description">Ustvarjanje seznama relejev, posebej zasnovanega za iskanje in označevanje uporabnikov, bo izboljšalo te rezultate.</string>
     <string name="search_relays_not_found_editing">Vnesite 1–3 releje za iskanje vsebine ali označevanje uporabnikov. Prepričajte se, da vaši izbrani releji podpirajo NIP-50</string>
     <string name="search_relays_not_found_examples">Dobre možnosti so\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Izhodni releji</string>
+    <string name="outbox_relays_not_found">Nastavi svoje javne izhodne releje za objave</string>
+    <string name="outbox_relays_not_found_description">Ustvarjanje seznama relejev, namensko zasnovanih za prejem vaše vsebine, je ključnega pomena za vašo izkušnjo z Nostrom in edini način, da vas lahko najdejo vaši sledilci.</string>
+    <string name="outbox_relays_not_found_editing">Vstavite med 1–3 releje, ki sprejemajo vaše objave. Prepričajte se, da ne zahtevajo plačila, če ne plačujete za shranjevanje vaših zapiskov na te releje</string>
+    <string name="outbox_relays_not_found_examples">Dobre opcije so:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">Vhodni rele</string>
+    <string name="inbox_relays_not_found">Nastavite javne vhodne releje za prejem obvestil</string>
+    <string name="inbox_relays_not_found_description">Ustvarjanje seznama relejev, namensko zasnovanega za prejem obvestil, je ključnega pomena za vašo izkušnjo v Nostru. </string>
+    <string name="inbox_relays_not_found_editing">Vstavite med 1 in 3 releje, ki za vas prejemajo obvestila. Poskrbite, da ta niso plačljiva ali uporabljajo WoT (mreža zaupanja), sicer boste prejemali obvestila le od plačnikov ali dolgoletnih Nostr uporabnikov.</string>
+    <string name="inbox_relays_not_found_examples">dobre opcije so::\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Naloži ZS</string>
     <string name="relay_settings">Nastavitve relejev</string>
     <string name="public_home_section">Javni za odhajajočo pošto/domači releji</string>
@@ -939,7 +1007,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="trusted_section_explainer">Releji katerim zaupaš in zanje ne rabiš Tor povezave</string>
     <string name="proxy_relays_title">Proxy releji</string>
     <string name="proxy_section">Proxy releji</string>
-    <string name="proxy_section_explainer">Agregatorji, ki jih mora aplikacija uporabljati za prenos vašega vira vsebin, na primer filter.nostr.wine. To nadomesti model odhodne pošte (outbox model) in bo prisililo aplikacijo k povezovanju prek relejev iz vašega seznama.</string>
+    <string name="proxy_section_explainer">Agregatorji, ki jih mora aplikacija uporabljati za prenos vaših vsebin, na primer filter.nostr.wine. To nadomesti model odhodne pošte (outbox model) in bo prisililo aplikacijo k povezovanju prek relejev iz vašega seznama.</string>
     <string name="broadcast_relays_title">Oddajni releji</string>
     <string name="broadcast_section">Oddajni releji</string>
     <string name="broadcast_section_explainer">Releji specializirani za posredovanje vaših zapiskov na vse ostale releje kot npr. sendit.nosflare.com. Amethyst bo dodal ta rele k vsem vašim novim dogodkom.</string>
@@ -1035,7 +1103,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="torrent_download">Prenesi</string>
     <string name="torrent_failure">Datoteke ni bilo mogoče odpreti</string>
     <string name="torrent_no_apps">Ni nameščenih torent aplikacij za odpiranje in prenos datoteke.</string>
-    <string name="select_list_to_filter">Izberite seznam za filtriranje vira</string>
+    <string name="torrent_no_info">Dogodek nima dovolj podatkov za sestavo magnetne povezave.</string>
+    <string name="my_lists_and_sets">Moji seznami/seti</string>
+    <string name="my_lists">Moji seznami</string>
+    <string name="people_list_label">Uporabniki</string>
+    <string name="select_list_to_filter">Izberite seznam za filtriranje vsebin</string>
     <string name="temporary_account">Odjava ob zaklepu naprave</string>
     <string name="private_message">Zasebno sporočilo</string>
     <string name="public_message">Javno sporočilo</string>
@@ -1044,17 +1116,26 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="share_image">Deli sliko…</string>
     <string name="unable_to_share_image">Deljenje slike ni uspelo, prosimo poskusite znova…</string>
     <string name="search_by_hashtag">Išči hashtag: #%1$s</string>
-    <string name="dont_translate_from">Ne prevajaj iz</string>
-    <string name="dont_translate_from_description">Jeziki, ki so prikazani tukaj, ne bodo prevedeni. Izberite jezik, da ga odstranite in ga znova prevedete. </string>
+    <string name="dont_translate_from">Ne prevedi iz</string>
+    <string name="dont_translate_from_description">Tu prikazani jeziki ne bodo prevedeni. Izberite jezik, da ga odstranite in ga znova prevedete.</string>
     <string name="pause">Premor</string>
     <string name="play">Predvajaj</string>
     <string name="open_dropdown_menu">Odpri spustni meni</string>
     <string name="option_of">Možnost %1$s od %2$s</string>
-    <string name="feed_filter_selected">Filter vira, %1$s izbran</string>
-    <string name="feed_filter_select_an_option">Filter vira,  %1$s</string>
+    <string name="feed_filter_selected">Filter vsebin, %1$s izbran</string>
+    <string name="feed_filter_select_an_option">Filter vsebin,  %1$s</string>
     <string name="crashreport_found">Najdeno je poročilo o napaki</string>
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Želite poslati poročilo o napaki Amethyst-u preko zasebnega sporočila? Vaši osebni podatki NE bojo posredovani.</string>
     <string name="crashreport_found_send">Pošlji</string>
     <string name="this_message_will_disappear_in_days">To sporočilo bo izginilo čez %1$d dni</string>
     <string name="select_signer">Izberi podpisnika</string>
+    <string name="in_the_list">Že na seznamu</string>
+    <string name="private_members">Zasebni člani</string>
+    <string name="public_members">Javni člani</string>
+    <string name="private_members_count">Zasebni člani (%1$s)</string>
+    <string name="public_members_count">Javni člani (%1$s)</string>
+    <string name="add_user_to_the_list">Dodaj uporabnika na seznam</string>
+    <string name="remove_user_from_the_list">Odstrani uporabnika iz seznama</string>
+    <string name="follow_list_item_label">Paket sledenih</string>
+    <string name="members">Člani</string>
 </resources>
