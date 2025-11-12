@@ -54,3 +54,8 @@ fun <T : Event> eventUpdate(
     createdAt: Long = TimeUtils.now(),
     updater: TagArrayBuilder<T>.() -> Unit = {},
 ) = EventTemplate<T>(createdAt, base.kind, base.tags.builder(updater), base.content)
+
+fun <T : Event> T.update(
+    createdAt: Long = TimeUtils.now(),
+    updater: TagArrayBuilder<T>.() -> Unit = {},
+) = eventUpdate(this, createdAt, updater)
