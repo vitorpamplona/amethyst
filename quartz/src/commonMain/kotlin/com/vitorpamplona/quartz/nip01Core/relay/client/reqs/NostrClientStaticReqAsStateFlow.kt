@@ -42,22 +42,22 @@ import kotlinx.coroutines.flow.callbackFlow
  *    - They will be ignored if they are already in the list.
  *    - They will be added to the beginning of the list if they are new.
  */
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: String,
     filters: List<Filter>,
-) = reqResultsInOrderAsFlow(RelayUrlNormalizer.normalize(relay), filters)
+) = reqAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: String,
     filter: Filter,
-) = reqResultsInOrderAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
+) = reqAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
-) = reqResultsInOrderAsFlow(relay, listOf(filter))
+) = reqAsFlow(relay, listOf(filter))
 
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
