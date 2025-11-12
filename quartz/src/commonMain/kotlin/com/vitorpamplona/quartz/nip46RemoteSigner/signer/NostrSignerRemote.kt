@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -38,16 +38,15 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.cache.LargeCache
-import com.vitorpamplona.quartz.utils.tryAndWait
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
 
 class NostrSignerRemote(
     val signer: NostrSignerInternal,
@@ -57,8 +56,13 @@ class NostrSignerRemote(
     val permissions: String? = null,
     val secret: String? = null,
 ) : NostrSigner(signer.pubKey) {
-    private val timeout = 30_000L
-    private val awaitingRequests = LargeCache<String, Continuation<BunkerResponse>>()
+    private val manager =
+        RemoteSignerManager(
+            signer = signer,
+            remoteKey = remotePubkey,
+            relayList = relays,
+            client = client,
+        )
 
     val subscription =
         client.req(
@@ -69,11 +73,7 @@ class NostrSignerRemote(
                     tags = mapOf("p" to listOf(signer.pubKey)),
                 ),
         ) { event ->
-            val message = signer.signerSync.nip44Decrypt(event.content, remotePubkey)
-            val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(message)
-
-            awaitingRequests.get(bunkerResponse.id)?.resume(bunkerResponse)
-            awaitingRequests.remove(bunkerResponse.id)
+            manager.newResponse(event)
         }
 
     fun openSubscription() {
@@ -92,224 +92,251 @@ class NostrSignerRemote(
         tags: Array<Array<String>>,
         content: String,
     ): T {
-        val template =
-            EventTemplate<Event>(
-                createdAt = createdAt,
-                kind = kind,
-                tags = tags,
-                content = content,
-            )
-
-        val request =
-            BunkerRequestSign(
-                event = template,
-            )
-
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
-            )
-
         val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    val template =
+                        EventTemplate<Event>(
+                            createdAt = createdAt,
+                            kind = kind,
+                            tags = tags,
+                            content = content,
+                        )
 
-                awaitingRequests.put(request.id, continuation)
+                    BunkerRequestSign(
+                        event = template,
+                    )
+                },
+                parser = { response ->
+                    if (response is BunkerResponseEvent) {
+                        if (!response.event.verify()) {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(response.event)
+                        } else {
+                            SignerResult.RequestAddressed.Successful(SignResult(response.event))
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
+            )
 
-                client.send(event, relayList = relays)
+        if (result is SignerResult.RequestAddressed.Successful<SignResult>) {
+            (result.result.event as? T)?.let {
+                return it
             }
+        }
 
-        return (result as BunkerResponseEvent).event as T
+        throw Exception("Could not sign")
     }
 
     override suspend fun nip04Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
-        val request =
-            BunkerRequestNip04Encrypt(
-                message = plaintext,
-                pubKey = toPublicKey,
-            )
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
-            )
         val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestNip04Encrypt(
+                        message = plaintext,
+                        pubKey = toPublicKey,
+                    )
+                },
+                parser = { response ->
+                    if (response is BunkerResponseEncrypt) {
+                        if (response.error != null) {
+                            SignerResult.RequestAddressed.Rejected()
+                        } else {
+                            SignerResult.RequestAddressed.Successful(EncryptionResult(response.ciphertext))
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
+            )
 
-                awaitingRequests.put(request.id, continuation)
+        if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
+            return result.result.ciphertext
+        }
 
-                client.send(event, relayList = relays)
-            }
-        return result?.result ?: ""
+        throw Exception("Could not encrypt")
     }
 
     override suspend fun nip04Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
     ): String {
-        val request =
-            BunkerRequestNip04Decrypt(
-                ciphertext = ciphertext,
-                pubKey = fromPublicKey,
-            )
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
-            )
         val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestNip04Decrypt(
+                        ciphertext = ciphertext,
+                        pubKey = fromPublicKey,
+                    )
+                },
+                parser = { response ->
+                    if (response is BunkerResponseDecrypt) {
+                        if (response.error != null) {
+                            SignerResult.RequestAddressed.Rejected()
+                        } else {
+                            SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
+            )
 
-                awaitingRequests.put(request.id, continuation)
+        if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
+            return result.result.plaintext
+        }
 
-                client.send(event, relayList = relays)
-            }
-        return result?.result ?: ""
+        throw Exception("Could not decrypt")
     }
 
     override suspend fun nip44Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
-        val request =
-            BunkerRequestNip44Encrypt(
-                message = plaintext,
-                pubKey = toPublicKey,
-            )
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
-            )
         val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestNip44Encrypt(
+                        message = plaintext,
+                        pubKey = toPublicKey,
+                    )
+                },
+                parser = { response ->
+                    if (response is BunkerResponseEncrypt) {
+                        if (response.error != null) {
+                            SignerResult.RequestAddressed.Rejected()
+                        } else {
+                            SignerResult.RequestAddressed.Successful(EncryptionResult(response.ciphertext))
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
+            )
 
-                awaitingRequests.put(request.id, continuation)
+        if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
+            return result.result.ciphertext
+        }
 
-                client.send(event, relayList = relays)
-            }
-        return result?.result ?: ""
+        throw Exception("Could not encrypt")
     }
 
     override suspend fun nip44Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
     ): String {
-        val request =
-            BunkerRequestNip44Decrypt(
-                ciphertext = ciphertext,
-                pubKey = fromPublicKey,
-            )
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
-            )
         val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestNip44Decrypt(
+                        ciphertext = ciphertext,
+                        pubKey = fromPublicKey,
+                    )
+                },
+                parser = { response ->
+                    if (response is BunkerResponseDecrypt) {
+                        if (response.error != null) {
+                            SignerResult.RequestAddressed.Rejected()
+                        } else {
+                            SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
+            )
 
-                awaitingRequests.put(request.id, continuation)
+        if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
+            return result.result.plaintext
+        }
 
-                client.send(event, relayList = relays)
-            }
-        return result?.result ?: ""
+        throw Exception("Could not decrypt")
     }
 
     suspend fun ping(): String? {
-        val request = BunkerRequestPing()
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
+        val result =
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestPing()
+                },
+                parser = { response ->
+                    if (response is BunkerResponsePong) {
+                        if (response.result != null) {
+                            SignerResult.RequestAddressed.Successful(PingResult(response.result))
+                        } else {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
             )
 
-        val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+        if (result is SignerResult.RequestAddressed.Successful<PingResult>) {
+            return result.result.pong
+        }
 
-                awaitingRequests.put(request.id, continuation)
-
-                client.send(event, relayList = relays)
-            }
-
-        return result?.result
+        throw Exception("Could not ping")
     }
 
-    suspend fun connect(): HexKey? {
-        val request =
-            BunkerRequestConnect(
-                remoteKey = remotePubkey,
-                permissions = permissions,
-                secret = secret,
-            )
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
-            )
-
+    suspend fun connect(): HexKey {
         val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestConnect(
+                        remoteKey = remotePubkey,
+                        permissions = permissions,
+                        secret = secret,
+                    )
+                },
+                parser = { response ->
+                    if (response is BunkerResponsePublicKey) {
+                        if (response.result != null) {
+                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.result))
+                        } else {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
+            )
 
-                awaitingRequests.put(request.id, continuation)
+        if (result is SignerResult.RequestAddressed.Successful<PublicKeyResult>) {
+            return result.result.pubkey
+        }
 
-                client.send(event, relayList = relays)
-            }
-
-        return result?.result
+        throw Exception("Could not connect")
     }
 
-    suspend fun getPublicKey(): HexKey? {
-        val request = BunkerRequestGetPublicKey()
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remotePubkey,
-                signer = signer,
+    suspend fun getPublicKey(): HexKey {
+        val result =
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = {
+                    BunkerRequestGetPublicKey()
+                },
+                parser = { response ->
+                    if (response is BunkerResponsePublicKey) {
+                        if (response.result != null) {
+                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.result))
+                        } else {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                    }
+                },
             )
 
-        val result =
-            tryAndWait(timeout) { continuation ->
-                continuation.invokeOnCancellation {
-                    awaitingRequests.remove(request.id)
-                }
+        if (result is SignerResult.RequestAddressed.Successful<PublicKeyResult>) {
+            return result.result.pubkey
+        }
 
-                awaitingRequests.put(request.id, continuation)
-
-                client.send(event, relayList = relays)
-            }
-
-        return result?.result
+        throw Exception("Could not get public key")
     }
 
     override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
