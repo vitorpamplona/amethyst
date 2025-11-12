@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,6 +71,7 @@ fun PeopleListAndUserMemberPreview() {
             privateMemberSize = 3,
             publicMemberSize = 2,
             onAddUserToList = {},
+            onClick = {},
             onRemoveUser = {},
         )
     }
@@ -88,6 +90,7 @@ fun PeopleListAndUserNotMemberPreview() {
             privateMemberSize = 3,
             publicMemberSize = 2,
             onAddUserToList = {},
+            onClick = {},
             onRemoveUser = {},
         )
     }
@@ -102,11 +105,12 @@ fun PeopleListAndUserItem(
     userIsPublicMember: Boolean,
     publicMemberSize: Int,
     privateMemberSize: Int,
+    onClick: () -> Unit,
     onAddUserToList: (shouldBePrivateMember: Boolean) -> Unit,
     onRemoveUser: () -> Unit,
 ) {
     ListItem(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         headlineContent = {
             Text(
                 text = listHeader,

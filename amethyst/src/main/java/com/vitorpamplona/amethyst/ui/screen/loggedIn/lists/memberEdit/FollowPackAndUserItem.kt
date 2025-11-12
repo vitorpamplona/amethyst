@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,7 @@ fun FollowPackAndUserMemberPreview() {
             isMember = true,
             memberSize = 2,
             onAddUserToList = {},
+            onClick = {},
             onRemoveUser = {},
         )
     }
@@ -79,6 +81,7 @@ fun FollowPackAndUserNotMemberPreview() {
             isMember = false,
             memberSize = 2,
             onAddUserToList = {},
+            onClick = {},
             onRemoveUser = {},
         )
     }
@@ -91,11 +94,12 @@ fun FollowPackAndUserItem(
     userName: String,
     isMember: Boolean,
     memberSize: Int,
+    onClick: () -> Unit,
     onAddUserToList: () -> Unit,
     onRemoveUser: () -> Unit,
 ) {
     ListItem(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         headlineContent = {
             Text(
                 text = listHeader,

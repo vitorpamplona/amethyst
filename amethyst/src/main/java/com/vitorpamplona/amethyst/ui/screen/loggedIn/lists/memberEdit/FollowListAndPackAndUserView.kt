@@ -120,6 +120,9 @@ fun FollowListAndPackAndUserView(
                     },
                     privateMemberSize = list.privateMembers.size,
                     publicMemberSize = list.publicMembers.size,
+                    onClick = {
+                        nav.nav(Route.MyPeopleListView(list.identifierTag))
+                    },
                     onAddUserToList = { userShouldBePrivate ->
                         accountViewModel.launchSigner {
                             accountViewModel.account.peopleLists.addUserToSet(
@@ -165,6 +168,9 @@ fun FollowListAndPackAndUserView(
                     listHeader = list.title,
                     userName = userName,
                     isMember = list.publicMembers.contains(userToAddOrRemove),
+                    onClick = {
+                        nav.nav(Route.MyFollowPackView(list.identifierTag))
+                    },
                     onRemoveUser = {
                         accountViewModel.launchSigner {
                             accountViewModel.account.followLists.removeUserFromSet(
