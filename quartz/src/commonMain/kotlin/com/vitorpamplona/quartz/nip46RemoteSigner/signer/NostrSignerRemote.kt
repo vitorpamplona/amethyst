@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -38,12 +37,6 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -108,19 +101,7 @@ class NostrSignerRemote(
                         event = template,
                     )
                 },
-                parser = { response ->
-                    if (response is BunkerResponseEvent) {
-                        if (!response.event.verify()) {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(response.event)
-                        } else {
-                            SignerResult.RequestAddressed.Successful(SignResult(response.event))
-                        }
-                    } else if (response is BunkerResponseError) {
-                        SignerResult.RequestAddressed.Rejected()
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                    }
-                },
+                parser = SignResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<SignResult>) {
@@ -144,21 +125,7 @@ class NostrSignerRemote(
                         pubKey = toPublicKey,
                     )
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponseEncrypt -> {
-                            SignerResult.RequestAddressed.Successful(EncryptionResult(response.ciphertext))
-                        }
-
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = Nip04EncryptResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
@@ -180,19 +147,7 @@ class NostrSignerRemote(
                         pubKey = fromPublicKey,
                     )
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponseDecrypt -> {
-                            SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
-                        }
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = Nip04DecryptResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
@@ -214,21 +169,7 @@ class NostrSignerRemote(
                         pubKey = toPublicKey,
                     )
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponseEncrypt -> {
-                            SignerResult.RequestAddressed.Successful(EncryptionResult(response.ciphertext))
-                        }
-
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = Nip44EncryptResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
@@ -250,21 +191,7 @@ class NostrSignerRemote(
                         pubKey = fromPublicKey,
                     )
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponseDecrypt -> {
-                            SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
-                        }
-
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = Nip44DecryptResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
@@ -280,21 +207,7 @@ class NostrSignerRemote(
                 bunkerRequestBuilder = {
                     BunkerRequestPing()
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponsePong -> {
-                            SignerResult.RequestAddressed.Successful(PingResult(response.id))
-                        }
-
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = PingResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<PingResult>) {
@@ -314,21 +227,7 @@ class NostrSignerRemote(
                         secret = secret,
                     )
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponsePublicKey -> {
-                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.pubkey))
-                        }
-
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = PubKeyResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<PublicKeyResult>) {
@@ -344,21 +243,7 @@ class NostrSignerRemote(
                 bunkerRequestBuilder = {
                     BunkerRequestGetPublicKey()
                 },
-                parser = { response ->
-                    when (response) {
-                        is BunkerResponsePublicKey -> {
-                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.pubkey))
-                        }
-
-                        is BunkerResponseError -> {
-                            SignerResult.RequestAddressed.Rejected()
-                        }
-
-                        else -> {
-                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-                        }
-                    }
-                },
+                parser = PubKeyResponse::parse,
             )
 
         if (result is SignerResult.RequestAddressed.Successful<PublicKeyResult>) {
