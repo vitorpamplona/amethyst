@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 
 @Composable
 fun NewPeopleListCreationDialog(
+    title: Int = R.string.follow_set_creation_dialog_title,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onCreateList: (name: String, description: String?) -> Unit,
@@ -56,7 +57,7 @@ fun NewPeopleListCreationDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringRes(R.string.follow_set_creation_dialog_title),
+                    text = stringRes(title),
                 )
             }
         },
