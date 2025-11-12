@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +60,10 @@ class FollowPackViewModel : ViewModel() {
                 )
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun selectedAddress() = FollowListEvent.createAddress(account.userProfile().pubkeyHex, selectedDTag.value)
+
+    fun selectedNote() = account.cache.getOrCreateAddressableNote(selectedAddress())
 
     fun init(
         account: Account,

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleList
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Stable
@@ -35,47 +34,6 @@ class FollowPackViewModel : ViewModel() {
     }
 
     fun listFlow() = accountViewModel.account.followLists.uiListFlow
-
-    fun addItem(
-        title: String,
-        description: String?,
-    ) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.addFollowList(
-                name = title,
-                desc = description,
-                account = accountViewModel.account,
-            )
-        }
-    }
-
-    fun openItem(dTag: String) = Route.MyFollowPackView(dTag)
-
-    fun renameItem(
-        followSet: PeopleList,
-        newValue: String,
-    ) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.renameFollowList(
-                newName = newValue,
-                followPack = followSet,
-                account = accountViewModel.account,
-            )
-        }
-    }
-
-    fun changeItemDescription(
-        followSet: PeopleList,
-        newDescription: String,
-    ) {
-        accountViewModel.launchSigner {
-            accountViewModel.account.followLists.modifyFollowSetDescription(
-                newDescription = newDescription,
-                followPack = followSet,
-                account = accountViewModel.account,
-            )
-        }
-    }
 
     fun cloneItem(
         followSet: PeopleList,

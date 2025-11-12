@@ -82,6 +82,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.FollowPackMetadataScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.metadata.PeopleListMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit.FollowListAndPackAndUserScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
@@ -131,6 +133,9 @@ fun AppNavigation(
             composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
             composableFromEndArgs<Route.MyFollowPackView> { FollowPackScreen(it.dTag, accountViewModel, nav) }
             composableFromBottomArgs<Route.PeopleListManagement> { FollowListAndPackAndUserScreen(it.userToAdd, accountViewModel, nav) }
+
+            composableFromBottomArgs<Route.PeopleListMetadataEdit> { PeopleListMetadataScreen(it.dTag, accountViewModel, nav) }
+            composableFromBottomArgs<Route.FollowPackMetadataEdit> { FollowPackMetadataScreen(it.dTag, accountViewModel, nav) }
 
             composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }

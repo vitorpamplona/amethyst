@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists
 
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -29,13 +32,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -55,29 +62,38 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
+import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
+import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.DrawUser
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.ListActionsMenuButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.PeopleListView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.RenderAddUserFieldAndSuggestions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.persistentListOf
@@ -354,6 +370,10 @@ private fun ListActionsMenuButton(
     nav: INav,
 ) {
     ListActionsMenuButton(
+        note = viewModel::selectedNote,
+        onEditList = {
+            nav.nav { Route.PeopleListMetadataEdit(viewModel.selectedDTag.value) }
+        },
         onBroadcastList = {
             accountViewModel.launchSigner {
                 viewModel.loadNote()?.let { updatedSetNote ->
@@ -368,4 +388,91 @@ private fun ListActionsMenuButton(
             nav.popBack()
         },
     )
+}
+
+@Composable
+private fun ListActionsMenuButton(
+    note: () -> AddressableNote,
+    onEditList: () -> Unit,
+    onBroadcastList: () -> Unit,
+    onDeleteList: () -> Unit,
+) {
+    val isActionListOpen = remember { mutableStateOf(false) }
+
+    ClickableBox(
+        modifier =
+            StdPadding
+                .size(30.dp)
+                .border(
+                    width = Dp.Hairline,
+                    color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                    shape = ButtonBorder,
+                ).background(
+                    color = ButtonDefaults.filledTonalButtonColors().containerColor,
+                    shape = ButtonBorder,
+                ),
+        onClick = { isActionListOpen.value = true },
+    ) {
+        VerticalDotsIcon()
+
+        DropdownMenu(
+            expanded = isActionListOpen.value,
+            onDismissRequest = { isActionListOpen.value = false },
+        ) {
+            val context = LocalContext.current
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.quick_action_share)) },
+                onClick = {
+                    val sendIntent =
+                        Intent().apply {
+                            action = Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                externalLinkForNote(note()),
+                            )
+                            putExtra(
+                                Intent.EXTRA_TITLE,
+                                stringRes(context, R.string.quick_action_share_browser_link),
+                            )
+                        }
+
+                    val shareIntent =
+                        Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                    ContextCompat.startActivity(context, shareIntent, null)
+                    isActionListOpen.value = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Text(stringRes(R.string.follow_set_edit_list_metadata))
+                },
+                onClick = {
+                    onEditList()
+                    isActionListOpen.value = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Text(stringRes(R.string.follow_set_broadcast))
+                },
+                onClick = {
+                    onBroadcastList()
+                    isActionListOpen.value = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Text(stringRes(R.string.follow_set_delete))
+                },
+                onClick = {
+                    onDeleteList()
+                    isActionListOpen.value = false
+                },
+            )
+        }
+    }
 }

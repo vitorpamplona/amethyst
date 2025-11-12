@@ -31,8 +31,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -81,17 +79,8 @@ fun ListOfPeopleListsScreen(
 }
 
 @Composable
-fun PeopleListFabsAndMenu(
-    title: Int = R.string.follow_set_creation_dialog_title,
-    onAddSet: (name: String, description: String?) -> Unit,
-) {
-    val isSetAdditionDialogOpen = remember { mutableStateOf(false) }
-
-    OutlinedButton(
-        onClick = {
-            isSetAdditionDialogOpen.value = true
-        },
-    ) {
+fun NewListButton(onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick) {
         Row(horizontalArrangement = SpacedBy5dp, verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
@@ -99,17 +88,5 @@ fun PeopleListFabsAndMenu(
             )
             Text(stringRes(R.string.follow_set_create_btn_label))
         }
-    }
-
-    if (isSetAdditionDialogOpen.value) {
-        NewPeopleListCreationDialog(
-            title = title,
-            onDismiss = {
-                isSetAdditionDialogOpen.value = false
-            },
-            onCreateList = { name, description ->
-                onAddSet(name, description)
-            },
-        )
     }
 }

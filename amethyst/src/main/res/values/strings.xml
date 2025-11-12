@@ -562,6 +562,7 @@
     <string name="follow_set_creation_action_btn_label">Create list</string>
     <string name="follow_set_copy_action_btn_label">Copy/Clone list</string>
     <string name="follow_set_rename_btn_label">Rename list</string>
+    <string name="follow_set_edit_list_metadata">Edit List</string>
     <string name="follow_set_desc_modify_btn_label">Modify</string>
     <string name="follow_set_rename_dialog_indicator_first_part">You are renaming from </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> to..</string>
@@ -1356,4 +1357,22 @@
     <string name="remove_user_from_the_list">Remove user from the list</string>
     <string name="follow_list_item_label">Follow Pack</string>
     <string name="members">Members</string>
+
+    <string name="people_list_title">Follow List Metadata</string>
+    <string name="people_list_explainer">Follow lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>
+
+    <string name="follow_pack_title">Follow Pack Metadata</string>
+    <string name="follow_pack_explainer">Follow pack metadata can be seen by anyone on Nostr and is frequently published in many websites as startup kits for new users.</string>
+
+    <string name="follow_pack_edit_list_metadata">Edit Follow Pack</string>
+    <string name="follow_pack_creation_name_label">Pack name</string>
+    <string name="follow_pack_copy_name_label">New Pack name</string>
+    <string name="follow_pack_creation_desc_label">Pack description</string>
+    <string name="follow_pack_copy_desc_label">New Pack description</string>
+
+    <string name="follow_set_broadcast">Broadcast List</string>
+    <string name="follow_pack_broadcast">Broadcast Pack</string>
+
+    <string name="follow_set_delete">Delete List</string>
+    <string name="follow_pack_delete">Delete Pack</string>
 </resources>

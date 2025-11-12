@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -86,19 +87,22 @@ fun AllPeopleListFeedView(
                             color = MaterialTheme.colorScheme.grayText,
                         )
                     }
-                    PeopleListFabsAndMenu(
-                        title = R.string.follow_set_creation_dialog_title,
-                        onAddSet = peopleListModel::addItem,
+                    NewListButton(
+                        onClick = {
+                            nav.nav(Route.PeopleListMetadataEdit())
+                        },
                     )
                 }
             }
             itemsIndexed(peopleListFeedState, key = { _, item -> item.identifierTag }) { _, followSet ->
                 PeopleListItem(
-                    modifier = Modifier.fillMaxSize().animateItem(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .animateItem(),
                     peopleList = followSet,
-                    onClick = { nav.nav(peopleListModel.openItem(followSet.identifierTag)) },
-                    onRename = { peopleListModel.renameItem(followSet, it) },
-                    onDescriptionChange = { newDescription -> peopleListModel.changeItemDescription(followSet, newDescription) },
+                    onClick = { nav.nav(Route.MyPeopleListView(followSet.identifierTag)) },
+                    onEditMetadata = { nav.nav(Route.PeopleListMetadataEdit(followSet.identifierTag)) },
                     onClone = { cloneName, cloneDescription -> peopleListModel.cloneItem(followSet, cloneName, cloneDescription) },
                     onDelete = { peopleListModel.deleteItem(followSet) },
                 )
@@ -106,7 +110,10 @@ fun AllPeopleListFeedView(
             }
             stickyHeader {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = SpacedBy5dp,
                 ) {
@@ -122,19 +129,22 @@ fun AllPeopleListFeedView(
                             color = MaterialTheme.colorScheme.grayText,
                         )
                     }
-                    PeopleListFabsAndMenu(
-                        title = R.string.follow_pack_creation_dialog_title,
-                        onAddSet = followPackModel::addItem,
+                    NewListButton(
+                        onClick = {
+                            nav.nav(Route.FollowPackMetadataEdit())
+                        },
                     )
                 }
             }
             itemsIndexed(followPackFeedState, key = { _, item -> item.identifierTag }) { _, followSet ->
                 PeopleListItem(
-                    modifier = Modifier.fillMaxSize().animateItem(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .animateItem(),
                     peopleList = followSet,
-                    onClick = { nav.nav(followPackModel.openItem(followSet.identifierTag)) },
-                    onRename = { followPackModel.renameItem(followSet, it) },
-                    onDescriptionChange = { newDescription -> followPackModel.changeItemDescription(followSet, newDescription) },
+                    onClick = { nav.nav(Route.MyFollowPackView(followSet.identifierTag)) },
+                    onEditMetadata = { nav.nav(Route.FollowPackMetadataEdit(followSet.identifierTag)) },
                     onClone = { cloneName, cloneDescription -> followPackModel.cloneItem(followSet, cloneName, cloneDescription) },
                     onDelete = { followPackModel.deleteItem(followSet) },
                 )
@@ -147,7 +157,9 @@ fun AllPeopleListFeedView(
 @Composable
 fun AllPeopleListFeedEmpty(message: String = stringRes(R.string.feed_is_empty)) {
     Column(
-        Modifier.fillMaxSize().padding(horizontal = Size40dp),
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = Size40dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

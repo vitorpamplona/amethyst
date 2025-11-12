@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip51Lists.followList
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -69,6 +70,16 @@ class FollowListEvent(
     companion object {
         const val KIND = 39089
         const val ALT = "List of people to follow"
+
+        fun createAddress(
+            pubKey: HexKey,
+            dTag: String,
+        ) = Address(KIND, pubKey, dTag)
+
+        fun listFor(
+            pubKey: HexKey,
+            dTag: String,
+        ): String = Address.assemble(KIND, pubKey, dTag)
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(

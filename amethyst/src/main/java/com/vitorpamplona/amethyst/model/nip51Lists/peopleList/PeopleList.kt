@@ -30,6 +30,7 @@ data class PeopleList(
     val identifierTag: String,
     val title: String,
     val description: String?,
+    val image: String?,
     val privateMembers: Set<User> = emptySet(),
     val publicMembers: Set<User> = emptySet(),
 ) {

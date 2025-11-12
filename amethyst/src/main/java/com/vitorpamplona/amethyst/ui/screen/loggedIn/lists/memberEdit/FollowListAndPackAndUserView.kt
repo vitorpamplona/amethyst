@@ -42,8 +42,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.PeopleListFabsAndMenu
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
@@ -95,17 +96,8 @@ fun FollowListAndPackAndUserView(
                             color = MaterialTheme.colorScheme.grayText,
                         )
                     }
-                    PeopleListFabsAndMenu(
-                        title = R.string.follow_set_creation_dialog_title,
-                        onAddSet = { title, description ->
-                            accountViewModel.launchSigner {
-                                accountViewModel.account.peopleLists.addFollowList(
-                                    listName = title,
-                                    listDescription = description,
-                                    account = accountViewModel.account,
-                                )
-                            }
-                        },
+                    NewListButton(
+                        onClick = { nav.nav(Route.PeopleListMetadataEdit()) },
                     )
                 }
             }
@@ -162,17 +154,8 @@ fun FollowListAndPackAndUserView(
                             color = MaterialTheme.colorScheme.grayText,
                         )
                     }
-                    PeopleListFabsAndMenu(
-                        title = R.string.follow_pack_creation_dialog_title,
-                        onAddSet = { title, description ->
-                            accountViewModel.launchSigner {
-                                accountViewModel.account.followLists.addFollowList(
-                                    name = title,
-                                    desc = description,
-                                    account = accountViewModel.account,
-                                )
-                            }
-                        },
+                    NewListButton(
+                        onClick = { nav.nav(Route.FollowPackMetadataEdit()) },
                     )
                 }
             }

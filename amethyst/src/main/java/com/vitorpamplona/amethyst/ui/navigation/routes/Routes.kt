@@ -63,6 +63,14 @@ sealed class Route {
         val dTag: String,
     ) : Route()
 
+    @Serializable data class PeopleListMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class FollowPackMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
     @Serializable data class PeopleListManagement(
         val userToAdd: HexKey,
     ) : Route()
@@ -293,6 +301,15 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
         dest.hasRoute<Route.GenericCommentPost>() -> entry.toRoute<Route.GenericCommentPost>()
         dest.hasRoute<Route.NewPublicMessage>() -> entry.toRoute<Route.NewPublicMessage>()
+
+        dest.hasRoute<Route.Lists>() -> entry.toRoute<Route.Lists>()
+        dest.hasRoute<Route.MyPeopleListView>() -> entry.toRoute<Route.MyPeopleListView>()
+        dest.hasRoute<Route.MyFollowPackView>() -> entry.toRoute<Route.MyFollowPackView>()
+        dest.hasRoute<Route.PeopleListMetadataEdit>() -> entry.toRoute<Route.PeopleListMetadataEdit>()
+        dest.hasRoute<Route.FollowPackMetadataEdit>() -> entry.toRoute<Route.FollowPackMetadataEdit>()
+        dest.hasRoute<Route.PeopleListManagement>() -> entry.toRoute<Route.PeopleListManagement>()
+        dest.hasRoute<Route.NewGroupDM>() -> entry.toRoute<Route.NewGroupDM>()
+        dest.hasRoute<Route.UserSettings>() -> entry.toRoute<Route.UserSettings>()
 
         else -> {
             null
