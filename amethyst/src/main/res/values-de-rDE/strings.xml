@@ -448,6 +448,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_list_selection">Folgen-Liste</string>
     <string name="follow_list_kind3follows">Alle Folgen</string>
     <string name="follow_list_kind3follows_users_only">Alle Benutzer Folgen</string>
+    <string name="follow_list_kind3_follows_users_only">Standard-Folgenliste</string>
     <string name="follow_list_kind3follows_proxy">Folgt über Proxy</string>
     <string name="follow_list_aroundme">In der Nähe</string>
     <string name="follow_list_global">Weltweit</string>
@@ -1119,6 +1120,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="in_the_list">Bereits in der Liste</string>
     <string name="private_members">Private Mitglieder</string>
     <string name="public_members">Öffentliche Mitglieder</string>
+    <string name="private_members_count">Private Mitglieder (%1$s)</string>
+    <string name="public_members_count">Öffentliche Mitglieder (%1$s)</string>
     <string name="add_user_to_the_list">Benutzer zur Liste hinzufügen</string>
     <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
+    <string name="follow_list_item_label">Folge Paket</string>
+    <string name="members">Mitglieder</string>
 </resources>
