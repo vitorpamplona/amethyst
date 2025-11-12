@@ -1309,9 +1309,7 @@ class AccountViewModel(
             if (existingNoteEvent != null) {
                 unwrapIfNeeded(existingNoteEvent)
             } else {
-                val newEvent = event.unwrapOrNull(account.signer)
-
-                if (newEvent == null) return null
+                val newEvent = event.unwrapOrNull(account.signer) ?: return null
 
                 // clear the encrypted payload to save memory
                 LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
