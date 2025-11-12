@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.logTime
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
+@Stable
 class UserSuggestionState(
     val account: Account,
     val requireAtSymbol: Boolean = true,
