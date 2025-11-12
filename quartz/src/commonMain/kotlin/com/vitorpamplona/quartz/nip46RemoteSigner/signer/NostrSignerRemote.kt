@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -110,95 +111,156 @@ class NostrSignerRemote(
                 signer = signer,
             )
 
-        client.send(event, relayList = relays)
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
 
-        TODO("Not yet implemented")
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+
+        return (result as BunkerResponseEvent).event as T
     }
 
     override suspend fun nip04Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
+        val request =
+            BunkerRequestNip04Encrypt(
+                message = plaintext,
+                pubKey = toPublicKey,
+            )
         val event =
             NostrConnectEvent.create(
-                message =
-                    BunkerRequestNip04Encrypt(
-                        message = plaintext,
-                        pubKey = toPublicKey,
-                    ),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+        return result?.result ?: ""
     }
 
     override suspend fun nip04Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
     ): String {
+        val request =
+            BunkerRequestNip04Decrypt(
+                ciphertext = ciphertext,
+                pubKey = fromPublicKey,
+            )
         val event =
             NostrConnectEvent.create(
-                message =
-                    BunkerRequestNip04Decrypt(
-                        ciphertext = ciphertext,
-                        pubKey = fromPublicKey,
-                    ),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+        return result?.result ?: ""
     }
 
     override suspend fun nip44Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
+        val request =
+            BunkerRequestNip44Encrypt(
+                message = plaintext,
+                pubKey = toPublicKey,
+            )
         val event =
             NostrConnectEvent.create(
-                message =
-                    BunkerRequestNip44Encrypt(
-                        message = plaintext,
-                        pubKey = toPublicKey,
-                    ),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+        return result?.result ?: ""
     }
 
     override suspend fun nip44Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
     ): String {
+        val request =
+            BunkerRequestNip44Decrypt(
+                ciphertext = ciphertext,
+                pubKey = fromPublicKey,
+            )
         val event =
             NostrConnectEvent.create(
-                message =
-                    BunkerRequestNip44Decrypt(
-                        ciphertext = ciphertext,
-                        pubKey = fromPublicKey,
-                    ),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+        return result?.result ?: ""
     }
 
-    suspend fun ping(): String {
+    suspend fun ping(): String? {
+        val request = BunkerRequestPing()
         val event =
             NostrConnectEvent.create(
-                message = BunkerRequestPing(),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+
+        return result?.result
     }
 
-    suspend fun connect(): BunkerResponse? {
+    suspend fun connect(): HexKey? {
         val request =
             BunkerRequestConnect(
                 remoteKey = remotePubkey,
@@ -223,18 +285,30 @@ class NostrSignerRemote(
                 client.send(event, relayList = relays)
             }
 
-        return result
+        return result?.result
     }
 
-    suspend fun getPublicKey(): String {
+    suspend fun getPublicKey(): HexKey? {
+        val request = BunkerRequestGetPublicKey()
         val event =
             NostrConnectEvent.create(
-                message = BunkerRequestGetPublicKey(),
+                message = request,
                 remoteKey = remotePubkey,
                 signer = signer,
             )
-        client.send(event, relayList = relays)
-        TODO("Not yet implemented")
+
+        val result =
+            tryAndWait(timeout) { continuation ->
+                continuation.invokeOnCancellation {
+                    awaitingRequests.remove(request.id)
+                }
+
+                awaitingRequests.put(request.id, continuation)
+
+                client.send(event, relayList = relays)
+            }
+
+        return result?.result
     }
 
     override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
