@@ -47,3 +47,23 @@ sealed interface SignerResult<T : IResult> {
 }
 
 interface IResult
+
+data class SignResult(
+    val event: Event,
+) : IResult
+
+data class EncryptionResult(
+    val ciphertext: String,
+) : IResult
+
+data class DecryptionResult(
+    val plaintext: String,
+) : IResult
+
+data class PingResult(
+    val pong: String,
+) : IResult
+
+data class PublicKeyResult(
+    val pubkey: String,
+) : IResult
