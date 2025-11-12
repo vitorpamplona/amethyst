@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.noteComposeRelayBox
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.flow.mapNotNull
 
 @Composable
 fun RelayBadges(
@@ -122,12 +123,14 @@ fun WatchAndRenderRelay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteRelays by baseNote
+    val relay by baseNote
         .flow()
         .relays.stateFlow
-        .collectAsStateWithLifecycle()
+        .mapNotNull {
+            it.note.relays.getOrNull(relayIndex)
+        }.collectAsStateWithLifecycle(baseNote.relays.getOrNull(relayIndex))
 
-    CrossfadeIfEnabled(targetState = noteRelays.note.relays.getOrNull(relayIndex), label = "RenderRelay", modifier = Size17Modifier, accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = relay, label = "RenderRelay", modifier = Size17Modifier, accountViewModel = accountViewModel) {
         if (it != null) {
             RenderRelay(it, accountViewModel, nav)
         }
