@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEncrypt
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
@@ -114,6 +115,8 @@ class NostrSignerRemote(
                         } else {
                             SignerResult.RequestAddressed.Successful(SignResult(response.event))
                         }
+                    } else if (response is BunkerResponseError) {
+                        SignerResult.RequestAddressed.Rejected()
                     } else {
                         SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
                     }
@@ -142,14 +145,18 @@ class NostrSignerRemote(
                     )
                 },
                 parser = { response ->
-                    if (response is BunkerResponseEncrypt) {
-                        if (response.error != null) {
-                            SignerResult.RequestAddressed.Rejected()
-                        } else {
+                    when (response) {
+                        is BunkerResponseEncrypt -> {
                             SignerResult.RequestAddressed.Successful(EncryptionResult(response.ciphertext))
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+
+                        is BunkerResponseError -> {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
@@ -174,14 +181,16 @@ class NostrSignerRemote(
                     )
                 },
                 parser = { response ->
-                    if (response is BunkerResponseDecrypt) {
-                        if (response.error != null) {
-                            SignerResult.RequestAddressed.Rejected()
-                        } else {
+                    when (response) {
+                        is BunkerResponseDecrypt -> {
                             SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        is BunkerResponseError -> {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
@@ -206,14 +215,18 @@ class NostrSignerRemote(
                     )
                 },
                 parser = { response ->
-                    if (response is BunkerResponseEncrypt) {
-                        if (response.error != null) {
-                            SignerResult.RequestAddressed.Rejected()
-                        } else {
+                    when (response) {
+                        is BunkerResponseEncrypt -> {
                             SignerResult.RequestAddressed.Successful(EncryptionResult(response.ciphertext))
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+
+                        is BunkerResponseError -> {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
@@ -238,14 +251,18 @@ class NostrSignerRemote(
                     )
                 },
                 parser = { response ->
-                    if (response is BunkerResponseDecrypt) {
-                        if (response.error != null) {
-                            SignerResult.RequestAddressed.Rejected()
-                        } else {
+                    when (response) {
+                        is BunkerResponseDecrypt -> {
                             SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+
+                        is BunkerResponseError -> {
+                            SignerResult.RequestAddressed.Rejected()
+                        }
+
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
@@ -257,21 +274,25 @@ class NostrSignerRemote(
         throw Exception("Could not decrypt")
     }
 
-    suspend fun ping(): String? {
+    suspend fun ping(): String {
         val result =
             manager.launchWaitAndParse(
                 bunkerRequestBuilder = {
                     BunkerRequestPing()
                 },
                 parser = { response ->
-                    if (response is BunkerResponsePong) {
-                        if (response.result != null) {
-                            SignerResult.RequestAddressed.Successful(PingResult(response.result))
-                        } else {
+                    when (response) {
+                        is BunkerResponsePong -> {
+                            SignerResult.RequestAddressed.Successful(PingResult(response.id))
+                        }
+
+                        is BunkerResponseError -> {
                             SignerResult.RequestAddressed.Rejected()
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
@@ -294,14 +315,18 @@ class NostrSignerRemote(
                     )
                 },
                 parser = { response ->
-                    if (response is BunkerResponsePublicKey) {
-                        if (response.result != null) {
-                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.result))
-                        } else {
+                    when (response) {
+                        is BunkerResponsePublicKey -> {
+                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.pubkey))
+                        }
+
+                        is BunkerResponseError -> {
                             SignerResult.RequestAddressed.Rejected()
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
@@ -320,14 +345,18 @@ class NostrSignerRemote(
                     BunkerRequestGetPublicKey()
                 },
                 parser = { response ->
-                    if (response is BunkerResponsePublicKey) {
-                        if (response.result != null) {
-                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.result))
-                        } else {
+                    when (response) {
+                        is BunkerResponsePublicKey -> {
+                            SignerResult.RequestAddressed.Successful(PublicKeyResult(response.pubkey))
+                        }
+
+                        is BunkerResponseError -> {
                             SignerResult.RequestAddressed.Rejected()
                         }
-                    } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+
+                        else -> {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                        }
                     }
                 },
             )
