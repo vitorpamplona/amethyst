@@ -161,7 +161,7 @@ class FollowListEvent(
         ) {
             dTag(dTag)
             alt(ALT)
-            name(name)
+            title(name)
             people(people)
 
             initializer()

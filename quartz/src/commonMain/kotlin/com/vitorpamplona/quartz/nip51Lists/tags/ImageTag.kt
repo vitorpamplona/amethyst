@@ -29,6 +29,6 @@ class ImageTag {
             return tag[1]
         }
 
-        fun assemble(name: String) = arrayOf(TAG_NAME, name)
+        fun assemble(url: String) = arrayOf(TAG_NAME, url)
     }
 }
