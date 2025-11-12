@@ -444,6 +444,7 @@
     <string name="follow_list_selection">अनुचरण सूची</string>
     <string name="follow_list_kind3follows">सभी अनुचरित</string>
     <string name="follow_list_kind3follows_users_only">प्रयोक्ता के सभी अनुगामी</string>
+    <string name="follow_list_kind3_follows_users_only">मूल अनुचरण सूची</string>
     <string name="follow_list_kind3follows_proxy">प्रतिनिधि द्वारा अनुचरित</string>
     <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
@@ -1119,5 +1120,10 @@
     <string name="in_the_list">पहले से ही सूची में</string>
     <string name="private_members">निजी सदस्य</string>
     <string name="public_members">सार्वजनिक सदस्य</string>
+    <string name="private_members_count">निजी सदस्य (%1$s)</string>
+    <string name="public_members_count">सार्वजनिक सदस्य (%1$s)</string>
     <string name="add_user_to_the_list">प्रयोक्ता को सूची में जोडें</string>
+    <string name="remove_user_from_the_list">सूची से प्रयोक्ता हटाएँ</string>
+    <string name="follow_list_item_label">अनुचरण पोटली</string>
+    <string name="members">सदस्य सूची</string>
 </resources>
