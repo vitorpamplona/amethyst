@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -85,6 +87,7 @@ private fun FeedLoaded(
     val listState = rememberLazyListState()
 
     LazyColumn(
+        modifier = Modifier.fillMaxSize(),
         contentPadding = FeedPadding,
         state = listState,
     ) {

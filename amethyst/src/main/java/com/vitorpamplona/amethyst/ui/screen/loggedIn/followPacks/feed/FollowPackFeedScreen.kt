@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -141,7 +142,6 @@ fun PrepareViewModelsFollowPackScreen(
     FollowPackFeedScreen(note, newThreadFeedViewModel, conversationsFeedViewModel, membersFeedViewModel, accountViewModel, nav)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowPackFeedScreen(
     note: AddressableNote,
@@ -162,90 +162,12 @@ fun FollowPackFeedScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            Column {
-                val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                val modifier = Modifier.fillMaxWidth().height(TopBarSize + statusBarHeight)
-                Box(
-                    modifier = modifier, // Adjust height as needed for your banner
-                ) {
-                    DisplayBanner(note, Modifier.fillMaxSize(), accountViewModel)
-
-                    ShorterTopAppBar(
-                        title = {
-                            FollowPackHeader(note, accountViewModel, nav)
-                        },
-                        navigationIcon = {
-                            Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = nav::popBack,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = stringRes(R.string.back),
-                                    )
-                                }
-                            }
-                        },
-                        actions = {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = SpacedBy2dp) {
-                                ReplyReaction(
-                                    baseNote = note,
-                                    grayTint = MaterialTheme.colorScheme.onBackground,
-                                    accountViewModel = accountViewModel,
-                                    iconSizeModifier = Size18Modifier,
-                                ) {
-                                    nav.nav {
-                                        Route.Note(note.idHex)
-                                    }
-                                }
-                                Spacer(modifier = HalfHorzSpacer)
-                                LikeReaction(
-                                    baseNote = note,
-                                    grayTint = MaterialTheme.colorScheme.onBackground,
-                                    accountViewModel = accountViewModel,
-                                    nav,
-                                )
-                                Spacer(modifier = HalfHorzSpacer)
-                                ZapReaction(
-                                    baseNote = note,
-                                    grayTint = MaterialTheme.colorScheme.onBackground,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                )
-                                Spacer(modifier = HalfHorzSpacer)
-                            }
-                        },
-                        colors =
-                            TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f), // Make TopAppBar background transparent
-                            ),
-                    )
-                }
-
-                TabRow(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    modifier = TabRowHeight,
-                    selectedTabIndex = pagerState.currentPage,
-                ) {
-                    val coroutineScope = rememberCoroutineScope()
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        text = { Text(text = stringRes(R.string.new_threads)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        text = { Text(text = stringRes(R.string.conversations)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 2,
-                        text = { Text(text = stringRes(R.string.members)) },
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                    )
-                }
-            }
+            FollowPackFeedTopBar(
+                note,
+                pagerState,
+                accountViewModel,
+                nav,
+            )
         },
         accountViewModel = accountViewModel,
     ) {
@@ -275,6 +197,100 @@ fun FollowPackFeedScreen(
                         nav,
                     )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FollowPackFeedTopBar(
+    note: AddressableNote,
+    pagerState: PagerState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column {
+        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val modifier = Modifier.fillMaxWidth().height(TopBarSize + statusBarHeight)
+        Box(
+            modifier = modifier, // Adjust height as needed for your banner
+        ) {
+            DisplayBanner(note, Modifier.fillMaxSize(), accountViewModel)
+
+            ShorterTopAppBar(
+                title = {
+                    FollowPackHeader(note, accountViewModel, nav)
+                },
+                navigationIcon = {
+                    Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = nav::popBack,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringRes(R.string.back),
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = SpacedBy2dp) {
+                        ReplyReaction(
+                            baseNote = note,
+                            grayTint = MaterialTheme.colorScheme.onBackground,
+                            accountViewModel = accountViewModel,
+                            iconSizeModifier = Size18Modifier,
+                        ) {
+                            nav.nav {
+                                Route.Note(note.idHex)
+                            }
+                        }
+                        Spacer(modifier = HalfHorzSpacer)
+                        LikeReaction(
+                            baseNote = note,
+                            grayTint = MaterialTheme.colorScheme.onBackground,
+                            accountViewModel = accountViewModel,
+                            nav,
+                        )
+                        Spacer(modifier = HalfHorzSpacer)
+                        ZapReaction(
+                            baseNote = note,
+                            grayTint = MaterialTheme.colorScheme.onBackground,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                        Spacer(modifier = HalfHorzSpacer)
+                    }
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f), // Make TopAppBar background transparent
+                    ),
+            )
+        }
+
+        TabRow(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            modifier = TabRowHeight,
+            selectedTabIndex = pagerState.currentPage,
+        ) {
+            val coroutineScope = rememberCoroutineScope()
+            Tab(
+                selected = pagerState.currentPage == 0,
+                text = { Text(text = stringRes(R.string.new_threads)) },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+            )
+            Tab(
+                selected = pagerState.currentPage == 1,
+                text = { Text(text = stringRes(R.string.conversations)) },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+            )
+            Tab(
+                selected = pagerState.currentPage == 2,
+                text = { Text(text = stringRes(R.string.members)) },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+            )
         }
     }
 }
