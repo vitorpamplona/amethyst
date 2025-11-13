@@ -33,7 +33,7 @@ class DeriveKeyResponse {
             )
 
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<DerivationResult> {
-            if (intent.rejected) {
+            if (intent.rejected == true) {
                 return SignerResult.RequestAddressed.ManuallyRejected()
             }
             val newPrivateKey = intent.result

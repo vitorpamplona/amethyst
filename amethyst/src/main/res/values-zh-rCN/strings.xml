@@ -125,6 +125,8 @@
     <string name="public_chat_feed">公开聊天</string>
     <string name="global_feed">全球</string>
     <string name="search_feed">搜索</string>
+    <string name="search_and_add_a_user">搜索并添加用户</string>
+    <string name="add_a_user">添加用户</string>
     <string name="add_a_relay">添加中继器</string>
     <string name="profile_name">名称</string>
     <string name="display_name">显示名称</string>
@@ -470,7 +472,10 @@
     <string name="follow_set_single_member_label">成员</string>
     <string name="follow_set_multiple_member_label">成员</string>
     <string name="follow_set_empty_label">无成员</string>
+    <string name="follow_set_empty_label2">空</string>
     <string name="follow_set_absence_indicator">此列表中没有 %1$s</string>
+    <string name="follow_set_absence_indicator2">%1$s 不是成员</string>
+    <string name="follow_set_man_dialog_title2">您的列表和 %1$s</string>
     <string name="follow_set_man_dialog_title">您的关注集</string>
     <string name="follow_set_empty_dialog_msg">未找到关注集，或者你还没有任何关注集。轻按下方刷新，或使用按钮新建。</string>
     <string name="follow_set_error_dialog_msg">获取时出了问题： %1$s</string>
@@ -1087,6 +1092,8 @@
     <string name="torrent_no_apps">没有用于打开和下载文件的 Torrent 客户端</string>
     <string name="torrent_no_info">事件没有足够信息来构建磁力链</string>
     <string name="my_lists_and_sets">我的列表/集合</string>
+    <string name="my_lists">我的列表</string>
+    <string name="people_list_label">用户</string>
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
     <string name="temporary_account">当设备锁定时注销</string>
     <string name="private_message">私信</string>
@@ -1109,4 +1116,8 @@
     <string name="crashreport_found_send">发送它</string>
     <string name="this_message_will_disappear_in_days">此消息将在 %1$d 天内消失</string>
     <string name="select_signer">选择签名者</string>
+    <string name="in_the_list">已经在列表中</string>
+    <string name="private_members">私密成员</string>
+    <string name="public_members">公开成员</string>
+    <string name="add_user_to_the_list">添加用户到列表</string>
 </resources>

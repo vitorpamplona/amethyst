@@ -62,7 +62,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
     fun create() {
         if (hasModified) {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 val writes = _homeRelays.value.map { it.relay }.toSet()
                 val reads = _notificationRelays.value.map { it.relay }.toSet()
 

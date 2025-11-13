@@ -18,16 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,12 +35,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardElevation
@@ -51,7 +45,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -62,60 +55,48 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.UserSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.AboutDisplay
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
-import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.AnimateOnNewSearch
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.DrawUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.PeopleListView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.RenderAddUserFieldAndSuggestions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.PopupUpEffect
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.SmallBorder
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -151,24 +132,7 @@ fun PeopleListScreen(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                 )
-                TabRow(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    selectedTabIndex = pagerState.currentPage,
-                    modifier = TabRowHeight,
-                ) {
-                    val scope = rememberCoroutineScope()
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = stringRes(R.string.private_members)) },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = stringRes(R.string.public_members)) },
-                    )
-                }
+                TopAppTabs(viewModel, pagerState)
             }
         },
     ) { padding ->
@@ -190,7 +154,46 @@ fun PeopleListScreen(
 }
 
 @Composable
-fun TitleAndDescription(viewModel: PeopleListViewModel) {
+private fun TopAppTabs(
+    viewModel: PeopleListViewModel,
+    pagerState: PagerState,
+) {
+    TabRow(
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight,
+    ) {
+        val scope = rememberCoroutineScope()
+        Tab(
+            selected = pagerState.currentPage == 0,
+            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+            text = {
+                val list = viewModel.selectedList.collectAsStateWithLifecycle()
+                val labelPublic =
+                    list.value?.let {
+                        stringRes(R.string.public_members_count, it.publicMembers.size)
+                    } ?: stringRes(R.string.public_members)
+                Text(labelPublic)
+            },
+        )
+        Tab(
+            selected = pagerState.currentPage == 1,
+            onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+            text = {
+                val list = viewModel.selectedList.collectAsStateWithLifecycle()
+                val labelPrivate =
+                    list.value?.let {
+                        stringRes(R.string.private_members_count, it.privateMembersList.size)
+                    } ?: stringRes(R.string.private_members)
+                Text(labelPrivate)
+            },
+        )
+    }
+}
+
+@Composable
+private fun TitleAndDescription(viewModel: PeopleListViewModel) {
     val selectedSetState = viewModel.selectedList.collectAsStateWithLifecycle()
     selectedSetState.value?.let { selectedSet ->
         Text(
@@ -215,7 +218,7 @@ private fun ListViewAndEditColumn(
             pagerState = pagerState,
             modifier = Modifier.weight(1f),
             onDeleteUser = { user, isPrivate ->
-                accountViewModel.runIOCatching {
+                accountViewModel.launchSigner {
                     viewModel.removeUserFromSet(user, isPrivate)
                 }
             },
@@ -233,70 +236,20 @@ private fun RenderAddUserFieldAndSuggestions(
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
 ) {
-    UserSearchDataSourceSubscription(viewModel.userSuggestions, accountViewModel)
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect {
-                viewModel.userSuggestions.invalidateData()
-            }
-        }
-        launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect {
-                viewModel.userSuggestions.invalidateData()
-            }
-        }
-    }
-
-    Spacer(HalfVertSpacer)
-
-    var userName by remember(viewModel) { mutableStateOf(TextFieldValue(viewModel.userSuggestions.currentWord.value)) }
-    val focusManager = LocalFocusManager.current
-
-    OutlinedTextField(
-        label = { Text(text = stringRes(R.string.search_and_add_a_user)) },
-        modifier = Modifier.padding(horizontal = Size10dp).fillMaxWidth(),
-        value = userName,
-        onValueChange = {
-            userName = it
-            viewModel.userSuggestions.processCurrentWord(it.text)
-        },
-        singleLine = true,
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    userName = TextFieldValue("")
-                    viewModel.userSuggestions.processCurrentWord("")
-                    focusManager.clearFocus()
-                },
-            ) {
-                ClearTextIcon()
-            }
-        },
-    )
-
-    ShowUserSuggestions(
-        userSuggestions = viewModel.userSuggestions,
+    RenderAddUserFieldAndSuggestions(
+        viewModel.userSuggestions,
         hasUserFlow = { user ->
-            viewModel.hasUserFlow(user, pagerState.currentPage == 0)
+            viewModel.hasUserFlow(user, pagerState.currentPage == 1)
         },
-        onSelect = { user ->
-            accountViewModel.runIOCatching {
-                viewModel.addUserToSet(user, pagerState.currentPage == 0)
+        addUserToSet = { user ->
+            accountViewModel.launchSigner {
+                viewModel.addUserToSet(user, pagerState.currentPage == 1)
             }
-            userName =
-                userName.copy(
-                    selection = TextRange(0, userName.text.length),
-                )
         },
-        onDelete = { user ->
-            accountViewModel.runIOCatching {
-                viewModel.removeUserFromSet(user, pagerState.currentPage == 0)
+        removeUserFromSet = { user ->
+            accountViewModel.launchSigner {
+                viewModel.removeUserFromSet(user, pagerState.currentPage == 1)
             }
-            userName =
-                userName.copy(
-                    selection = TextRange(0, userName.text.length),
-                )
         },
         accountViewModel = accountViewModel,
     )
@@ -317,9 +270,9 @@ private fun PeopleListPager(
             when (page) {
                 0 ->
                     PeopleListView(
-                        memberList = selectedSet.privateMembersList,
+                        memberList = selectedSet.publicMembersList,
                         onDeleteUser = { user ->
-                            onDeleteUser(user, true)
+                            onDeleteUser(user, false)
                         },
                         modifier = Modifier.fillMaxSize(),
                         accountViewModel = accountViewModel,
@@ -328,9 +281,9 @@ private fun PeopleListPager(
 
                 1 ->
                     PeopleListView(
-                        memberList = selectedSet.publicMembersList,
+                        memberList = selectedSet.privateMembersList,
                         onDeleteUser = { user ->
-                            onDeleteUser(user, false)
+                            onDeleteUser(user, true)
                         },
                         modifier = Modifier.fillMaxSize(),
                         accountViewModel = accountViewModel,
@@ -343,7 +296,7 @@ private fun PeopleListPager(
 
 @Composable
 @Preview(device = "spec:width=2160px,height=2940px,dpi=440")
-fun FollowSetListViewPreview() {
+private fun PeopleListViewPreview() {
     val accountViewModel = mockAccountViewModel()
 
     val user1: User = LocalCache.getOrCreateUser("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
@@ -356,7 +309,7 @@ fun FollowSetListViewPreview() {
                 memberList = persistentListOf(user1, user2, user3),
                 onDeleteUser = { user -> },
                 accountViewModel = accountViewModel,
-                nav = EmptyNav,
+                nav = EmptyNav(),
             )
 
             Spacer(HalfVertSpacer)
@@ -411,144 +364,25 @@ fun FollowSetListViewPreview() {
 }
 
 @Composable
-fun ShowUserSuggestions(
-    userSuggestions: UserSuggestionState,
-    hasUserFlow: (User) -> Flow<Boolean>,
-    onSelect: (User) -> Unit,
-    onDelete: (User) -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    val listState = rememberLazyListState()
-
-    AnimateOnNewSearch(userSuggestions, listState)
-
-    val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
-
-    if (suggestions.isNotEmpty()) {
-        Card(
-            modifier = Modifier.padding(start = 11.dp, end = 11.dp),
-            elevation = cardElevation(5.dp),
-            shape = PopupUpEffect,
-        ) {
-            LazyColumn(
-                contentPadding = PaddingValues(top = 10.dp),
-                modifier =
-                    Modifier
-                        .heightIn(0.dp, 200.dp),
-                state = listState,
-            ) {
-                itemsIndexed(suggestions, key = { _, item -> item.pubkeyHex }) { _, baseUser ->
-                    DrawUser(baseUser, hasUserFlow, onSelect, onDelete, accountViewModel)
-
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
-                }
-            }
-        }
-    }
-
-    Spacer(StdVertSpacer)
-}
-
-@Composable
-private fun DrawUser(
-    baseUser: User,
-    hasUserFlow: (User) -> Flow<Boolean>,
-    onSelect: (User) -> Unit,
-    onDelete: (User) -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = { onSelect(baseUser) })
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    top = 10.dp,
-                    bottom = 10.dp,
-                ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ClickableUserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
-
-        Column(
-            modifier =
-                Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                UsernameDisplay(
-                    baseUser,
-                    accountViewModel = accountViewModel,
-                )
-                HasUserTag(baseUser, hasUserFlow, onDelete)
-            }
-
-            AboutDisplay(baseUser, accountViewModel)
-        }
-    }
-}
-
-@Composable
-fun RowScope.HasUserTag(
-    baseUser: User,
-    hasUserFlow: (User) -> Flow<Boolean>,
-    onDelete: (User) -> Unit,
-) {
-    val hasUserState by hasUserFlow(baseUser).collectAsStateWithLifecycle(false)
-    if (hasUserState) {
-        Spacer(StdHorzSpacer)
-        Text(
-            text = stringRes(id = R.string.in_the_list),
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                remember {
-                    Modifier
-                        .clip(SmallBorder)
-                        .background(Color.Black)
-                        .padding(horizontal = 5.dp)
-                },
-        )
-        Spacer(Modifier.weight(1f))
-        IconButton(
-            modifier = Modifier.size(30.dp).padding(start = 10.dp),
-            onClick = { onDelete(baseUser) },
-        ) {
-            Icon(
-                imageVector = Icons.Default.Cancel,
-                contentDescription = stringRes(id = R.string.remove),
-                modifier = Modifier.size(15.dp),
-                tint = LightRedColor,
-            )
-        }
-    }
-}
-
-@Composable
-fun ListActionsMenuButton(
+private fun ListActionsMenuButton(
     viewModel: PeopleListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     ListActionsMenuButton(
+        note = viewModel::selectedNote,
+        onEditList = {
+            nav.nav { Route.PeopleListMetadataEdit(viewModel.selectedDTag.value) }
+        },
         onBroadcastList = {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 viewModel.loadNote()?.let { updatedSetNote ->
                     accountViewModel.broadcast(updatedSetNote)
                 }
             }
         },
         onDeleteList = {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 viewModel.deleteFollowSet()
             }
             nav.popBack()
@@ -557,7 +391,9 @@ fun ListActionsMenuButton(
 }
 
 @Composable
-fun ListActionsMenuButton(
+private fun ListActionsMenuButton(
+    note: () -> AddressableNote,
+    onEditList: () -> Unit,
     onBroadcastList: () -> Unit,
     onDeleteList: () -> Unit,
 ) {
@@ -578,44 +414,65 @@ fun ListActionsMenuButton(
         onClick = { isActionListOpen.value = true },
     ) {
         VerticalDotsIcon()
-        ListActionsMenu(
-            onCloseMenu = { isActionListOpen.value = false },
-            isOpen = isActionListOpen.value,
-            onBroadcastList = onBroadcastList,
-            onDeleteList = onDeleteList,
-        )
-    }
-}
 
-@Composable
-fun ListActionsMenu(
-    onCloseMenu: () -> Unit,
-    isOpen: Boolean,
-    onBroadcastList: () -> Unit,
-    onDeleteList: () -> Unit,
-) {
-    DropdownMenu(
-        expanded = isOpen,
-        onDismissRequest = onCloseMenu,
-    ) {
-        DropdownMenuItem(
-            text = {
-                Text("Broadcast List")
-            },
-            onClick = {
-                onBroadcastList()
-                onCloseMenu()
-            },
-        )
-        HorizontalDivider(thickness = DividerThickness)
-        DropdownMenuItem(
-            text = {
-                Text("Delete List")
-            },
-            onClick = {
-                onDeleteList()
-                onCloseMenu()
-            },
-        )
+        DropdownMenu(
+            expanded = isActionListOpen.value,
+            onDismissRequest = { isActionListOpen.value = false },
+        ) {
+            val context = LocalContext.current
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.quick_action_share)) },
+                onClick = {
+                    val sendIntent =
+                        Intent().apply {
+                            action = Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                externalLinkForNote(note()),
+                            )
+                            putExtra(
+                                Intent.EXTRA_TITLE,
+                                stringRes(context, R.string.quick_action_share_browser_link),
+                            )
+                        }
+
+                    val shareIntent =
+                        Intent.createChooser(sendIntent, stringRes(context, R.string.quick_action_share))
+                    ContextCompat.startActivity(context, shareIntent, null)
+                    isActionListOpen.value = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Text(stringRes(R.string.follow_set_edit_list_metadata))
+                },
+                onClick = {
+                    onEditList()
+                    isActionListOpen.value = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Text(stringRes(R.string.follow_set_broadcast))
+                },
+                onClick = {
+                    onBroadcastList()
+                    isActionListOpen.value = false
+                },
+            )
+            HorizontalDivider(thickness = DividerThickness)
+            DropdownMenuItem(
+                text = {
+                    Text(stringRes(R.string.follow_set_delete))
+                },
+                onClick = {
+                    onDeleteList()
+                    isActionListOpen.value = false
+                },
+            )
+        }
     }
 }

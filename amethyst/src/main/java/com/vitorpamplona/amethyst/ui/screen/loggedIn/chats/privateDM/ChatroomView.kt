@@ -72,19 +72,17 @@ fun ChatroomView(
 
     if (replyToNote != null) {
         LaunchedEffect(key1 = replyToNote, newPostModel, accountViewModel) {
-            accountViewModel.checkGetOrCreateNote(replyToNote) {
-                if (it != null) {
-                    newPostModel.reply(it)
-                }
+            val replyNote = accountViewModel.checkGetOrCreateNote(replyToNote)
+            if (replyNote != null) {
+                newPostModel.reply(replyNote)
             }
         }
     }
     if (editFromDraft != null) {
         LaunchedEffect(editFromDraft, newPostModel, accountViewModel) {
-            accountViewModel.checkGetOrCreateNote(editFromDraft) {
-                if (it != null) {
-                    newPostModel.editFromDraft(it)
-                }
+            val draftNote = accountViewModel.checkGetOrCreateNote(editFromDraft)
+            if (draftNote != null) {
+                newPostModel.editFromDraft(draftNote)
             }
         }
     }

@@ -38,8 +38,10 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -63,6 +65,48 @@ fun Gallery(
                 accountViewModel,
                 onClick = {
                     nav.nav(routeFor(it))
+                },
+            )
+        }
+
+        if (users.size > maxPictures) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(Size25dp).clip(shape = CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+            ) {
+                Text(
+                    text = "+" + showCount(users.size - maxPictures),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun GalleryUnloaded(
+    users: ImmutableList<HexKey>,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    maxPictures: Int = 6,
+) {
+    FlowRow(
+        modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy((-5).dp),
+    ) {
+        users.take(maxPictures).forEach {
+            ClickableUserPicture(
+                it,
+                Size25dp,
+                accountViewModel,
+                onClick = {
+                    nav.nav {
+                        routeForUser(it)
+                    }
                 },
             )
         }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -48,9 +50,12 @@ import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
@@ -61,6 +66,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
+import java.util.UUID
 
 @Composable
 fun RenderHighlight(
@@ -78,7 +84,7 @@ fun RenderHighlight(
         comment = noteEvent.comment(),
         highlight = noteEvent.quote(),
         context = noteEvent.context(),
-        authorHex = noteEvent.pubKey,
+        authorHex = noteEvent.author(),
         url = noteEvent.inUrl(),
         postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
@@ -89,6 +95,54 @@ fun RenderHighlight(
         accountViewModel = accountViewModel,
         nav = nav,
     )
+}
+
+@Preview
+@Composable
+fun DisplayHighlightPreview() {
+    ThemeComparisonColumn {
+        Column {
+            DisplayHighlight(
+                comment = null,
+                highlight = "new architectures of freedom",
+                context = "He never wrote a line of cryptographic code and never lectured on Austrian economics. Yet the cultural terrain he helped seed, particularly the psychedelic, post-industrial counterculture of the 1960s and ’70s, became the moral and metaphysical groundwork from which new architectures of freedom would later emerge.",
+                authorHex = "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac",
+                url = null,
+                postAddress = Address(30023, "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac", "bitcoin-here-now"),
+                postVersion = null,
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 3,
+                backgroundColor = mutableStateOf(Color.White),
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun DisplayHighlightPreviewNewLine() {
+    ThemeComparisonColumn {
+        Column {
+            DisplayHighlight(
+                comment = null,
+                highlight = "He never wrote a line of cryptographic code and never lectured on Austrian economics.\nYet the cultural terrain he helped seed, particularly the psychedelic",
+                context = "He never wrote a line of cryptographic code and never lectured on Austrian economics.\nYet the cultural terrain he helped seed, particularly the psychedelic, post-industrial counterculture of the 1960s and ’70s, became the moral and metaphysical groundwork from which new architectures of freedom would later emerge.",
+                authorHex = "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac",
+                url = null,
+                postAddress = Address(30023, "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac", "bitcoin-here-now"),
+                postVersion = null,
+                makeItShort = false,
+                canPreview = true,
+                quotesLeft = 3,
+                backgroundColor = mutableStateOf(Color.White),
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -124,8 +178,24 @@ fun DisplayHighlight(
     }
 
     val quote =
-        remember {
-            highlight.split("\n").joinToString("\n") { "> *${it.removeSuffix(" ")}*" }
+        remember(highlight) {
+            val uuid = UUID.randomUUID().toString()
+            if (context != null) {
+                if (context.contains(highlight)) {
+                    val cleanContext = context.replace(highlight, uuid)
+
+                    val quotedContext = cleanContext.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
+
+                    val quotedSplit = highlight.split("\n")
+                    val quotedHighlight = quotedSplit.joinToString("\n >") { "**${it.removeSuffix(" ")}**" }
+
+                    quotedContext.replace(uuid, quotedHighlight)
+                } else {
+                    highlight.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
+                }
+            } else {
+                highlight.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
+            }
         }
 
     TranslatableRichTextViewer(
@@ -173,9 +243,7 @@ private fun DisplayQuoteAuthor(
 
     if (userBase == null && authorHex != null) {
         LaunchedEffect(authorHex) {
-            accountViewModel.checkGetOrCreateUser(authorHex) { newUserBase ->
-                userBase = newUserBase
-            }
+            userBase = accountViewModel.checkGetOrCreateUser(authorHex)
         }
     }
 

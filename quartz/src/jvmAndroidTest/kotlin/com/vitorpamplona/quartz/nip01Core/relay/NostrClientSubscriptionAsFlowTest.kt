@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.reqResultsInOrderAsFlow
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.reqAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +50,7 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
             val client = NostrClient(socketBuilder, appScope)
 
             val flow =
-                client.reqResultsInOrderAsFlow(
+                client.reqAsFlow(
                     relay = "wss://relay.damus.io",
                     filter =
                         Filter(
@@ -88,7 +88,7 @@ class NostrClientSubscriptionAsFlowTest : BaseNostrClientTest() {
             val client = NostrClient(socketBuilder, appScope)
 
             val flow =
-                client.reqResultsInOrderAsFlow(
+                client.reqAsFlow(
                     relay = "wss://relay.damus.io",
                     filter =
                         Filter(

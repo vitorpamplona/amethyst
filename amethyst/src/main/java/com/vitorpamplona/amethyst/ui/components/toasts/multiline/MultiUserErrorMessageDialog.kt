@@ -49,7 +49,7 @@ import kotlinx.coroutines.withContext
 @Preview
 fun MultiUserErrorMessageContentPreview() {
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     var user1: User? = null
     var user2: User? = null

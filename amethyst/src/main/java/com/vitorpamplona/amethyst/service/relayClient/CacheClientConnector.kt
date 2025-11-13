@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 class CacheClientConnector(
     val client: INostrClient,
@@ -50,5 +53,39 @@ class CacheClientConnector(
     private fun markAsSeen(
         eventId: HexKey,
         info: NormalizedRelayUrl,
-    ) = LocalCache.getNoteIfExists(eventId)?.addRelay(info)
+    ) {
+        val note = LocalCache.getNoteIfExists(eventId)
+        if (note != null) {
+            note.addRelay(info)
+            markAsSeenInner(note, info)
+        }
+    }
+
+    private fun markAsSeenInner(
+        note: Note,
+        info: NormalizedRelayUrl,
+    ) {
+        val noteEvent = note.event
+        if (noteEvent is GiftWrapEvent) {
+            val innerEvent = noteEvent.innerEventId
+            if (innerEvent != null) {
+                val innerNote = cache.getNoteIfExists(innerEvent)
+                if (innerNote != null) {
+                    innerNote.addRelay(info)
+                    markAsSeenInner(innerNote, info)
+                }
+            }
+        }
+
+        if (noteEvent is SealedRumorEvent) {
+            val innerEvent = noteEvent.innerEventId
+            if (innerEvent != null) {
+                val innerNote = cache.getNoteIfExists(innerEvent)
+                if (innerNote != null) {
+                    innerNote.addRelay(info)
+                    markAsSeenInner(innerNote, info)
+                }
+            }
+        }
+    }
 }

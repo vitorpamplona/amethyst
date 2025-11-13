@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUser
+import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUserId
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
@@ -116,7 +116,7 @@ class HighlightEvent(
 
     fun inUrl() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 
-    fun author() = firstTaggedUser()
+    fun author() = firstTaggedUserId()
 
     fun quote() = content
 

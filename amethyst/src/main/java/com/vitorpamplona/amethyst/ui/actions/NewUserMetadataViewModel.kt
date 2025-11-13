@@ -102,7 +102,7 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun create() {
         // Tries to not delete any existing attribute that we do not work with.
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             val metadata =
                 account.userMetadata.sendNewUserMetadata(
                     name = displayName.value,
@@ -145,7 +145,7 @@ class NewUserMetadataViewModel : ViewModel() {
         context: Context,
         onError: (String, String) -> Unit,
     ) {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             upload(
                 uri,
                 context,
@@ -161,7 +161,7 @@ class NewUserMetadataViewModel : ViewModel() {
         context: Context,
         onError: (String, String) -> Unit,
     ) {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             upload(
                 uri,
                 context,

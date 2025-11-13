@@ -89,7 +89,7 @@ import java.util.Locale
 fun RenderLiveActivityEventPreview() {
     val event = Event.fromJson("{\"id\":\"19406ad34ce3c653d62eb73c1816ac27dcf473c2ccdccf5af7d90d2633c62561\",\"pubkey\":\"6b66886b3add72c779d205be574ec2d7cec619061ac3e75717389b26445989e4\",\"created_at\":1719084750,\"kind\":30311,\"tags\":[[\"r\",\"podcast:guid:72d5e069-f907-5ee7-b0d7-45404f4f0aa5\"],[\"r\",\"podcast:item:guid:bfc33d6e-e00f-4f11-a2ff-94865b7867aa\"],[\"d\",\"bfc33d6e-e00f-4f11-a2ff-94865b7867aa\"],[\"title\",\"The Online Identity Time Bomb\"],[\"summary\",\"Online identity is a ticking time bomb. But are trustworthy, open-source solutions ready to disarm it, or will we be stuck with lackluster, proprietary systems?\\n Live chat: https:/jblive.tv\"],[\"streaming\",\"https://jblive.fm\"],[\"starts\",\"1719167400\"],[\"status\",\"planned\"],[\"image\",\"https://station.us-iad-1.linodeobjects.com/art/lup-mp3.jpg\"]],\"content\":\"\",\"sig\":\"2ce3fae9ad4512541aaae4dbd9484f50df62ab95ba935d7512b736f087f151c1d15ec2bf62d3135474f16c3e070f335b24349c5493461873ddca3051804ca944\"}") as LiveActivitiesEvent
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
     val baseNote: Note?
 
     runBlocking {

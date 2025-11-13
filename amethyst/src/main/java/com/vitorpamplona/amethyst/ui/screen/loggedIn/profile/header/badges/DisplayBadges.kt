@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -77,7 +77,7 @@ private fun WatchAndRenderBadgeList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val badgeList by observeNoteEventAndMap(note, accountViewModel) { event: BadgeProfilesEvent ->
+    val badgeList by observeNoteEventAndMapNotNull(note, accountViewModel) { event: BadgeProfilesEvent ->
         event.badgeAwardEvents().toImmutableList()
     }
 

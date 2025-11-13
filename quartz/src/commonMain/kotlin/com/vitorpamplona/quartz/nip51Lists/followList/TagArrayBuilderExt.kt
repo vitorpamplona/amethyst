@@ -20,10 +20,32 @@
  */
 package com.vitorpamplona.quartz.nip51Lists.followList
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
-import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
-fun TagArrayBuilder<FollowListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
+fun TagArrayBuilder<FollowListEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+
+fun TagArrayBuilder<FollowListEvent>.description(desc: String) = addUnique(DescriptionTag.assemble(desc))
+
+fun TagArrayBuilder<FollowListEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
 
 fun TagArrayBuilder<FollowListEvent>.people(peoples: List<UserTag>) = addAll(peoples.map { it.toTagArray() })
+
+fun TagArrayBuilder<FollowListEvent>.person(person: UserTag) = add(person.toTagArray())
+
+fun TagArrayBuilder<FollowListEvent>.person(
+    pubkey: HexKey,
+    relayHint: NormalizedRelayUrl?,
+) = add(UserTag.assemble(pubkey, relayHint))
+
+fun TagArrayBuilder<FollowListEvent>.personFirst(
+    pubkey: HexKey,
+    relayHint: NormalizedRelayUrl?,
+) = addFirst(UserTag.assemble(pubkey, relayHint))
+
+fun TagArrayBuilder<FollowListEvent>.removePerson(pubkey: HexKey) = remove(UserTag.TAG_NAME, pubkey)

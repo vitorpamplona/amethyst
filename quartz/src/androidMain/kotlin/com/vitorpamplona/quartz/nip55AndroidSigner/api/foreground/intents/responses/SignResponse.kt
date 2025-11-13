@@ -39,7 +39,7 @@ class SignResponse {
             intent: IntentResult,
             unsignedEvent: Event,
         ): SignerResult.RequestAddressed<SignResult> {
-            if (intent.rejected) {
+            if (intent.rejected == true) {
                 return SignerResult.RequestAddressed.ManuallyRejected()
             }
 

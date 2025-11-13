@@ -104,15 +104,15 @@ open class NewProductViewModel :
     IZapRaiser {
     val draftTag = DraftTagState()
 
-    var accountViewModel: AccountViewModel? = null
-    var account: Account? = null
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    accountViewModel?.runIOCatching {
+                    accountViewModel.launchSigner {
                         sendDraftSync()
                     }
                 }
@@ -189,8 +189,6 @@ open class NewProductViewModel :
     }
 
     fun editFromDraft(draft: Note) {
-        val accountViewModel = accountViewModel ?: return
-
         val noteEvent = draft.event
         val noteAuthor = draft.author
 

@@ -74,7 +74,7 @@ class BlossomServerListState(
         return if (serverList != null && serverList.tags.isNotEmpty()) {
             BlossomServersEvent.updateRelayList(
                 earlierVersion = serverList,
-                relays = servers,
+                servers = servers,
                 signer = signer,
             )
         } else {

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.utils.asTextOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -127,7 +128,7 @@ class MeltProcessor {
                         val msg =
                             tree
                                 ?.get("detail")
-                                ?.asText()
+                                ?.asTextOrNull()
                                 ?.split('.')
                                 ?.getOrNull(0)
                                 ?.ifBlank { null }
@@ -203,7 +204,7 @@ class MeltProcessor {
                         val msg =
                             tree
                                 ?.get("detail")
-                                ?.asText()
+                                ?.asTextOrNull()
                                 ?.split('.')
                                 ?.getOrNull(0)
                                 ?.ifBlank { null }

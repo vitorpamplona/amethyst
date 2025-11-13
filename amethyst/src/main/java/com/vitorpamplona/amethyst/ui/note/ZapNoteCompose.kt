@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
 import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -104,7 +103,7 @@ fun RenderZapNotePreview() {
             user1,
             note1,
             accountViewModel,
-            EmptyNav,
+            EmptyNav(),
         )
     }
 }
@@ -122,7 +121,7 @@ fun RenderZapNoteSlimPreview() {
             user1,
             note1,
             accountViewModel,
-            EmptyNav,
+            EmptyNav(),
         )
     }
 }

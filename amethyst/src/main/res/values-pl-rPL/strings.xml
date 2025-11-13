@@ -125,6 +125,8 @@
     <string name="public_chat_feed">Kanał Czatu Publicznego</string>
     <string name="global_feed">Kanał Ogólny</string>
     <string name="search_feed">Przeszukaj kanał</string>
+    <string name="search_and_add_a_user">Szukaj i dodaj użytkownika</string>
+    <string name="add_a_user">Dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
     <string name="profile_name">Imię</string>
     <string name="display_name">Nazwa użytkownika</string>
@@ -467,7 +469,10 @@
     <string name="follow_set_single_member_label">uczestnik</string>
     <string name="follow_set_multiple_member_label">uczestnicy</string>
     <string name="follow_set_empty_label">Brak uczestników</string>
+    <string name="follow_set_empty_label2">Pusty</string>
     <string name="follow_set_absence_indicator">%1$s nie jest na liście</string>
+    <string name="follow_set_absence_indicator2">%1$s nie jest uczestnikiem</string>
+    <string name="follow_set_man_dialog_title2">Twoje listy oraz %1$s</string>
     <string name="follow_set_man_dialog_title">Twój zbiór obserwowanych</string>
     <string name="follow_set_empty_dialog_msg">Nie znaleziono zbiorów obserwowanych lub nie masz żadnych zbiorów obserwowanych. Dotknij poniżej, aby odświeżyć lub użyj menu, aby go utworzyć.</string>
     <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>
@@ -1084,6 +1089,8 @@
     <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
     <string name="torrent_no_info">Zdarzenie nie ma wystarczającej ilości informacji, aby zbudować link magnetyczny</string>
     <string name="my_lists_and_sets">Moje Listy/Zbiory</string>
+    <string name="my_lists">Moje listy</string>
+    <string name="people_list_label">Użytkownicy</string>
     <string name="select_list_to_filter">Wybierz listę, aby filtrować aktualności</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
@@ -1106,4 +1113,9 @@
     <string name="crashreport_found_send">Prześlij</string>
     <string name="this_message_will_disappear_in_days">Ta wiadomość zniknie za %1$d dni</string>
     <string name="select_signer">Wybierz Sygnatariusza</string>
+    <string name="in_the_list">Już jest na liście</string>
+    <string name="private_members">Prywatni uczestnicy</string>
+    <string name="public_members">Uczestnicy publiczni</string>
+    <string name="add_user_to_the_list">Dodaj użytkownika do listy</string>
+    <string name="remove_user_from_the_list">Usuń użytkownika z listy</string>
 </resources>

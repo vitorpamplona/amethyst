@@ -24,6 +24,8 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.vitorpamplona.quartz.utils.asBooleanOrNull
+import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class IntentResultJsonDeserializer : StdDeserializer<IntentResult>(IntentResult::class.java) {
     override fun deserialize(
@@ -31,12 +33,13 @@ class IntentResultJsonDeserializer : StdDeserializer<IntentResult>(IntentResult:
         ctxt: DeserializationContext,
     ): IntentResult {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
+
         return IntentResult(
-            `package` = jsonObject.get("package")?.asText()?.intern(),
-            result = jsonObject.get("result")?.asText(),
-            event = jsonObject.get("event")?.asText(),
-            id = jsonObject.get("id")?.asText()?.intern(),
-            rejected = jsonObject.get("rejected")?.asBoolean() ?: false,
+            `package` = jsonObject.get("package")?.asTextOrNull()?.intern(),
+            result = jsonObject.get("result")?.asTextOrNull(),
+            event = jsonObject.get("event")?.asTextOrNull(),
+            id = jsonObject.get("id")?.asTextOrNull()?.intern(),
+            rejected = jsonObject.get("rejected")?.asBooleanOrNull(),
         )
     }
 }

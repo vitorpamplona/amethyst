@@ -98,7 +98,7 @@ fun NewChatroomSubjectDialog(
 
                     PostButton(
                         onPost = {
-                            accountViewModel.runIOCatching {
+                            accountViewModel.launchSigner {
                                 val template =
                                     ChatMessageEvent.build(
                                         message.value,

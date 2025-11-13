@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata
 
 import android.content.Context
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -54,8 +56,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
+@Stable
 class ChannelMetadataViewModel : ViewModel() {
-    private var account: Account? = null
+    private lateinit var accountViewModel: AccountViewModel
+    private lateinit var account: Account
+
     private var originalChannel: PublicChatChannel? = null
 
     val channelName = mutableStateOf(TextFieldValue())
@@ -71,24 +76,28 @@ class ChannelMetadataViewModel : ViewModel() {
         channelName.value.text.isNotBlank()
     }
 
-    fun load(
-        account: Account,
-        channel: PublicChatChannel?,
-    ) {
-        this.account = account
-        if (channel != null) {
-            originalChannel = channel
-            channelName.value = TextFieldValue(channel.info.name ?: "")
-            channelPicture.value = TextFieldValue(channel.info.picture ?: "")
-            channelDescription.value = TextFieldValue(channel.info.about ?: "")
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
 
-            val relays =
-                channel.info.relays
-                    ?.map { relaySetupInfoBuilder(it) }
-                    ?.distinctBy { it.relay }
+    fun new() {
+        originalChannel = null
+        clear()
+    }
 
-            _channelRelays.update { relays ?: emptyList() }
-        }
+    fun load(channel: PublicChatChannel) {
+        originalChannel = channel
+        channelName.value = TextFieldValue(channel.info.name ?: "")
+        channelPicture.value = TextFieldValue(channel.info.picture ?: "")
+        channelDescription.value = TextFieldValue(channel.info.about ?: "")
+
+        val relays =
+            channel.info.relays
+                ?.map { relaySetupInfoBuilder(it) }
+                ?.distinctBy { it.relay }
+
+        _channelRelays.update { relays ?: emptyList() }
     }
 
     fun isNewChannel() = originalChannel == null && _channelRelays.value.isNotEmpty()

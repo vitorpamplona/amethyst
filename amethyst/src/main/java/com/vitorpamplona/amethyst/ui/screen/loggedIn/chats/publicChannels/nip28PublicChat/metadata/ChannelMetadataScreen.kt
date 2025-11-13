@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -91,7 +92,17 @@ fun ChannelMetadataScreen(
     nav: INav,
 ) {
     val postViewModel: ChannelMetadataViewModel = viewModel()
-    postViewModel.load(accountViewModel.account, channel)
+    postViewModel.init(accountViewModel)
+
+    if (channel != null) {
+        LaunchedEffect(postViewModel) {
+            postViewModel.load(channel)
+        }
+    } else {
+        LaunchedEffect(postViewModel) {
+            postViewModel.new()
+        }
+    }
 
     ChannelMetadataScaffold(
         postViewModel = postViewModel,
@@ -105,13 +116,13 @@ fun ChannelMetadataScreen(
 private fun DialogContentPreview() {
     val accountViewModel = mockAccountViewModel()
     val postViewModel: ChannelMetadataViewModel = viewModel()
-    postViewModel.load(accountViewModel.account, null)
+    postViewModel.init(accountViewModel)
 
     ThemeComparisonColumn {
         ChannelMetadataScaffold(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

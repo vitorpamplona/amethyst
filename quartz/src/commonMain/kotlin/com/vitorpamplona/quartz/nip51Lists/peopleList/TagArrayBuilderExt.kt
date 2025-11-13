@@ -22,8 +22,14 @@ package com.vitorpamplona.quartz.nip51Lists.peopleList
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 
 fun TagArrayBuilder<PeopleListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
+
+fun TagArrayBuilder<PeopleListEvent>.description(desc: String) = addUnique(DescriptionTag.assemble(desc))
+
+fun TagArrayBuilder<PeopleListEvent>.image(url: String) = addUnique(ImageTag.assemble(url))
 
 fun TagArrayBuilder<PeopleListEvent>.peoples(peoples: List<UserTag>) = addAll(peoples.map { it.toTagArray() })

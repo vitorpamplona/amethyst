@@ -273,6 +273,18 @@ val lightNewItemBubbleModifier =
         .clip(shape = CircleShape)
         .background(LightColorPalette.primary)
 
+val darkBlackTagModifier =
+    Modifier
+        .clip(SmallestBorder)
+        .background(DarkColorPalette.onBackground)
+        .padding(horizontal = 5.dp)
+
+val lightBlackTagModifier =
+    Modifier
+        .clip(SmallestBorder)
+        .background(LightColorPalette.onBackground)
+        .padding(horizontal = 5.dp)
+
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
 val MarkDownStyleOnDark =
@@ -473,6 +485,10 @@ val ColorScheme.largeProfilePictureModifier: Modifier
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.newItemBubbleModifier: Modifier
     get() = if (isLight) lightNewItemBubbleModifier else darkNewItemBubbleModifier
+
+@Suppress("ModifierFactoryExtensionFunction")
+val ColorScheme.blackTagModifier: Modifier
+    get() = if (isLight) lightBlackTagModifier else darkBlackTagModifier
 
 val chartLightColors =
     VicoTheme(

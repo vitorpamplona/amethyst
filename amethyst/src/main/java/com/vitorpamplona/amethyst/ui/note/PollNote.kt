@@ -151,7 +151,7 @@ fun PollNotePreview() {
         )
 
     val accountViewModel = mockVitorAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
     val baseNote: Note?
 
     runBlocking {
@@ -205,7 +205,7 @@ fun PollNotePreview2() {
         )
 
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
+    val nav = EmptyNav()
     val baseNote: Note?
 
     runBlocking {

@@ -125,6 +125,8 @@
     <string name="public_chat_feed">सार्वजनिक चर्चा सूचनावली</string>
     <string name="global_feed">वैश्विक सूचनावली</string>
     <string name="search_feed">खोज सूचनावली</string>
+    <string name="search_and_add_a_user">ढूँढें तथा प्रयेक्ता जोडें</string>
+    <string name="add_a_user">प्रयोक्ता जोडें</string>
     <string name="add_a_relay">पुनःप्रसारक जोडें</string>
     <string name="profile_name">नाम</string>
     <string name="display_name">प्रदर्शन नाम</string>
@@ -310,7 +312,7 @@
     <string name="account_switch_pubkey_only">केवल पढ सकते हैं, निजी कुंचिका नहीं</string>
     <string name="back">पीछे चलें</string>
     <string name="quick_action_select">चयन करें</string>
-    <string name="quick_action_share_browser_link">जालसंचारक जोड बाँटें</string>
+    <string name="quick_action_share_browser_link">जालसंचारक योजक बाँटें</string>
     <string name="quick_action_share">बाँटें</string>
     <string name="quick_action_copy_user_id">लेखक विभेदक</string>
     <string name="quick_action_copy_note_id">टीका विभेदक</string>
@@ -442,6 +444,7 @@
     <string name="follow_list_selection">अनुचरण सूची</string>
     <string name="follow_list_kind3follows">सभी अनुचरित</string>
     <string name="follow_list_kind3follows_users_only">प्रयोक्ता के सभी अनुगामी</string>
+    <string name="follow_list_kind3_follows_users_only">मूल अनुचरण सूची</string>
     <string name="follow_list_kind3follows_proxy">प्रतिनिधि द्वारा अनुचरित</string>
     <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
@@ -470,7 +473,10 @@
     <string name="follow_set_single_member_label">सदस्य</string>
     <string name="follow_set_multiple_member_label">सदस्य सूची</string>
     <string name="follow_set_empty_label">कोई सदस्य नहीं</string>
+    <string name="follow_set_empty_label2">रिक्त</string>
     <string name="follow_set_absence_indicator">%1$s इस सूची में नहीं है</string>
+    <string name="follow_set_absence_indicator2">%1$s एक सदस्य नहीं</string>
+    <string name="follow_set_man_dialog_title2">आपके सूचियाँ तथा %1$s</string>
     <string name="follow_set_man_dialog_title">आपके अनुगम्य सूचियाँ</string>
     <string name="follow_set_empty_dialog_msg">कोई अनुगम्य सूचियाँ प्राप्त नहीं। अथवा आपका कोई अनुगम्य सूचियाँ हैं नहीं। नवीकरण के लिए नीचे दबाएँ अथवा विकल्पसूची द्वारा एक नया बनाएँ।</string>
     <string name="follow_set_error_dialog_msg">लाने में अपक्रम : %1$s</string>
@@ -1087,6 +1093,8 @@
     <string name="torrent_no_apps">कोई उग्रप्रवाह क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
     <string name="torrent_no_info">अभिलेखविभेदक युक्त जालनिर्देशक बनाने के लिए पर्याप्त जानकारी नहीं है घटना में</string>
     <string name="my_lists_and_sets">मेरे सूचियाँ / समुच्चय</string>
+    <string name="my_lists">मेरे सूचियाँ</string>
+    <string name="people_list_label">प्रयोक्ता सूची</string>
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
     <string name="temporary_account">यन्त्र ताला लगने पर निर्गमनांकन करें</string>
     <string name="private_message">निजी सन्देश</string>
@@ -1109,4 +1117,13 @@
     <string name="crashreport_found_send">भेजें</string>
     <string name="this_message_will_disappear_in_days">यह सन्देश %1$d दिनों में अदृश्य हो जाएगा</string>
     <string name="select_signer">हस्ताक्षरकर्ता चुनें</string>
+    <string name="in_the_list">पहले से ही सूची में</string>
+    <string name="private_members">निजी सदस्य</string>
+    <string name="public_members">सार्वजनिक सदस्य</string>
+    <string name="private_members_count">निजी सदस्य (%1$s)</string>
+    <string name="public_members_count">सार्वजनिक सदस्य (%1$s)</string>
+    <string name="add_user_to_the_list">प्रयोक्ता को सूची में जोडें</string>
+    <string name="remove_user_from_the_list">सूची से प्रयोक्ता हटाएँ</string>
+    <string name="follow_list_item_label">अनुचरण पोटली</string>
+    <string name="members">सदस्य सूची</string>
 </resources>

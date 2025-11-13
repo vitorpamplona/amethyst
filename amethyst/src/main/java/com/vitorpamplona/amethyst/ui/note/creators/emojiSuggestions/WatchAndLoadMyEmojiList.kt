@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
@@ -37,7 +37,7 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMap(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
+            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
                 event.taggedAddresses().toImmutableList()
             }
 

@@ -32,7 +32,7 @@ class Nip44EncryptResponse {
             )
 
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<EncryptionResult> {
-            if (intent.rejected) {
+            if (intent.rejected == true) {
                 return SignerResult.RequestAddressed.ManuallyRejected()
             }
             val ciphertext = intent.result

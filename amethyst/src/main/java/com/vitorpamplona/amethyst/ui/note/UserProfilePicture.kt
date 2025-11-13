@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 @Composable
@@ -173,6 +174,40 @@ fun ClickableUserPicture(
         }
 
     BaseUserPicture(baseUser, size, accountViewModel, modifier, myModifier)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ClickableUserPicture(
+    baseUserHex: HexKey,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+    onClick: ((HexKey) -> Unit)? = null,
+    onLongClick: ((HexKey) -> Unit)? = null,
+) {
+    // BaseUser is the same reference as accountState.user
+    val myModifier =
+        remember(baseUserHex) {
+            if (onClick != null && onLongClick != null) {
+                Modifier
+                    .size(size)
+                    .combinedClickable(
+                        onClick = { onClick(baseUserHex) },
+                        onLongClick = { onLongClick(baseUserHex) },
+                    )
+            } else if (onClick != null) {
+                Modifier
+                    .size(size)
+                    .clickable(
+                        onClick = { onClick(baseUserHex) },
+                    )
+            } else {
+                Modifier.size(size)
+            }
+        }
+
+    BaseUserPicture(baseUserHex, size, accountViewModel, modifier, myModifier)
 }
 
 @Composable
@@ -323,6 +358,34 @@ fun BaseUserPicture(
 }
 
 @Composable
+fun BaseUserPicture(
+    baseUserHex: HexKey,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    innerModifier: Modifier = Modifier,
+    outerModifier: Modifier = Modifier.size(size),
+) {
+    Box(outerModifier, contentAlignment = Alignment.TopEnd) {
+        LoadUserProfilePicture(baseUserHex, accountViewModel) { userProfilePicture, userName ->
+            InnerUserPicture(
+                userHex = baseUserHex,
+                userPicture = userProfilePicture,
+                userName = userName,
+                size = size,
+                modifier = innerModifier,
+                accountViewModel = accountViewModel,
+            )
+        }
+
+        WatchUserFollows(baseUserHex, accountViewModel) { newFollowingState ->
+            if (newFollowingState) {
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+            }
+        }
+    }
+}
+
+@Composable
 fun LoadUserProfilePicture(
     baseUser: User,
     accountViewModel: AccountViewModel,
@@ -331,6 +394,23 @@ fun LoadUserProfilePicture(
     val userProfile by observeUserInfo(baseUser, accountViewModel)
 
     innerContent(userProfile?.profilePicture(), userProfile?.bestName())
+}
+
+@Composable
+fun LoadUserProfilePicture(
+    baseUserHex: HexKey,
+    accountViewModel: AccountViewModel,
+    innerContent: @Composable (String?, String?) -> Unit,
+) {
+    LoadUser(baseUserHex, accountViewModel) {
+        if (it != null) {
+            val userProfile by observeUserInfo(it, accountViewModel)
+
+            innerContent(userProfile?.profilePicture(), userProfile?.bestName())
+        } else {
+            innerContent(null, null)
+        }
+    }
 }
 
 @Composable

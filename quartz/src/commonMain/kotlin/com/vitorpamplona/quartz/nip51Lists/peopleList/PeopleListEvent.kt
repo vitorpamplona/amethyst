@@ -40,8 +40,8 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.remove
-import com.vitorpamplona.quartz.nip51Lists.replaceAll
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
@@ -70,6 +70,8 @@ class PeopleListEvent(
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
     fun users() = tags.users()
 
     fun countMutes() = tags.count(MuteTag::isTagged)
@@ -87,7 +89,17 @@ class PeopleListEvent(
 
         fun createBlockAddress(pubKey: HexKey) = Address(KIND, pubKey, BLOCK_LIST_D_TAG)
 
-        fun blockListFor(pubKeyHex: HexKey): String = "30000:$pubKeyHex:$BLOCK_LIST_D_TAG"
+        fun blockListFor(pubKeyHex: HexKey): String = Address.assemble(KIND, pubKeyHex, BLOCK_LIST_D_TAG)
+
+        fun createAddress(
+            pubKey: HexKey,
+            dTag: String,
+        ) = Address(KIND, pubKey, dTag)
+
+        fun listFor(
+            pubKey: HexKey,
+            dTag: String,
+        ): String = Address.assemble(KIND, pubKey, dTag)
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(
@@ -378,69 +390,5 @@ class PeopleListEvent(
                 signer = signer,
                 createdAt = createdAt,
             )
-
-        suspend fun modifyListName(
-            earlierVersion: PeopleListEvent,
-            newName: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-        ): PeopleListEvent {
-            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            val currentTitle = earlierVersion.tags.first { it[0] == NameTag.TAG_NAME || it[0] == TitleTag.TAG_NAME }
-            val newTitleTag =
-                if (currentTitle[0] == NameTag.TAG_NAME) {
-                    NameTag.assemble(newName)
-                } else {
-                    TitleTag.assemble(newName)
-                }
-
-            return resign(
-                publicTags = earlierVersion.tags.replaceAll(currentTitle, newTitleTag),
-                privateTags = privateTags.replaceAll(currentTitle, newTitleTag),
-                signer = signer,
-                createdAt = createdAt,
-            )
-        }
-
-        suspend fun modifyDescription(
-            earlierVersion: PeopleListEvent,
-            newDescription: String?,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-        ): PeopleListEvent? {
-            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            val currentDescriptionTag = earlierVersion.tags.firstOrNull { it[0] == DescriptionTag.TAG_NAME }
-            val currentDescription = currentDescriptionTag?.get(1)
-            if (currentDescription.equals(newDescription)) {
-                // Do nothing
-                return null
-            } else {
-                if (newDescription == null || newDescription.isEmpty()) {
-                    return resign(
-                        publicTags = earlierVersion.tags.remove { it[0] == DescriptionTag.TAG_NAME },
-                        privateTags = privateTags.remove { it[0] == DescriptionTag.TAG_NAME },
-                        signer = signer,
-                        createdAt = createdAt,
-                    )
-                } else {
-                    val newDescriptionTag = DescriptionTag.assemble(newDescription)
-                    return if (currentDescriptionTag == null) {
-                        resign(
-                            publicTags = earlierVersion.tags.plusElement(newDescriptionTag),
-                            privateTags = privateTags,
-                            signer = signer,
-                            createdAt = createdAt,
-                        )
-                    } else {
-                        resign(
-                            publicTags = earlierVersion.tags.replaceAll(currentDescriptionTag, newDescriptionTag),
-                            privateTags = privateTags.replaceAll(currentDescriptionTag, newDescriptionTag),
-                            signer = signer,
-                            createdAt = createdAt,
-                        )
-                    }
-                }
-            }
-        }
     }
 }

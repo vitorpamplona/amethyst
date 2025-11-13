@@ -169,7 +169,7 @@ fun NewGroupDMScreen(
     WatchAndLoadMyEmojiList(accountViewModel)
 
     BackHandler {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             postViewModel.cancel()
         }
@@ -184,7 +184,7 @@ fun NewGroupDMScreen(
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
                         postViewModel.cancel()
                     }
@@ -193,7 +193,7 @@ fun NewGroupDMScreen(
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         postViewModel.sendPostSync()
                         postViewModel.room?.let {
                             nav.nav(routeToMessage(it, null, null, null, null, accountViewModel))

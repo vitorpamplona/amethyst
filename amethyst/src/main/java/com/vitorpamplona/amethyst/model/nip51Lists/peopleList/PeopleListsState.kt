@@ -32,9 +32,14 @@ import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.amethyst.model.updateFlow
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.update
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.description
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.description
+import com.vitorpamplona.quartz.nip51Lists.peopleList.image
+import com.vitorpamplona.quartz.nip51Lists.peopleList.name
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +121,7 @@ class PeopleListsState(
             identifierTag = this.dTag(),
             title = this.nameOrTitle() ?: this.dTag(),
             description = this.description(),
+            image = this.image(),
             privateMembers = cache.load(decryptionCache.privateUserIdSet(this)),
             publicMembers = cache.load(this.publicUsersIdSet()),
         )
@@ -129,17 +135,17 @@ class PeopleListsState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    fun selectListFlow(selectedDTag: String) =
+    fun List<PeopleList>.select(dTag: String) =
+        this.firstOrNull {
+            it.identifierTag == dTag
+        }
+
+    fun selectList(dTag: String) = uiListFlow.value.select(dTag)
+
+    fun selectListFlow(dTag: String) =
         uiListFlow
-            .map { peopleLists ->
-                peopleLists.firstOrNull { list ->
-                    list.identifierTag == selectedDTag
-                }
-            }.onStart {
-                emit(
-                    uiListFlow.value.firstOrNull { it.identifierTag == selectedDTag },
-                )
-            }
+            .map { it.select(dTag) }
+            .onStart { emit(selectList(dTag)) }
 
     fun DeletionEvent.hasDeletedAnyPeopleList() = deleteAddressesWithKind(PeopleListEvent.KIND) || deletesAnyEventIn(peopleListsEventIds.value)
 
@@ -183,49 +189,48 @@ class PeopleListsState(
     suspend fun addFollowList(
         listName: String,
         listDescription: String?,
+        listImage: String?,
         member: User? = null,
         isPrivate: Boolean = false,
         account: Account,
-    ) {
-        val newList =
-            PeopleListEvent.createListWithDescription(
-                dTag = UUID.randomUUID().toString(),
-                title = listName,
-                description = listDescription,
+    ): String {
+        val dTag = UUID.randomUUID().toString()
+        val newListTemplate =
+            PeopleListEvent.build(
+                dTag = dTag,
+                name = listName,
                 publicMembers = if (!isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
                 privateMembers = if (isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
                 signer = account.signer,
-            )
+            ) {
+                if (listDescription != null) description(listDescription)
+                if (listImage != null) image(listImage)
+            }
+
+        val newList = signer.sign(newListTemplate)
+
         account.sendMyPublicAndPrivateOutbox(newList)
+        return dTag
     }
 
-    suspend fun renameFollowList(
-        newName: String,
+    suspend fun updateMetadata(
+        listName: String?,
+        listDescription: String?,
+        listImage: String?,
         peopleList: PeopleList,
         account: Account,
     ) {
         val listEvent = getPeopleList(peopleList.identifierTag)
-        val newList =
-            PeopleListEvent.modifyListName(
-                earlierVersion = listEvent,
-                newName = newName,
-                signer = account.signer,
-            )
-        account.sendMyPublicAndPrivateOutbox(newList)
-    }
 
-    suspend fun modifyFollowSetDescription(
-        newDescription: String?,
-        peopleList: PeopleList,
-        account: Account,
-    ) {
-        val listEvent = getPeopleList(peopleList.identifierTag)
-        val newList =
-            PeopleListEvent.modifyDescription(
-                earlierVersion = listEvent,
-                newDescription = newDescription,
-                signer = account.signer,
-            )
+        val template =
+            listEvent.update {
+                if (listName != null) name(listName)
+                if (listDescription != null) description(listDescription)
+                if (listImage != null) image(listImage)
+            }
+
+        val newList = signer.sign(template)
+
         account.sendMyPublicAndPrivateOutbox(newList)
     }
 

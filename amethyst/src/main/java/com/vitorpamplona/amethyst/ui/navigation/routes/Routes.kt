@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.serialization.Serializable
@@ -54,8 +55,20 @@ sealed class Route {
 
     @Serializable object Lists : Route()
 
-    @Serializable data class PeopleListView(
+    @Serializable data class MyPeopleListView(
         val dTag: String,
+    ) : Route()
+
+    @Serializable data class MyFollowPackView(
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class PeopleListMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class FollowPackMetadataEdit(
+        val dTag: String? = null,
     ) : Route()
 
     @Serializable data class PeopleListManagement(
@@ -96,7 +109,25 @@ sealed class Route {
         val kind: Int,
         val pubKeyHex: HexKey,
         val dTag: String,
-    ) : Route()
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable data class FollowPack(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
 
     @Serializable data class PublicChatChannel(
         val id: String,
@@ -270,6 +301,15 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
         dest.hasRoute<Route.GenericCommentPost>() -> entry.toRoute<Route.GenericCommentPost>()
         dest.hasRoute<Route.NewPublicMessage>() -> entry.toRoute<Route.NewPublicMessage>()
+
+        dest.hasRoute<Route.Lists>() -> entry.toRoute<Route.Lists>()
+        dest.hasRoute<Route.MyPeopleListView>() -> entry.toRoute<Route.MyPeopleListView>()
+        dest.hasRoute<Route.MyFollowPackView>() -> entry.toRoute<Route.MyFollowPackView>()
+        dest.hasRoute<Route.PeopleListMetadataEdit>() -> entry.toRoute<Route.PeopleListMetadataEdit>()
+        dest.hasRoute<Route.FollowPackMetadataEdit>() -> entry.toRoute<Route.FollowPackMetadataEdit>()
+        dest.hasRoute<Route.PeopleListManagement>() -> entry.toRoute<Route.PeopleListManagement>()
+        dest.hasRoute<Route.NewGroupDM>() -> entry.toRoute<Route.NewGroupDM>()
+        dest.hasRoute<Route.UserSettings>() -> entry.toRoute<Route.UserSettings>()
 
         else -> {
             null

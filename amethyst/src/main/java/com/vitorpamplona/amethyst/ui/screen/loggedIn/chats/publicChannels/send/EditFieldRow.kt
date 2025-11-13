@@ -62,7 +62,7 @@ fun EditFieldRow(
     nav: INav,
 ) {
     BackHandler {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             channelScreenModel.sendDraftSync()
             channelScreenModel.cancel()
         }

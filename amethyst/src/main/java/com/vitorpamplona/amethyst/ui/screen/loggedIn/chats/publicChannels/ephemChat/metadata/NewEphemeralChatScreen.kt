@@ -81,7 +81,7 @@ private fun DialogContentPreview() {
         ChannelMetadataScaffold(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

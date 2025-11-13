@@ -327,11 +327,7 @@ fun LoadUser(
 
     if (user == null) {
         LaunchedEffect(key1 = baseUserHex) {
-            accountViewModel.checkGetOrCreateUser(baseUserHex) { newUser ->
-                if (user != newUser) {
-                    user = newUser
-                }
-            }
+            user = accountViewModel.checkGetOrCreateUser(baseUserHex)
         }
     }
 

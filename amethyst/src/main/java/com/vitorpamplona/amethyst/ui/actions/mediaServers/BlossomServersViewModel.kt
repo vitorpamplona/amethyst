@@ -23,23 +23,28 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class BlossomServersViewModel : ViewModel() {
-    lateinit var account: Account
+    private lateinit var accountViewModel: AccountViewModel
+    private lateinit var account: Account
 
     private val _fileServers = MutableStateFlow<List<ServerName>>(emptyList())
     val fileServers = _fileServers.asStateFlow()
     private var isModified = false
 
-    fun load(account: Account) {
-        this.account = account
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
+
+    fun load() {
         refresh()
     }
 
@@ -102,7 +107,7 @@ class BlossomServersViewModel : ViewModel() {
         serverUrl: String,
     ) {
         viewModelScope.launch {
-            val serverName = if (name.isNotBlank()) name else Rfc3986.host(serverUrl)
+            val serverName = name.ifBlank { Rfc3986.host(serverUrl) }
             _fileServers.update {
                 it.minus(
                     ServerName(serverName, serverUrl, ServerType.Blossom),
@@ -119,7 +124,7 @@ class BlossomServersViewModel : ViewModel() {
 
     fun saveFileServers() {
         if (isModified) {
-            viewModelScope.launch(Dispatchers.IO) {
+            accountViewModel.launchSigner {
                 val serverList = _fileServers.value.map { it.baseUrl }
                 account.sendBlossomServersList(serverList)
                 refresh()
@@ -127,5 +132,5 @@ class BlossomServersViewModel : ViewModel() {
         }
     }
 
-    private fun obtainFileServers(): List<String>? = account.blossomServers.flow.value
+    private fun obtainFileServers(): List<String> = account.blossomServers.flow.value
 }

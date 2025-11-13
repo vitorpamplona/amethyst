@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.jackson.InliningTagArrayPrettyPrinter
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResultJsonDeserializer
@@ -50,9 +51,9 @@ object JsonMapperNip55 {
                     .addSerializer(Permission::class.java, PermissionSerializer()),
             )
 
-    inline fun <reified T> fromJsonTo(json: String): T = defaultMapper.readValue(json, T::class.java)
+    inline fun <reified T> fromJsonTo(json: String): T = defaultMapper.readValue<T>(json)
 
-    inline fun <reified T> fromJsonTo(json: InputStream): T = defaultMapper.readValue(json, T::class.java)
+    inline fun <reified T> fromJsonTo(json: InputStream): T = defaultMapper.readValue<T>(json)
 
     fun toJson(event: ArrayNode): String = defaultMapper.writeValueAsString(event)
 
