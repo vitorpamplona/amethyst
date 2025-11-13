@@ -505,12 +505,15 @@ private fun FullBleedNoteCompose(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ObserveDisplayNip05Status(
-                        baseNote,
+                    Column(
                         remember { Modifier.weight(1f) },
-                        accountViewModel,
-                        nav,
-                    )
+                    ) {
+                        ObserveDisplayNip05Status(
+                            baseNote,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
 
                     val geo = remember { noteEvent.geoHashOrScope() }
                     if (geo != null) {

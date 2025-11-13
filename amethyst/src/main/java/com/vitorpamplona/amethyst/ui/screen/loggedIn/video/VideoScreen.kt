@@ -311,7 +311,7 @@ private fun RenderAuthorInformation(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         NoteAuthorPicture(note, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
         Spacer(modifier = DoubleHorzSpacer)
@@ -327,10 +327,9 @@ private fun RenderAuthorInformation(
                 VideoUserOptionAction(note, accountViewModel, nav)
             }
             if (accountViewModel.settings.isCompleteUIMode()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.fillMaxWidth()) {
                     ObserveDisplayNip05Status(
                         note.author!!,
-                        Modifier.weight(1f),
                         accountViewModel,
                         nav = nav,
                     )
