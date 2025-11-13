@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.coroutines.launch
@@ -125,6 +126,8 @@ val externalLinkForNote = { note: Note ->
             "https://listr.lol/a/${note.toNAddr()}"
         } else if (note.event is AudioTrackEvent) {
             "https://zapstr.live/?track=${note.toNAddr()}"
+        } else if (note.event is FollowListEvent) {
+            "https://following.space/d/${note.address.dTag}?p=${note.address.pubKeyHex}"
         } else {
             njumpLink(note.toNAddr())
         }
