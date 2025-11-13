@@ -49,7 +49,7 @@ open class DiscoverLongFormFeedFilter(
         val notes =
             LocalCache.addressables.filterIntoSet(LongTextNoteEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is LongTextNoteEvent && params.match(noteEvent)
+                noteEvent is LongTextNoteEvent && params.match(noteEvent, it.relays)
             }
         return sort(notes)
     }
@@ -67,7 +67,7 @@ open class DiscoverLongFormFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is LongTextNoteEvent && params.match(noteEvent)
+            noteEvent is LongTextNoteEvent && params.match(noteEvent, it.relays)
         }
     }
 

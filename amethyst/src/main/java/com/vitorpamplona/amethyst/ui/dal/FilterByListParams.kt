@@ -67,14 +67,14 @@ class FilterByListParams(
 
     fun match(
         noteEvent: Event,
-        comingFrom: List<NormalizedRelayUrl> = emptyList(),
+        comingFrom: List<NormalizedRelayUrl>,
     ) = ((isGlobal(comingFrom)) || isEventInList(noteEvent)) &&
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
         isNotInTheFuture(noteEvent)
 
     fun match(
         address: Address?,
-        comingFrom: List<NormalizedRelayUrl> = emptyList(),
+        comingFrom: List<NormalizedRelayUrl>,
     ) = address != null &&
         (isGlobal(comingFrom) || isAuthorInFollows(address)) &&
         (isHiddenList || isNotHidden(address.pubKeyHex))

@@ -51,7 +51,7 @@ open class DiscoverChatFeedFilter(
                 val note = LocalCache.getNoteIfExists(channel.idHex)
                 val noteEvent = note?.event
 
-                if (noteEvent == null || params.match(noteEvent)) {
+                if (noteEvent == null || params.match(noteEvent, note.relays)) {
                     note
                 } else {
                     null
@@ -75,7 +75,7 @@ open class DiscoverChatFeedFilter(
         return collection.mapNotNullTo(HashSet()) { note ->
             // note event here will never be null
             val noteEvent = note.event
-            if (noteEvent is ChannelCreateEvent && params.match(noteEvent)) {
+            if (noteEvent is ChannelCreateEvent && params.match(noteEvent, note.relays)) {
                 if ((LocalCache.getPublicChatChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
                     note
                 } else {
@@ -86,7 +86,7 @@ open class DiscoverChatFeedFilter(
                 val channelEvent = channel?.event
 
                 if (channel != null &&
-                    (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent)))
+                    (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent, note.relays)))
                 ) {
                     if ((LocalCache.getPublicChatChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
                         channel

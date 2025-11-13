@@ -126,7 +126,7 @@ class VideoFeedFilter(
                 (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
                 (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
         ) &&
-            params.match(noteEvent) &&
+            params.match(noteEvent, note.relays) &&
             (params.isHiddenList || account.isAcceptable(note))
     }
 
