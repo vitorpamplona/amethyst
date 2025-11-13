@@ -95,7 +95,6 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.coroutines.launch
 
 private fun lightenColor(
@@ -132,11 +131,7 @@ val externalLinkForNote = { note: Note ->
             njumpLink(note.toNAddr())
         }
     } else {
-        if (note.event is FileHeaderEvent) {
-            "https://filestr.vercel.app/e/${note.toNEvent()}"
-        } else {
-            njumpLink(note.toNEvent())
-        }
+        njumpLink(note.toNEvent())
     }
 }
 
