@@ -387,6 +387,8 @@
     <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
+    <string name="bookmark_groups">Bookmark Groups</string>
+
     <string name="wallet_connect_service">Wallet Connect Service</string>
     <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect Pubkey</string>

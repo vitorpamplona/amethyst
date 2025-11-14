@@ -1784,6 +1784,7 @@ class Account(
                     newNotesPreProcessor.runNew(newNotes)
                     peopleLists.newNotes(newNotes)
                     followLists.newNotes(newNotes)
+                    labeledBookmarkLists.newNotes(newNotes)
                 }
             }
         }
@@ -1794,6 +1795,7 @@ class Account(
                     newNotesPreProcessor.runDeleted(deletedNotes)
                     peopleLists.deletedNotes(deletedNotes)
                     followLists.deletedNotes(deletedNotes)
+                    labeledBookmarkLists.deletedNotes(deletedNotes)
                 }
             }
         }
