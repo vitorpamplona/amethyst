@@ -134,6 +134,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
@@ -861,6 +862,12 @@ object LocalCache : ILocalCache {
 
         return false
     }
+
+    fun consume(
+        event: LabeledBookmarkListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: MuteListEvent,
@@ -2811,6 +2818,7 @@ object LocalCache : ILocalCache {
                 is InteractiveStoryPrologueEvent -> consume(event, relay, wasVerified)
                 is InteractiveStorySceneEvent -> consume(event, relay, wasVerified)
                 is InteractiveStoryReadingStateEvent -> consume(event, relay, wasVerified)
+                is LabeledBookmarkListEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesEvent -> consume(event, relay, wasVerified)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
                 is LnZapEvent -> consume(event, relay, wasVerified)
