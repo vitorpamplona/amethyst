@@ -20,32 +20,39 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -58,86 +65,155 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.NoSoTinyBorders
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size50ModifierOffset10
+import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun BookmarkGroupItem(
     modifier: Modifier = Modifier,
     bookmarkList: LabeledBookmarkList,
-    onClick: () -> Unit,
+    onClick: (bookmarkItemType: BookmarkType) -> Unit,
     onRename: (String) -> Unit,
     onDescriptionChange: (String?) -> Unit,
     onClone: (customName: String?, customDescription: String?) -> Unit,
     onDelete: () -> Unit,
 ) {
-    ListItem(
-        modifier = modifier,
-        headlineContent = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(bookmarkList.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    var isExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = modifier.clickable(onClick = { isExpanded = !isExpanded }),
+    ) {
+        Column(
+            modifier = Modifier.animateContentSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            ListItem(
+                headlineContent = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(bookmarkList.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
-                Column(
-                    modifier = NoSoTinyBorders,
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.End,
-                ) {
-                    BookmarkGroupOptionsButton(
-                        bookmarkGroupName = bookmarkList.title,
-                        bookmarkGroupDescription = bookmarkList.description,
-                        onGroupRename = onRename,
-                        onGroupDescriptionChange = onDescriptionChange,
-                        onGroupCloneCreate = onClone,
-                        onGroupDelete = onDelete,
-                    )
-                }
-            }
-        },
-        supportingContent = {
-            Text(
-                bookmarkList.description ?: "",
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 2,
+                        Column(
+                            modifier = NoSoTinyBorders,
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.End,
+                        ) {
+                            BookmarkGroupOptionsButton(
+                                bookmarkGroupName = bookmarkList.title,
+                                bookmarkGroupDescription = bookmarkList.description,
+                                onGroupRename = onRename,
+                                onGroupDescriptionChange = onDescriptionChange,
+                                onGroupCloneCreate = onClone,
+                                onGroupDelete = onDelete,
+                            )
+                        }
+                    }
+                },
+                supportingContent = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            bookmarkList.description ?: "",
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 2,
+                        )
+                    }
+                },
+                leadingContent = {
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.CollectionsBookmark,
+                            contentDescription = "Icon for bookmark group",
+                            modifier = Size40Modifier,
+                        )
+                        Spacer(StdVertSpacer)
+                        BookmarkMembershipStatusAndNumberDisplay(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            privateBookmarksSize = bookmarkList.privateBookmarks.size,
+                            publicBookmarksSize = bookmarkList.publicBookmarks.size,
+                        )
+                    }
+                },
             )
-        },
-        leadingContent = {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Outlined.CollectionsBookmark,
-                    contentDescription = "Icon for bookmark group",
-                    modifier = Size50ModifierOffset10,
-                )
-                BookmarkMembershipStatusAndNumberDisplay(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    privateBookmarksSize = bookmarkList.privateBookmarks.size,
-                    publicBookmarksSize = bookmarkList.publicBookmarks.size,
+            if (isExpanded) {
+                BookmarkGroupActions(
+                    modifier = Modifier.fillMaxWidth(),
+                    openPostBookmarks = { onClick(BookmarkType.PostBookmark) },
+                    openArticleBookmarks = { onClick(BookmarkType.ArticleBookmark) },
                 )
             }
-        },
-        trailingContent = {
-            IconButton(
-                onClick = onClick,
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
-                    Text(text = "View")
-                }
-            }
-        },
-    )
+        }
+    }
+}
+
+@Composable
+private fun BookmarkGroupActions(
+    modifier: Modifier = Modifier,
+    openPostBookmarks: () -> Unit = {},
+    openArticleBookmarks: () -> Unit = {},
+    openLinkBookmarks: () -> Unit = {},
+    openHashtagBookmarks: () -> Unit = {},
+) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.SpaceAround,
+        itemVerticalAlignment = Alignment.CenterVertically,
+        maxLines = 2,
+        maxItemsInEachRow = 2,
+    ) {
+        FilledTonalButton(
+            onClick = openPostBookmarks,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.post),
+                contentDescription = null,
+            )
+            Text("View Posts")
+        }
+        FilledTonalButton(
+            onClick = openArticleBookmarks,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Article,
+                contentDescription = null,
+            )
+            Text("View Articles")
+        }
+        FilledTonalButton(
+            onClick = openLinkBookmarks,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Link,
+                contentDescription = null,
+            )
+            Text("View Links")
+        }
+        FilledTonalButton(
+            onClick = openHashtagBookmarks,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Numbers,
+                contentDescription = null,
+            )
+            Text("View Hashtags")
+        }
+    }
 }
 
 @Composable
