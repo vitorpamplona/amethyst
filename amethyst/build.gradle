@@ -44,9 +44,9 @@ android {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
-        versionCode = 428
-        versionName = generateVersionName("1.03.0")
-        buildConfigField "String", "RELEASE_NOTES_ID", "\"08abe267baf5d7ce14db7975866f929e2794cc23484171aef0816c60a2416597\""
+        versionCode = 429
+        versionName = generateVersionName("1.04.0")
+        buildConfigField "String", "RELEASE_NOTES_ID", "\"81a7d493065830f6cb8b97fd8441438e0872ceafb06346226ef6e7c0987b3ac7\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -151,7 +151,7 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
-    
+
     // TODO: remove this when lightcompressor uses one MP4 parser only
     packaging {
         resources {
