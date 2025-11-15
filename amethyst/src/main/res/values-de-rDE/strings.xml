@@ -1126,4 +1126,27 @@ anz der Bedingungen ist erforderlich</string>
     <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
     <string name="follow_list_item_label">Folge Paket</string>
     <string name="members">Mitglieder</string>
+
+    <string name="follow_set_edit_list_metadata">Liste bearbeiten</string>
+    <string name="people_list_title">Metadaten der Follow-Liste</string>
+    <string name="people_list_explainer">Metadaten von Follow-Listen können von allen auf Nostr gesehen werden. Nur deine privaten Mitglieder sind verschlüsselt.</string>
+
+    <string name="follow_pack_title">Metadaten des Empfehlungspakets</string>
+    <string name="follow_pack_explainer">Metadaten von Empfehlungspaketen können von allen auf Nostr gesehen werden und werden häufig auf Websites als Starterkits für neue Nutzer veröffentlicht.</string>
+
+    <string name="follow_pack_edit_list_metadata">Empfehlungspaket bearbeiten</string>
+    <string name="follow_pack_creation_name_label">Paketname</string>
+    <string name="follow_pack_copy_name_label">Neuer Paketname</string>
+    <string name="follow_pack_creation_desc_label">Paketbeschreibung</string>
+    <string name="follow_pack_copy_desc_label">Neue Paketbeschreibung</string>
+
+    <string name="follow_set_broadcast">Liste veröffentlichen</string>
+    <string name="follow_pack_broadcast">Empfehlungspaket veröffentlichen</string>
+
+    <string name="follow_set_delete">Liste löschen</string>
+    <string name="follow_pack_delete">Empfehlungspaket löschen</string>
+    <string name="follow_pack_creation_dialog_title">Neues Empfehlungspaket</string>
+    <string name="follow_sets_explainer">Dies sind Follow-Listen für deine eigene Nutzung. Du kannst Nutzer privat oder öffentlich folgen.</string>
+    <string name="discover_follows_explainer">Dies sind Listen von Nutzern, die du anderen empfiehlst. Nur öffentliche Nutzer sind erlaubt.</string>
+
 </resources>

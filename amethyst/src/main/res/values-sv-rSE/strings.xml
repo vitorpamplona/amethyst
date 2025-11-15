@@ -1120,4 +1120,26 @@
     <string name="remove_user_from_the_list">Ta bort användare från listan</string>
     <string name="follow_list_item_label">Följpaket</string>
     <string name="members">Medlemmar</string>
+    <string name="follow_set_edit_list_metadata">Redigera lista</string>
+    <string name="people_list_title">Metadata för följlista</string>
+    <string name="people_list_explainer">Metadata för följlistor kan ses av alla på Nostr. Endast privata medlemmar är krypterade.</string>
+
+    <string name="follow_pack_title">Metadata för rekommendationspaket</string>
+    <string name="follow_pack_explainer">Metadata för rekommendationspaket kan ses av alla på Nostr och publiceras ofta på webbplatser som startpaket för nya användare.</string>
+
+    <string name="follow_pack_edit_list_metadata">Redigera rekommendationspaket</string>
+    <string name="follow_pack_creation_name_label">Paketnamn</string>
+    <string name="follow_pack_copy_name_label">Nytt paketnamn</string>
+    <string name="follow_pack_creation_desc_label">Paketbeskrivning</string>
+    <string name="follow_pack_copy_desc_label">Ny paketbeskrivning</string>
+
+    <string name="follow_set_broadcast">Sänd lista</string>
+    <string name="follow_pack_broadcast">Sänd rekommendationspaket</string>
+
+    <string name="follow_set_delete">Ta bort lista</string>
+    <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
+    <string name="follow_pack_creation_dialog_title">Nytt rekommendationspaket</string>
+    <string name="follow_sets_explainer">Detta är följlistor avsedda för ditt eget bruk. Du kan följa användare privat eller offentligt.</string>
+    <string name="discover_follows_explainer">Detta är listor med användare som du rekommenderar till andra. Endast offentliga användare är tillåtna.</string>
+
 </resources>

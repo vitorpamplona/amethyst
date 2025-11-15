@@ -1121,4 +1121,27 @@
     <string name="remove_user_from_the_list">Remover usuário da lista</string>
     <string name="follow_list_item_label">Pacote Seguir</string>
     <string name="members">Membros</string>
+
+    <string name="follow_set_edit_list_metadata">Editar lista</string>
+    <string name="people_list_title">Metadados da lista de seguidores</string>
+    <string name="people_list_explainer">Os metadados das listas de seguidores podem ser vistos por qualquer pessoa no Nostr. Apenas os membros privados são criptografados.</string>
+
+    <string name="follow_pack_title">Metadados do pacote de recomendações</string>
+    <string name="follow_pack_explainer">Os metadados dos pacotes de recomendações podem ser vistos por qualquer pessoa no Nostr e são frequentemente publicados em sites como kits iniciais para novos usuários.</string>
+
+    <string name="follow_pack_edit_list_metadata">Editar pacote de recomendações</string>
+    <string name="follow_pack_creation_name_label">Nome do pacote</string>
+    <string name="follow_pack_copy_name_label">Novo nome do pacote</string>
+    <string name="follow_pack_creation_desc_label">Descrição do pacote</string>
+    <string name="follow_pack_copy_desc_label">Nova descrição do pacote</string>
+
+    <string name="follow_set_broadcast">Transmitir lista</string>
+    <string name="follow_pack_broadcast">Transmitir pacote de recomendações</string>
+
+    <string name="follow_set_delete">Excluir lista</string>
+    <string name="follow_pack_delete">Excluir pacote de recomendações</string>
+    <string name="follow_pack_creation_dialog_title">Novo pacote de recomendações</string>
+    <string name="follow_sets_explainer">Essas são listas de seguidores criadas para seu próprio uso. Você pode seguir usuários de forma privada ou pública.</string>
+    <string name="discover_follows_explainer">Essas são listas de usuários que você recomenda para outras pessoas. Somente usuários públicos são permitidos.</string>
+
 </resources>
