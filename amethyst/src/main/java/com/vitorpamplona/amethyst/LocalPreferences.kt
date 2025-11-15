@@ -77,9 +77,9 @@ private const val DEBUG_PREFERENCES_NAME = "debug_prefs"
 @Serializable
 data class AccountInfo(
     val npub: String,
-    val hasPrivKey: Boolean,
-    val loggedInWithExternalSigner: Boolean,
-    val isTransient: Boolean,
+    val hasPrivKey: Boolean = false,
+    val loggedInWithExternalSigner: Boolean = false,
+    val isTransient: Boolean = false,
 )
 
 private object PrefKeys {
