@@ -114,6 +114,7 @@ import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
@@ -169,6 +170,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Composable
 fun ReactionsRow(
@@ -970,7 +973,7 @@ private fun likeClick(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalUuidApi::class)
 fun ZapReaction(
     baseNote: Note,
     grayTint: Color,
@@ -983,12 +986,6 @@ fun ZapReaction(
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
-    var wantsToPay by
-        remember(baseNote) {
-            mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
-                persistentListOf(),
-            )
-        }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1022,7 +1019,19 @@ fun ZapReaction(
                                     accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
                                 }
                             },
-                            onPayViaIntent = { wantsToPay = it },
+                            onPayViaIntent = {
+                                if (it.size == 1) {
+                                    val payable = it.first()
+                                    payViaIntent(payable.invoice, context, { }) { error ->
+                                        zappingProgress = 0f
+                                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                                    }
+                                } else {
+                                    val uid = Uuid.random().toString()
+                                    accountViewModel.tempManualPaymentCache.put(uid, it)
+                                    nav.nav(Route.ManualZapSplitPayment(uid))
+                                }
+                            },
                         )
                     }
                 },
@@ -1053,7 +1062,19 @@ fun ZapReaction(
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                onPayViaIntent = { wantsToPay = it },
+                onPayViaIntent = {
+                    if (it.size == 1) {
+                        val payable = it.first()
+                        payViaIntent(payable.invoice, context, { }) { error ->
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                        }
+                    } else {
+                        val uid = Uuid.random().toString()
+                        accountViewModel.tempManualPaymentCache.put(uid, it)
+                        nav.nav(Route.ManualZapSplitPayment(uid))
+                    }
+                },
             )
         }
 
@@ -1061,26 +1082,6 @@ fun ZapReaction(
             UpdateZapAmountDialog(
                 onClose = { wantsToChangeZapAmount = false },
                 accountViewModel = accountViewModel,
-            )
-        }
-
-        if (wantsToPay.isNotEmpty()) {
-            PayViaIntentDialog(
-                payingInvoices = wantsToPay,
-                accountViewModel = accountViewModel,
-                onClose = { wantsToPay = persistentListOf() },
-                onError = {
-                    wantsToPay = persistentListOf()
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
-                justShowError = {
-                    scope.launch {
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
             )
         }
 
@@ -1095,7 +1096,19 @@ fun ZapReaction(
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                onPayViaIntent = { wantsToPay = it },
+                onPayViaIntent = {
+                    if (it.size == 1) {
+                        val payable = it.first()
+                        payViaIntent(payable.invoice, context, { }) { error ->
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(error, payable.info.user))
+                        }
+                    } else {
+                        val uid = Uuid.random().toString()
+                        accountViewModel.tempManualPaymentCache.put(uid, it)
+                        nav.nav(Route.ManualZapSplitPayment(uid))
+                    }
+                },
                 accountViewModel = accountViewModel,
                 baseNote = baseNote,
             )

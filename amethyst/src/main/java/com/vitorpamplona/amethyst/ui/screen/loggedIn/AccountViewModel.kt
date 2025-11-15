@@ -175,6 +175,8 @@ class AccountViewModel(
     val toastManager = ToastManager()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
+    val tempManualPaymentCache = LruCache<String, List<ZapPaymentHandler.Payable>>(5)
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
         combineTransform(

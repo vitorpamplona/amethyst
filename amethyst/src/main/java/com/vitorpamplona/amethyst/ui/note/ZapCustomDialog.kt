@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -67,10 +68,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
-import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -286,52 +287,42 @@ fun ZapButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PayViaIntentDialog(
-    payingInvoices: ImmutableList<ZapPaymentHandler.Payable>,
+fun PayViaIntentScreen(
+    paymentId: String,
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
-    onError: (UserBasedErrorMessage) -> Unit,
-    justShowError: (UserBasedErrorMessage) -> Unit,
+    nav: INav,
 ) {
-    if (payingInvoices.size == 1) {
-        val context = LocalContext.current
-        val payable = payingInvoices.first()
-        payViaIntent(payable.invoice, context, onClose) {
-            onError(UserBasedErrorMessage(it, payable.info.user))
-        }
-    } else {
-        Dialog(
-            onDismissRequest = onClose,
-            properties =
-                DialogProperties(
-                    dismissOnClickOutside = false,
-                    usePlatformDefaultWidth = false,
-                    decorFitsSystemWindows = false,
-                ),
-        ) {
-            SetDialogToEdgeToEdge()
+    Scaffold(
+        topBar = {
+            TopBarWithBackButton(stringRes(id = R.string.manual_zaps), nav::popBack)
+        },
+    ) { pad ->
+        val list = accountViewModel.tempManualPaymentCache.get(paymentId)
 
-            Scaffold(
-                topBar = {
-                    TopBarWithBackButton(stringRes(id = R.string.manual_zaps), onClose)
-                },
-            ) { pad ->
-                LazyColumn(
-                    Modifier.padding(
-                        16.dp,
-                        pad.calculateTopPadding(),
-                        16.dp,
-                        pad.calculateBottomPadding(),
-                    ),
-                ) {
-                    itemsIndexed(
-                        payingInvoices,
-                        key = { _: Int, invoice: ZapPaymentHandler.Payable ->
-                            invoice.invoice
-                        },
-                    ) { index, payable ->
-                        DisplayPayable(index, payable, justShowError, accountViewModel)
-                    }
+        if (list == null) {
+            Column(
+                Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(stringRes(R.string.feed_is_empty))
+            }
+        } else {
+            LazyColumn(
+                Modifier.padding(
+                    16.dp,
+                    pad.calculateTopPadding(),
+                    16.dp,
+                    pad.calculateBottomPadding(),
+                ),
+            ) {
+                itemsIndexed(
+                    accountViewModel.tempManualPaymentCache.get(paymentId) ?: emptyList(),
+                    key = { _: Int, invoice: ZapPaymentHandler.Payable ->
+                        invoice.invoice
+                    },
+                ) { index, payable ->
+                    DisplayPayable(index, payable, accountViewModel)
                 }
             }
         }
@@ -342,7 +333,6 @@ fun PayViaIntentDialog(
 fun DisplayPayable(
     index: Int,
     payable: ZapPaymentHandler.Payable,
-    justShowError: (UserBasedErrorMessage) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     val paid = rememberSaveable(payable) { mutableStateOf(false) }
@@ -395,7 +385,10 @@ fun DisplayPayable(
 
         PayButton(isActive = !paid.value) {
             payViaIntent(payable.invoice, context, { paid.value = true }) {
-                justShowError(UserBasedErrorMessage(it, null))
+                accountViewModel.toastManager.toast(
+                    R.string.error_dialog_zap_error,
+                    UserBasedErrorMessage(it, payable.info.user),
+                )
             }
         }
     }
