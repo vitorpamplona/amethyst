@@ -28,13 +28,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,12 +71,12 @@ import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -281,6 +284,7 @@ fun ZapButton(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PayViaIntentDialog(
     payingInvoices: ImmutableList<ZapPaymentHandler.Payable>,
@@ -289,9 +293,8 @@ fun PayViaIntentDialog(
     onError: (UserBasedErrorMessage) -> Unit,
     justShowError: (UserBasedErrorMessage) -> Unit,
 ) {
-    val context = LocalContext.current
-
     if (payingInvoices.size == 1) {
+        val context = LocalContext.current
         val payable = payingInvoices.first()
         payViaIntent(payable.invoice, context, onClose) {
             onError(UserBasedErrorMessage(it, payable.info.user))
@@ -307,73 +310,92 @@ fun PayViaIntentDialog(
                 ),
         ) {
             SetDialogToEdgeToEdge()
-            Surface {
-                Column(modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState())) {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CloseButton(onPress = onClose)
-                    }
 
-                    Spacer(modifier = DoubleVertSpacer)
-
-                    payingInvoices.forEachIndexed { index, payable ->
-                        val paid = remember { mutableStateOf(false) }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = Size10dp),
-                        ) {
-                            if (payable.info.user != null) {
-                                BaseUserPicture(payable.info.user, Size55dp, accountViewModel = accountViewModel)
-                            } else {
-                                DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
-                            }
-
-                            Spacer(modifier = DoubleHorzSpacer)
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                if (payable.info.user != null) {
-                                    UsernameDisplay(payable.info.user, accountViewModel = accountViewModel)
-                                } else {
-                                    Text(
-                                        text = stringRes(id = R.string.wallet_number, index + 1),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp,
-                                    )
-                                }
-                                Row {
-                                    Text(
-                                        text = showAmount((payable.amountMilliSats / 1000.0f).toBigDecimal()),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp,
-                                    )
-                                    Spacer(modifier = StdHorzSpacer)
-                                    Text(
-                                        text = stringRes(id = R.string.sats),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp,
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = DoubleHorzSpacer)
-
-                            PayButton(isActive = !paid.value) {
-                                payViaIntent(payable.invoice, context, { paid.value = true }) {
-                                    justShowError(UserBasedErrorMessage(it, null))
-                                }
-                            }
-                        }
+            Scaffold(
+                topBar = {
+                    TopBarWithBackButton(stringRes(id = R.string.manual_zaps), onClose)
+                },
+            ) { pad ->
+                LazyColumn(
+                    Modifier.padding(
+                        16.dp,
+                        pad.calculateTopPadding(),
+                        16.dp,
+                        pad.calculateBottomPadding(),
+                    ),
+                ) {
+                    itemsIndexed(
+                        payingInvoices,
+                        key = { _: Int, invoice: ZapPaymentHandler.Payable ->
+                            invoice.invoice
+                        },
+                    ) { index, payable ->
+                        DisplayPayable(index, payable, justShowError, accountViewModel)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayPayable(
+    index: Int,
+    payable: ZapPaymentHandler.Payable,
+    justShowError: (UserBasedErrorMessage) -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    val paid = rememberSaveable(payable) { mutableStateOf(false) }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = Size10dp),
+    ) {
+        if (payable.info.user != null) {
+            BaseUserPicture(payable.info.user, Size55dp, accountViewModel = accountViewModel)
+        } else {
+            DisplayBlankAuthor(size = Size55dp, accountViewModel = accountViewModel)
+        }
+
+        Spacer(modifier = DoubleHorzSpacer)
+
+        Column(modifier = Modifier.weight(1f)) {
+            if (payable.info.user != null) {
+                UsernameDisplay(payable.info.user, accountViewModel = accountViewModel)
+            } else {
+                Text(
+                    text = stringRes(id = R.string.wallet_number, index + 1),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                )
+            }
+            Row {
+                Text(
+                    text = showAmount((payable.amountMilliSats / 1000.0f).toBigDecimal()),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                Text(
+                    text = stringRes(id = R.string.sats),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                )
+            }
+        }
+
+        Spacer(modifier = DoubleHorzSpacer)
+        val context = LocalContext.current
+
+        PayButton(isActive = !paid.value) {
+            payViaIntent(payable.invoice, context, { paid.value = true }) {
+                justShowError(UserBasedErrorMessage(it, null))
             }
         }
     }
