@@ -444,11 +444,13 @@
     <string name="follow_list_selection">关注列表</string>
     <string name="follow_list_kind3follows">所有关注</string>
     <string name="follow_list_kind3follows_users_only">所有用户关注</string>
+    <string name="follow_list_kind3_follows_users_only">默认关注列表</string>
     <string name="follow_list_kind3follows_proxy">通过代理关注</string>
     <string name="follow_list_aroundme">周围的人</string>
     <string name="follow_list_global">全球</string>
     <string name="follow_list_mute_list">静音列表</string>
     <string name="follow_sets">关注集</string>
+    <string name="follow_sets_explainer">这些是为您自己使用设计的关注列表。您可以私下或公开关注用户</string>
     <string name="labeled_bookmarks">有标签的书签</string>
     <string name="general_bookmarks">常规书签</string>
     <string name="follow_set_type_public">公开</string>
@@ -483,6 +485,7 @@
     <string name="follow_set_creation_item_label">创建用户新的 %1$s 列表</string>
     <string name="follow_set_creation_item_description">创建 %1$s 关注集，并添加 %2$s 到其中。</string>
     <string name="follow_set_creation_dialog_title">新的 %1$s 列表</string>
+    <string name="follow_pack_creation_dialog_title">新的关注包</string>
     <string name="follow_set_copy_dialog_title">复制/克隆关注集</string>
     <string name="follow_set_desc_modify_label">修改描述</string>
     <string name="follow_set_empty_desc_label">此列表没有描述</string>
@@ -494,7 +497,8 @@
     <string name="follow_set_copy_desc_label">(原始集合描述)</string>
     <string name="follow_set_creation_action_btn_label">新建集</string>
     <string name="follow_set_copy_action_btn_label">复制/克隆集</string>
-    <string name="follow_set_rename_btn_label">重命名集</string>
+    <string name="follow_set_rename_btn_label">重命名列表</string>
+    <string name="follow_set_edit_list_metadata">编辑列表</string>
     <string name="follow_set_desc_modify_btn_label">修改</string>
     <string name="follow_set_rename_dialog_indicator_first_part">正将集合名称从 </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> 改为</string>
@@ -633,6 +637,7 @@
     <string name="followed_tags">已关注的标签</string>
     <string name="relay_setup">中继器</string>
     <string name="discover_follows">关注包</string>
+    <string name="discover_follows_explainer">这些是您推荐给其他人的用户列表。只允许公开用户。</string>
     <string name="discover_reads">次浏览</string>
     <string name="discover_content_v2">动态源算法</string>
     <string name="discover_marketplace">市场</string>
@@ -1119,5 +1124,23 @@
     <string name="in_the_list">已经在列表中</string>
     <string name="private_members">私密成员</string>
     <string name="public_members">公开成员</string>
+    <string name="private_members_count">私密成员（%1$s）</string>
+    <string name="public_members_count">公开成员 (%1$s)</string>
     <string name="add_user_to_the_list">添加用户到列表</string>
+    <string name="remove_user_from_the_list">从列表中删除用户</string>
+    <string name="follow_list_item_label">关注包</string>
+    <string name="members">成员</string>
+    <string name="people_list_title">关注列表元数据</string>
+    <string name="people_list_explainer">关注列表元数据可以被Nostr上的任何人看到。只有您的私人成员是加密的。</string>
+    <string name="follow_pack_title">关注包元数据</string>
+    <string name="follow_pack_explainer">关注包元数据可以被Nostr上的任何人看见，并且常作为新用户启动包发布在许多网站上。</string>
+    <string name="follow_pack_edit_list_metadata">编辑关注包</string>
+    <string name="follow_pack_creation_name_label">包名</string>
+    <string name="follow_pack_copy_name_label">新的包名称</string>
+    <string name="follow_pack_creation_desc_label">包说明</string>
+    <string name="follow_pack_copy_desc_label">新的包说明</string>
+    <string name="follow_set_broadcast">广播列表</string>
+    <string name="follow_pack_broadcast">广播包</string>
+    <string name="follow_set_delete">删除列表</string>
+    <string name="follow_pack_delete">删除包</string>
 </resources>
