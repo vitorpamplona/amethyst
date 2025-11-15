@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,8 +46,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -63,44 +61,43 @@ fun FollowListAndPackAndUserView(
     val followPackFeedState by accountViewModel.account.followLists.uiListFlow
         .collectAsStateWithLifecycle()
 
-    if (followSetsState.isEmpty() && followPackFeedState.isEmpty()) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.5f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(text = stringRes(R.string.follow_set_empty_dialog_msg))
-            Spacer(modifier = StdVertSpacer)
-        }
-    } else {
-        val userName by observeUserName(userToAddOrRemove, accountViewModel)
+    val userName by observeUserName(userToAddOrRemove, accountViewModel)
 
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            stickyHeader {
-                Row(
-                    modifier = MaxWidthWithHorzPadding,
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = SpacedBy5dp,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringRes(R.string.follow_sets),
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text = stringRes(R.string.follow_sets_explainer),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.grayText,
-                        )
-                    }
-                    NewListButton(
-                        onClick = { nav.nav(Route.PeopleListMetadataEdit()) },
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        stickyHeader {
+            Row(
+                modifier = MaxWidthWithHorzPadding,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = SpacedBy5dp,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringRes(R.string.follow_sets),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringRes(R.string.follow_sets_explainer),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.grayText,
                     )
                 }
+                NewListButton(
+                    onClick = { nav.nav(Route.PeopleListMetadataEdit()) },
+                )
             }
+        }
+        if (followSetsState.isEmpty()) {
+            item {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = stringRes(R.string.feed_is_empty),
+                        modifier = Modifier.padding(vertical = Size20dp),
+                    )
+                    HorizontalDivider(thickness = DividerThickness)
+                }
+            }
+        } else {
             itemsIndexed(followSetsState, key = { _, item -> item.identifierTag }) { _, list ->
                 PeopleListAndUserItem(
                     modifier = Modifier.fillMaxWidth(),
@@ -136,32 +133,44 @@ fun FollowListAndPackAndUserView(
                 )
                 HorizontalDivider(thickness = DividerThickness)
             }
-            stickyHeader {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(start = 10.dp, end = 10.dp, top = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = SpacedBy5dp,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringRes(R.string.discover_follows),
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text = stringRes(R.string.discover_follows_explainer),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.grayText,
-                        )
-                    }
-                    NewListButton(
-                        onClick = { nav.nav(Route.FollowPackMetadataEdit()) },
+        }
+        stickyHeader {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = SpacedBy5dp,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringRes(R.string.discover_follows),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringRes(R.string.discover_follows_explainer),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.grayText,
                     )
                 }
+                NewListButton(
+                    onClick = { nav.nav(Route.FollowPackMetadataEdit()) },
+                )
             }
+        }
+        if (followPackFeedState.isEmpty()) {
+            item {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = stringRes(R.string.feed_is_empty),
+                        modifier = Modifier.padding(vertical = Size20dp),
+                    )
+                    HorizontalDivider(thickness = DividerThickness)
+                }
+            }
+        } else {
             itemsIndexed(followPackFeedState, key = { _, item -> item.identifierTag }) { _, list ->
                 FollowPackAndUserItem(
                     modifier = Modifier.fillMaxWidth(),
