@@ -447,7 +447,7 @@
     <string name="follow_list_global">Wszystkie</string>
     <string name="follow_list_mute_list">Zablokowane</string>
     <string name="follow_sets">Listy obserwowanych</string>
-    <string name="follow_sets_explainer">Są to listy obserwowanych przeznaczone do prywatnego użytku. Możesz obserwować użytkowników prywatnie lub publicznie</string>
+    <string name="follow_sets_explainer">Są to listy obserwowanych przeznaczone do prywatnego użytku. Możesz obserwować użytkowników dyskretnie lub otwarcie</string>
     <string name="labeled_bookmarks">Oznaczone zakładki</string>
     <string name="general_bookmarks">Ogólne zakładki</string>
     <string name="follow_set_type_public">Publiczna</string>
@@ -482,6 +482,7 @@
     <string name="follow_set_creation_item_label">\"Utwórz nową listę %1$s z użytkownikiem</string>
     <string name="follow_set_creation_item_description">Tworzy zbiór obserwowanych %1$s i dodaje do niego %2$s.</string>
     <string name="follow_set_creation_dialog_title">Nowa lista</string>
+    <string name="follow_pack_creation_dialog_title">Nowa Kategoria</string>
     <string name="follow_set_copy_dialog_title">Kopiuj/Sklonuj listę obserwowanych</string>
     <string name="follow_set_desc_modify_label">Modyfikuj opis</string>
     <string name="follow_set_empty_desc_label">Ta lista nie ma opisu</string>
@@ -633,6 +634,7 @@
     <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
     <string name="discover_follows">Godne uwagi</string>
+    <string name="discover_follows_explainer">Są to listy profili, które polecasz innym użytkownikom. Dozwolone są wyłącznie profile publiczne.</string>
     <string name="discover_reads">Popularne</string>
     <string name="discover_content_v2">Wybrane przez algorytm</string>
     <string name="discover_marketplace">Market</string>
@@ -1122,6 +1124,18 @@
     <string name="private_members_count">Prywatni uczestnicy (%1$s)</string>
     <string name="add_user_to_the_list">Dodaj użytkownika do listy</string>
     <string name="remove_user_from_the_list">Usuń użytkownika z listy</string>
+    <string name="follow_list_item_label">Kategoria profilów</string>
     <string name="members">Uczestnicy</string>
+    <string name="people_list_title">Metadane listy profili</string>
+    <string name="follow_pack_title">Metadane kategorii profilów</string>
+    <string name="follow_pack_explainer">Metadane kategorii profilów są widoczne dla wszystkich użytkowników serwisu Nostr i często publikowane na wielu stronach internetowych jako zestawy startowe dla nowych użytkowników.</string>
+    <string name="follow_pack_edit_list_metadata">Edytuj kategorię profili</string>
+    <string name="follow_pack_creation_name_label">Nazwa kategorii</string>
+    <string name="follow_pack_copy_name_label">Nowa nazwa kategorii</string>
+    <string name="follow_pack_creation_desc_label">Opis kategorii</string>
+    <string name="follow_pack_copy_desc_label">Opis nowej kategorii</string>
+    <string name="follow_set_broadcast">Upowszechnij listę</string>
+    <string name="follow_pack_broadcast">Upowszechnij kategorię</string>
     <string name="follow_set_delete">Usuń listę</string>
+    <string name="follow_pack_delete">Usuń kategorię</string>
 </resources>
