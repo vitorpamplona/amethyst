@@ -40,6 +40,14 @@ fun Array<String>.startsWith(startsWith: Array<String>): Boolean {
     return true
 }
 
+fun Array<String>.startsWithIgnoreCase(startsWith: Array<String>): Boolean {
+    if (startsWith.size > this.size) return false
+    for (tagIdx in startsWith.indices) {
+        if (!startsWith[tagIdx].equals(this[tagIdx], ignoreCase = true)) return false
+    }
+    return true
+}
+
 fun Array<String>.startsWithAny(startsWithList: List<Array<String>>): Boolean = startsWithList.any { startsWith(it) }
 
 public inline fun <T, R> Array<out T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {
