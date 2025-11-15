@@ -6,7 +6,9 @@
 This version adds support for creating, managing, deleting, and viewing follow lists, which include
 both public and private members. We've also added similar UI to support for creating, managing,
 deleting, and viewing follow packs from following.space, allowing you to assemble following lists
-not only for yourself,but also as a starter packs for other users.
+not only for yourself, but also as a starter packs for other users. You will find a new "My Lists"
+menu option in the side bar and Follow buttons when extended behavior to add users directly into
+lists or packs.
 
 This version also introduces significant improvements to the quality of video compression and hash
 checks during media upload/download, along with new codecs and a new image gallery for displaying
@@ -46,7 +48,7 @@ Improvements:
 - Removes non-outbox relays from the outbox lists
 - Adds support bigger, up to 4GB, payloads in NIP-44
 - Restructures the default REQ limits from each relay in all feeds
-- Adds a guarantee incoming message order to OkHttp websocket implementations to aviod EOSE mismatch
+- Adds a guarantee incoming message order to OkHttp websocket implementations to avoid EOSE mismatch
 - Only downloads DMs and Drafts if the account is writeable / nsec is present
 - Adds support for copying/cloning follow lists in the UI.
 - Adds a default relay list for indexers in new accounts with local backup
