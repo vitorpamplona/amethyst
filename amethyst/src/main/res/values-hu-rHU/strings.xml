@@ -444,11 +444,13 @@
     <string name="follow_list_selection">Követési lista</string>
     <string name="follow_list_kind3follows">Követettek bejegyzései</string>
     <string name="follow_list_kind3follows_users_only">Összes követett felhasználó</string>
+    <string name="follow_list_kind3_follows_users_only">Alapértelmezett követési lista</string>
     <string name="follow_list_kind3follows_proxy">Követés proxyn keresztül</string>
     <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
     <string name="follow_sets">Követési gyüjtemények</string>
+    <string name="follow_sets_explainer">Ezek a követési listák az Ön saját alkalmazás-használatából lettek kialakítva. A felhasználókat privát vagy nyilvánosan követheti</string>
     <string name="labeled_bookmarks">Címkézett könyvjelzők</string>
     <string name="general_bookmarks">Általános könyvjelzők</string>
     <string name="follow_set_type_public">Nyílvános</string>
@@ -483,6 +485,7 @@
     <string name="follow_set_creation_item_label">Új %1$s lista létrehozása felhasználóval</string>
     <string name="follow_set_creation_item_description">%1$s követési gyüjtemény létrehozása, és hozzáadás a következhöz: %2$s.</string>
     <string name="follow_set_creation_dialog_title">Új %1$s lista</string>
+    <string name="follow_pack_creation_dialog_title">Új követési lista</string>
     <string name="follow_set_copy_dialog_title">Követési gyüjtemény másolása/klónozása</string>
     <string name="follow_set_desc_modify_label">Leírás módosítása</string>
     <string name="follow_set_empty_desc_label">Ennek a listának nincs leírása</string>
@@ -495,6 +498,7 @@
     <string name="follow_set_creation_action_btn_label">Gyüjtemény létrehozása</string>
     <string name="follow_set_copy_action_btn_label">Gyüjtemény másolása/klónozása</string>
     <string name="follow_set_rename_btn_label">Gyüjtemény átnevezése</string>
+    <string name="follow_set_edit_list_metadata">Lista szerkesztése</string>
     <string name="follow_set_desc_modify_btn_label">Módosítás</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Ön átnevezi a követési gyüjteményt erről: </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> erre:</string>
@@ -633,6 +637,7 @@
     <string name="followed_tags">Követett címke</string>
     <string name="relay_setup">Átjátszók</string>
     <string name="discover_follows">Követett csomagok</string>
+    <string name="discover_follows_explainer">Ezek a listák azon felhasználók listái, akiket másoknak ajánlhat. Csak nyilvános felhasználók szerepelhetnek a listán.</string>
     <string name="discover_reads">Olvasmányok</string>
     <string name="discover_content_v2">Hírforrás-algoritmus</string>
     <string name="discover_marketplace">Piac</string>
@@ -1119,5 +1124,23 @@
     <string name="in_the_list">Már rajta van a listán</string>
     <string name="private_members">Privát tagok</string>
     <string name="public_members">Nyilvános tagok</string>
+    <string name="private_members_count">Privát tagok (%1$s)</string>
+    <string name="public_members_count">Nyilvános tagok (%1$s)</string>
     <string name="add_user_to_the_list">Felhasználó hozzáadása a listához</string>
+    <string name="remove_user_from_the_list">Felhasználó törlése a listáról</string>
+    <string name="follow_list_item_label">Követési csomag</string>
+    <string name="members">Tagok</string>
+    <string name="people_list_title">Követési lista metaadatai</string>
+    <string name="people_list_explainer">A követési listák metaadatai a Nostr-on bárki számára láthatók. Csak a privát tagok adatai vannak titkosítva.</string>
+    <string name="follow_pack_title">Követési csomag metaadatai</string>
+    <string name="follow_pack_explainer">A követési csomag metaadatai a Nostr-on bárki számára láthatók, és gyakran megjelennek számos weboldalon, új felhasználók számára készült kezdőcsomagként.</string>
+    <string name="follow_pack_edit_list_metadata">Követési csomag szerkesztése</string>
+    <string name="follow_pack_creation_name_label">Csomagnév</string>
+    <string name="follow_pack_copy_name_label">Új csomagnév</string>
+    <string name="follow_pack_creation_desc_label">Csomagleírás</string>
+    <string name="follow_pack_copy_desc_label">Új csomagleírás</string>
+    <string name="follow_set_broadcast">Közvetítési lista</string>
+    <string name="follow_pack_broadcast">Közvetítési csomag</string>
+    <string name="follow_set_delete">Lista törlése</string>
+    <string name="follow_pack_delete">Csomag törlése</string>
 </resources>
