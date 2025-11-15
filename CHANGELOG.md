@@ -1,3 +1,21 @@
+<a id="v1.04.1"></a>
+# [Release v1.04.1: Bugfixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.04.1) - 2025-11-15
+
+#Amethyst v1.04.1: Bug fixes
+
+- Fixes crashing when starting
+- Fixes hashtag unfollowing for mixed case tags
+- Fixes release Id for the zap the devs button
+- Fixes quartz version for a release to Maven
+- Fixes disappearing of the Zap the Devs Manual Payment screen
+- Fixes back button of the Zap the Devs Manual Payment screen staying behind the status bar
+
+Translations:
+- Polish by @npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm
+- Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
+
+Download: http://amethyst.social
+
 <a id="v1.04.0"></a>
 # [Release v1.04.0: List Management](https://github.com/vitorpamplona/amethyst/releases/tag/v1.04.0) - 2025-11-15
 

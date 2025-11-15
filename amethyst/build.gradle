@@ -45,7 +45,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
         versionCode = 429
-        versionName = generateVersionName("1.04.0")
+        versionName = generateVersionName("1.04.1")
         buildConfigField "String", "RELEASE_NOTES_ID", "\"3a03c75d85aaf6b181d3b232d064c4d4feea5c73f0bea2bd91ed61b8da7cd6a6\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
