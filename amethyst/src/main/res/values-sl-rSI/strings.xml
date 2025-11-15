@@ -509,6 +509,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_creation_action_btn_label">Ustvari seznam</string>
     <string name="follow_set_copy_action_btn_label">Kopiraj/kloniraj seznam</string>
     <string name="follow_set_rename_btn_label">Preimenuj seznam</string>
+    <string name="follow_set_edit_list_metadata">Uredi seznam</string>
     <string name="follow_set_desc_modify_btn_label">Uredi</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Preimenuješ iz </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> v..</string>
@@ -1141,4 +1142,17 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="remove_user_from_the_list">Odstrani uporabnika iz seznama</string>
     <string name="follow_list_item_label">Paket sledenih</string>
     <string name="members">Člani</string>
+    <string name="people_list_title">Sledi metapodatkom seznama</string>
+    <string name="people_list_explainer">Sledenje metapodatkom seznama je lahko vidno vsem na Nostru. Le tvoji zasebni člani so šifrirani.</string>
+    <string name="follow_pack_title">Metapodatki paketa sledenih</string>
+    <string name="follow_pack_explainer">Metapodatki paketa sledenih so lahko vidno vsem na Nostru in redno objavljeni na ostalih spletnih straneh, kot začetni prikaz za nove uporabnike</string>
+    <string name="follow_pack_edit_list_metadata">Uredi paket sledenih</string>
+    <string name="follow_pack_creation_name_label">Ime paketa</string>
+    <string name="follow_pack_copy_name_label">Novo ime paketa</string>
+    <string name="follow_pack_creation_desc_label">Opis paketa</string>
+    <string name="follow_pack_copy_desc_label">Nov opis paketa</string>
+    <string name="follow_set_broadcast">Oddajaj seznam</string>
+    <string name="follow_pack_broadcast">Oddajaj paket</string>
+    <string name="follow_set_delete">Izbriši seznam</string>
+    <string name="follow_pack_delete">Izbriši paket</string>
 </resources>
