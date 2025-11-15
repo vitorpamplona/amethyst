@@ -102,6 +102,9 @@ val ALL_FOLLOWS = " All Follows "
 val ALL_USER_FOLLOWS = " All User Follows "
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val KIND3_FOLLOWS = " Main User Follows "
+
+// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val AROUND_ME = " Around Me "
 
 @Stable

@@ -26,6 +26,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.jackson.TagArrayManualDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import com.vitorpamplona.quartz.utils.asIntOrNull
+import com.vitorpamplona.quartz.utils.asLongOrNull
+import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
     override fun deserialize(
@@ -34,12 +37,12 @@ class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
     ): Rumor {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
         return Rumor(
-            id = jsonObject.get("id")?.asText()?.intern(),
-            pubKey = jsonObject.get("pubkey")?.asText()?.intern(),
-            createdAt = jsonObject.get("created_at")?.asLong(),
-            kind = jsonObject.get("kind")?.asInt(),
+            id = jsonObject.get("id")?.asTextOrNull()?.intern(),
+            pubKey = jsonObject.get("pubkey")?.asTextOrNull()?.intern(),
+            createdAt = jsonObject.get("created_at")?.asLongOrNull(),
+            kind = jsonObject.get("kind")?.asIntOrNull(),
             tags = TagArrayManualDeserializer.fromJson(jsonObject.get("tags")),
-            content = jsonObject.get("content")?.asText(),
+            content = jsonObject.get("content")?.asTextOrNull(),
         )
     }
 }

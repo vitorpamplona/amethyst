@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -72,7 +73,7 @@ class TopNavFilterState(
     val account: Account,
     val scope: CoroutineScope,
 ) {
-    val kind3Follow =
+    val allFollows =
         PeopleListOutBoxFeedDefinition(
             code = ALL_FOLLOWS,
             name = ResourceName(R.string.follow_list_kind3follows),
@@ -81,10 +82,19 @@ class TopNavFilterState(
             unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
-    val kind3FollowUsers =
+    val userFollows =
         PeopleListOutBoxFeedDefinition(
             code = ALL_USER_FOLLOWS,
             name = ResourceName(R.string.follow_list_kind3follows_users_only),
+            type = CodeNameType.HARDCODED,
+            kinds = DEFAULT_FEED_KINDS,
+            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
+        )
+
+    val kind3Follows =
+        PeopleListOutBoxFeedDefinition(
+            code = KIND3_FOLLOWS,
+            name = ResourceName(R.string.follow_list_kind3_follows_users_only),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
             unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
@@ -115,7 +125,7 @@ class TopNavFilterState(
             unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
         )
 
-    val defaultLists = persistentListOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow, muteListFollow)
+    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -229,7 +239,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
                     myLivePeopleListsFlow,
                     myLiveKind3FollowsFlow,
                     listOf(muteListFollow),
@@ -245,7 +255,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(kind3Follow, kind3FollowUsers, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
                     myLivePeopleListsFlow,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),

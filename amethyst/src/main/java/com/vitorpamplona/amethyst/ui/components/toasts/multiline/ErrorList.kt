@@ -90,7 +90,7 @@ fun ErrorListPreview() {
         ErrorList(
             model = model,
             accountViewModel = accountViewModel,
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

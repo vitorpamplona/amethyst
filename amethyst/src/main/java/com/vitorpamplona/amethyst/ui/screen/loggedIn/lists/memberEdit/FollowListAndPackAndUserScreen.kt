@@ -26,15 +26,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,13 +42,12 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewPeopleListCreationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditPeopleListScreen(
+fun FollowListAndPackAndUserScreen(
     userToAddOrRemove: HexKey,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -72,22 +64,19 @@ fun EditPeopleListScreen(
     }
 
     userBase?.let {
-        EditPeopleListScreen(it, accountViewModel, nav)
+        FollowListAndPackAndUserScreen(it, accountViewModel, nav)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditPeopleListScreen(
+fun FollowListAndPackAndUserScreen(
     userToAddOrRemove: User,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize().recalculateWindowInsets(),
-        floatingActionButton = {
-            PeopleListAndUserFab(accountViewModel)
-        },
         topBar = {
             val userName by observeUserName(userToAddOrRemove, accountViewModel)
             TopBarWithBackButton(
@@ -105,45 +94,7 @@ fun EditPeopleListScreen(
                     ).consumeWindowInsets(contentPadding)
                     .imePadding(),
         ) {
-            PeopleListAndUserView(userToAddOrRemove, accountViewModel, nav)
+            FollowListAndPackAndUserView(userToAddOrRemove, accountViewModel, nav)
         }
-    }
-}
-
-@Composable
-private fun PeopleListAndUserFab(accountViewModel: AccountViewModel) {
-    var isOpen by remember { mutableStateOf(false) }
-
-    ExtendedFloatingActionButton(
-        text = {
-            Text(text = stringRes(R.string.follow_set_create_btn_label))
-        },
-        icon = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
-                contentDescription = null,
-            )
-        },
-        onClick = { isOpen = !isOpen },
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    )
-
-    if (isOpen) {
-        NewPeopleListCreationDialog(
-            onDismiss = {
-                isOpen = false
-            },
-            onCreateList = { name, description ->
-                accountViewModel.runIOCatching {
-                    accountViewModel.account.peopleLists.addFollowList(
-                        listName = name,
-                        listDescription = description,
-                        account = accountViewModel.account,
-                    )
-                }
-                isOpen = false
-            },
-        )
     }
 }

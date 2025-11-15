@@ -32,7 +32,7 @@ class Nip04EncryptResponse {
             )
 
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<EncryptionResult> {
-            if (intent.rejected) {
+            if (intent.rejected == true) {
                 return SignerResult.RequestAddressed.ManuallyRejected()
             }
 

@@ -114,7 +114,7 @@ class ChatNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         sendDraftSync()
                     }
                 }
@@ -325,9 +325,7 @@ class ChatNewMessageViewModel :
                 }
 
             if (replyId != null) {
-                accountViewModel.checkGetOrCreateNote(replyId) {
-                    replyTo.value = it
-                }
+                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
             }
         } else if (draftEvent is PrivateDmEvent) {
             val recipientNPub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
@@ -335,9 +333,7 @@ class ChatNewMessageViewModel :
 
             val replyId = draftEvent.replyTo()
             if (replyId != null) {
-                accountViewModel.checkGetOrCreateNote(replyId) {
-                    replyTo.value = it
-                }
+                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
             }
         }
 
@@ -393,7 +389,7 @@ class ChatNewMessageViewModel :
     ) {
         val uploadState = uploadState ?: return
 
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             if (nip17) {
                 ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
                     uploadsWaitingToBeSent += it
@@ -418,7 +414,7 @@ class ChatNewMessageViewModel :
         val room = room ?: return
         val uploadState = uploadState ?: return
 
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             if (nip17) {
                 ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
                     ChatFileSender(room, account).sendNIP17(it)

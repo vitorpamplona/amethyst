@@ -66,18 +66,15 @@ class BlossomServersEvent(
 
         suspend fun updateRelayList(
             earlierVersion: BlossomServersEvent,
-            relays: List<String>,
+            servers: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): BlossomServersEvent {
             val tags =
                 earlierVersion.tags
                     .filter { it[0] != "server" }
-                    .plus(
-                        relays.map {
-                            arrayOf("server", it)
-                        },
-                    ).toTypedArray()
+                    .plus(servers.map { arrayOf("server", it) })
+                    .toTypedArray()
 
             return signer.sign(createdAt, KIND, tags, earlierVersion.content)
         }

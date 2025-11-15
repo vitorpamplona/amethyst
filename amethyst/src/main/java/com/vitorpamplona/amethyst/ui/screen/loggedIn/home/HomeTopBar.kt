@@ -68,7 +68,7 @@ private fun TopNavFilterBar(
         placeholderCode = listName,
         explainer = stringRes(R.string.select_list_to_filter),
         options = allLists,
-        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
+        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.allFollows) },
         accountViewModel = accountViewModel,
     )
 }

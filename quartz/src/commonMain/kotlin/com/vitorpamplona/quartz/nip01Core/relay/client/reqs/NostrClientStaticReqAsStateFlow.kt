@@ -42,22 +42,22 @@ import kotlinx.coroutines.flow.callbackFlow
  *    - They will be ignored if they are already in the list.
  *    - They will be added to the beginning of the list if they are new.
  */
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: String,
     filters: List<Filter>,
-) = reqResultsInOrderAsFlow(RelayUrlNormalizer.normalize(relay), filters)
+) = reqAsFlow(RelayUrlNormalizer.normalize(relay), filters)
 
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: String,
     filter: Filter,
-) = reqResultsInOrderAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
+) = reqAsFlow(RelayUrlNormalizer.normalize(relay), listOf(filter))
 
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: NormalizedRelayUrl,
     filter: Filter,
-) = reqResultsInOrderAsFlow(relay, listOf(filter))
+) = reqAsFlow(relay, listOf(filter))
 
-fun INostrClient.reqResultsInOrderAsFlow(
+fun INostrClient.reqAsFlow(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
 ): Flow<List<Event>> =
@@ -65,7 +65,7 @@ fun INostrClient.reqResultsInOrderAsFlow(
         val subId = RandomInstance.randomChars(10)
         var hasBeenLive = false
         val eventIds = mutableSetOf<HexKey>()
-        val events = mutableListOf<Event>()
+        var currentEvents = listOf<Event>()
 
         val listener =
             object : IRequestListener {
@@ -77,12 +77,16 @@ fun INostrClient.reqResultsInOrderAsFlow(
                 ) {
                     if (event.id !in eventIds) {
                         if (hasBeenLive) {
-                            events.add(0, event)
+                            // faster
+                            val list = ArrayList<Event>(1 + currentEvents.size)
+                            list.add(event)
+                            list.addAll(currentEvents)
+                            currentEvents = list
                         } else {
-                            events.add(event)
+                            currentEvents = currentEvents + event
                         }
                         eventIds.add(event.id)
-                        trySend(events.toList())
+                        trySend(currentEvents)
                     }
                 }
 

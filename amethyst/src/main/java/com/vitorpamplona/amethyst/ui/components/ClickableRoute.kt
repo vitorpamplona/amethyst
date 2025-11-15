@@ -112,7 +112,7 @@ fun LoadOrCreateNote(
 
     if (note == null) {
         LaunchedEffect(key1 = event.id) {
-            accountViewModel.checkGetOrCreateNote(event) { note = it }
+            note = accountViewModel.noteFromEvent(event)
         }
     }
 
@@ -254,7 +254,7 @@ fun DisplayUser(
 
     if (userBase == null) {
         LaunchedEffect(key1 = userHex) {
-            accountViewModel.checkGetOrCreateUser(userHex) { userBase = it }
+            userBase = accountViewModel.checkGetOrCreateUser(userHex)
         }
     }
 

@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -370,7 +370,7 @@ private fun EmojiSelector(
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMap(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
+            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
                 event.emojiPacks().toImmutableList()
             }
 

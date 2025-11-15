@@ -61,13 +61,12 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
 open class EditPostViewModel : ViewModel() {
-    var accountViewModel: AccountViewModel? = null
-    var account: Account? = null
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
 
     var editedFromNote: Note? = null
 
@@ -94,46 +93,32 @@ open class EditPostViewModel : ViewModel() {
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
-    open fun prepare(
-        edit: Note,
-        versionLookingAt: Note?,
-        accountViewModel: AccountViewModel,
-    ) {
+    open fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
-        this.editedFromNote = edit
-
-        this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountViewModel.account)
     }
 
     open fun load(
         edit: Note,
         versionLookingAt: Note?,
-        accountViewModel: AccountViewModel,
     ) {
-        this.accountViewModel = accountViewModel
-        this.account = accountViewModel.account
-
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         multiOrchestrator = null
 
         message = TextFieldValue(versionLookingAt?.event?.content ?: edit.event?.content ?: "")
         urlPreview = findUrlInMessage()
 
-        editedFromNote = edit
+        this.editedFromNote = edit
+
+        this.userSuggestions?.reset()
+        this.userSuggestions = UserSuggestionState(accountViewModel.account)
     }
 
     fun sendPost() {
-        viewModelScope.launch(Dispatchers.IO) { innerSendPost() }
+        accountViewModel.launchSigner(::innerSendPost)
     }
 
     suspend fun innerSendPost() {
-        if (accountViewModel == null) {
-            cancel()
-            return
-        }
-
         val extraNotesToBroadcast = mutableListOf<Event>()
 
         nip95attachments.forEach {
@@ -142,14 +127,14 @@ open class EditPostViewModel : ViewModel() {
         }
 
         val notify =
-            if (editedFromNote?.author?.pubkeyHex == account?.userProfile()?.pubkeyHex) {
+            if (editedFromNote?.author?.pubkeyHex == account.userProfile().pubkeyHex) {
                 null
             } else {
                 // notifies if it is not the logged in user
                 editedFromNote?.author?.pubkeyHex
             }
 
-        account?.sendEdit(
+        account.sendEdit(
             message = message.text,
             originalNote = editedFromNote!!,
             notify = notify,
@@ -191,7 +176,7 @@ open class EditPostViewModel : ViewModel() {
         context: Context,
     ) {
         viewModelScope.launch {
-            val myAccount = account ?: return@launch
+            val myAccount = account
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             isUploadingImage = true
@@ -218,7 +203,7 @@ open class EditPostViewModel : ViewModel() {
                                 contentWarningReason = if (sensitiveContent) "" else null,
                             )
                         nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())

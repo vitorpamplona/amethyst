@@ -110,7 +110,7 @@ fun EditPostView(
     nav: INav,
 ) {
     val postViewModel: EditPostViewModel = viewModel()
-    postViewModel.prepare(edit, versionLookingAt, accountViewModel)
+    postViewModel.init(accountViewModel)
 
     val context = LocalContext.current
 
@@ -118,7 +118,7 @@ fun EditPostView(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        postViewModel.load(edit, versionLookingAt, accountViewModel)
+        postViewModel.load(edit, versionLookingAt)
     }
 
     Dialog(

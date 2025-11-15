@@ -81,8 +81,9 @@ private fun PeopleListItemPreview() {
     val samplePeopleList1 =
         PeopleList(
             identifierTag = "00001-2222",
-            title = "Sample List Title",
+            title = "Sample List Title, Very long title, very very very long",
             description = "Sample List Description",
+            image = "http://some.com/image.png",
             emptySet(),
             emptySet(),
         )
@@ -92,6 +93,7 @@ private fun PeopleListItemPreview() {
             identifierTag = "00001-2223",
             title = "Sample List Title",
             description = "Sample List Description",
+            image = "http://some.com/image.png",
             setOf(user1, user3),
             emptySet(),
         )
@@ -101,6 +103,7 @@ private fun PeopleListItemPreview() {
             identifierTag = "00001-2224",
             title = "Sample List Title",
             description = "Sample List Description",
+            image = "http://some.com/image.png",
             emptySet(),
             setOf(user1, user3),
         )
@@ -110,6 +113,7 @@ private fun PeopleListItemPreview() {
             identifierTag = "00001-2225",
             title = "Sample List Title",
             description = "Sample List Description",
+            image = "http://some.com/image.png",
             setOf(user3),
             setOf(user1, user2, user3),
         )
@@ -120,8 +124,7 @@ private fun PeopleListItemPreview() {
                 modifier = Modifier,
                 peopleList = samplePeopleList1,
                 onClick = {},
-                onRename = {},
-                onDescriptionChange = { },
+                onEditMetadata = {},
                 onClone = { newName, newDesc -> },
                 onDelete = {},
             )
@@ -129,8 +132,7 @@ private fun PeopleListItemPreview() {
                 modifier = Modifier,
                 peopleList = samplePeopleList2,
                 onClick = {},
-                onRename = {},
-                onDescriptionChange = { },
+                onEditMetadata = {},
                 onClone = { newName, newDesc -> },
                 onDelete = {},
             )
@@ -138,8 +140,7 @@ private fun PeopleListItemPreview() {
                 modifier = Modifier,
                 peopleList = samplePeopleList3,
                 onClick = {},
-                onRename = {},
-                onDescriptionChange = { },
+                onEditMetadata = {},
                 onClone = { newName, newDesc -> },
                 onDelete = {},
             )
@@ -147,8 +148,7 @@ private fun PeopleListItemPreview() {
                 modifier = Modifier,
                 peopleList = samplePeopleList4,
                 onClick = {},
-                onRename = {},
-                onDescriptionChange = { },
+                onEditMetadata = {},
                 onClone = { newName, newDesc -> },
                 onDelete = {},
             )
@@ -161,8 +161,7 @@ fun PeopleListItem(
     modifier: Modifier = Modifier,
     peopleList: PeopleList,
     onClick: () -> Unit,
-    onRename: (String) -> Unit,
-    onDescriptionChange: (String?) -> Unit,
+    onEditMetadata: () -> Unit,
     onClone: (customName: String?, customDescription: String?) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -173,7 +172,12 @@ fun PeopleListItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(peopleList.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    modifier = Modifier.weight(1f),
+                    text = peopleList.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
                 Column(
                     modifier = NoSoTinyBorders,
@@ -181,10 +185,7 @@ fun PeopleListItem(
                     horizontalAlignment = Alignment.End,
                 ) {
                     PeopleListOptionsButton(
-                        peopleListName = peopleList.title,
-                        peopleListDescription = peopleList.description,
-                        onListRename = onRename,
-                        onListDescriptionChange = onDescriptionChange,
+                        onListEditMetadata = onEditMetadata,
                         onListCloneCreate = onClone,
                         onListDelete = onDelete,
                     )
@@ -271,10 +272,7 @@ fun DisplayParticipantNumberAndStatus(
 @Composable
 private fun PeopleListOptionsButton(
     modifier: Modifier = Modifier,
-    peopleListName: String,
-    peopleListDescription: String?,
-    onListRename: (String) -> Unit,
-    onListDescriptionChange: (String?) -> Unit,
+    onListEditMetadata: () -> Unit,
     onListCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onListDelete: () -> Unit,
 ) {
@@ -286,35 +284,23 @@ private fun PeopleListOptionsButton(
         VerticalDotsIcon()
 
         ListOptionsMenu(
-            setName = peopleListName,
-            setDescription = peopleListDescription,
             isExpanded = isMenuOpen.value,
-            onDismiss = { isMenuOpen.value = false },
-            onListRename = onListRename,
-            onListDescriptionChange = onListDescriptionChange,
+            onListEditMetadata = onListEditMetadata,
             onListClone = onListCloneCreate,
             onDelete = onListDelete,
+            onDismiss = { isMenuOpen.value = false },
         )
     }
 }
 
 @Composable
 private fun ListOptionsMenu(
-    modifier: Modifier = Modifier,
     isExpanded: Boolean,
-    setName: String,
-    setDescription: String?,
-    onListRename: (String) -> Unit,
-    onListDescriptionChange: (String?) -> Unit,
+    onListEditMetadata: () -> Unit,
     onListClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val isRenameDialogOpen = remember { mutableStateOf(false) }
-    val renameString = remember { mutableStateOf("") }
-
-    val isDescriptionModDialogOpen = remember { mutableStateOf(false) }
-
     val isCopyDialogOpen = remember { mutableStateOf(false) }
     val optionalCloneName = remember { mutableStateOf<String?>(null) }
     val optionalCloneDescription = remember { mutableStateOf<String?>(null) }
@@ -325,19 +311,10 @@ private fun ListOptionsMenu(
     ) {
         DropdownMenuItem(
             text = {
-                Text(text = stringRes(R.string.follow_set_rename_btn_label))
+                Text(text = stringRes(R.string.follow_set_edit_list_metadata))
             },
             onClick = {
-                isRenameDialogOpen.value = true
-                onDismiss()
-            },
-        )
-        DropdownMenuItem(
-            text = {
-                Text(text = stringRes(R.string.follow_set_desc_modify_label))
-            },
-            onClick = {
-                isDescriptionModDialogOpen.value = true
+                onListEditMetadata()
                 onDismiss()
             },
         )
@@ -357,28 +334,6 @@ private fun ListOptionsMenu(
             onClick = {
                 onDelete()
             },
-        )
-    }
-
-    if (isRenameDialogOpen.value) {
-        ListRenameDialog(
-            currentName = setName,
-            newName = renameString.value,
-            onStringRenameChange = {
-                renameString.value = it
-            },
-            onDismissDialog = { isRenameDialogOpen.value = false },
-            onListRename = {
-                onListRename(renameString.value)
-            },
-        )
-    }
-
-    if (isDescriptionModDialogOpen.value) {
-        ListModifyDescriptionDialog(
-            currentDescription = setDescription,
-            onDismissDialog = { isDescriptionModDialogOpen.value = false },
-            onModifyDescription = onListDescriptionChange,
         )
     }
 
@@ -465,9 +420,9 @@ private fun ListModifyDescriptionDialog(
     modifier: Modifier = Modifier,
     currentDescription: String?,
     onDismissDialog: () -> Unit,
-    onModifyDescription: (String?) -> Unit,
+    onModifyDescription: (String) -> Unit,
 ) {
-    val updatedDescription = remember { mutableStateOf<String?>(null) }
+    val updatedDescription = remember { mutableStateOf<String>("") }
 
     val modifyIndicatorLabel =
         if (currentDescription == null) {
@@ -504,7 +459,7 @@ private fun ListModifyDescriptionDialog(
                     fontStyle = FontStyle.Italic,
                 )
                 TextField(
-                    value = updatedDescription.value ?: "",
+                    value = updatedDescription.value,
                     onValueChange = { updatedDescription.value = it },
                 )
             }

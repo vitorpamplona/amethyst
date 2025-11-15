@@ -107,7 +107,7 @@ open class ChannelNewMessageViewModel :
             draftTag.versions.collectLatest {
                 // don't save the first
                 if (it > 0) {
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         sendDraftSync()
                     }
                 }
@@ -242,16 +242,12 @@ open class ChannelNewMessageViewModel :
         if (draftEvent as? ChannelMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                accountViewModel.checkGetOrCreateNote(replyId) {
-                    replyTo.value = it
-                }
+                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
             }
         } else if (draftEvent as? LiveActivitiesChatMessageEvent != null) {
             val replyId = draftEvent.reply()?.eventId
             if (replyId != null) {
-                accountViewModel.checkGetOrCreateNote(replyId) {
-                    replyTo.value = it
-                }
+                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
             }
         }
 
@@ -263,7 +259,7 @@ open class ChannelNewMessageViewModel :
     }
 
     fun sendPost(onDone: suspend () -> Unit) {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             sendPostSync()
             onDone()
         }

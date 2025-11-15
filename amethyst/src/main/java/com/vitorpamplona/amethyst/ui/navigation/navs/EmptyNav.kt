@@ -29,7 +29,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KClass
 
 @Stable
-object EmptyNav : INav {
+class EmptyNav : INav {
     override val navigationScope: CoroutineScope get() = TODO("Not yet implemented")
     override val drawerState = DrawerState(DrawerValue.Closed)
 

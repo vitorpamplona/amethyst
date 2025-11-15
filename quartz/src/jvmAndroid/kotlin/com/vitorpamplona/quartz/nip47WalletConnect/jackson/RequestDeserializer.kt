@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.Request
+import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
     override fun deserialize(
@@ -33,7 +34,7 @@ class RequestDeserializer : StdDeserializer<Request>(Request::class.java) {
         ctxt: DeserializationContext,
     ): Request? {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
-        val method = jsonObject.get("method")?.asText()
+        val method = jsonObject.get("method")?.asTextOrNull()
 
         if (method == "pay_invoice") {
             return jp.codec.treeToValue(jsonObject, PayInvoiceMethod::class.java)

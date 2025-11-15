@@ -51,6 +51,7 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarSize
 
 val Shapes =
     Shapes(
@@ -81,6 +82,8 @@ val StdButtonSizeModifier = Modifier.size(19.dp)
 val HalfVertSpacer = Modifier.height(2.dp)
 
 val MinHorzSpacer = Modifier.width(1.dp)
+
+val HalfHorzSpacer = Modifier.width(3.dp)
 
 val StdHorzSpacer = Modifier.width(5.dp)
 val StdVertSpacer = Modifier.height(5.dp)
@@ -374,3 +377,5 @@ val SpacedBy10dp = Arrangement.spacedBy(Size10dp)
 val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
 
 val Size50ModifierOffset10 = Modifier.size(50.dp).offset(y = (-10).dp)
+
+val FollowPackHeaderModifier = Modifier.fillMaxWidth().height(TopBarSize)

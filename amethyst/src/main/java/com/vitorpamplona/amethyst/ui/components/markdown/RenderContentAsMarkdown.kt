@@ -122,7 +122,7 @@ fun RenderContentAsMarkdown(
 fun RenderContentAsMarkdownPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -174,7 +174,7 @@ fun RenderContentAsMarkdownPreview() {
 fun RenderContentAsMarkdownListsPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -224,7 +224,7 @@ fun RenderContentAsMarkdownListsPreview() {
 fun RenderContentAsMarkdownCodePreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -278,7 +278,7 @@ fun RenderContentAsMarkdownCodePreview() {
 fun RenderContentAsMarkdownTablesPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -319,7 +319,7 @@ fun RenderContentAsMarkdownTablesPreview() {
 fun RenderContentAsMarkdownFootNotesPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     ThemeComparisonRow {
         val background = MaterialTheme.colorScheme.background
@@ -356,7 +356,7 @@ fun RenderContentAsMarkdownFootNotesPreview() {
 fun RenderContentAsMarkdownUserPreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     runBlocking {
         withContext(Dispatchers.IO) {
@@ -418,7 +418,7 @@ fun RenderContentAsMarkdownUserPreview() {
 fun RenderContentAsMarkdownNotePreview() {
     val accountViewModel = mockAccountViewModel()
 
-    val nav = EmptyNav
+    val nav = EmptyNav()
 
     runBlocking {
         withContext(Dispatchers.IO) {

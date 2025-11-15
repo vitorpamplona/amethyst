@@ -708,7 +708,7 @@ private fun RenderNoteRow(
         is BadgeAwardEvent -> RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
         is FhirResourceEvent -> RenderFhirResource(baseNote, accountViewModel, nav)
         is PeopleListEvent -> DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
-        is FollowListEvent -> DisplayFollowList(baseNote, backgroundColor, accountViewModel, nav)
+        is FollowListEvent -> DisplayFollowList(baseNote, true, accountViewModel, nav)
         is RelaySetEvent -> DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
         is ChatMessageRelayListEvent -> DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is AdvertisedRelayListEvent -> DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)

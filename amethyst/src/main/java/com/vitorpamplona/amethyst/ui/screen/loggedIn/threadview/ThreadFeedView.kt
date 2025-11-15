@@ -578,7 +578,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is PeopleListEvent) {
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is FollowListEvent) {
-                    DisplayFollowList(baseNote, backgroundColor, accountViewModel, nav)
+                    DisplayFollowList(baseNote, false, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
                     AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
@@ -1059,7 +1059,6 @@ private fun RenderLongFormHeaderForThread(
 private fun RenderWikiHeaderForThreadPreview() {
     val event = Event.fromJson("{\"id\":\"277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1\",\"pubkey\":\"460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c\",\"created_at\":1708695717,\"kind\":30818,\"tags\":[[\"d\",\"amethyst\"],[\"a\",\"30818:f03e7c5262648e0b7823dfb49f8f17309cfec9cb14711413dcabdf3d7fc6369a:amethyst\",\"wss://relay.nostr.band\",\"fork\"],[\"e\",\"ceabc60c8022c472c727aa25ae7691885964366386ce265c47e5a78be6cb00be\",\"wss://relay.nostr.band\",\"fork\"],[\"title\",\"Amethyst\"],[\"published_at\",\"1708707133\"]],\"content\":\"An Android-only app written in Kotlin with support for over 90 event kinds. \\n\\n![](https://play-lh.googleusercontent.com/lvZlAm9dBrpHeOo7sIPKCsiKOLYLhR2b0FiOT4tyiwWO2dvsR2gDS0xk9tOOr9U-6uM=w240-h480-rw)\\n\",\"sig\":\"6748126a909a20dbdb67947a09d64e41d7140a79335a4ad675c6173d7dd5dbcab9c360dec617bd67bbbc20dfad416b15056eda2e20716cd6c425a84301a125a0\"}") as WikiNoteEvent
     val accountViewModel = mockAccountViewModel()
-    val nav = EmptyNav
 
     val editState =
         remember {
@@ -1071,6 +1070,8 @@ private fun RenderWikiHeaderForThreadPreview() {
             LocalCache.justConsume(event, null, false)
         }
     }
+
+    val nav = EmptyNav()
 
     LoadNote(baseNoteHex = "277f982a4cd3f67cc47ad9282176acabee1713848f547d6021e0c155572078e1", accountViewModel = accountViewModel) { baseNote ->
         ThemeComparisonColumn {

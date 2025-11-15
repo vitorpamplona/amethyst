@@ -52,9 +52,12 @@ fun AllMediaServersScreen(
     val nip96ServersViewModel: NIP96ServersViewModel = viewModel()
     val blossomServersViewModel: BlossomServersViewModel = viewModel()
 
-    LaunchedEffect(key1 = Unit) {
-        nip96ServersViewModel.load(accountViewModel.account)
-        blossomServersViewModel.load(accountViewModel.account)
+    nip96ServersViewModel.init(accountViewModel)
+    blossomServersViewModel.init(accountViewModel)
+
+    LaunchedEffect(key1 = accountViewModel) {
+        nip96ServersViewModel.load()
+        blossomServersViewModel.load()
     }
 
     MediaServersScaffold(nip96ServersViewModel, blossomServersViewModel) {

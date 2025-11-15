@@ -58,7 +58,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     fun create() {
         if (hasModified) {
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 saveRelayList(_relays.value.map { it.relay })
                 clear()
             }

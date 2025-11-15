@@ -109,7 +109,7 @@ fun ZapTheDevsCardPreview() {
                 ZapTheDevsCard(
                     releaseNote,
                     accountViewModel,
-                    nav = EmptyNav,
+                    nav = EmptyNav(),
                 )
             }
         }

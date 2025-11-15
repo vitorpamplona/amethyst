@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +60,10 @@ class PeopleListViewModel : ViewModel() {
                 )
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun selectedAddress() = PeopleListEvent.createAddress(account.userProfile().pubkeyHex, selectedDTag.value)
+
+    fun selectedNote() = account.cache.getOrCreateAddressableNote(selectedAddress())
 
     fun init(
         account: Account,

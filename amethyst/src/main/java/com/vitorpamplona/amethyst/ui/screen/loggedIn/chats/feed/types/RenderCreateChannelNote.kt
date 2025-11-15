@@ -117,7 +117,7 @@ fun RenderChannelDataPreview() {
             tags = EmptyTagList,
             bgColor = remember { mutableStateOf(Color.Transparent) },
             accountViewModel = mockAccountViewModel(),
-            nav = EmptyNav,
+            nav = EmptyNav(),
         )
     }
 }

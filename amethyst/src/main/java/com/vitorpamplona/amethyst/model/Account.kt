@@ -176,7 +176,6 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -352,6 +351,7 @@ class Account(
     val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultHomeFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -367,6 +367,7 @@ class Account(
     val liveStoriesFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultStoriesFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -382,6 +383,7 @@ class Account(
     val liveDiscoveryFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultDiscoveryFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -397,6 +399,7 @@ class Account(
     val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
             feedFilterListName = settings.defaultNotificationFollowList,
+            kind3Follows = kind3FollowList.flow,
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = defaultGlobalRelays.flow,
@@ -1468,18 +1471,6 @@ class Account(
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
-            val gift = giftWrap.unwrapOrNull(signer)
-            if (gift is SealedRumorEvent) {
-                val rumor = gift.unsealOrNull(signer)
-                if (rumor != null) {
-                    cache.justConsumeMyOwnEvent(rumor)
-                }
-            }
-
-            if (gift != null) {
-                cache.justConsumeMyOwnEvent(gift)
-            }
-
             cache.justConsumeMyOwnEvent(giftWrap)
         }
 
@@ -1692,6 +1683,10 @@ class Account(
     fun isFollowing(user: User): Boolean = user.pubkeyHex in followingKeySet()
 
     fun isFollowing(user: HexKey): Boolean = user in followingKeySet()
+
+    fun isKnown(user: User): Boolean = user.pubkeyHex in allFollows.flow.value.authors
+
+    fun isKnown(user: HexKey): Boolean = user in allFollows.flow.value.authors
 
     fun isAcceptable(note: Note): Boolean {
         return note.author?.let { isAcceptable(it) } ?: true &&

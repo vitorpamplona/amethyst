@@ -60,6 +60,12 @@ class TagArrayBuilder<T : IEvent> {
         return this
     }
 
+    fun addFirst(tag: Array<String>): TagArrayBuilder<T> {
+        if (tag.isEmpty() || tag[0].isEmpty()) return this
+        tagList.getOrPut(tag[0], ::mutableListOf).add(0, tag)
+        return this
+    }
+
     fun addUnique(tag: Array<String>): TagArrayBuilder<T> {
         if (tag.isEmpty() || tag[0].isEmpty()) return this
         tagList[tag[0]] = mutableListOf(tag)

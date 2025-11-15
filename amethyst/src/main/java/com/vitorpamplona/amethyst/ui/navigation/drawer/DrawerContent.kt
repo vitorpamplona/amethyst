@@ -525,7 +525,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.user_preferences,
-            icons = listOf(Icons.Outlined.Translate),
+            icon = Icons.Outlined.Translate,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.UserSettings,
@@ -609,26 +609,9 @@ fun NavigationRow(
     nav: INav,
     route: Route,
 ) {
-    NavigationRow(
-        title = title,
-        icons = listOf(icon),
-        tint = tint,
-        nav = nav,
-        route = route,
-    )
-}
-
-@Composable
-fun NavigationRow(
-    title: Int,
-    icons: List<ImageVector>,
-    tint: Color,
-    nav: INav,
-    route: Route,
-) {
     IconRow(
         title = title,
-        icons = icons,
+        icon = icon,
         tint = tint,
         onClick = {
             nav.closeDrawer()
@@ -679,21 +662,6 @@ fun IconRow(
     tint: Color,
     onClick: () -> Unit,
 ) {
-    IconRow(
-        title = title,
-        icons = listOf(icon),
-        tint = tint,
-        onClick = onClick,
-    )
-}
-
-@Composable
-fun IconRow(
-    title: Int,
-    icons: List<ImageVector>,
-    tint: Color,
-    onClick: () -> Unit,
-) {
     Row(
         modifier =
             Modifier
@@ -707,14 +675,12 @@ fun IconRow(
             modifier = IconRowModifier,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            icons.forEach { icon ->
-                Icon(
-                    imageVector = icon,
-                    contentDescription = stringRes(title),
-                    modifier = Size22Modifier.padding(end = 4.dp),
-                    tint = tint,
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = stringRes(title),
+                modifier = Size22Modifier.padding(end = 4.dp),
+                tint = tint,
+            )
 
             Text(
                 modifier = IconRowTextModifier,

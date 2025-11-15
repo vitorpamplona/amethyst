@@ -21,139 +21,214 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.GalleryUnloaded
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
-import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.FollowSetCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.blackTagModifier
+import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
+import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayFollowList(
     baseNote: Note,
-    backgroundColor: MutableState<Color>,
+    makeItShort: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? FollowListEvent ?: return
-
-    var members by remember { mutableStateOf<ImmutableList<User>>(persistentListOf()) }
-
-    var expanded by remember { mutableStateOf(false) }
-
-    val toMembersShow =
-        if (expanded) {
-            members
-        } else {
-            members.take(3)
+    val card =
+        observeNoteEventAndMap(baseNote, accountViewModel) { event: FollowListEvent? ->
+            if (event == null) {
+                FollowSetCard(
+                    name = "",
+                    media = "",
+                    description = "",
+                    users = persistentListOf(),
+                )
+            } else {
+                FollowSetCard(
+                    name = event.title()?.ifBlank { null } ?: event.dTag(),
+                    media = event.image()?.ifBlank { null },
+                    description = event.description(),
+                    users = accountViewModel.sortUsersSync(event.followIds()).toImmutableList(),
+                )
+            }
         }
 
-    val image = noteEvent.image()
-
-    image?.let {
-        MyAsyncImage(
-            imageUrl = it,
-            contentDescription =
-                stringRes(
-                    R.string.preview_card_image_for,
-                    it,
-                ),
-            contentScale = ContentScale.Crop,
-            mainImageModifier = Modifier.fillMaxWidth(),
-            loadedImageModifier = FollowSetImageModifier,
-            accountViewModel = accountViewModel,
-            onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
-            onError = { DefaultImageHeader(baseNote, accountViewModel) },
-        )
-    } ?: run {
-        DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier)
-    }
-
-    Text(
-        text = noteEvent.title() ?: noteEvent.dTag(),
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp),
-        textAlign = TextAlign.Center,
+    RenderFollowSetThumbEmbed(
+        card.value,
+        baseNote,
+        makeItShort,
+        accountViewModel,
+        nav,
     )
+}
 
-    LaunchedEffect(Unit) {
-        accountViewModel.loadUsers(noteEvent.taggedUserIds()) {
-            members = it
+@Composable
+fun RenderFollowSetThumbEmbed(
+    card: FollowSetCard,
+    baseNote: Note,
+    makeItShort: Boolean,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth().clickable {
+                nav.nav { routeFor(baseNote, accountViewModel.account) }
+            },
+        verticalArrangement = SpacedBy5dp,
+    ) {
+        Box(
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            card.media?.let {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = stringRes(R.string.preview_card_image_for, it),
+                    contentScale = ContentScale.Crop,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = FollowSetImageModifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                )
+            } ?: run { DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier) }
+
+            GalleryUnloaded(card.users, StdPadding, accountViewModel, nav)
+        }
+
+        Row(
+            verticalAlignment = CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = card.name,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringRes(R.string.follow_list_item_label),
+                color = MaterialTheme.colorScheme.background,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = MaterialTheme.colorScheme.blackTagModifier,
+            )
+        }
+
+        if (!makeItShort) {
+            card.description?.let {
+                val defaultBackground = MaterialTheme.colorScheme.background
+                val background = remember { mutableStateOf(defaultBackground) }
+
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = true,
+                    quotesLeft = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = baseNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList,
+                    backgroundColor = background,
+                    id = it,
+                    callbackUri = null,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
+}
 
-    Box {
-        FlowRow(modifier = Modifier.padding(top = 5.dp)) {
-            toMembersShow.forEach { user ->
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    UserCompose(
-                        user,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+@Preview
+@Composable
+fun RenderFollowSetThumbPreview() {
+    val accountViewModel = mockAccountViewModel()
 
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
-                }
-            }
-        }
+    val followCard =
+        FollowListEvent(
+            id = "eca31634fce7c9068b56fa8db9f387da70bdcceb3986a77ca1a9844f3128eb5f",
+            pubKey = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da",
+            createdAt = 1761736286,
+            tags =
+                arrayOf(
+                    arrayOf("title", "Retro Computer Fans"),
+                    arrayOf("d", "xmbspe8rddsq"),
+                    arrayOf("image", "https://blog.johnnovak.net/2022/04/15/achieving-period-correct-graphics-in-personal-computer-emulators-part-1-the-amiga/img/dream-setup.jpg"),
+                    arrayOf("p", "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da"),
+                    arrayOf("p", "9a9a4aa0e43e57873380ab22e8a3df12f3c4cf5bb3a804c6e3fed0069a6e2740"),
+                    arrayOf("p", "4f5dd82517b11088ce00f23d99f06fe8f3e2e45ecf47bc9c2f90f34d5c6f7382"),
+                    arrayOf("p", "ac92102a2ecb873c488e0125354ef5a97075a16198668c360eda050007ed42cd"),
+                    arrayOf("p", "47f54409a4620eb35208a3bc1b53555bf3d0656b246bf0471a93208e20672f6f"),
+                    arrayOf("p", "2624911545afb7a2b440cf10f5c69308afa33aae26fca664d8c94623dc0f1baf"),
+                    arrayOf("p", "6641f26f5c59f7010dbe3e42e4593398e27c087497cb7d20e0e7633a17e48a94"),
+                    arrayOf("description", "Retro computer fans and enthusiasts "),
+                ),
+            content = "",
+            sig = "3aa388edafad151e81cb0228fe04e115dbbcaa851c666bfe3c8740b6cd99575f0fc3ba2d47acda86f7626564a05e9dbc05ef452a7bd0ac00f828dbad0e1bae6c",
+        )
 
-        if (members.size > 3 && !expanded) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(getGradient(backgroundColor)),
-            ) {
-                ShowMoreButton { expanded = !expanded }
-            }
-        }
+    LocalCache.justConsume(followCard, null, false)
+
+    val card =
+        FollowSetCard(
+            name = followCard.title()?.ifBlank { null } ?: followCard.dTag(),
+            media = followCard.image()?.ifBlank { null },
+            description = followCard.description()?.ifBlank { null },
+            users = followCard.followIds().toImmutableList(),
+        )
+
+    ThemeComparisonColumn {
+        RenderFollowSetThumbEmbed(
+            card = card,
+            baseNote = LocalCache.getOrCreateNote(followCard.id),
+            makeItShort = false,
+            accountViewModel = accountViewModel,
+            nav = EmptyNav(),
+        )
     }
 }

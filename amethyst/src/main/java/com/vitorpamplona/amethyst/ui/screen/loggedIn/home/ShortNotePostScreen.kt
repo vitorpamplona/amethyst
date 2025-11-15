@@ -167,7 +167,7 @@ private fun NewPostScreenInner(
     WatchAndLoadMyEmojiList(accountViewModel)
 
     BackHandler {
-        accountViewModel.runIOCatching {
+        accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             postViewModel.cancel()
         }
@@ -181,7 +181,7 @@ private fun NewPostScreenInner(
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         postViewModel.sendPostSync()
                         nav.popBack()
                     }
@@ -189,7 +189,7 @@ private fun NewPostScreenInner(
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.runIOCatching {
+                    accountViewModel.launchSigner {
                         postViewModel.sendDraftSync()
                         postViewModel.cancel()
                     }
