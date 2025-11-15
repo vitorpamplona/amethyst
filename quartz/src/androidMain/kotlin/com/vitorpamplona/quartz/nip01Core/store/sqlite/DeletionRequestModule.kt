@@ -71,16 +71,19 @@ class DeletionRequestModule {
             val idParams = idValues.joinToString(",") { "?" }
 
             val addresses = event.deleteAddresses()
-            val addressParams = addresses.joinToString(",") { "(?, ?)" }
+            val addressClause =
+                addresses.joinToString(" OR ") {
+                    "(kind = ? AND d_tag = ?)"
+                }
             val addressValues = addresses.flatMap { listOf<Any>(it.kind, it.dTag) }
 
             val whereClause =
                 if (idValues.isNotEmpty() && addresses.isNotEmpty()) {
-                    "(id IN ($idParams) OR (kind, d_tag) IN ($addressParams)) AND pubkey = ?"
+                    "(id IN ($idParams) OR ($addressClause)) AND pubkey = ?"
                 } else if (idValues.isNotEmpty()) {
                     "id IN ($idParams) AND pubkey = ?"
                 } else if (addresses.isNotEmpty()) {
-                    "(kind, d_tag) IN ($addressParams) AND pubkey = ?"
+                    "($addressClause) AND pubkey = ?"
                 } else {
                     return
                 }

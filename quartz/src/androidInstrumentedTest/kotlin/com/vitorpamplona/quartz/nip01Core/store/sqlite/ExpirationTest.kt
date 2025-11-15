@@ -52,12 +52,10 @@ class ExpirationTest {
 
     @Test
     fun testDeletingExpiredEvents() {
-        val time = TimeUtils.now()
-
         val noteSafe =
             signer.sign(
-                TextNoteEvent.build("test1", createdAt = time + 1) {
-                    expiration(time + 100)
+                TextNoteEvent.build("test1", createdAt = TimeUtils.now() + 1) {
+                    expiration(TimeUtils.now() + 100)
                 },
             )
 
@@ -65,8 +63,8 @@ class ExpirationTest {
 
         val noteToExpire =
             signer.sign(
-                TextNoteEvent.build("test1", createdAt = time + 1) {
-                    expiration(time + 1)
+                TextNoteEvent.build("test1", createdAt = TimeUtils.now() + 1) {
+                    expiration(TimeUtils.now() + 5)
                 },
             )
 
@@ -74,7 +72,7 @@ class ExpirationTest {
 
         db.assertQuery(noteToExpire, Filter(ids = listOf(noteToExpire.id)))
 
-        Thread.sleep(2000)
+        Thread.sleep(6000)
 
         db.deleteExpiredEvents()
 
@@ -84,12 +82,10 @@ class ExpirationTest {
 
     @Test
     fun testInsertingExpiredEvents() {
-        val time = TimeUtils.now()
-
         val note1 =
             signer.sign(
-                TextNoteEvent.build("test1", createdAt = time - 12) {
-                    expiration(time - 10)
+                TextNoteEvent.build("test1", createdAt = TimeUtils.now() - 12) {
+                    expiration(TimeUtils.now() - 10)
                 },
             )
 
