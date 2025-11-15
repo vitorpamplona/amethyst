@@ -448,6 +448,7 @@
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Tyst listan</string>
     <string name="follow_sets">Följelistor</string>
+    <string name="follow_sets_explainer">Detta är följlistor avsedda för ditt eget bruk. Du kan följa användare privat eller offentligt.</string>
     <string name="labeled_bookmarks">Märkta bokmärken</string>
     <string name="general_bookmarks">Allmänna bokmärken</string>
     <string name="follow_set_type_public">Offentlig</string>
@@ -480,6 +481,7 @@
     <string name="follow_set_creation_item_label">Skapa ny %1$s-lista med användare</string>
     <string name="follow_set_creation_item_description">Skapar ett %1$s-följ-set och lägger till %2$s i det.</string>
     <string name="follow_set_creation_dialog_title">Ny följelista</string>
+    <string name="follow_pack_creation_dialog_title">Nytt rekommendationspaket</string>
     <string name="follow_set_copy_dialog_title">Kopiera/Klona följelista</string>
     <string name="follow_set_desc_modify_label">Ändra beskrivning</string>
     <string name="follow_set_empty_desc_label">Den här listan har ingen beskrivning</string>
@@ -492,6 +494,7 @@
     <string name="follow_set_creation_action_btn_label">Skapa lista</string>
     <string name="follow_set_copy_action_btn_label">Kopiera/Klona lista</string>
     <string name="follow_set_rename_btn_label">Byt namn på lista</string>
+    <string name="follow_set_edit_list_metadata">Redigera lista</string>
     <string name="follow_set_desc_modify_btn_label">Ändra</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Du byter namn från </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> till..</string>
@@ -629,6 +632,7 @@
     <string name="followed_tags">Följda taggar</string>
     <string name="relay_setup">Reläer</string>
     <string name="discover_follows">Följpaket</string>
+    <string name="discover_follows_explainer">Detta är listor med användare som du rekommenderar till andra. Endast offentliga användare är tillåtna.</string>
     <string name="discover_reads">Läsningar</string>
     <string name="discover_content_v2">Feed algoritmer</string>
     <string name="discover_marketplace">Marknadsplats</string>
@@ -1120,4 +1124,17 @@
     <string name="remove_user_from_the_list">Ta bort användare från listan</string>
     <string name="follow_list_item_label">Följpaket</string>
     <string name="members">Medlemmar</string>
+    <string name="people_list_title">Metadata för följlista</string>
+    <string name="people_list_explainer">Metadata för följlistor kan ses av alla på Nostr. Endast privata medlemmar är krypterade.</string>
+    <string name="follow_pack_title">Metadata för rekommendationspaket</string>
+    <string name="follow_pack_explainer">Metadata för rekommendationspaket kan ses av alla på Nostr och publiceras ofta på webbplatser som startpaket för nya användare.</string>
+    <string name="follow_pack_edit_list_metadata">Redigera rekommendationspaket</string>
+    <string name="follow_pack_creation_name_label">Paketnamn</string>
+    <string name="follow_pack_copy_name_label">Nytt paketnamn</string>
+    <string name="follow_pack_creation_desc_label">Paketbeskrivning</string>
+    <string name="follow_pack_copy_desc_label">Ny paketbeskrivning</string>
+    <string name="follow_set_broadcast">Sänd lista</string>
+    <string name="follow_pack_broadcast">Sänd rekommendationspaket</string>
+    <string name="follow_set_delete">Ta bort lista</string>
+    <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
 </resources>

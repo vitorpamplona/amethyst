@@ -454,6 +454,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_list_global">Weltweit</string>
     <string name="follow_list_mute_list">Stummliste</string>
     <string name="follow_sets">Follower-Listen</string>
+    <string name="follow_sets_explainer">Dies sind Follow-Listen für deine eigene Nutzung. Du kannst Nutzer privat oder öffentlich folgen.</string>
     <string name="labeled_bookmarks">Markierte Lesezeichen</string>
     <string name="general_bookmarks">Allgemeine Lesezeichen</string>
     <string name="follow_set_type_public">Öffentlich</string>
@@ -486,6 +487,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_creation_item_label">Neue %1$s-Liste mit Benutzer erstellen</string>
     <string name="follow_set_creation_item_description">Erstellt ein %1$s-Folge-Set und fügt %2$s hinzu.</string>
     <string name="follow_set_creation_dialog_title">Neue Follower-Liste</string>
+    <string name="follow_pack_creation_dialog_title">Neues Empfehlungspaket</string>
     <string name="follow_set_copy_dialog_title">Follower-Liste kopieren/klonen</string>
     <string name="follow_set_desc_modify_label">Beschreibung bearbeiten</string>
     <string name="follow_set_empty_desc_label">Diese Liste hat keine Beschreibung</string>
@@ -498,6 +500,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_creation_action_btn_label">Liste erstellen</string>
     <string name="follow_set_copy_action_btn_label">Liste kopieren/klonen</string>
     <string name="follow_set_rename_btn_label">Liste umbenennen</string>
+    <string name="follow_set_edit_list_metadata">Liste bearbeiten</string>
     <string name="follow_set_desc_modify_btn_label">Bearbeiten</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Du benennst um von </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> zu..</string>
@@ -635,6 +638,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="followed_tags">Gefolgte Tags</string>
     <string name="relay_setup">Relais</string>
     <string name="discover_follows">Folge Paketen</string>
+    <string name="discover_follows_explainer">Dies sind Listen von Nutzern, die du anderen empfiehlst. Nur öffentliche Nutzer sind erlaubt.</string>
     <string name="discover_reads">Lesungen</string>
     <string name="discover_content_v2">Feedalgorithmen</string>
     <string name="discover_marketplace">Marktplatz</string>
@@ -1126,4 +1130,17 @@ anz der Bedingungen ist erforderlich</string>
     <string name="remove_user_from_the_list">Benutzer aus der Liste entfernen</string>
     <string name="follow_list_item_label">Folge Paket</string>
     <string name="members">Mitglieder</string>
+    <string name="people_list_title">Metadaten der Follow-Liste</string>
+    <string name="people_list_explainer">Metadaten von Follow-Listen können von allen auf Nostr gesehen werden. Nur deine privaten Mitglieder sind verschlüsselt.</string>
+    <string name="follow_pack_title">Metadaten des Empfehlungspakets</string>
+    <string name="follow_pack_explainer">Metadaten von Empfehlungspaketen können von allen auf Nostr gesehen werden und werden häufig auf Websites als Starterkits für neue Nutzer veröffentlicht.</string>
+    <string name="follow_pack_edit_list_metadata">Empfehlungspaket bearbeiten</string>
+    <string name="follow_pack_creation_name_label">Paketname</string>
+    <string name="follow_pack_copy_name_label">Neuer Paketname</string>
+    <string name="follow_pack_creation_desc_label">Paketbeschreibung</string>
+    <string name="follow_pack_copy_desc_label">Neue Paketbeschreibung</string>
+    <string name="follow_set_broadcast">Liste veröffentlichen</string>
+    <string name="follow_pack_broadcast">Empfehlungspaket veröffentlichen</string>
+    <string name="follow_set_delete">Liste löschen</string>
+    <string name="follow_pack_delete">Empfehlungspaket löschen</string>
 </resources>

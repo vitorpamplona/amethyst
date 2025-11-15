@@ -448,6 +448,7 @@
     <string name="follow_list_global">Globální</string>
     <string name="follow_list_mute_list">Seznam ztlumení</string>
     <string name="follow_sets">Seznamy sledování</string>
+    <string name="follow_sets_explainer">Toto jsou follow seznamy určené pro vaše vlastní použití. Můžete sledovat uživatele soukromě nebo veřejně.</string>
     <string name="labeled_bookmarks">Označené záložky</string>
     <string name="general_bookmarks">Obecné záložky</string>
     <string name="follow_set_type_public">Veřejné</string>
@@ -480,6 +481,7 @@
     <string name="follow_set_creation_item_label">Vytvořit nový seznam %1$s s uživatelem</string>
     <string name="follow_set_creation_item_description">Vytvoří %1$s sadu sledování a přidá do ní %2$s.</string>
     <string name="follow_set_creation_dialog_title">Nový seznam sledování</string>
+    <string name="follow_pack_creation_dialog_title">Nová sada doporučení</string>
     <string name="follow_set_copy_dialog_title">Kopírovat/Klonovat seznam sledování</string>
     <string name="follow_set_desc_modify_label">Upravit popis</string>
     <string name="follow_set_empty_desc_label">Tento seznam nemá žádný popis</string>
@@ -492,6 +494,7 @@
     <string name="follow_set_creation_action_btn_label">Vytvořit seznam</string>
     <string name="follow_set_copy_action_btn_label">Kopírovat/Klonovat seznam</string>
     <string name="follow_set_rename_btn_label">Přejmenovat seznam</string>
+    <string name="follow_set_edit_list_metadata">Upravit seznam</string>
     <string name="follow_set_desc_modify_btn_label">Upravit</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Přejmenováváte z </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> na..</string>
@@ -630,6 +633,7 @@
     <string name="followed_tags">Sledované značky</string>
     <string name="relay_setup">Rele</string>
     <string name="discover_follows">Balíčky Sledování</string>
+    <string name="discover_follows_explainer">Toto jsou seznamy uživatelů, které doporučujete ostatním. Jsou povoleni pouze veřejní uživatelé.</string>
     <string name="discover_reads">Přečtené</string>
     <string name="discover_content_v2">Algoritmy kanálu</string>
     <string name="discover_marketplace">Trh</string>
@@ -1121,4 +1125,17 @@
     <string name="remove_user_from_the_list">Odebrat uživatele ze seznamu</string>
     <string name="follow_list_item_label">Balíček Sledování</string>
     <string name="members">Členové</string>
+    <string name="people_list_title">Metadata seznamu sledování</string>
+    <string name="people_list_explainer">Metadata seznamů sledování mohou vidět všichni na Nostr. Pouze vaši soukromí členové jsou šifrovaní.</string>
+    <string name="follow_pack_title">Metadata sady doporučení</string>
+    <string name="follow_pack_explainer">Metadata sad doporučení mohou vidět všichni na Nostr a často jsou zveřejňována na různých webech jako startovací sady pro nové uživatele.</string>
+    <string name="follow_pack_edit_list_metadata">Upravit sadu doporučení</string>
+    <string name="follow_pack_creation_name_label">Název sady</string>
+    <string name="follow_pack_copy_name_label">Nový název sady</string>
+    <string name="follow_pack_creation_desc_label">Popis sady</string>
+    <string name="follow_pack_copy_desc_label">Nový popis sady</string>
+    <string name="follow_set_broadcast">Broadcast seznamu</string>
+    <string name="follow_pack_broadcast">Broadcast sady doporučení</string>
+    <string name="follow_set_delete">Smazat seznam</string>
+    <string name="follow_pack_delete">Smazat sadu doporučení</string>
 </resources>
