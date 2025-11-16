@@ -345,6 +345,7 @@
     <string name="report_dialog_post_report_btn">Odeslat zprávu</string>
     <string name="report_dialog_title">Blokovat a nahlásit</string>
     <string name="block_only">Blokovat</string>
+    <string name="manual_zaps">Manuální zap rozdělení</string>
     <string name="bookmarks">Záložky</string>
     <string name="drafts">Koncepty</string>
     <string name="private_bookmarks">Soukromé záložky</string>

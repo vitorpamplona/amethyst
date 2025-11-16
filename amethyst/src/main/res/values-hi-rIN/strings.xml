@@ -347,6 +347,7 @@
     <string name="report_dialog_post_report_btn">सूचना प्रकाशित करें</string>
     <string name="report_dialog_title">बाधित करें तथा सूचना दें</string>
     <string name="block_only">बाधित करें</string>
+    <string name="manual_zaps">मनुष्यकृत ज्साप विभाजन</string>
     <string name="bookmarks">स्मर्तव्य</string>
     <string name="drafts">पाण्डुलिपियाँ</string>
     <string name="private_bookmarks">निजी स्मर्तव्य</string>
@@ -449,7 +450,7 @@
     <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
     <string name="follow_list_mute_list">मौन सूची</string>
-    <string name="follow_sets">अनुगम्य सूचियाँ</string>
+    <string name="follow_sets">अनुचरण सूचियाँ</string>
     <string name="labeled_bookmarks">सूचक युक्त स्मर्त्तव्य सूची</string>
     <string name="general_bookmarks">सामान्य स्मर्त्तव्य सूची</string>
     <string name="follow_set_type_public">सार्वजनिक</string>
@@ -459,9 +460,9 @@
         \nनवीकरण के लिए नीचे दबाएँ। अथवा एक नया बनाने के लिए जोड घुण्डियाँ टाँकें।
     </string>
     <string name="follow_set_create_btn_label">नव्य</string>
-    <string name="follow_set_add_author_from_note_action">लेखक जोडें अनुगम्य सूची में</string>
+    <string name="follow_set_add_author_from_note_action">लेखक जोडें अनुचरण सूची में</string>
     <string name="follow_set_profile_actions_menu_description">प्रयोक्ता को सूचियों में जोडें अथवा हटाएँ अथवा इस प्रयोक्ता के साथ नई सूची बनाएँ।</string>
-    <string name="follow_set_icon_description">सूची %1$s के लिए चिह्न</string>
+    <string name="follow_set_icon_description">अनुचरण सूची के लिए चिह्न</string>
     <string name="follow_set_public_presence_indicator">%1$s एक सार्वजनिक सदस्य है</string>
     <string name="follow_set_private_presence_indicator">%1$s एक निजी सदस्य है</string>
     <string name="follow_set_public_member_add_label">सार्वजनिक सदस्य के रूप में जोडें</string>
@@ -484,6 +485,7 @@
     <string name="follow_set_creation_item_label">प्रयोक्ता के साथ नई सूची %1$s बनाएँ</string>
     <string name="follow_set_creation_item_description">अनुगम्य सूची %1$s बनाता है तथा उससे %2$s जोडता है।</string>
     <string name="follow_set_creation_dialog_title">नई %1$s सूची</string>
+    <string name="follow_pack_creation_dialog_title">नव्य अनुचरण पोटली</string>
     <string name="follow_set_copy_dialog_title">अनुचरण सूची की अनुकृति करें</string>
     <string name="follow_set_desc_modify_label">विवरण का संशोधन करें</string>
     <string name="follow_set_empty_desc_label">इस सूची का कोई विवरण नहीं</string>
@@ -496,6 +498,7 @@
     <string name="follow_set_creation_action_btn_label">समुच्चय बनाएँ</string>
     <string name="follow_set_copy_action_btn_label">सूची की अनुकृति</string>
     <string name="follow_set_rename_btn_label">समुच्चय पुनःनामकरण</string>
+    <string name="follow_set_edit_list_metadata">सूची सम्पादन</string>
     <string name="follow_set_desc_modify_btn_label">संशोधन करें</string>
     <string name="follow_set_rename_dialog_indicator_first_part">आप पनःनामकरण कर रहे हैं इस से </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> इस तक..</string>
@@ -1126,4 +1129,15 @@
     <string name="remove_user_from_the_list">सूची से प्रयोक्ता हटाएँ</string>
     <string name="follow_list_item_label">अनुचरण पोटली</string>
     <string name="members">सदस्य सूची</string>
+    <string name="people_list_title">अनुचरण सूची उपतथ्य</string>
+    <string name="follow_pack_title">अनुचरण पोटली उपतथ्य</string>
+    <string name="follow_pack_edit_list_metadata">अनुचरण पोटली सम्पादन</string>
+    <string name="follow_pack_creation_name_label">पोटली नाम</string>
+    <string name="follow_pack_copy_name_label">नव्य पोटली नाम</string>
+    <string name="follow_pack_creation_desc_label">पोटली विवरण</string>
+    <string name="follow_pack_copy_desc_label">नव्य पोटली विवरण</string>
+    <string name="follow_set_broadcast">सूची प्रसारण</string>
+    <string name="follow_pack_broadcast">पोटली प्रसारण</string>
+    <string name="follow_set_delete">सूची मिटाएँ</string>
+    <string name="follow_pack_delete">पोटली मिटाएँ</string>
 </resources>

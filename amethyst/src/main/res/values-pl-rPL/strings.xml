@@ -68,9 +68,9 @@
     <string name="quote">Zacytuj</string>
     <string name="fork">Sklonuj</string>
     <string name="propose_an_edit">Zaproponuj zmianę</string>
-    <string name="new_amount_in_sats">Nowa kwota w Satach</string>
+    <string name="new_amount_in_sats">Nowa kwota w Satsach</string>
     <string name="add">Dodaj</string>
-    <string name="replying_to">"odpowiadając do"</string>
+    <string name="replying_to">"odpowiadając do "</string>
     <string name="and">" i "</string>
     <string name="in_channel">"na kanale "</string>
     <string name="profile_banner">Baner profilu</string>
@@ -475,7 +475,7 @@
     <string name="follow_set_empty_label2">Pusty</string>
     <string name="follow_set_absence_indicator">%1$s nie jest na liście</string>
     <string name="follow_set_absence_indicator2">%1$s nie jest uczestnikiem</string>
-    <string name="follow_set_man_dialog_title2">Twoje listy oraz %1$s</string>
+    <string name="follow_set_man_dialog_title2">%1$s na Twoich listach</string>
     <string name="follow_set_man_dialog_title">Twoja lista obserwowanych</string>
     <string name="follow_set_empty_dialog_msg">Nie znaleziono list obserwowanych lub nie masz żadnych list obserwowanych. Naciśnij poniżej, aby odświeżyć lub użyj menu, aby utworzyć nową.</string>
     <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>

@@ -345,6 +345,7 @@
     <string name="report_dialog_post_report_btn">Skicka rapport</string>
     <string name="report_dialog_title">Blockera och rapportera</string>
     <string name="block_only">Blockera</string>
+    <string name="manual_zaps">Manuell Zap delning</string>
     <string name="bookmarks">Bokmärken</string>
     <string name="drafts">Utkast</string>
     <string name="private_bookmarks">Privata Bokmärken</string>
