@@ -345,6 +345,7 @@
     <string name="report_dialog_post_report_btn">Enviar Denuncia</string>
     <string name="report_dialog_title">Bloquear e Denunciar</string>
     <string name="block_only">Bloquear</string>
+    <string name="manual_zaps">Divisão manual de Zap</string>
     <string name="bookmarks">Itens Salvos</string>
     <string name="drafts">Rascunhos</string>
     <string name="private_bookmarks">Itens Salvos Privados</string>
