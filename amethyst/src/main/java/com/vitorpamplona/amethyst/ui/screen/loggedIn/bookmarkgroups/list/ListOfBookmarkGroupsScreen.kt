@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.flow.StateFlow
 
@@ -52,7 +53,7 @@ fun ListOfBookmarkGroupsScreen(
     ListOfBookmarkGroupsFeed(
         listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
         addBookmarkGroup = { title, description ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.labeledBookmarkLists.addLabeledBookmarkList(
                     listName = title,
                     listDescription = description,
@@ -60,11 +61,11 @@ fun ListOfBookmarkGroupsScreen(
                 )
             }
         },
-        openBookmarkGroup = {
-            nav.nav(Route.BookmarkGroupView(it))
+        openBookmarkGroup = { identifier, bookmarkType ->
+            nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
         },
         renameBookmarkGroup = { bookmarkGroup, newName ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.labeledBookmarkLists.renameBookmarkList(
                     newName = newName,
                     bookmarkList = bookmarkGroup,
@@ -73,7 +74,7 @@ fun ListOfBookmarkGroupsScreen(
             }
         },
         changeBookmarkGroupDescription = { bookmarkGroup, newDescription ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.labeledBookmarkLists.modifyListDescription(
                     newDescription = newDescription,
                     bookmarkList = bookmarkGroup,
@@ -82,7 +83,7 @@ fun ListOfBookmarkGroupsScreen(
             }
         },
         cloneBookmarkGroup = { bookmarkGroup, customName, customDesc ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.labeledBookmarkLists.cloneBookmarkList(
                     currentBookmarkList = bookmarkGroup,
                     customCloneName = customName,
@@ -92,7 +93,7 @@ fun ListOfBookmarkGroupsScreen(
             }
         },
         deleteBookmarkGroup = { bookmarkGroup ->
-            accountViewModel.runIOCatching {
+            accountViewModel.launchSigner {
                 accountViewModel.account.labeledBookmarkLists.deleteBookmarkList(
                     bookmarkList = bookmarkGroup,
                     account = accountViewModel.account,
@@ -107,7 +108,7 @@ fun ListOfBookmarkGroupsScreen(
 fun ListOfBookmarkGroupsFeed(
     listSource: StateFlow<List<LabeledBookmarkList>>,
     addBookmarkGroup: (title: String, description: String?) -> Unit,
-    openBookmarkGroup: (identifier: String) -> Unit,
+    openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
     renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList, newName: String) -> Unit,
     changeBookmarkGroupDescription: (bookmarkGroup: LabeledBookmarkList, newDescription: String?) -> Unit,
     cloneBookmarkGroup: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,

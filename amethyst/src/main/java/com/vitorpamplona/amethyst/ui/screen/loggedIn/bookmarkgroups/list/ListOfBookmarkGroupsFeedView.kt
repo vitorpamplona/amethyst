@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -47,7 +48,7 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun ListOfBookmarkGroupsFeedView(
     groupListFeedSource: StateFlow<List<LabeledBookmarkList>>,
-    onOpenItem: (String) -> Unit,
+    onOpenItem: (String, BookmarkType) -> Unit,
     onRenameItem: (targetBookmarkGroup: LabeledBookmarkList, newName: String) -> Unit,
     onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList, newDescription: String?) -> Unit,
     onItemClone: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
@@ -69,7 +70,7 @@ fun ListOfBookmarkGroupsFeedView(
                 BookmarkGroupItem(
                     modifier = Modifier.fillMaxSize().animateItem(),
                     bookmarkList = groupItem,
-                    onClick = { onOpenItem(groupItem.identifier) },
+                    onClick = { bookmarkType -> onOpenItem(groupItem.identifier, bookmarkType) },
                     onRename = { onRenameItem(groupItem, it) },
                     onDescriptionChange = { onItemDescriptionChange(groupItem, it) },
                     onClone = { cloneName, cloneDescription -> onItemClone(groupItem, cloneName, cloneDescription) },
