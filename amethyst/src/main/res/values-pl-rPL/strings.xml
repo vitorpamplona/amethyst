@@ -344,6 +344,7 @@
     <string name="report_dialog_post_report_btn">Wyślij zgłoszenie</string>
     <string name="report_dialog_title">Zablokuj i zgłoś</string>
     <string name="block_only">Zablokuj</string>
+    <string name="manual_zaps">Ręczny podział zapów</string>
     <string name="bookmarks">Zakładki</string>
     <string name="drafts">Projekty</string>
     <string name="private_bookmarks">Prywatne Zakładki</string>
@@ -480,7 +481,7 @@
     <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>
     <string name="follow_set_creation_menu_title">Utwórz nową listę</string>
     <string name="follow_set_creation_item_label">\"Utwórz nową listę %1$s z użytkownikiem</string>
-    <string name="follow_set_creation_item_description">Tworzy zbiór obserwowanych %1$s i dodaje do niego %2$s.</string>
+    <string name="follow_set_creation_item_description">Tworzy zestaw obserwowanych %1$s i dodaje do niego %2$s.</string>
     <string name="follow_set_creation_dialog_title">Nowa lista</string>
     <string name="follow_pack_creation_dialog_title">Nowa Kategoria</string>
     <string name="follow_set_copy_dialog_title">Kopiuj/Sklonuj listę obserwowanych</string>
@@ -1121,12 +1122,14 @@
     <string name="in_the_list">Już jest na liście</string>
     <string name="private_members">Prywatni uczestnicy</string>
     <string name="public_members">Uczestnicy publiczni</string>
-    <string name="private_members_count">Prywatni uczestnicy (%1$s)</string>
+    <string name="private_members_count">Uczestnicy prywatni (%1$s)</string>
+    <string name="public_members_count">Uczestnicy publiczni (%1$s)</string>
     <string name="add_user_to_the_list">Dodaj użytkownika do listy</string>
     <string name="remove_user_from_the_list">Usuń użytkownika z listy</string>
     <string name="follow_list_item_label">Kategoria profilów</string>
     <string name="members">Uczestnicy</string>
     <string name="people_list_title">Metadane listy profili</string>
+    <string name="people_list_explainer">Metadane listy obserwowanych są widoczne dla wszystkich użytkowników w sieci Nostr. Tylko Twoi uczestnicy prywatni są zaszyfrowani.</string>
     <string name="follow_pack_title">Metadane kategorii profilów</string>
     <string name="follow_pack_explainer">Metadane kategorii profilów są widoczne dla wszystkich użytkowników serwisu Nostr i często publikowane na wielu stronach internetowych jako zestawy startowe dla nowych użytkowników.</string>
     <string name="follow_pack_edit_list_metadata">Edytuj kategorię profili</string>
