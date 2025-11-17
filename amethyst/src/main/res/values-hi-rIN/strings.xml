@@ -451,6 +451,7 @@
     <string name="follow_list_global">वैश्विक</string>
     <string name="follow_list_mute_list">मौन सूची</string>
     <string name="follow_sets">अनुचरण सूचियाँ</string>
+    <string name="follow_sets_explainer">ये अनुचरण सूचियाँ आपके उपयोग के लिए रूपांकित हैं। आप प्रयोक्ताओं का अनुचरण कर सकते हैं निजी अथवा सार्वजनिक रूप से</string>
     <string name="labeled_bookmarks">सूचक युक्त स्मर्त्तव्य सूची</string>
     <string name="general_bookmarks">सामान्य स्मर्त्तव्य सूची</string>
     <string name="follow_set_type_public">सार्वजनिक</string>
@@ -637,6 +638,7 @@
     <string name="followed_tags">अनुचरित विषयसूचक</string>
     <string name="relay_setup">पुनःप्रसारक</string>
     <string name="discover_follows">अनुचरण पोटलियाँ</string>
+    <string name="discover_follows_explainer">ये प्रयोक्ता सूचियाँ हैं जो आप अन्य लोगों के लिए अनुशंसित करते हैं। केवल सार्वजनिक प्रयोक्ता अनुमत।</string>
     <string name="discover_reads">पठितव्य</string>
     <string name="discover_content_v2">सूचनावली विधियाँ</string>
     <string name="discover_marketplace">पण्यक्षेत्र</string>
@@ -1130,7 +1132,9 @@
     <string name="follow_list_item_label">अनुचरण पोटली</string>
     <string name="members">सदस्य सूची</string>
     <string name="people_list_title">अनुचरण सूची उपतथ्य</string>
+    <string name="people_list_explainer">अनुचरण सूची उपतथ्य नोस्टर में सब के द्वारा देखा जा सकता है। केवल आपके निजी सदस्य रहस्यीकृत हैं।</string>
     <string name="follow_pack_title">अनुचरण पोटली उपतथ्य</string>
+    <string name="follow_pack_explainer">अनुचरण पोटली उपतथ्य नोस्टर में सब के द्वारा देखा जा सकता है तथा प्रायः अनेक जालस्थानों पर प्रकाशित होते हैं प्रारम्भ सामग्री के रूप में नये प्रयोक्ताओं के लिए।</string>
     <string name="follow_pack_edit_list_metadata">अनुचरण पोटली सम्पादन</string>
     <string name="follow_pack_creation_name_label">पोटली नाम</string>
     <string name="follow_pack_copy_name_label">नव्य पोटली नाम</string>
