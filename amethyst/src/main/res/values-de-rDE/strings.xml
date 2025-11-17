@@ -351,6 +351,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="report_dialog_post_report_btn">Meldung veröffentlichen</string>
     <string name="report_dialog_title">Blockieren und melden</string>
     <string name="block_only">Blockieren</string>
+    <string name="manual_zaps">Manuelle Zap-Splits</string>
     <string name="bookmarks">Lesezeichen</string>
     <string name="drafts">Entwürfe</string>
     <string name="private_bookmarks">Private Lesezeichen</string>

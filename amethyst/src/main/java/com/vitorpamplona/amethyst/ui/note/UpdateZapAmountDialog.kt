@@ -353,7 +353,7 @@ fun UpdateZapAmountContent(
                             postViewModel.copyFromClipboard(it)
                         }
                     } catch (e: IllegalArgumentException) {
-                        accountViewModel.toastManager.toast(R.string.invalid_nip47_uri_title, R.string.invalid_nip47_uri_description)
+                        accountViewModel.toastManager.toast(R.string.invalid_nip47_uri_title, R.string.invalid_nip47_uri_description, uri ?: "")
                     }
                 },
             ) {
