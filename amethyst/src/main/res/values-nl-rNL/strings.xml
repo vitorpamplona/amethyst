@@ -488,6 +488,21 @@
     <string name="follow_set_creation_dialog_title">Nieuwe volglijst</string>
     <string name="follow_pack_creation_dialog_title">Nieuwe volglijst</string>
     <string name="follow_set_copy_dialog_title">Kopieer/kloon volglijst</string>
+    <string name="follow_set_desc_modify_label">Beschrijving wijzigen</string>
+    <string name="follow_set_empty_desc_label">Deze lijst heeft geen beschrijving</string>
+    <string name="follow_set_current_desc_label">Huidige beschrijving:</string>
+    <string name="follow_set_copy_indicator_description">Stel een nieuwe naam/omschrijving in voor de gekloonde lijst hieronder.</string>
+    <string name="follow_set_creation_name_label">Lijstnaam</string>
+    <string name="follow_set_copy_name_label">Nieuwe lijstnaam</string>
+    <string name="follow_set_creation_desc_label">Lijstbeschrijving (optioneel)</string>
+    <string name="follow_set_copy_desc_label">Beschrijving nieuwe lijst</string>
+    <string name="follow_set_creation_action_btn_label">Lijst maken</string>
+    <string name="follow_set_copy_action_btn_label">Kopieer/kloon lijst</string>
+    <string name="follow_set_rename_btn_label">Lijst hernoemen</string>
+    <string name="follow_set_edit_list_metadata">Bewerk lijst</string>
+    <string name="follow_set_desc_modify_btn_label">Aanpassen</string>
+    <string name="follow_set_rename_dialog_indicator_first_part">Je hernoemt de naam van </string>
+    <string name="follow_set_rename_dialog_indicator_second_part"> om..</string>
     <string name="connect_through_your_orbot_setup_short">Standaard poort is 9050</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Verbind via Tor met Orbot
         \n\n1. Installeer [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
@@ -623,6 +638,7 @@
     <string name="followed_tags">Gevolgde tags</string>
     <string name="relay_setup">Relays</string>
     <string name="discover_follows">Volg pakketten</string>
+    <string name="discover_follows_explainer">Dit zijn lijsten van gebruikers die u aanbeveelt aan andere mensen. Alleen openbare gebruikers zijn toegestaan.</string>
     <string name="discover_reads">Gelezen</string>
     <string name="discover_content_v2">Feed algoritmes</string>
     <string name="discover_marketplace">Marktplaats</string>
@@ -704,6 +720,17 @@
     <string name="paste_from_clipboard">Plakken vanaf klembord</string>
     <string name="invalid_nip47_uri_title">Invalide NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">De URI %1$s is geen geldige NIP-47 login-URI.</string>
+    <string name="connect_to_new_nwc_wallet">Verbinding maken met nieuwe NWC-wallet</string>
+    <string name="couldnt_find_nwc_wallets">Wallet niet gevonden</string>
+    <string name="couldnt_find_nwc_wallets_description">Amethyst kon geen wallet-apps vinden die Nostr Wallet Connect (NWC) ondersteunen.
+\n\nWat je kan doen:
+\n\t1. Verifieer NWC Support: Controleer of uw voorkeurswallet app compatibel is met Nostr Wallet Connect.
+\n\t2. Maak een verbinding. Ga naar uw wallet-app en maak een nieuwe NWC verbinding aan.
+\n\t3. Link naar Amethyst: Je wallet geeft je meestal drie opties:
+\n\t\t3. Automatische link: Een knop om automatisch te openen en te verbinden met Amethyst. Als dat zo is, klik dan op die knop, open Amethist en druk op opslaan op het nieuwe scherm.
+\n\t\t3. Handmatige link: Een URI voor verbinding, u kunt het plakpictogram op dit scherm kopiëren en klikken om het direct in te voeren.
+\n\t\t3. QR-Code: De wallet maakt een QR-code die je kunt lezen op de QR-code knop op dit scherm.
+    </string>
     <string name="language_description">Voor de interface van de app</string>
     <string name="theme_description">Donker-, Licht- of Systeemthema</string>
     <string name="automatically_load_images_gifs_description">Automatisch afbeeldingen en GIF\'s laden</string>
@@ -875,6 +902,8 @@
     <string name="media_compression_quality_medium">Normaal</string>
     <string name="media_compression_quality_high">Hoog</string>
     <string name="media_compression_quality_uncompressed">Ongecomprimeerd</string>
+    <string name="video_codec_h265_label">H.265/HEVC Codec gebruiken</string>
+    <string name="video_codec_h265_description">Betere kwaliteit in kleinere bestandsformaten, maar niet alle apparaten ondersteunen H.265 playback.</string>
     <string name="edit_draft">Concept bewerken</string>
     <string name="login_with_qr_code">Inloggen met QR-Code</string>
     <string name="route">Route</string>
@@ -933,6 +962,16 @@
     <string name="search_relays_not_found_description">Het maken van een relay lijst speciaal ontworpen voor zoekopdracht en gebruikers-tagging zal deze resultaten verbeteren.</string>
     <string name="search_relays_not_found_editing">Voeg tussen de 1 en 3 relays toe om te gebruiken bij het zoeken naar content of bij het taggen van gebruikers. Zorg ervoor dat uw gekozen relays implementatie van NIP-50</string>
     <string name="search_relays_not_found_examples">Goede opties zijn:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Outbox relays</string>
+    <string name="outbox_relays_not_found">Stel uw openbare outbox relays in om te posten</string>
+    <string name="outbox_relays_not_found_description">Het maken van een relay-lijst speciaal ontworpen voor het ontvangen van jouw inhoud is cruciaal voor de Nostr ervaring en de enige manier waarop jouw volgers je kunnen vinden. </string>
+    <string name="outbox_relays_not_found_editing">Voer tussen de 1 en 3 relays in om je berichten te ontvangen. Zorg ervoor dat je geen betaling nodig hebt als je niet betaalt om in te voegen</string>
+    <string name="outbox_relays_not_found_examples">Goede opties zijn:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_title">Inbox relays</string>
+    <string name="inbox_relays_not_found">Stel uw openbare inbox relays in om meldingen te ontvangen</string>
+    <string name="inbox_relays_not_found_description">Het maken van een relay-lijst speciaal ontworpen voor het ontvangen van meldingen is cruciaal voor uw Nostr ervaring. </string>
+    <string name="inbox_relays_not_found_editing">Voeg tussen de 1 en 3 relays toe die meldingen voor u ontvangen. Zorg ervoor dat ze geen betaling of vertrouwensweb van de afzender nodig hebben, anders ontvangt u alleen meldingen van betalers of langdurig gebruikers</string>
+    <string name="inbox_relays_not_found_examples">Goede opties zijn:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">DM uploaden</string>
     <string name="relay_settings">Relay-instellingen</string>
     <string name="public_home_section">Openbare thuis relays</string>
@@ -1058,6 +1097,9 @@
     <string name="torrent_failure">Kon bestand niet openen</string>
     <string name="torrent_no_apps">Geen torrent apps geïnstalleerd om het bestand te openen en te downloaden.</string>
     <string name="torrent_no_info">Evenement heeft niet genoeg informatie om een magnet-link te maken</string>
+    <string name="my_lists_and_sets">Mijn lijsten/sets</string>
+    <string name="my_lists">Mijn lijsten</string>
+    <string name="people_list_label">Gebruikers</string>
     <string name="select_list_to_filter">Selecteer een lijst om de feed te filteren</string>
     <string name="temporary_account">Afmelden bij apparaatvergrendeling</string>
     <string name="private_message">Privébericht</string>
@@ -1079,4 +1121,27 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Wilt u het recente crashrapport verzenden naar Amethyst in een DM? Er zal geen persoonlijke informatie gedeeld worden</string>
     <string name="crashreport_found_send">Verzenden</string>
     <string name="this_message_will_disappear_in_days">Dit bericht zal verdwijnen in %1$d dagen</string>
+    <string name="select_signer">Selecteer ondertekenaar</string>
+    <string name="in_the_list">Al in de lijst</string>
+    <string name="private_members">Privé leden</string>
+    <string name="public_members">Openbare leden</string>
+    <string name="private_members_count">Privéleden (%1$s)</string>
+    <string name="public_members_count">Openbare leden (%1$s)</string>
+    <string name="add_user_to_the_list">Gebruiker toevoegen aan de lijst</string>
+    <string name="remove_user_from_the_list">Gebruiker uit de lijst verwijderen</string>
+    <string name="follow_list_item_label">Volgpakket</string>
+    <string name="members">Leden</string>
+    <string name="people_list_title">Volglijst metadata</string>
+    <string name="people_list_explainer">Volglijsten metadata kunnen door iedereen op Nostr. Alleen uw privéleden zijn versleuteld.</string>
+    <string name="follow_pack_title">Volglijst metadata</string>
+    <string name="follow_pack_explainer">Volgpakket metadata kan door iedereen op Nostr worden gezien en is vaak op veel websites gepubliceerd als opstartuitrustingen voor nieuwe gebruikers.</string>
+    <string name="follow_pack_edit_list_metadata">Wijzig volglijst</string>
+    <string name="follow_pack_creation_name_label">Pakketnaam</string>
+    <string name="follow_pack_copy_name_label">Nieuwe pakketnaam</string>
+    <string name="follow_pack_creation_desc_label">Pakketbeschrijving</string>
+    <string name="follow_pack_copy_desc_label">Nieuwe pakketbeschrijving</string>
+    <string name="follow_set_broadcast">Uitzendlijst</string>
+    <string name="follow_pack_broadcast">Uitzendpakket</string>
+    <string name="follow_set_delete">Verwijder lijst</string>
+    <string name="follow_pack_delete">Verwijder pakket</string>
 </resources>
