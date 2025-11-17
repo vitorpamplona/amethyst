@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups
 
-sealed interface BookmarkType {
-    object PostBookmark : BookmarkType
+enum class BookmarkType {
+    PostBookmark,
 
-    object ArticleBookmark : BookmarkType
+    ArticleBookmark,
 
-    object LinkBookmark : BookmarkType
+    LinkBookmark,
 
-    object HashtagBookmark : BookmarkType
+    HashtagBookmark,
 }
