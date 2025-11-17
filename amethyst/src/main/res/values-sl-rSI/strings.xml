@@ -89,7 +89,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="error_parsing_error_message">Napaka pri razčlembi sporočila o napaki</string>
     <string name="following">" Sledi"</string>
     <string name="followers">" Sledilcev"</string>
-    <string name="number_following">"%1$s Sledi"</string>
+    <string name="number_following">"%1$s Sledim"</string>
     <string name="number_followers">"%1$s Sledilcev"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Varnostni filtri</string>
@@ -185,7 +185,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="mutual">Vaše</string>
     <string name="gallery">Galerija</string>
     <string name="follows">"sledilcev"</string>
-    <string name="reports">"Reportaže"</string>
+    <string name="reports">"Prijav"</string>
     <string name="number_reports">"%1$s Prijave"</string>
     <string name="more_options">Več možnosti</string>
     <string name="relays">" Releji"</string>
@@ -199,7 +199,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiraj javni ključ (NPub) v odložišče</string>
     <string name="send_a_direct_message">Pošlji direktno sporočilo</string>
     <string name="edits_the_user_s_metadata">Uredi uporabnikove metapodatke</string>
-    <string name="follow">Sledim</string>
+    <string name="follow">Že sledim</string>
     <string name="follow_back">Sledi nazaj</string>
     <string name="unblock">Deblokiraj</string>
     <string name="copy_user_id">Kopiraj uporabnikov ID</string>
@@ -358,6 +358,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="report_dialog_post_report_btn">Objavi prijavo</string>
     <string name="report_dialog_title">Blokiraj in prijavi</string>
     <string name="block_only">Blokiraj</string>
+    <string name="manual_zaps">Ročno razdeli zape</string>
     <string name="bookmarks">Zaznamki</string>
     <string name="drafts">Osnutki</string>
     <string name="private_bookmarks">Privatni zaznamki</string>
