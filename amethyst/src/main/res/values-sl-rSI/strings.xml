@@ -185,8 +185,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="mutual">Vaše</string>
     <string name="gallery">Galerija</string>
     <string name="follows">"sledilcev"</string>
-    <string name="reports">"Prijav"</string>
-    <string name="number_reports">"%1$s Prijave"</string>
+    <string name="reports">"Prijave"</string>
+    <string name="number_reports">"%1$s Prijav"</string>
     <string name="more_options">Več možnosti</string>
     <string name="relays">" Releji"</string>
     <string name="website">Spletna stran</string>
@@ -453,7 +453,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="do_you_really_want_to_disable_tor_text">Vaši podatki bodo takoj preneseni v običajno omrežje</string>
     <string name="yes">Da</string>
     <string name="no">Ne</string>
-    <string name="follow_list_selection">Spisek komu sledimo</string>
+    <string name="follow_list_selection">Seznam sledenih</string>
     <string name="follow_list_kind3follows">Vse, čemur sledimo</string>
     <string name="follow_list_kind3follows_users_only">Vsi sledeni sledenih</string>
     <string name="follow_list_kind3_follows_users_only">Privzeti seznam sledenih</string>

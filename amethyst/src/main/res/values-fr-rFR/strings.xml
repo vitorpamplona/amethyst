@@ -473,9 +473,11 @@
     <string name="follow_set_man_dialog_title">Vos listes</string>
     <string name="follow_set_error_dialog_msg">Un problème est survenu lors de la récupération : %1$s</string>
     <string name="follow_set_creation_menu_title">Créer une nouvelle liste</string>
+    <string name="follow_set_creation_item_label">Nouvelle liste avec %1$s membres</string>
     <string name="follow_set_desc_modify_label">Modifier la description</string>
     <string name="follow_set_empty_desc_label">Cette liste n\'a pas de description</string>
     <string name="follow_set_current_desc_label">Description actuelle :</string>
+    <string name="follow_set_copy_indicator_description">Définissez un nouveau nom/description pour la liste dupliquée ci-dessous.</string>
     <string name="follow_set_creation_name_label">Nom de la liste</string>
     <string name="follow_set_copy_name_label">Nom de la nouvelle liste</string>
     <string name="follow_set_creation_desc_label">Description de la liste (facultatif)</string>
@@ -622,6 +624,7 @@
     <string name="followed_tags">Tags suivis</string>
     <string name="relay_setup">Relais</string>
     <string name="discover_follows">Packs à suivre</string>
+    <string name="discover_follows_explainer">Ce sont des listes d\'utilisateurs que vous recommandez à d\'autres personnes. Seuls les utilisateurs publics sont autorisés.</string>
     <string name="discover_reads">Lectures</string>
     <string name="discover_content_v2">Algorithmes de flux</string>
     <string name="discover_marketplace">Place de Marché</string>
@@ -703,6 +706,7 @@
     <string name="paste_from_clipboard">Coller depuis le presse-papiers</string>
     <string name="invalid_nip47_uri_title">URI NIP-47 invalide</string>
     <string name="invalid_nip47_uri_description">L\'URI %1$s n\'est pas une URI de connexion NIP-47 valide.</string>
+    <string name="connect_to_new_nwc_wallet">Se connecter à un nouveau portefeuille NWC</string>
     <string name="couldnt_find_nwc_wallets">Portefeuille introuvable</string>
     <string name="language_description">Pour l\'interface de l\'App</string>
     <string name="theme_description">Sombre, Clair ou thème Système</string>
@@ -876,6 +880,7 @@
     <string name="media_compression_quality_high">Haute</string>
     <string name="media_compression_quality_uncompressed">Non compressé</string>
     <string name="video_codec_h265_label">Utiliser le codec H.265/HEVC</string>
+    <string name="video_codec_h265_description">Une meilleure qualité avec des tailles de fichier plus petites, mais tous les appareils ne supportent pas la lecture H.265.</string>
     <string name="edit_draft">Modifier le brouillon</string>
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route">Route</string>
@@ -934,6 +939,15 @@
     <string name="search_relays_not_found_description">La création d\'une liste de relais spécialement conçue pour la recherche et l\'étiquetage utilisateur améliorera ces résultats.</string>
     <string name="search_relays_not_found_editing">Insérez de 1 à 3 relais à utiliser lors de la recherche de contenu ou de l\'étiquetage utilisateur. Assurez-vous que les relais que vous avez choisis implémentent le NIP-50</string>
     <string name="search_relays_not_found_examples">De bonnes options sont:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="outbox_relays_title">Relais d\'envoi</string>
+    <string name="outbox_relays_not_found">Configurez vos relais d\'envoi pour publier</string>
+    <string name="outbox_relays_not_found_description">Créer une liste de relais spécialement conçue pour recevoir votre contenu est crucial pour votre expérience Nostr et la seule façon que vos abonnés puissent vous trouver. </string>
+    <string name="outbox_relays_not_found_editing">Insérez entre 1 et 3 relais qui reçoivent vos messages. Assurez-vous qu\'ils ne nécessitent pas de paiement si vous ne payez pas pour publier</string>
+    <string name="outbox_relays_not_found_examples">De bonnes options sont :\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
+    <string name="inbox_relays_not_found">Configurez vos relais de messagerie publique pour recevoir des notifications</string>
+    <string name="inbox_relays_not_found_description">Créer une liste de relais spécialement conçue pour recevoir des notifications est crucial pour votre expérience Nostr. </string>
+    <string name="inbox_relays_not_found_editing">Insérez entre 1 et 3 relais qui reçoivent des notifications pour vous. Assurez-vous qu\'ils n\'exigent pas de paiement ou de web de confiance de la part de l\'expéditeur, sinon vous ne recevrez que des notifications des payeurs ou des utilisateurs à long terme</string>
+    <string name="inbox_relays_not_found_examples">De bonnes options sont :\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="dm_upload">Téléversement de MP</string>
     <string name="relay_settings">Paramètres du relais</string>
     <string name="public_home_section">Relais publics d\'accueil</string>
@@ -1058,6 +1072,7 @@
     <string name="torrent_download">Télécharger</string>
     <string name="torrent_failure">Échec de l\'ouverture du fichier</string>
     <string name="torrent_no_apps">Aucune application torrent installée pour ouvrir et télécharger le fichier.</string>
+    <string name="torrent_no_info">L\'événement ne possède pas assez d\'informations pour construire un lien magnet</string>
     <string name="my_lists">Mes listes</string>
     <string name="people_list_label">Utilisateurs</string>
     <string name="select_list_to_filter">Sélectionnez une liste pour filtrer le fil</string>
@@ -1089,4 +1104,12 @@
     <string name="add_user_to_the_list">Ajouter l\'utilisateur à la liste</string>
     <string name="remove_user_from_the_list">Supprimer l\'utilisateur de la liste</string>
     <string name="members">Membres</string>
+    <string name="follow_pack_creation_name_label">Nom du pack</string>
+    <string name="follow_pack_copy_name_label">Nom du nouveau pack</string>
+    <string name="follow_pack_creation_desc_label">Description du pack</string>
+    <string name="follow_pack_copy_desc_label">Description du nouveau pack</string>
+    <string name="follow_set_broadcast">Liste de diffusion</string>
+    <string name="follow_pack_broadcast">Pack de diffusion</string>
+    <string name="follow_set_delete">Supprimer la liste</string>
+    <string name="follow_pack_delete">Supprimer le pack</string>
 </resources>
