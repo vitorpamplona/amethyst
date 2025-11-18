@@ -150,8 +150,9 @@ fun ShowQRDialog(
             ) {
                 Column {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                        verticalArrangement = Arrangement.SpaceAround,
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (presenting) {
                             Column {
