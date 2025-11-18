@@ -112,11 +112,11 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font18SP
 import com.vitorpamplona.amethyst.ui.theme.IconRowModifier
 import com.vitorpamplona.amethyst.ui.theme.IconRowTextModifier
-import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Width16Space
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -124,7 +124,8 @@ import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 @Composable
 fun DrawerContent(
@@ -538,40 +539,6 @@ fun ListContent(
 }
 
 @Composable
-private fun RelayStatus(accountViewModel: AccountViewModel) {
-    val connectedRelaysText by accountViewModel.account.client
-        .relayStatusFlow()
-        .collectAsStateWithLifecycle()
-
-    RenderRelayStatus(connectedRelaysText)
-}
-
-@Composable
-private fun RenderRelayStatus(relayPool: RelayPool.RelayPoolStatus) {
-    val text by
-        remember(relayPool) { derivedStateOf { "${relayPool.connected.size}/${relayPool.available.size}" } }
-
-    val placeHolder = MaterialTheme.colorScheme.placeholderText
-
-    val color by
-        remember(relayPool) {
-            derivedStateOf {
-                if (relayPool.isConnected) {
-                    placeHolder
-                } else {
-                    Color.Red
-                }
-            }
-        }
-
-    Text(
-        text = text,
-        color = color,
-        style = MaterialTheme.typography.titleMedium,
-    )
-}
-
-@Composable
 fun NavigationRow(
     title: Int,
     icon: Int,
@@ -691,33 +658,53 @@ fun IconRowRelays(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { onClick() },
+                .padding(vertical = 15.dp, horizontal = 25.dp)
+                .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 15.dp, horizontal = 25.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterRes(R.drawable.relays, 4),
-                contentDescription = stringRes(R.string.relay_setup),
-                modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
+        Icon(
+            painter = painterRes(R.drawable.relays, 4),
+            contentDescription = stringRes(R.string.relay_setup),
+            modifier = Size22Modifier,
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
 
-            Text(
-                modifier = Modifier.padding(start = 16.dp),
-                text = stringRes(id = R.string.relay_setup),
-                fontSize = 18.sp,
-            )
+        Text(
+            modifier = IconRowTextModifier,
+            text = stringRes(id = R.string.relay_setup),
+            fontSize = Font18SP,
+        )
 
-            Spacer(modifier = Modifier.width(Size16dp))
+        Spacer(modifier = Width16Space)
 
-            RelayStatus(accountViewModel = accountViewModel)
-        }
+        RelayStatus(accountViewModel)
     }
+}
+
+class PoolStatus(
+    val share: String,
+    val isConnected: Boolean,
+)
+
+@Composable
+private fun RelayStatus(accountViewModel: AccountViewModel) {
+    val statusCounterFlow: Flow<PoolStatus> =
+        remember(accountViewModel) {
+            combine(
+                accountViewModel.account.client.connectedRelaysFlow(),
+                accountViewModel.account.client.availableRelaysFlow(),
+            ) { connected, available ->
+                PoolStatus("${connected.size}/${available.size}", connected.isNotEmpty())
+            }
+        }
+
+    val relayPool by statusCounterFlow.collectAsStateWithLifecycle(PoolStatus("", false))
+
+    Text(
+        text = relayPool.share,
+        color = if (relayPool.isConnected) MaterialTheme.colorScheme.placeholderText else Color.Red,
+        style = MaterialTheme.typography.titleMedium,
+    )
 }
 
 @Composable

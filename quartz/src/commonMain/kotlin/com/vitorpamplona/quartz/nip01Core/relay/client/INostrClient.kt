@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -32,7 +31,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface INostrClient {
-    fun relayStatusFlow(): StateFlow<RelayPool.RelayPoolStatus>
+    fun connectedRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>>
+
+    fun availableRelaysFlow(): StateFlow<Set<NormalizedRelayUrl>>
 
     fun connect()
 
@@ -80,7 +81,9 @@ interface INostrClient {
 }
 
 object EmptyNostrClient : INostrClient {
-    override fun relayStatusFlow() = MutableStateFlow(RelayPool.RelayPoolStatus())
+    override fun connectedRelaysFlow() = MutableStateFlow(emptySet<NormalizedRelayUrl>())
+
+    override fun availableRelaysFlow() = MutableStateFlow(emptySet<NormalizedRelayUrl>())
 
     override fun connect() { }
 

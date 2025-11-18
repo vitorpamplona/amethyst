@@ -704,7 +704,7 @@ class Account(
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
         if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
             // everywhere
-            return followPlusAllMineWithIndex.flow.value + client.relayStatusFlow().value.available
+            return followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value
         }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
@@ -904,7 +904,7 @@ class Account(
     }
 
     fun sendLiterallyEverywhere(event: Event) {
-        client.send(event, followPlusAllMineWithIndex.flow.value + client.relayStatusFlow().value.available)
+        client.send(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
         cache.justConsumeMyOwnEvent(event)
     }
 
