@@ -133,6 +133,42 @@
                 <data android:host="njump.me" />
             </intent-filter>
 
+            <intent-filter android:label="njump.to">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="njump.to" />
+            </intent-filter>
+
+            <intent-filter android:label="iris.to">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="iris.to" />
+            </intent-filter>
+
+            <intent-filter android:label="zap.stream">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="zap.stream" />
+                <data android:pathPrefix="/p/" />
+                <data android:pathPrefix="/" />
+            </intent-filter>
+
+            <intent-filter android:label="shosho.live">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="shosho.live" />
+                <data android:pathPrefix="/profile/" />
+                <data android:pathPrefix="/live/" />
+            </intent-filter>
+
             <intent-filter android:label="Primal">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

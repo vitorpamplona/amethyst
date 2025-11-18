@@ -465,14 +465,14 @@
     <string name="follow_set_private_presence_indicator">%1$s jest uczestnikiem prywatnym</string>
     <string name="follow_set_public_member_add_label">Dodaj jako uczestnika publicznego</string>
     <string name="follow_set_private_member_add_label">Dodaj jako uczestnika prywatnego</string>
-    <string name="follow_set_public_members_header_label2">Uczestnicy publiczni</string>
-    <string name="follow_set_private_members_header_label2">Prywatni uczestnicy</string>
+    <string name="follow_set_public_members_header_label2">Publiczne</string>
+    <string name="follow_set_private_members_header_label2">Prywatne</string>
     <string name="follow_set_public_members_header_label">Profile publiczne</string>
     <string name="follow_set_private_members_header_label">Profile prywatne</string>
     <string name="follow_set_single_member_label">uczestnik</string>
-    <string name="follow_set_multiple_member_label">uczestnicy</string>
+    <string name="follow_set_multiple_member_label">członkowie</string>
     <string name="follow_set_empty_label">Brak uczestników</string>
-    <string name="follow_set_empty_label2">Pusty</string>
+    <string name="follow_set_empty_label2">Pusto</string>
     <string name="follow_set_absence_indicator">%1$s nie jest na liście</string>
     <string name="follow_set_absence_indicator2">%1$s nie jest uczestnikiem</string>
     <string name="follow_set_man_dialog_title2">%1$s na Twoich listach</string>
@@ -480,7 +480,7 @@
     <string name="follow_set_empty_dialog_msg">Nie znaleziono list obserwowanych lub nie masz żadnych list obserwowanych. Naciśnij poniżej, aby odświeżyć lub użyj menu, aby utworzyć nową.</string>
     <string name="follow_set_error_dialog_msg">Podczas pobierania wystąpił błąd: %1$s</string>
     <string name="follow_set_creation_menu_title">Utwórz nową listę</string>
-    <string name="follow_set_creation_item_label">\"Utwórz nową listę %1$s z użytkownikiem</string>
+    <string name="follow_set_creation_item_label">\"Utwórz nową listę %1$s z członkiem</string>
     <string name="follow_set_creation_item_description">Tworzy zestaw obserwowanych %1$s i dodaje do niego %2$s.</string>
     <string name="follow_set_creation_dialog_title">Nowa lista</string>
     <string name="follow_pack_creation_dialog_title">Nowa Kategoria</string>
