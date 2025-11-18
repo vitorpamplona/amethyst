@@ -89,6 +89,10 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class QRDisplay(
+        val pubkey: String,
+    ) : Route()
+
     @Serializable data class ContentDiscovery(
         val id: String,
     ) : Route()
@@ -287,6 +291,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Geohash>() -> entry.toRoute<Route.Geohash>()
         dest.hasRoute<Route.Community>() -> entry.toRoute<Route.Community>()
 
+        dest.hasRoute<Route.QRDisplay>() -> entry.toRoute<Route.QRDisplay>()
         dest.hasRoute<Route.RelayInfo>() -> entry.toRoute<Route.RelayInfo>()
 
         dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()

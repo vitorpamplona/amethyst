@@ -105,7 +105,6 @@ import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -713,9 +712,6 @@ fun BottomContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // store the dialog open or close state
-    var dialogOpen by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier) {
         HorizontalDivider(
             modifier = Modifier.padding(top = 15.dp),
@@ -759,7 +755,7 @@ fun BottomContent(
             Box(modifier = Modifier.weight(1F))
             IconButton(
                 onClick = {
-                    dialogOpen = true
+                    nav.nav(Route.QRDisplay(user.pubkeyHex))
                     nav.closeDrawer()
                 },
             ) {
@@ -771,18 +767,5 @@ fun BottomContent(
                 )
             }
         }
-    }
-
-    if (dialogOpen) {
-        ShowQRDialog(
-            user,
-            accountViewModel,
-            onScan = {
-                dialogOpen = false
-                nav.closeDrawer()
-                nav.nav(it)
-            },
-            onClose = { dialogOpen = false },
-        )
     }
 }
