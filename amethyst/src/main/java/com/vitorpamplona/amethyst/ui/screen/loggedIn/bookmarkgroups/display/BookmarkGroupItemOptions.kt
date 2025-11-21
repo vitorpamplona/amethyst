@@ -60,7 +60,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun BookmarkGroupItemOptions(
     baseNote: Note,
-    onDeleteBookmarkGroup: () -> Unit,
+    onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -77,7 +77,7 @@ fun BookmarkGroupItemOptions(
             BookmarkGroupItemOptionsMenu(
                 note = baseNote,
                 onDismiss = { popupExpanded.value = false },
-                onDeleteBookmarkGroup = onDeleteBookmarkGroup,
+                onDeleteBookmarkItem = onDeleteBookmarkItem,
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -90,7 +90,7 @@ fun BookmarkGroupItemOptions(
 fun BookmarkGroupItemOptionsMenu(
     note: Note,
     onDismiss: () -> Unit,
-    onDeleteBookmarkGroup: () -> Unit,
+    onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -152,7 +152,7 @@ fun BookmarkGroupItemOptionsMenu(
         DropdownMenuItem(
             text = { Text("Remove from Bookmark List") },
             onClick = {
-                onDeleteBookmarkGroup()
+                onDeleteBookmarkItem()
                 onDismiss()
             },
         )

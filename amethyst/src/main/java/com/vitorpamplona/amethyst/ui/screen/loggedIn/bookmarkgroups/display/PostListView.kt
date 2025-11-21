@@ -91,7 +91,6 @@ private fun PostList(
         state = listState,
     ) {
         itemsIndexed(posts, key = { _, item -> item.idHex }) { _, item ->
-            // TODO: Find a way to integrate bookmark group callbacks into the note below
             NoteCompose(
                 baseNote = item,
                 modifier = Modifier.animateItem().animateContentSize(),
@@ -101,7 +100,7 @@ private fun PostList(
                 moreOptions = {
                     BookmarkGroupItemOptions(
                         baseNote = item,
-                        onDeleteBookmarkGroup = { onDeletePostBookmark(item.idHex) },
+                        onDeleteBookmarkItem = { onDeletePostBookmark(item.idHex) },
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )

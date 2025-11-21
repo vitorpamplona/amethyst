@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -35,33 +36,39 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
 @Composable
 fun RenderArticleList(
     bookmarkGroupViewModel: BookmarkGroupViewModel,
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
+    deleteArticleBookmark: (articleAddress: Address, isPrivate: Boolean) -> Unit,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val privateArticles = bookmarkGroupViewModel.privateArticles().collectAsStateWithLifecycle()
-    val publicArticles = bookmarkGroupViewModel.publicArticles().collectAsStateWithLifecycle()
+    val privateArticles by bookmarkGroupViewModel.privateArticles().collectAsStateWithLifecycle()
+    val publicArticles by bookmarkGroupViewModel.publicArticles().collectAsStateWithLifecycle()
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {
             0 ->
                 ArticleList(
                     modifier = Modifier.fillMaxSize(),
-                    articles = publicArticles.value,
-                    isPrivate = false,
+                    articles = publicArticles,
+                    onDeleteArticleBookmark = { articleAddress ->
+                        deleteArticleBookmark(articleAddress, false)
+                    },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
             1 ->
                 ArticleList(
                     modifier = Modifier.fillMaxSize(),
-                    articles = privateArticles.value,
-                    isPrivate = true,
+                    articles = privateArticles,
+                    onDeleteArticleBookmark = { articleAddress ->
+                        deleteArticleBookmark(articleAddress, true)
+                    },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -73,7 +80,7 @@ fun RenderArticleList(
 fun ArticleList(
     modifier: Modifier = Modifier,
     articles: List<AddressableNote>,
-    isPrivate: Boolean,
+    onDeleteArticleBookmark: (Address) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -92,6 +99,16 @@ fun ArticleList(
                 quotesLeft = 3,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                moreOptions = {
+                    BookmarkGroupItemOptions(
+                        baseNote = item,
+                        onDeleteBookmarkItem = {
+                            onDeleteArticleBookmark(item.address)
+                        },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
             )
         }
     }
