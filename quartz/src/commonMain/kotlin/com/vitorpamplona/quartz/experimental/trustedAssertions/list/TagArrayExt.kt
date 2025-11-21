@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.quartz.experimental.trustedAssertions.list
 
+import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag.Companion.parse
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 fun TagArray.serviceProviders() = mapNotNull(ServiceProviderTag::parse)
+
+fun TagArray.serviceProviderSet() = mapNotNullTo(mutableSetOf(), ServiceProviderTag::parse)

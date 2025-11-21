@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.trustedAssertions
 
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.serviceProviderSet
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.serviceProviders
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
@@ -32,5 +33,9 @@ class TrustProviderListDecryptionCache(
 
     fun cachedServiceProviders(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagListPrecached(event).serviceProviders()
 
+    fun cachedServiceProviderSet(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagListPrecached(event).serviceProviderSet()
+
     suspend fun serviceProviders(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagList(event).serviceProviders()
+
+    suspend fun serviceProviderSet(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagList(event).serviceProviderSet()
 }

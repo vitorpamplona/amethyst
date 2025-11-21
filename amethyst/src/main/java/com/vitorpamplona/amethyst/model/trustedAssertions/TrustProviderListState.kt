@@ -59,7 +59,7 @@ class TrustProviderListState(
 
     suspend fun trustProviderListWithBackup(note: Note): Set<ServiceProviderTag> {
         val event = note.event as? TrustProviderListEvent ?: settings.backupTrustProviderList
-        return event?.let { decryptionCache.roomSet(it) } ?: emptySet()
+        return event?.let { decryptionCache.serviceProviderSet(it) } ?: emptySet()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
