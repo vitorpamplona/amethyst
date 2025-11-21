@@ -98,6 +98,11 @@ class LabeledBookmarkListsState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
+    fun List<LabeledBookmarkList>.getList(bookmarkListId: String) =
+        this.firstOrNull {
+            it.identifier == bookmarkListId
+        }
+
     fun DeletionEvent.hasAnyDeletedBookmarkLists() = deleteAddressesWithKind(LabeledBookmarkListEvent.KIND) || deletesAnyEventIn(labeledBookmarkListEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
@@ -130,11 +135,11 @@ class LabeledBookmarkListsState(
     fun getLabeledBookmarkListEvent(bookmarkIdentifier: String): LabeledBookmarkListEvent = getLabeledBookmarkListNote(bookmarkIdentifier)?.event as LabeledBookmarkListEvent
 
     fun getLabeledBookmarkListFlow(bookmarkIdentifier: String) =
-        labeledBookmarkListNotes
-            .map { getLabeledBookmarkListEvent(bookmarkIdentifier).toLabeledBookmarkList() }
+        listFeedFlow
+            .map { it.getList(bookmarkIdentifier) }
             .onStart {
                 emit(
-                    getLabeledBookmarkListEvent(bookmarkIdentifier).toLabeledBookmarkList(),
+                    listFeedFlow.value.getList(bookmarkIdentifier),
                 )
             }.flowOn(Dispatchers.IO)
 
@@ -204,21 +209,22 @@ class LabeledBookmarkListsState(
     }
 
     suspend fun deleteBookmarkList(
-        bookmarkList: LabeledBookmarkList,
+        bookmarkListIdentifier: String,
         account: Account,
     ) {
-        val listEvent = getLabeledBookmarkListEvent(bookmarkList.identifier)
-        val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(listEvent)))
+        val listEvent = getLabeledBookmarkListEvent(bookmarkListIdentifier)
+        val deletionEventTemplate = DeletionEvent.build(listOf(listEvent))
+        val deletionEvent = account.signer.sign(deletionEventTemplate)
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
     }
 
     suspend fun addBookmarkToList(
         bookmark: BookmarkIdTag,
-        bookmarkList: LabeledBookmarkList,
+        bookmarkListIdentifier: String,
         isBookmarkPrivate: Boolean,
         account: Account,
     ) {
-        val currentBookmarkList = getLabeledBookmarkListEvent(bookmarkList.identifier)
+        val currentBookmarkList = getLabeledBookmarkListEvent(bookmarkListIdentifier)
         val updatedList =
             LabeledBookmarkListEvent.addBookmark(
                 earlierVersion = currentBookmarkList,
@@ -231,11 +237,11 @@ class LabeledBookmarkListsState(
 
     suspend fun removeBookmarkFromList(
         bookmark: BookmarkIdTag,
-        bookmarkList: LabeledBookmarkList,
+        bookmarkListIdentifier: String,
         isBookmarkPrivate: Boolean,
         account: Account,
     ) {
-        val currentBookmarkList = getLabeledBookmarkListEvent(bookmarkList.identifier)
+        val currentBookmarkList = getLabeledBookmarkListEvent(bookmarkListIdentifier)
         val updatedList =
             LabeledBookmarkListEvent.removeBookmark(
                 earlierVersion = currentBookmarkList,

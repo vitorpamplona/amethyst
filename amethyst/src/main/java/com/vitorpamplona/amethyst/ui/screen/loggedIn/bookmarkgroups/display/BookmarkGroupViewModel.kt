@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
@@ -32,11 +33,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.collections.emptyList
 
 @Stable
 class BookmarkGroupViewModel(
     val account: Account,
-    bookmarkGroupIdentifier: String,
+    val bookmarkGroupIdentifier: String,
 ) : ViewModel() {
     val selectedBookmarkGroupFlow =
         account.labeledBookmarkLists
@@ -46,75 +48,83 @@ class BookmarkGroupViewModel(
     fun publicPosts() =
         selectedBookmarkGroupFlow
             .filterNotNull()
-            .map { group ->
-                group.publicBookmarks
-                    .filter { it is EventBookmark }
-                    .map { account.cache.getOrCreateNote((it as EventBookmark).eventId) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            .map { group -> group.publicPostBookmarks.map { account.cache.getOrCreateNote(it.eventId) } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun privatePosts() =
         selectedBookmarkGroupFlow
             .filterNotNull()
-            .map { group ->
-                group.privateBookmarks
-                    .filter { it is EventBookmark }
-                    .map { account.cache.getOrCreateNote((it as EventBookmark).eventId) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            .map { group -> group.privatePostBookmarks.map { account.cache.getOrCreateNote(it.eventId) } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun publicArticles() =
         selectedBookmarkGroupFlow
             .filterNotNull()
-            .map { group ->
-                group.publicBookmarks
-                    .filter { it is AddressBookmark }
-                    .map { account.cache.getOrCreateAddressableNote((it as AddressBookmark).address) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            .map { group -> group.publicArticleBookmarks.map { account.cache.getOrCreateAddressableNote(it.address) } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun privateArticles() =
         selectedBookmarkGroupFlow
             .filterNotNull()
-            .map { group ->
-                group.privateBookmarks
-                    .filter { it is AddressBookmark }
-                    .map { account.cache.getOrCreateAddressableNote((it as AddressBookmark).address) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            .map { group -> group.privateArticleBookmarks.map { account.cache.getOrCreateAddressableNote(it.address) } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // TODO: Add implementations for Hashtag and Link bookmarks
 
-    suspend fun deleteBookmarkGroup() {
-        selectedBookmarkGroupFlow.value?.let {
-            account.labeledBookmarkLists.deleteBookmarkList(it, account)
-        }
+    suspend fun deleteBookmarkGroup(groupIdentifier: String) {
+        account.labeledBookmarkLists.deleteBookmarkList(groupIdentifier, account)
     }
 
     suspend fun addBookmarkToGroup(
+        groupIdentifier: String = bookmarkGroupIdentifier,
         bookmark: BookmarkIdTag,
         isPrivate: Boolean,
-        account: Account,
     ) {
-        selectedBookmarkGroupFlow.value?.let {
-            account.labeledBookmarkLists.addBookmarkToList(
-                bookmark,
-                it,
-                isPrivate,
-                account,
-            )
-        }
+        account.labeledBookmarkLists.addBookmarkToList(
+            bookmark,
+            groupIdentifier,
+            isPrivate,
+            account,
+        )
+    }
+
+    suspend fun removePostBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        bookmarkPostId: String,
+        isPrivate: Boolean,
+    ) {
+        val eventBookmark = EventBookmark(bookmarkPostId)
+        removeBookmarkFromGroup(
+            groupIdentifier,
+            eventBookmark,
+            isPrivate,
+        )
+    }
+
+    suspend fun removeArticleBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        bookmarkArticleAddress: Address,
+        isPrivate: Boolean,
+    ) {
+        val eventBookmark = AddressBookmark(bookmarkArticleAddress)
+        removeBookmarkFromGroup(
+            groupIdentifier,
+            eventBookmark,
+            isPrivate,
+        )
     }
 
     suspend fun removeBookmarkFromGroup(
+        groupIdentifier: String = bookmarkGroupIdentifier,
         bookmark: BookmarkIdTag,
         isPrivate: Boolean,
-        account: Account,
     ) {
-        selectedBookmarkGroupFlow.value?.let {
-            account.labeledBookmarkLists.removeBookmarkFromList(
-                bookmark,
-                it,
-                isPrivate,
-                account,
-            )
-        }
+        account.labeledBookmarkLists.removeBookmarkFromList(
+            bookmark,
+            groupIdentifier,
+            isPrivate,
+            account,
+        )
     }
 
     class Initializer(

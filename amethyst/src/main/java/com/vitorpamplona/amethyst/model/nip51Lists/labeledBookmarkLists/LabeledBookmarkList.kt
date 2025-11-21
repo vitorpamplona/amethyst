@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 
 @Stable
 data class LabeledBookmarkList(
@@ -30,4 +32,12 @@ data class LabeledBookmarkList(
     val description: String?,
     val privateBookmarks: Set<BookmarkIdTag> = emptySet(),
     val publicBookmarks: Set<BookmarkIdTag> = emptySet(),
-)
+) {
+    // TODO: Add methods for LInk and Hashtag, after their implementation.
+
+    val privatePostBookmarks = privateBookmarks.filter { it is EventBookmark }.map { bookmarkIdTag -> bookmarkIdTag as EventBookmark }
+    val publicPostBookmarks = publicBookmarks.filter { it is EventBookmark }.map { bookmarkIdTag -> bookmarkIdTag as EventBookmark }
+
+    val privateArticleBookmarks = privateBookmarks.filter { it is AddressBookmark }.map { bookmarkIdTag -> bookmarkIdTag as AddressBookmark }
+    val publicArticleBookmarks = publicBookmarks.filter { it is AddressBookmark }.map { bookmarkIdTag -> bookmarkIdTag as AddressBookmark }
+}
