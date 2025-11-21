@@ -72,7 +72,7 @@ open class DiscoverLiveFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is LiveActivitiesEvent && filterParams.match(noteEvent)
+            noteEvent is LiveActivitiesEvent && filterParams.match(noteEvent, it.relays)
         }
     }
 

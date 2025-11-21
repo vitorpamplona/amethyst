@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -122,19 +121,17 @@ fun nip05VerificationAsAState(
 @Composable
 fun ObserveDisplayNip05Status(
     baseNote: Note,
-    columnModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     WatchAuthor(baseNote = baseNote, accountViewModel) {
-        ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav)
+        ObserveDisplayNip05Status(it, accountViewModel, nav)
     }
 }
 
 @Composable
 fun ObserveDisplayNip05Status(
     baseUser: User,
-    columnModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -143,14 +140,12 @@ fun ObserveDisplayNip05Status(
 
     CrossfadeIfEnabled(
         targetState = nip05,
-        modifier = columnModifier,
         accountViewModel = accountViewModel,
     ) {
         VerifyAndDisplayNIP05OrStatusLine(
             it,
             statuses,
             baseUser,
-            columnModifier,
             accountViewModel,
             nav,
         )
@@ -162,29 +157,26 @@ private fun VerifyAndDisplayNIP05OrStatusLine(
     nip05: String?,
     statuses: ImmutableList<AddressableNote>,
     baseUser: User,
-    columnModifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Column(modifier = columnModifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (nip05 != null) {
-                val nip05Verified =
-                    nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (nip05 != null) {
+            val nip05Verified =
+                nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
 
-                if (nip05Verified.value != true) {
-                    DisplayNIP05(nip05, nip05Verified, accountViewModel)
-                } else if (!statuses.isEmpty()) {
-                    ObserveRotateStatuses(statuses, accountViewModel, nav)
-                } else {
-                    DisplayNIP05(nip05, nip05Verified, accountViewModel)
-                }
+            if (nip05Verified.value != true) {
+                DisplayNIP05(nip05, nip05Verified, accountViewModel)
+            } else if (!statuses.isEmpty()) {
+                ObserveRotateStatuses(statuses, accountViewModel, nav)
             } else {
-                if (!statuses.isEmpty()) {
-                    RotateStatuses(statuses, accountViewModel, nav)
-                } else {
-                    DisplayUsersNpub(baseUser.pubkeyDisplayHex())
-                }
+                DisplayNIP05(nip05, nip05Verified, accountViewModel)
+            }
+        } else {
+            if (!statuses.isEmpty()) {
+                RotateStatuses(statuses, accountViewModel, nav)
+            } else {
+                DisplayUsersNpub(baseUser.pubkeyDisplayHex())
             }
         }
     }
@@ -253,7 +245,7 @@ fun DisplayStatus(
     nav: INav,
 ) {
     val noteState by observeNote(addressableNote, accountViewModel)
-    val noteEvent = noteState?.note?.event as? StatusEvent ?: return
+    val noteEvent = noteState.note.event as? StatusEvent ?: return
 
     DisplayStatus(noteEvent, accountViewModel, nav)
 }

@@ -692,7 +692,7 @@ fun HashTag(
         modifier =
             remember {
                 Modifier.clickable {
-                    nav.nav(Route.Hashtag(segment.hashtag))
+                    nav.nav(Route.Hashtag(segment.hashtag.lowercase()))
                 }
             },
         inlineContent =

@@ -96,7 +96,7 @@ class UserOutboxFinderSubAssembler(
         if (noOutboxList.isEmpty()) return null
 
         val accounts = keys.mapTo(mutableSetOf()) { it.account }
-        val connectedRelays = client.relayStatusFlow().value.connected
+        val connectedRelays = client.connectedRelaysFlow().value
 
         val perRelayKeysBoth =
             pickRelaysToLoadUsers(

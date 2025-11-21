@@ -148,6 +148,18 @@ class NIP19ParserTest {
     }
 
     @Test
+    fun nAddrIncompleteParser() {
+        val result =
+            Nip19Parser.uriToRoute(
+                "nostr:naddr1qqqqzxthwden5te0wfjkccte9ejxjanfdejjuanfv3jk7tczyrv4428upmlcujyf2fy4hqrynywj07ukakr99ufvmmw95n5tttj5qqcyqqqgt0qeresua",
+            )
+        assertEquals(
+            "34236:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:",
+            (result?.entity as? NAddress)?.aTag(),
+        )
+    }
+
+    @Test
     fun nAddrParser2() {
         val result =
             Nip19Parser.uriToRoute(

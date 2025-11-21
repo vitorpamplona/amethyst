@@ -320,5 +320,7 @@ class NostrClient(
 
     override fun getCountFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeCounts.getSubscriptionFiltersOrNull(subId)
 
-    override fun relayStatusFlow() = relayPool.statusFlow
+    override fun connectedRelaysFlow() = relayPool.connectedRelays
+
+    override fun availableRelaysFlow() = relayPool.availableRelays
 }

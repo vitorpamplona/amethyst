@@ -18,6 +18,7 @@
 /.idea/artifacts/*
 /.idea/kotlinNotebook.xml
 /.idea/ChatHistory_schema_v3.xml
+/.idea/markdown.xml
 .DS_Store
 /build
 /captures

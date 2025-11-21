@@ -257,7 +257,7 @@ private fun DisplaySearchResults(
             hashTags,
             key = { _, item -> "#$item" },
         ) { _, item ->
-            HashtagLine(item) { nav.nav(Route.Hashtag(item)) }
+            HashtagLine(item.lowercase()) { nav.nav(Route.Hashtag(item.lowercase())) }
 
             HorizontalDivider(
                 modifier = Modifier.padding(top = 10.dp),

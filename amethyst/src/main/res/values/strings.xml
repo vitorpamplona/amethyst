@@ -378,6 +378,7 @@
     <string name="report_dialog_title">Block and Report</string>
     <string name="block_only">Block</string>
 
+    <string name="manual_zaps">Manual Zap Splits</string>
     <string name="bookmarks">Bookmarks</string>
     <string name="drafts">Drafts</string>
     <string name="private_bookmarks">Private Bookmarks</string>

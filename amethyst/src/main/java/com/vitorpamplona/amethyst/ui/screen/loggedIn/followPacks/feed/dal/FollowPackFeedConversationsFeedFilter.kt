@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -96,6 +97,7 @@ class FollowPackFeedConversationsFeedFilter(
 
     fun acceptableEvent(
         event: Event?,
+        relays: List<NormalizedRelayUrl>,
         filterParams: FilterByListParams,
     ): Boolean =
         (
@@ -107,12 +109,12 @@ class FollowPackFeedConversationsFeedFilter(
                 event is PublicMessageEvent ||
                 event is LiveActivitiesChatMessageEvent
         ) &&
-            filterParams.match(event)
+            filterParams.match(event, relays)
 
     fun acceptableEvent(
         note: Note,
         filterParams: FilterByListParams,
-    ): Boolean = acceptableEvent(note.event, filterParams) && !note.isNewThread()
+    ): Boolean = acceptableEvent(note.event, note.relays, filterParams) && !note.isNewThread()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

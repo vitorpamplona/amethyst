@@ -50,8 +50,8 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
 
     override fun getRelayList(): List<NormalizedRelayUrl> =
         account.client
-            .relayStatusFlow()
-            .value.available
+            .availableRelaysFlow()
+            .value
             .sorted()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {

@@ -110,7 +110,7 @@ class ImageUploadTesting {
                 .upload(
                     inputStream = inputStream,
                     hash = initialHash,
-                    length = paylod.size,
+                    length = paylod.size.toLong(),
                     baseFileName = "filename.png",
                     contentType = "image/png",
                     alt = null,

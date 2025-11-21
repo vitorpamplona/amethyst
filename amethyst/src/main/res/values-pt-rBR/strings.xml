@@ -345,6 +345,7 @@
     <string name="report_dialog_post_report_btn">Enviar Denuncia</string>
     <string name="report_dialog_title">Bloquear e Denunciar</string>
     <string name="block_only">Bloquear</string>
+    <string name="manual_zaps">Divisão manual de Zap</string>
     <string name="bookmarks">Itens Salvos</string>
     <string name="drafts">Rascunhos</string>
     <string name="private_bookmarks">Itens Salvos Privados</string>
@@ -448,6 +449,7 @@
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Lista Silenciada</string>
     <string name="follow_sets">Listas de seguidores</string>
+    <string name="follow_sets_explainer">Essas são listas de seguidores criadas para seu próprio uso. Você pode seguir usuários de forma privada ou pública.</string>
     <string name="labeled_bookmarks">Favoritos com etiqueta</string>
     <string name="general_bookmarks">Favoritos gerais</string>
     <string name="follow_set_type_public">Público</string>
@@ -480,6 +482,7 @@
     <string name="follow_set_creation_item_label">Criar nova lista %1$s com usuário</string>
     <string name="follow_set_creation_item_description">Cria um conjunto de seguimento %1$s e adiciona %2$s a ele.</string>
     <string name="follow_set_creation_dialog_title">Nova lista de seguidores</string>
+    <string name="follow_pack_creation_dialog_title">Novo pacote de recomendações</string>
     <string name="follow_set_copy_dialog_title">Copiar/Clonar lista de seguidores</string>
     <string name="follow_set_desc_modify_label">Modificar descrição</string>
     <string name="follow_set_empty_desc_label">Esta lista não tem descrição</string>
@@ -492,6 +495,7 @@
     <string name="follow_set_creation_action_btn_label">Criar lista</string>
     <string name="follow_set_copy_action_btn_label">Copiar/Clonar lista</string>
     <string name="follow_set_rename_btn_label">Renomear lista</string>
+    <string name="follow_set_edit_list_metadata">Editar lista</string>
     <string name="follow_set_desc_modify_btn_label">Modificar</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Você está renomeando de </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> para..</string>
@@ -630,6 +634,7 @@
     <string name="followed_tags">Tags Seguidas</string>
     <string name="relay_setup">Relés</string>
     <string name="discover_follows">Pacotes Seguir</string>
+    <string name="discover_follows_explainer">Essas são listas de usuários que você recomenda para outras pessoas. Somente usuários públicos são permitidos.</string>
     <string name="discover_reads">Leituras</string>
     <string name="discover_content_v2">Algoritmos de feed</string>
     <string name="discover_marketplace">Mercado</string>
@@ -1121,4 +1126,17 @@
     <string name="remove_user_from_the_list">Remover usuário da lista</string>
     <string name="follow_list_item_label">Pacote Seguir</string>
     <string name="members">Membros</string>
+    <string name="people_list_title">Metadados da lista de seguidores</string>
+    <string name="people_list_explainer">Os metadados das listas de seguidores podem ser vistos por qualquer pessoa no Nostr. Apenas os membros privados são criptografados.</string>
+    <string name="follow_pack_title">Metadados do pacote de recomendações</string>
+    <string name="follow_pack_explainer">Os metadados dos pacotes de recomendações podem ser vistos por qualquer pessoa no Nostr e são frequentemente publicados em sites como kits iniciais para novos usuários.</string>
+    <string name="follow_pack_edit_list_metadata">Editar pacote de recomendações</string>
+    <string name="follow_pack_creation_name_label">Nome do pacote</string>
+    <string name="follow_pack_copy_name_label">Novo nome do pacote</string>
+    <string name="follow_pack_creation_desc_label">Descrição do pacote</string>
+    <string name="follow_pack_copy_desc_label">Nova descrição do pacote</string>
+    <string name="follow_set_broadcast">Transmitir lista</string>
+    <string name="follow_pack_broadcast">Transmitir pacote de recomendações</string>
+    <string name="follow_set_delete">Excluir lista</string>
+    <string name="follow_pack_delete">Excluir pacote de recomendações</string>
 </resources>

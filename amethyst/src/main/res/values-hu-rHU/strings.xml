@@ -115,7 +115,7 @@
     <string name="rename">Átnevezés</string>
     <string name="cancel">Mégse</string>
     <string name="failed_to_upload_the_image">Nem sikerült feltölteni a képet</string>
-    <string name="relay_address">Atjátszó címe</string>
+    <string name="relay_address">Átjátszó címe</string>
     <string name="posts">Bejegyzések</string>
     <string name="bytes">Bájt</string>
     <string name="errors">Hibák</string>
@@ -347,6 +347,7 @@
     <string name="report_dialog_post_report_btn">Bejelentés közzététele</string>
     <string name="report_dialog_title">Letiltás és bejelentés</string>
     <string name="block_only">Letiltás</string>
+    <string name="manual_zaps">Kézi Zap-megosztás</string>
     <string name="bookmarks">Könyvjelző</string>
     <string name="drafts">Piszkozatok</string>
     <string name="private_bookmarks">Privát könyvjelzők</string>
@@ -427,7 +428,7 @@
     <string name="uploading_state_uploading">Feltöltés…</string>
     <string name="uploading_state_server_processing">Feldolgozás…</string>
     <string name="uploading_state_downloading">Letöltés…</string>
-    <string name="uploading_state_hashing">Hash-selés…</string>
+    <string name="uploading_state_hashing">Kivonatolás</string>
     <string name="uploading_state_finished">Kész</string>
     <string name="uploading_state_error">Hiba</string>
     <string name="upload_server_relays_nip95">Saját átjátszók (NIP-95)</string>
@@ -444,11 +445,13 @@
     <string name="follow_list_selection">Követési lista</string>
     <string name="follow_list_kind3follows">Követettek bejegyzései</string>
     <string name="follow_list_kind3follows_users_only">Összes követett felhasználó</string>
+    <string name="follow_list_kind3_follows_users_only">Alapértelmezett követési lista</string>
     <string name="follow_list_kind3follows_proxy">Követés proxyn keresztül</string>
     <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
-    <string name="follow_sets">Követési gyüjtemények</string>
+    <string name="follow_sets">Követési listák</string>
+    <string name="follow_sets_explainer">Ezek a követési listák az Ön saját alkalmazás-használatából lettek kialakítva. A felhasználókat privát vagy nyilvánosan követheti</string>
     <string name="labeled_bookmarks">Címkézett könyvjelzők</string>
     <string name="general_bookmarks">Általános könyvjelzők</string>
     <string name="follow_set_type_public">Nyílvános</string>
@@ -458,14 +461,14 @@
         \nKoppintson a frissítéshez vagy érintse meg a hozzáadás gombot a gyüjtemény létrehozásához.
     </string>
     <string name="follow_set_create_btn_label">Új</string>
-    <string name="follow_set_add_author_from_note_action">Szerző hozzáadása a követési gyűjteményhez</string>
+    <string name="follow_set_add_author_from_note_action">Szerző hozzáadása a követési listához</string>
     <string name="follow_set_profile_actions_menu_description">Felhasználó hozzáadása vagy eltávolítása a listákból, vagy új lista létrehozása ezzel a felhasználóval.</string>
-    <string name="follow_set_icon_description">Ikon a(z) %1$s nevű listához</string>
+    <string name="follow_set_icon_description">Ikon a követési listához</string>
     <string name="follow_set_public_presence_indicator">%1$s egy nyílvános tag</string>
     <string name="follow_set_private_presence_indicator">%1$s egy privát tag</string>
     <string name="follow_set_public_member_add_label">Hozzáadás mint nyílvános tag</string>
     <string name="follow_set_private_member_add_label">Hozzáadás mint privát tag</string>
-    <string name="follow_set_public_members_header_label2">Publikus Tagok</string>
+    <string name="follow_set_public_members_header_label2">Nyilvános tagok</string>
     <string name="follow_set_private_members_header_label2">Privát Tagok</string>
     <string name="follow_set_public_members_header_label">Nyílvános profilok</string>
     <string name="follow_set_private_members_header_label">Privát profilok</string>
@@ -476,25 +479,27 @@
     <string name="follow_set_absence_indicator">A(z) %1$s nincs a listában</string>
     <string name="follow_set_absence_indicator2">%1$s nem tag</string>
     <string name="follow_set_man_dialog_title2">Saját listák és %1$s</string>
-    <string name="follow_set_man_dialog_title">Saját követési gyüjtemények</string>
-    <string name="follow_set_empty_dialog_msg">Nem találhatók követési gyüjtemények, vagy nincs követési gyüjteménye. Érintse meg az alábbi gombot a frissítéshez vagy használja a menüt egy gyüjtemény létrehozásához.</string>
+    <string name="follow_set_man_dialog_title">Saját listák</string>
+    <string name="follow_set_empty_dialog_msg">Nem találhatók vagy Önnek még nincs követési listája. Koppintson az alábbi gombra a frissítéshez vagy használja a menüt egy új lista létrehozásához.</string>
     <string name="follow_set_error_dialog_msg">Probléma történt a következő lekérdezésekor: %1$s</string>
     <string name="follow_set_creation_menu_title">Új lista létrehozása</string>
-    <string name="follow_set_creation_item_label">Új %1$s lista létrehozása felhasználóval</string>
-    <string name="follow_set_creation_item_description">%1$s követési gyüjtemény létrehozása, és hozzáadás a következhöz: %2$s.</string>
-    <string name="follow_set_creation_dialog_title">Új %1$s lista</string>
-    <string name="follow_set_copy_dialog_title">Követési gyüjtemény másolása/klónozása</string>
+    <string name="follow_set_creation_item_label">Új lista %1$s tagsággal</string>
+    <string name="follow_set_creation_item_description">Egy új követési gyüjtemény létrehozása, és %1$s hozzáadása mint %2$s tag.</string>
+    <string name="follow_set_creation_dialog_title">Új követési lista</string>
+    <string name="follow_pack_creation_dialog_title">Új követési lista</string>
+    <string name="follow_set_copy_dialog_title">Követési lista másolása/klónozása</string>
     <string name="follow_set_desc_modify_label">Leírás módosítása</string>
     <string name="follow_set_empty_desc_label">Ennek a listának nincs leírása</string>
     <string name="follow_set_current_desc_label">Jelenlegi leírás:</string>
-    <string name="follow_set_copy_indicator_description">Az alábbiakban beállíthat egy egyéni nevet/leírást ehhez a klónozott követési gyűjteményhez.</string>
-    <string name="follow_set_creation_name_label">Név megadása</string>
-    <string name="follow_set_copy_name_label">(Gyüjtemény eredeti neve)</string>
-    <string name="follow_set_creation_desc_label">Leírás megadása (nem kötelező)</string>
-    <string name="follow_set_copy_desc_label">(Gyüjtemény eredeti leírása)</string>
-    <string name="follow_set_creation_action_btn_label">Gyüjtemény létrehozása</string>
-    <string name="follow_set_copy_action_btn_label">Gyüjtemény másolása/klónozása</string>
-    <string name="follow_set_rename_btn_label">Gyüjtemény átnevezése</string>
+    <string name="follow_set_copy_indicator_description">Az alábbiakban beállíthat egy új nevet/leírást ehhez a klónozott követési listához.</string>
+    <string name="follow_set_creation_name_label">Listanév</string>
+    <string name="follow_set_copy_name_label">Új listanév</string>
+    <string name="follow_set_creation_desc_label">Listaleírás (nem kötelező)</string>
+    <string name="follow_set_copy_desc_label">Új listaleírás</string>
+    <string name="follow_set_creation_action_btn_label">Lista létrehozása</string>
+    <string name="follow_set_copy_action_btn_label">Lista másolása/klónozása</string>
+    <string name="follow_set_rename_btn_label">Lista átnevezése</string>
+    <string name="follow_set_edit_list_metadata">Lista szerkesztése</string>
     <string name="follow_set_desc_modify_btn_label">Módosítás</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Ön átnevezi a követési gyüjteményt erről: </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> erre:</string>
@@ -633,6 +638,7 @@
     <string name="followed_tags">Követett címke</string>
     <string name="relay_setup">Átjátszók</string>
     <string name="discover_follows">Követett csomagok</string>
+    <string name="discover_follows_explainer">Ezek a listák azon felhasználók listái, akiket másoknak ajánlhat. Csak nyilvános felhasználók szerepelhetnek a listán.</string>
     <string name="discover_reads">Olvasmányok</string>
     <string name="discover_content_v2">Hírforrás-algoritmus</string>
     <string name="discover_marketplace">Piac</string>
@@ -687,7 +693,7 @@
     <string name="zap_forward_title">Zap-ek továbbítása neki:</string>
     <string name="zap_forward_explainer">A funkciót támogató kliensek a Zap-eket az alábbi LN-címre vagy felhasználói profilra továbbítják az Öné helyett</string>
     <string name="geohash_title">A helyszín megjelenítése mint </string>
-    <string name="geohash_explainer">Hozzáadja a helyének geohash-sét a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
+    <string name="geohash_explainer">Hozzáadja a helyszínének geokivonatát a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
     <string name="hashtag_exclusive">Hashtag-exkluzív bejegyzés</string>
@@ -714,15 +720,15 @@
     <string name="paste_from_clipboard">Beszúrás vágólapról</string>
     <string name="invalid_nip47_uri_title">Érvénytelen NIP-47 URI</string>
     <string name="invalid_nip47_uri_description">A(z) %1$s URI nem egy érvényes NIP-47 bejelentkezési URI.</string>
-    <string name="connect_to_new_nwc_wallet">Csatlakozás az új NWC tárcához</string>
-    <string name="couldnt_find_nwc_wallets">Tárca nem található</string>
-    <string name="couldnt_find_nwc_wallets_description">Az Amethyst nem talált olyan pénztárcaalkalmazást, amely támogatja a Nostr Wallet Connect (NWC) szolgáltatást.
+    <string name="connect_to_new_nwc_wallet">Kapcsolódás az új NWC-pénztárcához</string>
+    <string name="couldnt_find_nwc_wallets">Nem található pénztárca</string>
+    <string name="couldnt_find_nwc_wallets_description">Az Amethyst nem talált olyan pénztárca-alkalmazást, amely támogatja a Nostr Wallet Connect (NWC) szolgáltatást.
 \n\nAmit tehet:
-\n\t1. NWC támogatás ellenőrzése: Ellenőrizze, hogy a kívánt pénztárcaalkalmazás kompatibilis-e a Nostr Wallet Connect szolgáltatással.
+\n\t1. NWC-támogatás ellenőrzése: Ellenőrizze, hogy a kívánt pénztárca-alkalmazás kompatibilis-e a Nostr Wallet Connect szolgáltatással.
 \n\t2. Kapcsolat létrehozása: Nyissa meg a pénztárcaalkalmazást, és hozzon létre egy új NWC-kapcsolatot.
 \n\t3. Kapcsolódás az Amethysthez: A pénztárcája általában három lehetőséget kínál:
-\n\t\t3.1 Automatikus kapcsolódás: Egy gomb az Amethyst automatikus megnyitásához és csatlakoztatásához. Ha igen, kattintson erre a gombra, nyissa meg az Amethyst alkalmazást, és mentse el az új képernyőn.
-\n\t\t3.2 Manuális kapcsolódás: Egy kapcsolat URl, amelyet kimásolhat, és a képernyőn található beillesztés ikonra kattintva közvetlenül beírhatja.
+\n\t\t3.1 Automatikus kapcsolódás: Egy gomb az Amethyst automatikus megnyitásához és kapcsolódáshoz. Koppintson erre a gombra, nyissa meg az Amethyst alkalmazást, és mentse el az új képernyőn.
+\n\t\t3.2 Kézi kapcsolódás: Egy kapcsolódási cím, amelyet kimásolhat, és a képernyőn található beillesztés gombra koppintva közvetlenül beírhatja.
 \n\t\t3.3 QR-kód: A pénztárca létrehoz egy QR-kódot, amelyet a képernyőn található QR-kód gombról olvashat be.
     </string>
     <string name="language_description">Az alkalmazás felületéhez</string>
@@ -1119,5 +1125,23 @@
     <string name="in_the_list">Már rajta van a listán</string>
     <string name="private_members">Privát tagok</string>
     <string name="public_members">Nyilvános tagok</string>
+    <string name="private_members_count">Privát tagok (%1$s)</string>
+    <string name="public_members_count">Nyilvános tagok (%1$s)</string>
     <string name="add_user_to_the_list">Felhasználó hozzáadása a listához</string>
+    <string name="remove_user_from_the_list">Felhasználó törlése a listáról</string>
+    <string name="follow_list_item_label">Követési csomag</string>
+    <string name="members">Tagok</string>
+    <string name="people_list_title">Követési lista metaadatai</string>
+    <string name="people_list_explainer">A követési listák metaadatai a Nostr-on bárki számára láthatók. Csak a privát tagok adatai vannak titkosítva.</string>
+    <string name="follow_pack_title">Követési csomag metaadatai</string>
+    <string name="follow_pack_explainer">A követési csomag metaadatai a Nostr-on bárki számára láthatók, és gyakran megjelennek számos weboldalon, új felhasználók számára készült kezdőcsomagként.</string>
+    <string name="follow_pack_edit_list_metadata">Követési csomag szerkesztése</string>
+    <string name="follow_pack_creation_name_label">Csomagnév</string>
+    <string name="follow_pack_copy_name_label">Új csomagnév</string>
+    <string name="follow_pack_creation_desc_label">Csomagleírás</string>
+    <string name="follow_pack_copy_desc_label">Új csomagleírás</string>
+    <string name="follow_set_broadcast">Közvetítési lista</string>
+    <string name="follow_pack_broadcast">Közvetítési csomag</string>
+    <string name="follow_set_delete">Lista törlése</string>
+    <string name="follow_pack_delete">Csomag törlése</string>
 </resources>

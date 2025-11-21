@@ -42,18 +42,14 @@ class IMetaTag(
         const val TAG_NAME = "imeta"
         const val ANCHOR_PROPERTY = "url"
 
-        fun parse(tag: Array<String>): IMetaTag? {
+        fun parse(tag: Array<String>): List<IMetaTag>? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
             val allTags = parseIMeta(tag)
-            val url = allTags[ANCHOR_PROPERTY]?.firstOrNull()
-
-            return if (url != null) {
-                IMetaTag(url, allTags.minus(ANCHOR_PROPERTY))
-            } else {
-                null
+            return allTags[ANCHOR_PROPERTY]?.map {
+                IMetaTag(it, allTags.minus(ANCHOR_PROPERTY))
             }
         }
 

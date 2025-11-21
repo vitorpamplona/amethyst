@@ -24,12 +24,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.utils.startsWith
 import com.vitorpamplona.quartz.utils.startsWithAny
+import com.vitorpamplona.quartz.utils.startsWithIgnoreCase
 
 inline fun TagArray.filterToArray(predicate: (Array<String>) -> Boolean): TagArray = filterTo(ArrayList(), predicate).toTypedArray()
 
 inline fun TagArray.remove(predicate: (Array<String>) -> Boolean): TagArray = filterNotTo(ArrayList(this.size), predicate).toTypedArray()
 
 fun TagArray.remove(startsWith: Array<String>): TagArray = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).toTypedArray()
+
+fun TagArray.removeIgnoreCase(startsWith: Array<String>): TagArray = filterNotTo(ArrayList(this.size), { it.startsWithIgnoreCase(startsWith) }).toTypedArray()
 
 fun <R> TagArray.removeParsing(
     transform: (Tag) -> R,

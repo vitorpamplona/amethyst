@@ -60,17 +60,6 @@ fun debugState(context: Context) {
 
     Log.d(
         STATE_DUMP_TAG,
-        "Connected Relays: " +
-            Amethyst.instance.client
-                .relayStatusFlow()
-                .value.connected.size + "/" +
-            Amethyst.instance.client
-                .relayStatusFlow()
-                .value.available.size,
-    )
-
-    Log.d(
-        STATE_DUMP_TAG,
         "Indexed Relays: " +
             Amethyst.instance.cache.relayHints.relayDB
                 .size() + "/" + normalizedUrls.size(),

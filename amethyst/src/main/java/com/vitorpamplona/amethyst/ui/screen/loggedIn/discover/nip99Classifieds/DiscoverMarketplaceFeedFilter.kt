@@ -49,7 +49,7 @@ open class DiscoverMarketplaceFeedFilter(
         val notes =
             LocalCache.addressables.filterIntoSet(ClassifiedsEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent)
+                noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent, it.relays)
             }
 
         return sort(notes)
@@ -68,7 +68,7 @@ open class DiscoverMarketplaceFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent)
+            noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent, it.relays)
         }
     }
 

@@ -21,28 +21,25 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserComposeNoAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
@@ -94,22 +91,16 @@ fun PeopleListItem(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-            IconButton(
+            OutlinedIconButton(
                 onClick = {
                     onDeleteUser(user)
                 },
-                modifier =
-                    HalfPadding
-                        .align(Alignment.CenterVertically)
-                        .background(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(percent = 80),
-                        ),
+                modifier = HalfPadding,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    imageVector = Icons.Filled.PersonRemove,
+                    contentDescription = stringRes(R.string.remove_user_from_the_list),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
         }

@@ -55,7 +55,7 @@ fun DisplayHashtagExternalId(
     nav: INav,
 ) {
     DisplayHashtagExternalId(externalId.topic) {
-        nav.nav(Route.Hashtag(externalId.topic))
+        nav.nav(Route.Hashtag(externalId.topic.lowercase()))
     }
 }
 

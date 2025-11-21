@@ -53,13 +53,13 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
@@ -127,23 +127,9 @@ fun DrawAdditionalInfo(
             )
         }
 
-        var dialogOpen by remember { mutableStateOf(false) }
-
-        if (dialogOpen) {
-            ShowQRDialog(
-                user = user,
-                accountViewModel = accountViewModel,
-                onScan = {
-                    dialogOpen = false
-                    nav.nav(it)
-                },
-                onClose = { dialogOpen = false },
-            )
-        }
-
         IconButton(
             modifier = Size25Modifier,
-            onClick = { dialogOpen = true },
+            onClick = { nav.nav(Route.QRDisplay(user.pubkeyHex)) },
         ) {
             Icon(
                 painter = painterRes(R.drawable.ic_qrcode, 1),

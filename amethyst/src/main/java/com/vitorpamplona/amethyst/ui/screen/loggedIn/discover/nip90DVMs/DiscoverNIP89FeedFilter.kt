@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -74,16 +75,19 @@ open class DiscoverNIP89FeedFilter(
     fun acceptDVM(note: Note): Boolean {
         val noteEvent = note.event
         return if (noteEvent is AppDefinitionEvent) {
-            acceptDVM(noteEvent)
+            acceptDVM(noteEvent, note.relays)
         } else {
             false
         }
     }
 
-    fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
+    fun acceptDVM(
+        noteEvent: AppDefinitionEvent,
+        relays: List<NormalizedRelayUrl>,
+    ): Boolean {
         val filterParams = buildFilterParams(account)
         return noteEvent.appMetaData()?.subscription != true &&
-            filterParams.match(noteEvent) &&
+            filterParams.match(noteEvent, relays) &&
             noteEvent.includeKind(5300) &&
             noteEvent.createdAt > lastAnnounced // && params.match(noteEvent)
     }

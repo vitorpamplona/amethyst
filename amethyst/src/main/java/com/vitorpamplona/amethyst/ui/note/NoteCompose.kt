@@ -1073,10 +1073,12 @@ fun SecondUserInfoRow(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        if (noteEvent is BaseThreadedEvent && noteEvent.isAFork()) {
-            ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
-        } else {
-            ObserveDisplayNip05Status(noteAuthor, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+        Column(modifier = remember(noteEvent) { Modifier.weight(1f) }) {
+            if (noteEvent is BaseThreadedEvent && noteEvent.isAFork()) {
+                ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+            } else {
+                ObserveDisplayNip05Status(noteAuthor, accountViewModel, nav)
+            }
         }
 
         val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }

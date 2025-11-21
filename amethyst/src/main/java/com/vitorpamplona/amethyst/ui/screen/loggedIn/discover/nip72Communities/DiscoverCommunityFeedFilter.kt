@@ -60,7 +60,7 @@ open class DiscoverCommunityFeedFilter(
                 if (noteEvent == null && shouldInclude(key, filterParams, note.relays)) {
                     // send unloaded communities to the screen
                     note
-                } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
+                } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent, note.relays)) {
                     note
                 } else {
                     null
@@ -84,7 +84,7 @@ open class DiscoverCommunityFeedFilter(
             .mapNotNull { note ->
                 // note event here will never be null
                 val noteEvent = note.event
-                if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
+                if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent, note.relays)) {
                     listOf(note)
                 } else if (noteEvent is CommunityPostApprovalEvent) {
                     noteEvent.communityAddresses().mapNotNull {
@@ -93,7 +93,7 @@ open class DiscoverCommunityFeedFilter(
 
                         if (definitionEvent == null && shouldInclude(it, filterParams, definitionNote.relays)) {
                             definitionNote
-                        } else if (definitionEvent is CommunityDefinitionEvent && filterParams.match(definitionEvent)) {
+                        } else if (definitionEvent is CommunityDefinitionEvent && filterParams.match(definitionEvent, definitionNote.relays)) {
                             definitionNote
                         } else {
                             null

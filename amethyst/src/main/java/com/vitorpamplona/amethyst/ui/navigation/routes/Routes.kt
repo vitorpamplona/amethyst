@@ -97,6 +97,10 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class QRDisplay(
+        val pubkey: String,
+    ) : Route()
+
     @Serializable data class ContentDiscovery(
         val id: String,
     ) : Route()
@@ -260,6 +264,11 @@ sealed class Route {
         val version: String? = null,
         val draft: String? = null,
     ) : Route()
+
+    @Serializable
+    data class ManualZapSplitPayment(
+        val paymentId: String,
+    ) : Route()
 }
 
 inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
@@ -290,6 +299,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Geohash>() -> entry.toRoute<Route.Geohash>()
         dest.hasRoute<Route.Community>() -> entry.toRoute<Route.Community>()
 
+        dest.hasRoute<Route.QRDisplay>() -> entry.toRoute<Route.QRDisplay>()
         dest.hasRoute<Route.RelayInfo>() -> entry.toRoute<Route.RelayInfo>()
 
         dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
@@ -318,6 +328,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.PeopleListManagement>() -> entry.toRoute<Route.PeopleListManagement>()
         dest.hasRoute<Route.NewGroupDM>() -> entry.toRoute<Route.NewGroupDM>()
         dest.hasRoute<Route.UserSettings>() -> entry.toRoute<Route.UserSettings>()
+        dest.hasRoute<Route.ManualZapSplitPayment>() -> entry.toRoute<Route.ManualZapSplitPayment>()
 
         else -> {
             null
