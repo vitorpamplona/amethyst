@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
@@ -41,27 +42,32 @@ fun RenderPostList(
     bookmarkGroupViewModel: BookmarkGroupViewModel,
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
+    deletePostBookmark: (postId: String, isPrivate: Boolean) -> Unit,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val privatePosts = bookmarkGroupViewModel.privatePosts().collectAsStateWithLifecycle()
-    val publicPosts = bookmarkGroupViewModel.publicPosts().collectAsStateWithLifecycle()
+    val privatePosts by bookmarkGroupViewModel.privatePosts().collectAsStateWithLifecycle()
+    val publicPosts by bookmarkGroupViewModel.publicPosts().collectAsStateWithLifecycle()
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {
             0 ->
                 PostList(
                     modifier = Modifier.fillMaxSize(),
-                    posts = publicPosts.value,
-                    isPrivate = false,
+                    posts = publicPosts,
+                    onDeletePostBookmark = { postId ->
+                        deletePostBookmark(postId, false)
+                    },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
             1 ->
                 PostList(
                     modifier = Modifier.fillMaxSize(),
-                    posts = privatePosts.value,
-                    isPrivate = true,
+                    posts = privatePosts,
+                    onDeletePostBookmark = { postId ->
+                        deletePostBookmark(postId, true)
+                    },
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -73,7 +79,7 @@ fun RenderPostList(
 private fun PostList(
     modifier: Modifier = Modifier,
     posts: List<Note>,
-    isPrivate: Boolean,
+    onDeletePostBookmark: (postId: String) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -88,10 +94,18 @@ private fun PostList(
             // TODO: Find a way to integrate bookmark group callbacks into the note below
             NoteCompose(
                 baseNote = item,
-                modifier = Modifier.animateContentSize(),
+                modifier = Modifier.animateItem().animateContentSize(),
                 quotesLeft = 3,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                moreOptions = {
+                    BookmarkGroupItemOptions(
+                        baseNote = item,
+                        onDeleteBookmarkGroup = { onDeletePostBookmark(item.idHex) },
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
             )
         }
     }
