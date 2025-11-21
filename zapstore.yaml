@@ -1,16 +1,13 @@
-amethyst:
-  android:
-    name: Amethyst
-    description: The all-in-one Nostr client
-    license: MIT
-    builder: npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0
-    repository: https://github.com/vitorpamplona/amethyst
-    artifacts:
-      - amethyst-googleplay-arm64-v8a-v%v.apk
-      - amethyst-googleplay-armeabi-v7a-v%v.apk
-      - amethyst-googleplay-universal-v%v.apk
-      - amethyst-googleplay-x86-v%v.apk
-      - amethyst-googleplay-x86_64-v%v.apk
+name: Amethyst
+description: The all-in-one Nostr client
+license: MIT
+builder: npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0
+repository: https://github.com/vitorpamplona/amethyst
+homepage: https://amethyst.social/
+assets:
+  - amethyst-googleplay.*.apk
+remote_metadata:
+  - github
 
 
 

@@ -141,7 +141,7 @@ fun uriToRoute(
         return Route.Notification
     }
     if (isHashtagRoute(uri)) {
-        return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id="))
+        return Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id=").lowercase())
     }
 
     val nip19 = Nip19Parser.uriToRoute(uri)?.entity

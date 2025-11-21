@@ -22,6 +22,6 @@ package com.vitorpamplona.quartz.nip92IMeta
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-fun TagArray.imetas() = this.mapNotNull(IMetaTag::parse)
+fun TagArray.imetas() = this.mapNotNull(IMetaTag::parse).flatten()
 
 fun TagArray.imetasByUrl() = this.imetas().associateBy { it.url }

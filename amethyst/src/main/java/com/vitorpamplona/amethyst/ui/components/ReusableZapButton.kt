@@ -50,12 +50,14 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
-import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
@@ -64,11 +66,12 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Configuration for zap button behavior and appearance
@@ -91,6 +94,7 @@ data class ZapButtonCallbacks(
     val onZapComplete: ((Boolean) -> Unit)? = null,
 )
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun ReusableZapButton(
     baseNote: Note,
@@ -100,9 +104,6 @@ fun ReusableZapButton(
     callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
 ) {
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
-    var wantsToPay by remember(baseNote) {
-        mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(persistentListOf())
-    }
 
     // Makes sure the user is loaded to get his ln address ahead of time (for DVM buttons)
     if (config.showUserFinderSubscription) {
@@ -138,7 +139,19 @@ fun ReusableZapButton(
                         accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, toUser)
                     }
                 },
-                onPayViaIntent = { wantsToPay = it },
+                onPayViaIntent = {
+                    if (it.size == 1) {
+                        val payable = it.first()
+                        payViaIntent(payable.invoice, context, { }) {
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
+                        }
+                    } else {
+                        val uid = Uuid.random().toString()
+                        accountViewModel.tempManualPaymentCache.put(uid, it)
+                        nav.nav(Route.ManualZapSplitPayment(uid))
+                    }
+                },
             )
         },
         modifier = Modifier.fillMaxWidth(),
@@ -166,25 +179,17 @@ fun ReusableZapButton(
                 onProgress = {
                     scope.launch(Dispatchers.Main) { zappingProgress = it }
                 },
-                onPayViaIntent = { wantsToPay = it },
-            )
-        }
-
-        if (wantsToPay.isNotEmpty()) {
-            PayViaIntentDialog(
-                payingInvoices = wantsToPay,
-                accountViewModel = accountViewModel,
-                onClose = { wantsToPay = persistentListOf() },
-                onError = {
-                    wantsToPay = persistentListOf()
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
-                justShowError = {
-                    scope.launch {
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
+                onPayViaIntent = {
+                    if (it.size == 1) {
+                        val payable = it.first()
+                        payViaIntent(payable.invoice, context, { }) {
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, UserBasedErrorMessage(it, payable.info.user))
+                        }
+                    } else {
+                        val uid = Uuid.random().toString()
+                        accountViewModel.tempManualPaymentCache.put(uid, it)
+                        nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
             )

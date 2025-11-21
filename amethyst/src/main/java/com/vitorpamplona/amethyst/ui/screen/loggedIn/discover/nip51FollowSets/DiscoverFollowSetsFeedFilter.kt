@@ -48,7 +48,7 @@ open class DiscoverFollowSetsFeedFilter(
         val notes =
             LocalCache.addressables.filterIntoSet(FollowListEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is FollowListEvent && params.match(noteEvent)
+                noteEvent is FollowListEvent && params.match(noteEvent, it.relays)
             }
 
         return sort(notes)
@@ -67,7 +67,7 @@ open class DiscoverFollowSetsFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is FollowListEvent && params.match(noteEvent)
+            noteEvent is FollowListEvent && params.match(noteEvent, it.relays)
         }
     }
 

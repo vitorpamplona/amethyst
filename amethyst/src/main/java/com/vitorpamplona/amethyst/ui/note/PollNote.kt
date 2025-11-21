@@ -52,7 +52,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -81,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.toasts.StringToastMsg
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -102,14 +102,14 @@ import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Preview
 @Composable
@@ -499,7 +499,7 @@ private fun RenderOptionBeforeVote(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalUuidApi::class)
 fun ZapVote(
     baseNote: Note,
     poolOption: PollOption,
@@ -513,14 +513,8 @@ fun ZapVote(
     val isLoggedUser by remember { derivedStateOf { accountViewModel.isLoggedUser(baseNote.author) } }
 
     var wantsToZap by remember { mutableStateOf(false) }
-    var wantsToPay by remember {
-        mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
-            persistentListOf(),
-        )
-    }
 
     var zappingProgress by remember { mutableFloatStateOf(0f) }
-    var zapStartingTime by remember { mutableLongStateOf(0L) }
 
     var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
@@ -563,7 +557,6 @@ fun ZapVote(
                         accountViewModel.zapAmountChoices().size == 1 &&
                         pollViewModel.isValidInputVoteAmount(accountViewModel.zapAmountChoices().first())
                     ) {
-                        zapStartingTime = TimeUtils.now()
                         accountViewModel.zap(
                             baseNote,
                             accountViewModel.zapAmountChoices().first() * 1000,
@@ -584,12 +577,13 @@ fun ZapVote(
             ),
     ) {
         if (wantsToZap) {
+            val context = LocalContext.current
             FilteredZapAmountChoicePopup(
                 baseNote,
                 accountViewModel,
                 pollViewModel,
                 poolOption.option,
-                onZapStarts = { zapStartingTime = TimeUtils.now() },
+                onZapStarts = { },
                 onDismiss = {
                     wantsToZap = false
                     zappingProgress = 0f
@@ -600,33 +594,17 @@ fun ZapVote(
                     zappingProgress = 0f
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                onPayViaIntent = { wantsToPay = it },
-            )
-        }
-
-        if (wantsToPay.isNotEmpty()) {
-            PayViaIntentDialog(
-                payingInvoices = wantsToPay,
-                accountViewModel = accountViewModel,
-                onClose = { wantsToPay = persistentListOf() },
-                onError = {
-                    wantsToPay = persistentListOf()
-                    scope.launch {
-                        zappingProgress = 0f
-                        showErrorMessageDialog =
-                            StringToastMsg(
-                                stringRes(context, R.string.error_dialog_zap_error),
-                                it.error,
-                            )
-                    }
-                },
-                justShowError = {
-                    scope.launch {
-                        showErrorMessageDialog =
-                            StringToastMsg(
-                                stringRes(context, R.string.error_dialog_zap_error),
-                                it.error,
-                            )
+                onPayViaIntent = {
+                    if (it.size == 1) {
+                        val payable = it.first()
+                        payViaIntent(payable.invoice, context, { }) { error ->
+                            zappingProgress = 0f
+                            showErrorMessageDialog = StringToastMsg(stringRes(context, R.string.error_dialog_zap_error), error)
+                        }
+                    } else {
+                        val uid = Uuid.random().toString()
+                        accountViewModel.tempManualPaymentCache.put(uid, it)
+                        nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
             )

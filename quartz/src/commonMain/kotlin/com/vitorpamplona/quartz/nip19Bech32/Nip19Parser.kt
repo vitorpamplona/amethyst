@@ -89,10 +89,7 @@ object Nip19Parser {
         if (uri == null) return null
 
         try {
-            val matcher = nip19PlusNip46regex.find(uri)
-            if (matcher == null) {
-                return null
-            }
+            val matcher = nip19PlusNip46regex.find(uri) ?: return null
 
             val type = matcher.groups[3]?.value ?: matcher.groups[5]?.value // npub1
             val key = matcher.groups[4]?.value ?: matcher.groups[6]?.value // bech32

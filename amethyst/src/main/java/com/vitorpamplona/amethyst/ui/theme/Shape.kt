@@ -255,6 +255,8 @@ val drawerSpacing = Modifier.padding(top = Size10dp, start = Size25dp, end = Siz
 val IconRowTextModifier = Modifier.padding(start = 16.dp)
 val IconRowModifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 25.dp)
 
+val Width16Space = Modifier.width(Size16dp)
+
 val emptyLineItemModifier = Modifier.height(Size75dp).fillMaxWidth()
 
 val imageHeaderBannerSize = Modifier.fillMaxWidth().height(150.dp)

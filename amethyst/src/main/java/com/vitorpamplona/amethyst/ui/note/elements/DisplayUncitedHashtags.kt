@@ -96,7 +96,7 @@ fun DisplayUncitedHashtags(
             unusedHashtags.forEach { hashtag ->
                 ClickableTextColor(
                     text = "#$hashtag ",
-                    onClick = { nav.nav(Route.Hashtag(hashtag)) },
+                    onClick = { nav.nav(Route.Hashtag(hashtag.lowercase())) },
                     linkColor = MaterialTheme.colorScheme.lessImportantLink,
                 )
             }

@@ -57,7 +57,7 @@ fun TabFollowedTags(
                 HashtagHeader(
                     tag = hashtag,
                     account = accountViewModel,
-                    onClick = { nav.nav(Route.Hashtag(hashtag)) },
+                    onClick = { nav.nav(Route.Hashtag(hashtag.lowercase())) },
                 )
                 HorizontalDivider(
                     thickness = DividerThickness,

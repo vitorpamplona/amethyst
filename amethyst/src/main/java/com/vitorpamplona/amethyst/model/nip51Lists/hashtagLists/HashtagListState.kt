@@ -89,9 +89,9 @@ class HashtagListState(
         val hashtagList = getHashtagList()
 
         return if (hashtagList == null) {
-            HashtagListEvent.create(hashtag, true, signer)
+            HashtagListEvent.create(hashtag.lowercase(), true, signer)
         } else {
-            HashtagListEvent.add(hashtagList, hashtag, true, signer)
+            HashtagListEvent.add(hashtagList, hashtag.lowercase(), true, signer)
         }
     }
 

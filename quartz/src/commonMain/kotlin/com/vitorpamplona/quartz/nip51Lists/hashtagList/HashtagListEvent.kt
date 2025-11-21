@@ -36,8 +36,8 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
-import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.removeAny
+import com.vitorpamplona.quartz.nip51Lists.removeIgnoreCase
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -140,8 +140,8 @@ class HashtagListEvent(
         ): HashtagListEvent {
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             return resign(
-                privateTags = privateTags.remove(HashtagTag.assemble(hashtag)),
-                tags = earlierVersion.tags.remove(HashtagTag.assemble(hashtag)),
+                privateTags = privateTags.removeIgnoreCase(HashtagTag.assemble(hashtag)),
+                tags = earlierVersion.tags.removeIgnoreCase(HashtagTag.assemble(hashtag)),
                 signer = signer,
                 createdAt = createdAt,
             )

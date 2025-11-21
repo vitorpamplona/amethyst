@@ -86,6 +86,6 @@ private fun DisplayTagList(
         overflow = TextOverflow.Ellipsis,
         maxLines = 1,
     ) {
-        nav.nav(Route.Hashtag(firstTag))
+        nav.nav(Route.Hashtag(firstTag.lowercase()))
     }
 }

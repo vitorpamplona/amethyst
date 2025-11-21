@@ -43,6 +43,8 @@ fun NIP19QrCodeScanner(
         try {
             if (it != null) {
                 onScan(uriToRoute(it, accountViewModel.account))
+            } else {
+                onScan(null)
             }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e

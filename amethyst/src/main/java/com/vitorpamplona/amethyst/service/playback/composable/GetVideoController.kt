@@ -64,7 +64,7 @@ fun GetVideoController(
         if (controllerId.needsController()) {
             // If there is a connection, don't wait.
             if (!onlyOnePreparing.getAndSet(true)) {
-                scope.launch {
+                scope.launch(Dispatchers.IO) {
                     Log.d("PlaybackService", "Preparing Video ${controllerId.id} ${mediaItem.src.videoUri}")
                     PlaybackServiceClient.prepareController(
                         mediaControllerState = controllerId,
@@ -172,7 +172,7 @@ fun GetVideoController(
                     // if the controller is not null, just continue playing what the controller was playing
                     if (controllerId.needsController()) {
                         if (!onlyOnePreparing.getAndSet(true)) {
-                            scope.launch(Dispatchers.Main) {
+                            scope.launch(Dispatchers.IO) {
                                 Log.d("PlaybackService", "Preparing Video from Resume ${controllerId.id} ${mediaItem.src.videoUri} ")
                                 PlaybackServiceClient.prepareController(
                                     mediaControllerState = controllerId,

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -31,8 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * RelayPool manages a collection of Nostr relays, abstracting individual connections and providing
@@ -61,9 +60,11 @@ class RelayPool(
 ) : IRelayClientListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
 
-    // Backing property to avoid flow emissions from other classes
-    private val _statusFlow = MutableStateFlow<RelayPoolStatus>(RelayPoolStatus())
-    val statusFlow: StateFlow<RelayPoolStatus> = _statusFlow.asStateFlow()
+    private val _connectedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+    val connectedRelays = _connectedRelays.asStateFlow()
+
+    private val _availableRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+    val availableRelays = _availableRelays.asStateFlow()
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
@@ -87,21 +88,18 @@ class RelayPool(
                 relay.connectAndSyncFiltersIfDisconnected(ignoreRetryDelays)
             }
         }
-        updateStatus()
     }
 
     fun connect() {
         relays.forEach { url, relay ->
             relay.connect()
         }
-        updateStatus()
     }
 
     fun connectIfDisconnected() {
         relays.forEach { url, relay ->
             relay.connectAndSyncFiltersIfDisconnected()
         }
-        updateStatus()
     }
 
     fun connectIfDisconnected(relay: NormalizedRelayUrl) = relays.get(relay)?.connectAndSyncFiltersIfDisconnected()
@@ -110,7 +108,6 @@ class RelayPool(
         relays.forEach { url, relay ->
             relay.disconnect()
         }
-        updateStatus()
     }
 
     fun sendOrConnectAndSync(
@@ -144,7 +141,13 @@ class RelayPool(
     // --------------------
     // Pool Maintenance
     // --------------------
-    fun getOrCreateRelay(relay: NormalizedRelayUrl) = relays.getOrCreate(relay, ::createNewRelay)
+    fun getOrCreateRelay(relay: NormalizedRelayUrl): IRelayClient {
+        val r = relays.getOrCreate(relay, ::createNewRelay)
+        if (_availableRelays.value.size != relays.size()) {
+            _availableRelays.update { relays.keys() }
+        }
+        return r
+    }
 
     fun createRelayIfAbsent(relay: NormalizedRelayUrl): Boolean = relays.createIfAbsent(relay, ::createNewRelay)
 
@@ -155,39 +158,40 @@ class RelayPool(
         val toRemove = relays.keys() - newRelays
         var atLeastOne = false
 
-        newRelays.forEach {
-            if (createRelayIfAbsent(it)) {
+        newRelays.forEach { relay ->
+            if (createRelayIfAbsent(relay)) {
                 atLeastOne = true
             }
         }
 
-        toRemove.forEach {
-            if (removeRelayInner(it)) {
+        toRemove.forEach { relay ->
+            if (removeRelayInner(relay)) {
                 atLeastOne = true
             }
         }
 
         if (atLeastOne) {
-            updateStatus()
+            _availableRelays.update { relays.keys() }
         }
     }
 
     fun addRelay(relay: NormalizedRelayUrl): IRelayClient {
         if (createRelayIfAbsent(relay)) {
-            updateStatus()
+            _availableRelays.update { relays.keys() }
         }
         return getOrCreateRelay(relay)
     }
 
     fun addAllRelays(relayList: List<NormalizedRelayUrl>) {
         var atLeastOne = false
-        relayList.forEach {
-            if (createRelayIfAbsent(it)) {
+        relayList.forEach { relay ->
+            if (createRelayIfAbsent(relay)) {
                 atLeastOne = true
             }
         }
+
         if (atLeastOne) {
-            updateStatus()
+            _availableRelays.update { relays.keys() }
         }
     }
 
@@ -202,7 +206,7 @@ class RelayPool(
 
     fun removeRelay(relay: NormalizedRelayUrl) {
         if (removeRelayInner(relay)) {
-            updateStatus()
+            _availableRelays.update { relays.keys() }
         }
     }
 
@@ -210,7 +214,7 @@ class RelayPool(
         if (relays.size() > 0) {
             disconnect()
             relays.clear()
-            updateStatus()
+            _availableRelays.update { emptySet() }
         }
     }
 
@@ -224,12 +228,12 @@ class RelayPool(
         pingMillis: Int,
         compressed: Boolean,
     ) {
-        updateStatus()
+        _connectedRelays.update { it + relay.url }
         listener.onConnected(relay, pingMillis, compressed)
     }
 
     override fun onDisconnected(relay: IRelayClient) {
-        updateStatus()
+        _connectedRelays.update { it - relay.url }
         listener.onDisconnected(relay)
     }
 
@@ -251,33 +255,5 @@ class RelayPool(
         success: Boolean,
     ) = listener.onSent(relay, cmdStr, cmd, success)
 
-    // ---------------
-    // STATUS Reports
-    // ---------------
-
-    fun availableRelays(): Set<NormalizedRelayUrl> = relays.keys()
-
-    fun connectedRelays(): Set<NormalizedRelayUrl> =
-        relays.mapNotNullIntoSet { url, relay ->
-            if (relay.isConnected()) {
-                url
-            } else {
-                null
-            }
-        }
-
-    private fun updateStatus() {
-        val connected = connectedRelays()
-        val available = availableRelays()
-        if (_statusFlow.value.connected != connected || _statusFlow.value.available != available) {
-            _statusFlow.tryEmit(RelayPoolStatus(connected, available))
-        }
-    }
-
-    @Immutable
-    data class RelayPoolStatus(
-        val connected: Set<NormalizedRelayUrl> = emptySet(),
-        val available: Set<NormalizedRelayUrl> = emptySet(),
-        val isConnected: Boolean = connected.isNotEmpty(),
-    )
+    fun connectedRelaysCount(): Int = relays.count { url, relay -> relay.isConnected() }
 }

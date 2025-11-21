@@ -21,13 +21,13 @@
     <string name="illegal_behavior">Nedovoljeno obnašanje</string>
     <string name="other">Drugo</string>
     <string name="harassment">Nadlegovanje</string>
-    <string name="unknown">Neznano</string>
+    <string name="unknown">Nepoznano</string>
     <string name="relay_icon">Ikona releja</string>
     <string name="unknown_author">Avtor neznan</string>
     <string name="copy_text">Kopiraj tekst</string>
     <string name="copy_user_pubkey">Kopiraj ID avtorja</string>
     <string name="copy_note_id">Kopiraj ID zapiska</string>
-    <string name="broadcast">Oddajanje</string>
+    <string name="broadcast">Razpošlji</string>
     <string name="timestamp_it">Uporabi časovni žig</string>
     <string name="timestamp_pending">Časovni žig: Potrditve v obdelavi</string>
     <string name="timestamp_pending_short">OTS: V obdelavi</string>
@@ -89,7 +89,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="error_parsing_error_message">Napaka pri razčlembi sporočila o napaki</string>
     <string name="following">" Sledi"</string>
     <string name="followers">" Sledilcev"</string>
-    <string name="number_following">"%1$s Sledi"</string>
+    <string name="number_following">"%1$s Sledim"</string>
     <string name="number_followers">"%1$s Sledilcev"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Varnostni filtri</string>
@@ -102,11 +102,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="thank_you_so_much">Najlepša hvala!</string>
     <string name="amount_in_sats">Vsota v Sat</string>
     <string name="send_sats">Pošlji Sat</string>
-    <string name="secret_emoji_maker">Orodje za emodžije s skrivnostmi</string>
-    <string name="secret_emoji_maker_explainer">Izberi emodži za pošiljanje s skritim sporočilom</string>
-    <string name="secret_note_to_receiver">Sprejem skrivnosti</string>
-    <string name="secret_note_to_receiver_placeholder">Moja skrita sporočila</string>
-    <string name="secret_visible_text">Vidni prefiksi</string>
+    <string name="secret_emoji_maker">Orodje za emoji s skrivnostmi</string>
+    <string name="secret_emoji_maker_explainer">Izberi emoji za pošiljanje s skritim sporočilom</string>
+    <string name="secret_note_to_receiver">Skrivno sporočilo</string>
+    <string name="secret_note_to_receiver_placeholder">Moje skrito sporočilo</string>
+    <string name="secret_visible_text">Vidna predpona</string>
     <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">Dodaj v zapisek</string>
     <string name="error_parsing_preview_for">"Napaka pri razčlembi predogleda za %1$s : %2$s"</string>
@@ -173,11 +173,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiraj ID kanala (zapisek) v odložišče</string>
     <string name="edits_the_channel_metadata">Uredi metapodatke kanala</string>
     <string name="join">Pridruži se</string>
-    <string name="known">Znano</string>
+    <string name="known">Poznani</string>
     <string name="new_requests">Nova prošnja</string>
     <string name="blocked_users">Blokirani uporabniki</string>
     <string name="new_threads">Nove objave</string>
-    <string name="conversations">Pogovori</string>
+    <string name="conversations">Razprave</string>
     <string name="feed">Vsebine</string>
     <string name="mod_queue">Moderatorska vrsta</string>
     <string name="notes">Zapiski</string>
@@ -185,8 +185,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="mutual">Vaše</string>
     <string name="gallery">Galerija</string>
     <string name="follows">"sledilcev"</string>
-    <string name="reports">"Reportaže"</string>
-    <string name="number_reports">"%1$s Prijave"</string>
+    <string name="reports">"Prijave"</string>
+    <string name="number_reports">"%1$s Prijav"</string>
     <string name="more_options">Več možnosti</string>
     <string name="relays">" Releji"</string>
     <string name="website">Spletna stran</string>
@@ -199,7 +199,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiraj javni ključ (NPub) v odložišče</string>
     <string name="send_a_direct_message">Pošlji direktno sporočilo</string>
     <string name="edits_the_user_s_metadata">Uredi uporabnikove metapodatke</string>
-    <string name="follow">Sledim</string>
+    <string name="follow">Že sledim</string>
     <string name="follow_back">Sledi nazaj</string>
     <string name="unblock">Deblokiraj</string>
     <string name="copy_user_id">Kopiraj uporabnikov ID</string>
@@ -358,6 +358,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="report_dialog_post_report_btn">Objavi prijavo</string>
     <string name="report_dialog_title">Blokiraj in prijavi</string>
     <string name="block_only">Blokiraj</string>
+    <string name="manual_zaps">Ročno razdeli zape</string>
     <string name="bookmarks">Zaznamki</string>
     <string name="drafts">Osnutki</string>
     <string name="private_bookmarks">Privatni zaznamki</string>
@@ -452,7 +453,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="do_you_really_want_to_disable_tor_text">Vaši podatki bodo takoj preneseni v običajno omrežje</string>
     <string name="yes">Da</string>
     <string name="no">Ne</string>
-    <string name="follow_list_selection">Spisek komu sledimo</string>
+    <string name="follow_list_selection">Seznam sledenih</string>
     <string name="follow_list_kind3follows">Vse, čemur sledimo</string>
     <string name="follow_list_kind3follows_users_only">Vsi sledeni sledenih</string>
     <string name="follow_list_kind3_follows_users_only">Privzeti seznam sledenih</string>
@@ -461,6 +462,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_list_global">Globalno</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
     <string name="follow_sets">Seznam sledenih</string>
+    <string name="follow_sets_explainer">To so seznami sledenih, namenjeni za vašo lastno uporabo. Uporabnike lahko sledite javno ali zasebno</string>
     <string name="labeled_bookmarks">Označeni zaznamki</string>
     <string name="general_bookmarks">Splošni zaznamki</string>
     <string name="follow_set_type_public">Javno</string>
@@ -495,6 +497,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_creation_item_label">Nov seznam s  %1$s člani</string>
     <string name="follow_set_creation_item_description">Ustvari nov set sledenih, ter doda %1$s kot %2$s člana.</string>
     <string name="follow_set_creation_dialog_title">Nov seznam sledenih</string>
+    <string name="follow_pack_creation_dialog_title">Nov paket sledenih</string>
     <string name="follow_set_copy_dialog_title">Kopiraj/Kloniraj seznam sledenih</string>
     <string name="follow_set_desc_modify_label">Spremeni opis</string>
     <string name="follow_set_empty_desc_label">Ta seznam nima opisa</string>
@@ -507,6 +510,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_creation_action_btn_label">Ustvari seznam</string>
     <string name="follow_set_copy_action_btn_label">Kopiraj/kloniraj seznam</string>
     <string name="follow_set_rename_btn_label">Preimenuj seznam</string>
+    <string name="follow_set_edit_list_metadata">Uredi seznam</string>
     <string name="follow_set_desc_modify_btn_label">Uredi</string>
     <string name="follow_set_rename_dialog_indicator_first_part">Preimenuješ iz </string>
     <string name="follow_set_rename_dialog_indicator_second_part"> v..</string>
@@ -645,6 +649,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="followed_tags">Spremljana vsebina</string>
     <string name="relay_setup">Releji</string>
     <string name="discover_follows">Paketi sledenih</string>
+    <string name="discover_follows_explainer">To so seznami uporabnikov, ki jih priporočate drugim. Dovoljeni so le javni uporabniki.</string>
     <string name="discover_reads">Branje</string>
     <string name="discover_content_v2">Algoritmi vsebin</string>
     <string name="discover_marketplace">Tržnica</string>
@@ -1138,4 +1143,17 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="remove_user_from_the_list">Odstrani uporabnika iz seznama</string>
     <string name="follow_list_item_label">Paket sledenih</string>
     <string name="members">Člani</string>
+    <string name="people_list_title">Sledi metapodatkom seznama</string>
+    <string name="people_list_explainer">Sledenje metapodatkom seznama je lahko vidno vsem na Nostru. Le tvoji zasebni člani so šifrirani.</string>
+    <string name="follow_pack_title">Metapodatki paketa sledenih</string>
+    <string name="follow_pack_explainer">Metapodatki paketa sledenih so lahko vidno vsem na Nostru in redno objavljeni na ostalih spletnih straneh, kot začetni prikaz za nove uporabnike</string>
+    <string name="follow_pack_edit_list_metadata">Uredi paket sledenih</string>
+    <string name="follow_pack_creation_name_label">Ime paketa</string>
+    <string name="follow_pack_copy_name_label">Novo ime paketa</string>
+    <string name="follow_pack_creation_desc_label">Opis paketa</string>
+    <string name="follow_pack_copy_desc_label">Nov opis paketa</string>
+    <string name="follow_set_broadcast">Oddajaj seznam</string>
+    <string name="follow_pack_broadcast">Oddajaj paket</string>
+    <string name="follow_set_delete">Izbriši seznam</string>
+    <string name="follow_pack_delete">Izbriši paket</string>
 </resources>
