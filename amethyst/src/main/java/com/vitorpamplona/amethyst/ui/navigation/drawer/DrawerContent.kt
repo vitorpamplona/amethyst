@@ -453,7 +453,7 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = R.string.bookmark_groups,
+            title = R.string.bookmark_lists,
             icon = Icons.Outlined.CollectionsBookmark,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,

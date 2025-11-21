@@ -95,7 +95,7 @@ fun ListOfBookmarkGroupsScreen(
         deleteBookmarkGroup = { bookmarkGroup ->
             accountViewModel.launchSigner {
                 accountViewModel.account.labeledBookmarkLists.deleteBookmarkList(
-                    bookmarkList = bookmarkGroup,
+                    bookmarkListIdentifier = bookmarkGroup.identifier,
                     account = accountViewModel.account,
                 )
             }
@@ -117,7 +117,7 @@ fun ListOfBookmarkGroupsFeed(
 ) {
     Scaffold(
         topBar = {
-            TopBarWithBackButton(caption = "Bookmark Groups", nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav::popBack)
         },
         floatingActionButton = {
             BookmarkGroupFabAndMenu(onAddGroup = addBookmarkGroup)

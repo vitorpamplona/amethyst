@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -44,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,12 +56,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -91,8 +95,9 @@ fun BookmarkGroupScreen(
         },
         deleteBookmarkGroup = {
             accountViewModel.launchSigner {
-                bookmarkGroupViewModel.deleteBookmarkGroup()
+                bookmarkGroupViewModel.deleteBookmarkGroup(bookmarkIdentifier)
             }
+            nav.popBack()
         },
         accountViewModel,
         nav,
@@ -110,21 +115,6 @@ fun BookmarkGroupScreenView(
     nav: INav,
 ) {
     val pagerState = rememberPagerState { 2 }
-    val privateItemTypeLabel =
-        when (bookmarkType) {
-            BookmarkType.ArticleBookmark -> "Private Articles"
-            BookmarkType.HashtagBookmark -> "Private Hashtags"
-            BookmarkType.LinkBookmark -> "Private Links"
-            BookmarkType.PostBookmark -> "Private Posts"
-        }
-
-    val publicItemTypeLabel =
-        when (bookmarkType) {
-            BookmarkType.ArticleBookmark -> "Public Articles"
-            BookmarkType.HashtagBookmark -> "Public Hashtags"
-            BookmarkType.LinkBookmark -> "Public Links"
-            BookmarkType.PostBookmark -> "Public Posts"
-        }
     Scaffold(
         topBar = {
             Column {
@@ -148,24 +138,11 @@ fun BookmarkGroupScreenView(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                 )
-                TabRow(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    selectedTabIndex = pagerState.currentPage,
-                    modifier = TabRowHeight,
-                ) {
-                    val scope = rememberCoroutineScope()
-                    Tab(
-                        selected = pagerState.currentPage == 0,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = publicItemTypeLabel) },
-                    )
-                    Tab(
-                        selected = pagerState.currentPage == 1,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = privateItemTypeLabel) },
-                    )
-                }
+                BookmarkGroupHeaderTabs(
+                    bookmarkGroupViewModel,
+                    bookmarkType,
+                    pagerState,
+                )
             }
         },
     ) { padding ->
@@ -185,6 +162,15 @@ fun BookmarkGroupScreenView(
                         bookmarkGroupViewModel,
                         pagerState,
                         accountViewModel,
+                        deletePostBookmark = { postId, isPrivate ->
+                            accountViewModel.launchSigner {
+                                bookmarkGroupViewModel.removePostBookmark(
+                                    bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                    postId,
+                                    isPrivate,
+                                )
+                            }
+                        },
                         nav,
                     )
                 BookmarkType.ArticleBookmark ->
@@ -192,6 +178,15 @@ fun BookmarkGroupScreenView(
                         bookmarkGroupViewModel,
                         pagerState,
                         accountViewModel,
+                        deleteArticleBookmark = { articleAddress, isPrivate ->
+                            accountViewModel.launchSigner {
+                                bookmarkGroupViewModel.removeArticleBookmark(
+                                    bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                    articleAddress,
+                                    isPrivate,
+                                )
+                            }
+                        },
                         nav,
                     )
                 BookmarkType.HashtagBookmark -> RenderHashtagList(bookmarkGroupViewModel, pagerState)
@@ -222,6 +217,64 @@ private fun TitleAndDescription(viewModel: BookmarkGroupViewModel) {
                     )
                 }
             },
+        )
+    }
+}
+
+@Composable
+fun BookmarkGroupHeaderTabs(
+    bookmarkGroupViewModel: BookmarkGroupViewModel,
+    bookmarkType: BookmarkType,
+    pagerState: PagerState,
+) {
+    val bookmarkGroup by bookmarkGroupViewModel.selectedBookmarkGroupFlow.collectAsStateWithLifecycle()
+    val privateItemTypeLabel =
+        when (bookmarkType) {
+            BookmarkType.PostBookmark ->
+                bookmarkGroup?.let {
+                    stringRes(R.string.private_posts_count, it.privatePostBookmarks.size)
+                } ?: stringRes(R.string.private_posts_label)
+            BookmarkType.ArticleBookmark ->
+                bookmarkGroup?.let {
+                    stringRes(R.string.private_articles_count, it.privateArticleBookmarks.size)
+                } ?: stringRes(R.string.private_posts_label)
+
+            // TODO: Match the implementations in the pair below to the pair above.
+            BookmarkType.HashtagBookmark -> stringRes(R.string.private_hashtags_label)
+            BookmarkType.LinkBookmark -> stringRes(R.string.private_links_label)
+        }
+
+    val publicItemTypeLabel =
+        when (bookmarkType) {
+            BookmarkType.PostBookmark ->
+                bookmarkGroup?.let {
+                    stringRes(R.string.public_posts_count, it.publicPostBookmarks.size)
+                } ?: stringRes(R.string.public_posts_label)
+            BookmarkType.ArticleBookmark ->
+                bookmarkGroup?.let {
+                    stringRes(R.string.public_articles_count, it.publicArticleBookmarks.size)
+                } ?: stringRes(R.string.public_articles_label)
+            // TODO: Match the implementations in the pair below to the pair above.
+            BookmarkType.HashtagBookmark -> stringRes(R.string.public_hashtags_label)
+            BookmarkType.LinkBookmark -> stringRes(R.string.public_links_label)
+        }
+
+    TabRow(
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        selectedTabIndex = pagerState.currentPage,
+        modifier = TabRowHeight,
+    ) {
+        val scope = rememberCoroutineScope()
+        Tab(
+            selected = pagerState.currentPage == 0,
+            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+            text = { Text(text = publicItemTypeLabel) },
+        )
+        Tab(
+            selected = pagerState.currentPage == 1,
+            onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+            text = { Text(text = privateItemTypeLabel) },
         )
     }
 }
@@ -270,7 +323,7 @@ fun BookmarkGroupActionsMenu(
     ) {
         DropdownMenuItem(
             text = {
-                Text("Broadcast Bookmark Group")
+                Text(stringRes(R.string.bookmark_list_broadcast_btn_label))
             },
             onClick = {
                 onBroadcastList()
@@ -280,7 +333,7 @@ fun BookmarkGroupActionsMenu(
         HorizontalDivider(thickness = DividerThickness)
         DropdownMenuItem(
             text = {
-                Text("Delete Bookmark Group")
+                Text(stringRes(R.string.bookmark_list_delete_btn_label))
             },
             onClick = {
                 onDeleteList()

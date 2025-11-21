@@ -57,7 +57,7 @@ fun ListOfBookmarkGroupsFeedView(
     val bookmarkGroupFeedState by groupListFeedSource.collectAsStateWithLifecycle()
 
     if (bookmarkGroupFeedState.isEmpty()) {
-        BookmarkGroupsFeedEmpty(message = "You do not have any bookmark groups yet. Tap the new button below to make one.")
+        BookmarkGroupsFeedEmpty(message = stringRes(R.string.bookmark_list_feed_empty_msg))
     } else {
         LazyColumn(
             state = rememberLazyListState(),

@@ -75,7 +75,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun BookmarkGroupItem(
@@ -138,15 +137,16 @@ fun BookmarkGroupItem(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.CollectionsBookmark,
-                            contentDescription = "Icon for bookmark group",
+                            contentDescription = stringRes(R.string.bookmark_list_icon_label),
                             modifier = Size40Modifier,
                         )
-                        Spacer(StdVertSpacer)
-                        BookmarkMembershipStatusAndNumberDisplay(
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            privateBookmarksSize = bookmarkList.privateBookmarks.size,
-                            publicBookmarksSize = bookmarkList.publicBookmarks.size,
-                        )
+                        // TODO: Fix the component below, with per-category stats
+//                        Spacer(StdVertSpacer)
+//                        BookmarkMembershipStatusAndNumberDisplay(
+//                            modifier = Modifier.align(Alignment.CenterHorizontally),
+//                            privateBookmarksSize = bookmarkList.privateBookmarks.size,
+//                            publicBookmarksSize = bookmarkList.publicBookmarks.size,
+//                        )
                     }
                 },
             )
@@ -184,7 +184,7 @@ private fun BookmarkGroupActions(
                 painter = painterResource(R.drawable.post),
                 contentDescription = null,
             )
-            Text("View Posts")
+            Text(stringRes(R.string.bookmark_list_posts_btn_label))
         }
         FilledTonalButton(
             onClick = openArticleBookmarks,
@@ -193,7 +193,7 @@ private fun BookmarkGroupActions(
                 imageVector = Icons.AutoMirrored.Outlined.Article,
                 contentDescription = null,
             )
-            Text("View Articles")
+            Text(stringRes(R.string.bookmark_list_articles_btn_label))
         }
         FilledTonalButton(
             onClick = openLinkBookmarks,
@@ -202,7 +202,7 @@ private fun BookmarkGroupActions(
                 imageVector = Icons.Outlined.Link,
                 contentDescription = null,
             )
-            Text("View Links")
+            Text(stringRes(R.string.bookmark_list_links_btn_label))
         }
         FilledTonalButton(
             onClick = openHashtagBookmarks,
@@ -211,7 +211,7 @@ private fun BookmarkGroupActions(
                 imageVector = Icons.Outlined.Numbers,
                 contentDescription = null,
             )
-            Text("View Hashtags")
+            Text(stringRes(R.string.bookmark_list_hashtags_btn_label))
         }
     }
 }
@@ -542,7 +542,7 @@ private fun GroupCloneDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Clone Bookmark Group",
+                    text = stringRes(R.string.bookmark_list_clone_btn_label),
                 )
             }
         },
