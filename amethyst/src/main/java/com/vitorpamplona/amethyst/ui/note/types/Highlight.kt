@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -113,7 +112,7 @@ fun DisplayHighlightPreview() {
                 makeItShort = false,
                 canPreview = true,
                 quotesLeft = 3,
-                backgroundColor = mutableStateOf(Color.White),
+                backgroundColor = remember { mutableStateOf(Color.White) },
                 accountViewModel = mockAccountViewModel(),
                 nav = EmptyNav(),
             )
@@ -137,7 +136,7 @@ fun DisplayHighlightPreviewNewLine() {
                 makeItShort = false,
                 canPreview = true,
                 quotesLeft = 3,
-                backgroundColor = mutableStateOf(Color.White),
+                backgroundColor = remember { mutableStateOf(Color.White) },
                 accountViewModel = mockAccountViewModel(),
                 nav = EmptyNav(),
             )
@@ -239,7 +238,7 @@ private fun DisplayQuoteAuthor(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var userBase by remember { mutableStateOf<User?>(authorHex?.let { accountViewModel.getUserIfExists(it) }) }
+    var userBase by remember { mutableStateOf(authorHex?.let { accountViewModel.getUserIfExists(it) }) }
 
     if (userBase == null && authorHex != null) {
         LaunchedEffect(authorHex) {
@@ -248,7 +247,7 @@ private fun DisplayQuoteAuthor(
     }
 
     var addressable by remember {
-        mutableStateOf<AddressableNote?>(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it) })
+        mutableStateOf(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it) })
     }
 
     if (addressable == null && postAddress != null) {
@@ -264,7 +263,7 @@ private fun DisplayQuoteAuthor(
     }
 
     var version by remember {
-        mutableStateOf<Note?>(postVersion?.let { accountViewModel.getNoteIfExists(it.eventId) })
+        mutableStateOf(postVersion?.let { accountViewModel.getNoteIfExists(it.eventId) })
     }
 
     if (version == null && postVersion != null) {
@@ -324,7 +323,7 @@ fun DisplayEntryForNote(
 ) {
     val noteState by observeNote(note, accountViewModel)
 
-    val author = userBase ?: noteState?.note?.author
+    val author = userBase ?: noteState.note.author
 
     if (author != null) {
         RenderUserAsClickableText(author, null, accountViewModel, nav)
@@ -361,7 +360,7 @@ fun DisplayEntryForAUrl(
         remember {
             try {
                 URL(url)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Log.w("Note Compose", "Invalid URI: $url")
                 null
             }
