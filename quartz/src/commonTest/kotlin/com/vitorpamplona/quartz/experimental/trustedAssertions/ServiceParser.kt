@@ -59,7 +59,7 @@ class ServiceParser {
                 "a49e1bdd16cb0d720cd04c4c4cd9e04c21ea2292121fbbe99f03f4a6c1fd2a98",
                 RelayUrlNormalizer.normalize("wss://nip85.brainstorm.world"),
             ),
-            brainstorm.services()[0],
+            brainstorm.serviceProviders()[0],
         )
     }
 }
