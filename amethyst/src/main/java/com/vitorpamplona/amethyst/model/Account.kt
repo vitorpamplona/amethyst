@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecry
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
@@ -295,6 +296,7 @@ class Account(
 
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
+    val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
@@ -1782,6 +1784,7 @@ class Account(
                     newNotesPreProcessor.runNew(newNotes)
                     peopleLists.newNotes(newNotes)
                     followLists.newNotes(newNotes)
+                    labeledBookmarkLists.newNotes(newNotes)
                 }
             }
         }
@@ -1792,6 +1795,7 @@ class Account(
                     newNotesPreProcessor.runDeleted(deletedNotes)
                     peopleLists.deletedNotes(deletedNotes)
                     followLists.deletedNotes(deletedNotes)
+                    labeledBookmarkLists.deletedNotes(deletedNotes)
                 }
             }
         }
