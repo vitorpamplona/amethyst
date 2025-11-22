@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -110,6 +111,7 @@ private object PrefKeys {
     const val LATEST_HASHTAG_LIST = "latestHashtagList"
     const val LATEST_GEOHASH_LIST = "latestGeohashList"
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
+    const val LATEST_TRUST_PROVIDER_LIST = "latestTrustProviderList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
@@ -354,6 +356,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_HASHTAG_LIST, settings.backupHashtagList)
                     putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
+                    putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
 
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
@@ -482,6 +485,7 @@ object LocalPreferences {
                     val latestHashtagList = parseEventOrNull<HashtagListEvent>(PrefKeys.LATEST_HASHTAG_LIST)
                     val latestGeohashList = parseEventOrNull<GeohashListEvent>(PrefKeys.LATEST_GEOHASH_LIST)
                     val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
+                    val latestTrustProviderList = parseEventOrNull<TrustProviderListEvent>(PrefKeys.LATEST_TRUST_PROVIDER_LIST)
 
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
@@ -525,6 +529,7 @@ object LocalPreferences {
                         backupHashtagList = latestHashtagList,
                         backupGeohashList = latestGeohashList,
                         backupEphemeralChatList = latestEphemeralList,
+                        backupTrustProviderList = latestTrustProviderList,
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         pendingAttestations = MutableStateFlow(pendingAttestations),

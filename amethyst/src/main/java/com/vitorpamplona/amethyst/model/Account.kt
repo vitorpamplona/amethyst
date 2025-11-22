@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
+import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
@@ -283,6 +285,9 @@ class Account(
 
     val muteListDecryptionCache = MuteListDecryptionCache(signer)
     val muteList = MuteListState(signer, cache, muteListDecryptionCache, scope, settings)
+
+    val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
+    val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)

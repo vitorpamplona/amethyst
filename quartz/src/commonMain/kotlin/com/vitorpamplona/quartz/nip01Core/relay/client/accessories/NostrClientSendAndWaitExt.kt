@@ -103,7 +103,7 @@ suspend fun INostrClient.sendAndWaitForResponse(
                             val currentResult = receivedResults[result.relay]
                             // do not override a successful result.
                             if (currentResult == null || !currentResult) {
-                                receivedResults.put(result.relay, result.success)
+                                receivedResults[result.relay] = result.success
                             }
                         }
                     }

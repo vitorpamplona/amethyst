@@ -123,12 +123,17 @@ fun WatchAndRenderRelay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relay by baseNote
-        .flow()
-        .relays.stateFlow
-        .mapNotNull {
-            it.note.relays.getOrNull(relayIndex)
-        }.collectAsStateWithLifecycle(baseNote.relays.getOrNull(relayIndex))
+    val flow =
+        remember(baseNote, relayIndex) {
+            baseNote
+                .flow()
+                .relays.stateFlow
+                .mapNotNull {
+                    it.note.relays.getOrNull(relayIndex)
+                }
+        }
+
+    val relay by flow.collectAsStateWithLifecycle(baseNote.relays.getOrNull(relayIndex))
 
     CrossfadeIfEnabled(targetState = relay, label = "RenderRelay", modifier = Size17Modifier, accountViewModel = accountViewModel) {
         if (it != null) {

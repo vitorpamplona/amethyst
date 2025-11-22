@@ -65,7 +65,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,17 +84,14 @@ class AccountStateViewModel : ViewModel() {
     fun loginWithDefaultAccountIfLoggedOff() {
         // pulls account from storage.
         if (_accountContent.value !is AccountState.LoggedIn) {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 loginWithDefaultAccount()
             }
         }
     }
 
     private suspend fun loginWithDefaultAccount(route: Route? = null) {
-        val accountSettings =
-            withContext(Dispatchers.IO) {
-                LocalPreferences.loadAccountConfigFromEncryptedStorage()
-            }
+        val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage()
 
         if (accountSettings != null) {
             startUI(accountSettings, route)
@@ -135,7 +131,7 @@ class AccountStateViewModel : ViewModel() {
             throw Exception("Invalid key while trying to login with external signer")
         }
 
-        val account =
+        val accountSettings =
             if (loginWithExternalSigner) {
                 AccountSettings(
                     keyPair = KeyPair(pubKey = pubKeyParsed),
@@ -164,18 +160,18 @@ class AccountStateViewModel : ViewModel() {
                 )
             }
 
-        LocalPreferences.setDefaultAccount(account)
+        LocalPreferences.setDefaultAccount(accountSettings)
 
-        startUI(account)
+        startUI(accountSettings)
     }
 
-    @OptIn(FlowPreview::class)
-    suspend fun startUI(
+    fun startUI(
         accountSettings: AccountSettings,
         route: Route? = null,
-    ) = withContext(Dispatchers.Main) {
+    ) {
+        val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
         _accountContent.update {
-            AccountState.LoggedIn(Amethyst.instance.accountsCache.loadAccount(accountSettings), route)
+            AccountState.LoggedIn(account, route)
         }
     }
 

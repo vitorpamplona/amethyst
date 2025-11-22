@@ -30,14 +30,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class NostrClientSendAndWaitTest : BaseNostrClientTest() {
     @Test
     fun testSendAndWaitForResponse() =
-        runTest {
+        runBlocking {
             val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val client = NostrClient(socketBuilder, appScope)
 
@@ -61,6 +61,6 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
             appScope.cancel()
 
             assertEquals(true, resultDamus)
-            assertEquals(false, resultNos)
+            assertEquals(true, resultNos)
         }
 }

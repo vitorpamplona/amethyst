@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -138,6 +139,7 @@ class AccountSettings(
     var backupHashtagList: HashtagListEvent? = null,
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
+    var backupTrustProviderList: TrustProviderListEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
@@ -433,6 +435,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupEphemeralChatList?.id != newEphemeralChatList.id) {
             backupEphemeralChatList = newEphemeralChatList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateTrustProviderListTo(trustProviderList: TrustProviderListEvent?) {
+        if (trustProviderList == null || trustProviderList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupTrustProviderList?.id != trustProviderList.id) {
+            backupTrustProviderList = trustProviderList
             saveAccountSettings()
         }
     }
