@@ -28,13 +28,13 @@ class PoolEventOutboxState(
     val event: Event,
     var relays: Set<NormalizedRelayUrl>,
 ) {
-    private val tries = mutableMapOf<NormalizedRelayUrl, Tries>()
+    private var tries = mapOf<NormalizedRelayUrl, Tries>()
 
     fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
         relays = newRelays
     }
 
-    fun isDone(url: NormalizedRelayUrl) = tries[url]?.let { it.isDone() } ?: false
+    fun isDone(url: NormalizedRelayUrl) = tries[url]?.isDone() ?: false
 
     fun isDone() = relays.all { isDone(it) }
 
@@ -54,7 +54,7 @@ class PoolEventOutboxState(
         if (currentTries != null) {
             currentTries.tries.add(TimeUtils.now())
         } else {
-            tries.put(url, Tries(mutableListOf(TimeUtils.now())))
+            tries = tries + (url to Tries(mutableListOf(TimeUtils.now())))
         }
     }
 
@@ -67,12 +67,12 @@ class PoolEventOutboxState(
         if (currentTries != null) {
             currentTries.responses.add(Response(success, message))
         } else {
-            tries.put(
-                url,
-                Tries(
-                    mutableListOf(TimeUtils.now() - 1),
-                    mutableListOf(Response(success, message)),
-                ),
+            tries = tries + (
+                url to
+                    Tries(
+                        mutableListOf(TimeUtils.now() - 1),
+                        mutableListOf(Response(success, message)),
+                    )
             )
         }
     }
@@ -82,7 +82,7 @@ class PoolEventOutboxState(
         val tries: MutableList<Long> = mutableListOf(),
         val responses: MutableList<Response> = mutableListOf(),
     ) {
-        fun isDone() = responses.any { it.success == true } || responses.size > 2 || tries.size > 3
+        fun isDone() = responses.any { it.success } || responses.size > 2 || tries.size > 3
     }
 
     class Response(
