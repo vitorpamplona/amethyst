@@ -52,9 +52,9 @@ class PoolEventOutboxState(
     fun newTry(url: NormalizedRelayUrl) {
         val currentTries = tries[url]
         if (currentTries != null) {
-            currentTries.tries.add(TimeUtils.now())
+            currentTries.addTriedTime(TimeUtils.now())
         } else {
-            tries = tries + (url to Tries(mutableListOf(TimeUtils.now())))
+            tries = tries + (url to Tries(listOf(TimeUtils.now())))
         }
     }
 
@@ -65,13 +65,13 @@ class PoolEventOutboxState(
     ) {
         val currentTries = tries[url]
         if (currentTries != null) {
-            currentTries.responses.add(Response(success, message))
+            currentTries.addResponse(Response(success, message))
         } else {
             tries = tries + (
                 url to
                     Tries(
-                        mutableListOf(TimeUtils.now() - 1),
-                        mutableListOf(Response(success, message)),
+                        listOf(TimeUtils.now() - 1),
+                        listOf(Response(success, message)),
                     )
             )
         }
@@ -79,10 +79,18 @@ class PoolEventOutboxState(
 
     // Tries 3 times
     class Tries(
-        val tries: MutableList<Long> = mutableListOf(),
-        val responses: MutableList<Response> = mutableListOf(),
+        var tries: List<Long> = listOf(),
+        var responses: List<Response> = listOf(),
     ) {
         fun isDone() = responses.any { it.success } || responses.size > 2 || tries.size > 3
+
+        fun addResponse(r: Response) {
+            responses += r
+        }
+
+        fun addTriedTime(tried: Long) {
+            tries += tried
+        }
     }
 
     class Response(
