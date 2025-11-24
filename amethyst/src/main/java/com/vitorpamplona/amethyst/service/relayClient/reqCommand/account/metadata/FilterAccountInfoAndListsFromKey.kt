@@ -65,6 +65,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         ProxyRelayListEvent.KIND,
         HashtagListEvent.KIND,
         GeohashListEvent.KIND,
+        TrustedRelayListEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
