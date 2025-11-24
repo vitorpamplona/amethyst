@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.crypto
 
 import com.fasterxml.jackson.core.JsonEncoding
-import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.util.BufferRecycler
 import com.fasterxml.jackson.core.util.ByteArrayBuilder
@@ -78,7 +77,7 @@ actual object EventHasherSerializer {
         try {
             ByteArrayBuilder(br).use { bb ->
                 val generator = JacksonMapper.mapper.createGenerator(bb, JsonEncoding.UTF8)
-                generator.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8)
+
                 generator.use {
                     it.writeStartArray()
                     it.writeNumber(0)
