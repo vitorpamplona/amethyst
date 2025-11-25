@@ -21,19 +21,26 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -46,6 +53,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
@@ -354,6 +363,12 @@ fun BaseUserPicture(
                 FollowingIcon(Modifier.size(size.div(3.5f)))
             }
         }
+
+        WatchUserCards(baseUser.pubkeyHex, accountViewModel) { score ->
+            if (score != null) {
+                ScoreTag(score, Modifier.align(Alignment.BottomCenter))
+            }
+        }
     }
 }
 
@@ -382,7 +397,39 @@ fun BaseUserPicture(
                 FollowingIcon(Modifier.size(size.div(3.5f)))
             }
         }
+
+        WatchUserCards(baseUserHex, accountViewModel) { score ->
+            if (score != null) {
+                ScoreTag(score, Modifier.align(Alignment.BottomCenter))
+            }
+        }
     }
+}
+
+@Preview
+@Composable
+fun ScoreTagPreview() {
+    Box(Modifier.size(55.dp), contentAlignment = Alignment.TopEnd) {
+        ScoreTag(100, Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+@Composable
+fun ScoreTag(
+    score: Int,
+    modifier: Modifier,
+) {
+    Text(
+        text = score.toString(),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        fontSize = Font10SP,
+        modifier =
+            modifier
+                .clip(SmallBorder)
+                .background(Color.Black)
+                .padding(horizontal = 5.dp),
+    )
 }
 
 @Composable
@@ -457,4 +504,20 @@ fun WatchUserFollows(
 
         onFollowChanges(state.authors.contains(userHex))
     }
+}
+
+@Composable
+fun WatchUserCards(
+    userHex: String,
+    accountViewModel: AccountViewModel,
+    onScoreChanges: @Composable (Int?) -> Unit,
+) {
+    val flow =
+        remember(userHex) {
+            accountViewModel.account.loadUserCardFlow(userHex)
+        }
+
+    val score by flow.collectAsStateWithLifecycle(null)
+
+    onScoreChanges(score)
 }

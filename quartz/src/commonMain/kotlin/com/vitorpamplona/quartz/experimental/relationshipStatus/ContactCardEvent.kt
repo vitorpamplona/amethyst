@@ -24,10 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetNameTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
@@ -49,9 +51,19 @@ class ContactCardEvent(
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    companion object Companion {
+    companion object {
         const val KIND = 30382
         const val ALT = "Contact Card"
+
+        fun createAddress(
+            owner: HexKey,
+            target: HexKey,
+        ): Address = Address(KIND, owner, target)
+
+        fun createAddressTag(
+            owner: HexKey,
+            target: HexKey,
+        ): ATag = ATag(KIND, owner, target, null)
 
         suspend fun create(
             targetUser: HexKey,
