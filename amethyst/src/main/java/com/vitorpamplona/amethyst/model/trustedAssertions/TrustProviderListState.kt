@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +38,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -74,6 +77,38 @@ class TrustProviderListState(
                 scope,
                 SharingStarted.Eagerly,
                 emptySet(),
+            )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveUserRankProvider: StateFlow<ServiceProviderTag?> =
+        liveTrustProviderList.map {
+            it.firstOrNull { it.service == ProviderTypes.rank }
+        }.onStart {
+            emit(
+                liveTrustProviderList.value.firstOrNull {
+                    it.service == ProviderTypes.rank
+                }
+            )
+        }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                null,
+            )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveUserFollowerCount: StateFlow<ServiceProviderTag?> =
+        liveTrustProviderList.map { tagList ->
+            tagList.firstOrNull { it.service == ProviderTypes.followerCount }
+        }.onStart {
+            emit(
+                liveTrustProviderList.value.firstOrNull { it.service == ProviderTypes.followerCount }
+            )
+        }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                null,
             )
 
     init {

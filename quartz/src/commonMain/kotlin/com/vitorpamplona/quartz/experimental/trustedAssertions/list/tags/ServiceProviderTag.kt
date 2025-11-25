@@ -61,28 +61,3 @@ data class ServiceProviderTag(
         fun assemble(id: ServiceProviderTag) = arrayOf(id.service, id.pubkey, id.relayUrl)
     }
 }
-
-data class ServiceType(
-    val kind: Int,
-    val type: String,
-) {
-    fun toValue() = assemble(kind, type)
-
-    companion object {
-        fun assemble(
-            kind: Int,
-            type: String,
-        ) = "$kind:$type"
-
-        fun parse(serviceType: String): ServiceType? {
-            val (kindStr, type) = serviceType.split(":", limit = 2)
-            val kind = kindStr.toIntOrNull() ?: return null
-            return ServiceType(kind, type)
-        }
-
-        fun isOfKind(
-            serviceType: String,
-            kind: String,
-        ) = serviceType.startsWith(kind) && serviceType[kind.length] == ':'
-    }
-}
