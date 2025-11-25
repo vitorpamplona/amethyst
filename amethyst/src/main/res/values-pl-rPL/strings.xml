@@ -231,7 +231,7 @@
     <string name="description_to">opis dla</string>
     <string name="and_picture_to">i zdjęcie do</string>
     <string name="leave">Wyjdź</string>
-    <string name="unfollow">Porzuć obserwację</string>
+    <string name="unfollow">Nie obserwuj</string>
     <string name="channel_created">Kanał utworzony</string>
     <string name="channel_information_changed_to">"Informacje o kanale zmienione na"</string>
     <string name="ephemeral_relay_chat">Czat efemeryczny</string>
