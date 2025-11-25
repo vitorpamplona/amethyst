@@ -25,6 +25,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -52,9 +53,12 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.Font6SP
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
@@ -366,7 +370,7 @@ fun BaseUserPicture(
 
         WatchUserCards(baseUser.pubkeyHex, accountViewModel) { score ->
             if (score != null) {
-                ScoreTag(score, Modifier.align(Alignment.BottomCenter))
+                ScoreTag(score, size, Modifier.align(Alignment.BottomCenter))
             }
         }
     }
@@ -400,7 +404,7 @@ fun BaseUserPicture(
 
         WatchUserCards(baseUserHex, accountViewModel) { score ->
             if (score != null) {
-                ScoreTag(score, Modifier.align(Alignment.BottomCenter))
+                ScoreTag(score, size, Modifier.align(Alignment.BottomCenter))
             }
         }
     }
@@ -408,27 +412,95 @@ fun BaseUserPicture(
 
 @Preview
 @Composable
-fun ScoreTagPreview() {
-    Box(Modifier.size(55.dp), contentAlignment = Alignment.TopEnd) {
-        ScoreTag(100, Modifier.align(Alignment.BottomCenter))
+fun ScoreTag55Preview() {
+    val accountViewModel = mockAccountViewModel()
+    ThemeComparisonColumn {
+        Row {
+            var size = 75.dp
+            Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
+                InnerUserPicture(
+                    userHex = "AABBCC",
+                    userPicture = "http://null",
+                    userName = "vitor",
+                    size = size,
+                    modifier = Modifier,
+                    accountViewModel = accountViewModel,
+                )
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+                ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
+            }
+            size = 55.dp
+            Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
+                InnerUserPicture(
+                    userHex = "AABBCC",
+                    userPicture = "http://null",
+                    userName = "vitor",
+                    size = size,
+                    modifier = Modifier,
+                    accountViewModel = accountViewModel,
+                )
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+                ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
+            }
+            size = 35.dp
+            Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
+                InnerUserPicture(
+                    userHex = "AABBCC",
+                    userPicture = "http://null",
+                    userName = "vitor",
+                    size = size,
+                    modifier = Modifier,
+                    accountViewModel = accountViewModel,
+                )
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+                ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
+            }
+            size = 25.dp
+            Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
+                InnerUserPicture(
+                    userHex = "AABBCC",
+                    userPicture = "http://null",
+                    userName = "vitor",
+                    size = size,
+                    modifier = Modifier,
+                    accountViewModel = accountViewModel,
+                )
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+                ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
+            }
+            size = 18.dp
+            Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
+                InnerUserPicture(
+                    userHex = "AABBCC",
+                    userPicture = "http://null",
+                    userName = "vitor",
+                    size = size,
+                    modifier = Modifier,
+                    accountViewModel = accountViewModel,
+                )
+                FollowingIcon(Modifier.size(size.div(3.5f)))
+                ScoreTag(100, size, Modifier.align(Alignment.BottomCenter))
+            }
+        }
     }
 }
 
 @Composable
 fun ScoreTag(
     score: Int,
+    size: Dp,
     modifier: Modifier,
 ) {
     Text(
         text = score.toString(),
         color = Color.White,
         fontWeight = FontWeight.Bold,
-        fontSize = Font10SP,
+        fontSize = if (size > 34.dp) Font10SP else Font6SP,
         modifier =
             modifier
                 .clip(SmallBorder)
                 .background(Color.Black)
-                .padding(horizontal = 5.dp),
+                .padding(horizontal = if (size > 34.dp) 4.dp else 3.dp, vertical = 0.dp),
     )
 }
 
