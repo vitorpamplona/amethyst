@@ -150,7 +150,7 @@ fun BookmarkGroupItemOptionsMenu(
 
         val scope = rememberCoroutineScope()
         DropdownMenuItem(
-            text = { Text("Remove from Bookmark List") },
+            text = { Text(stringRes(R.string.bookmark_remove_action_label)) },
             onClick = {
                 onDeleteBookmarkItem()
                 onDismiss()

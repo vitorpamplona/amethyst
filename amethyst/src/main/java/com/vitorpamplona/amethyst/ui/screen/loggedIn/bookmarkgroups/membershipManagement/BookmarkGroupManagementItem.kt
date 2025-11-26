@@ -110,11 +110,11 @@ fun BookmarkStatusInList(
     ) {
         val text =
             if (isPublicMemberBookmark) {
-                "is a public bookmark here"
+                stringRes(R.string.public_bookmark_presence_indicator)
             } else if (isPrivateMemberBookmark) {
-                "is a private bookmark here"
+                stringRes(R.string.private_bookmark_presence_indicator)
             } else {
-                "is not a bookmark here"
+                stringRes(R.string.bookmark_absence_indicator)
             }
 
         val icon =
@@ -175,13 +175,13 @@ fun BookmarkManagementOptions(
             if (isBookmarkInList) {
                 Icon(
                     imageVector = Icons.Filled.BookmarkRemove,
-                    contentDescription = "Remove bookmark from list",
+                    contentDescription = stringRes(R.string.bookmark_remove_action_desc),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Filled.BookmarkAdd,
-                    contentDescription = "Add bookmark to list",
+                    contentDescription = stringRes(R.string.bookmark_add_action_desc),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
@@ -193,7 +193,7 @@ fun BookmarkManagementOptions(
         ) {
             DropdownMenuItem(
                 text = {
-                    Text(text = "Add as public bookmark")
+                    Text(text = stringRes(R.string.public_bookmark_add_action_label))
                 },
                 onClick = {
                     onAddBookmark(false)
@@ -202,7 +202,7 @@ fun BookmarkManagementOptions(
             )
             DropdownMenuItem(
                 text = {
-                    Text(text = "Add as private bookmark")
+                    Text(text = stringRes(R.string.private_bookmark_add_action_label))
                 },
                 onClick = {
                     onAddBookmark(true)

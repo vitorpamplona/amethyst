@@ -92,7 +92,6 @@ fun ArticleList(
         state = listState,
     ) {
         itemsIndexed(articles, key = { _, item -> item.toNAddr() }) { _, item ->
-            // TODO: Find a way to integrate bookmark group callbacks into the note below
             NoteCompose(
                 baseNote = item,
                 modifier = Modifier.animateContentSize(),

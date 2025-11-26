@@ -79,7 +79,7 @@ private fun ListManagementView(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopBarWithBackButton(caption = "Bookmark this post", nav::popBack)
+            TopBarWithBackButton(caption = stringRes(R.string.post_bookmark_management_title), nav::popBack)
         },
         floatingActionButton = {
             NewListButton { }
