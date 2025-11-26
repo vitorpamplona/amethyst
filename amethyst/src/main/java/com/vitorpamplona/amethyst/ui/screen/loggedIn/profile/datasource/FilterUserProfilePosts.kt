@@ -81,7 +81,7 @@ fun filterUserProfilePosts(
                         Filter(
                             kinds = UserProfilePostKinds1,
                             authors = listOf(user.pubkeyHex),
-                            limit = 200,
+                            limit = 500,
                             since = since?.get(relay)?.time,
                         ),
                 ),
