@@ -24,8 +24,4 @@ enum class BookmarkType {
     PostBookmark,
 
     ArticleBookmark,
-
-    LinkBookmark,
-
-    HashtagBookmark,
 }
