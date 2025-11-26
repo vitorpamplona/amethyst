@@ -32,9 +32,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -166,8 +164,6 @@ private fun BookmarkGroupActions(
     modifier: Modifier = Modifier,
     openPostBookmarks: () -> Unit = {},
     openArticleBookmarks: () -> Unit = {},
-    openLinkBookmarks: () -> Unit = {},
-    openHashtagBookmarks: () -> Unit = {},
 ) {
     FlowRow(
         modifier = modifier,
@@ -194,24 +190,6 @@ private fun BookmarkGroupActions(
                 contentDescription = null,
             )
             Text(stringRes(R.string.bookmark_list_articles_btn_label))
-        }
-        FilledTonalButton(
-            onClick = openLinkBookmarks,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Link,
-                contentDescription = null,
-            )
-            Text(stringRes(R.string.bookmark_list_links_btn_label))
-        }
-        FilledTonalButton(
-            onClick = openHashtagBookmarks,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Numbers,
-                contentDescription = null,
-            )
-            Text(stringRes(R.string.bookmark_list_hashtags_btn_label))
         }
     }
 }
@@ -394,7 +372,7 @@ private fun GroupOptionsMenu(
                 optionalCloneDescription.value = it
             },
             onCloneCreate = { name, description ->
-                onGroupClone(optionalCloneName.value, optionalCloneDescription.value)
+                onGroupClone(name, description)
             },
             onDismiss = { isCopyDialogOpen.value = false },
         )

@@ -406,14 +406,6 @@
     <string name="private_articles_count">Private Articles(%1$s)</string>
     <string name="public_articles_label">Public Articles</string>
     <string name="public_articles_count">Public Articles(%1$s)</string>
-    <string name="private_hashtags_label">Private Hashtags</string>
-    <string name="private_hashtags_count">Private Hashtags(%1$s)</string>
-    <string name="public_hashtags_label">Public Hashtags</string>
-    <string name="public_hashtags_count">Public Hashtags(%1$s)</string>
-    <string name="private_links_label">Private Links</string>
-    <string name="private_links_count">Private Links(%1$s)</string>
-    <string name="public_links_label">Public Links</string>
-    <string name="public_links_count">Public Links(%1$s)</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
     <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>

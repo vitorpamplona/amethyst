@@ -189,8 +189,6 @@ fun BookmarkGroupScreenView(
                         },
                         nav,
                     )
-                BookmarkType.HashtagBookmark -> RenderHashtagList(bookmarkGroupViewModel, pagerState)
-                BookmarkType.LinkBookmark -> RenderLinksList(bookmarkGroupViewModel, pagerState)
             }
         }
     }
@@ -238,10 +236,6 @@ fun BookmarkGroupHeaderTabs(
                 bookmarkGroup?.let {
                     stringRes(R.string.private_articles_count, it.privateArticleBookmarks.size)
                 } ?: stringRes(R.string.private_posts_label)
-
-            // TODO: Match the implementations in the pair below to the pair above.
-            BookmarkType.HashtagBookmark -> stringRes(R.string.private_hashtags_label)
-            BookmarkType.LinkBookmark -> stringRes(R.string.private_links_label)
         }
 
     val publicItemTypeLabel =
@@ -254,9 +248,6 @@ fun BookmarkGroupHeaderTabs(
                 bookmarkGroup?.let {
                     stringRes(R.string.public_articles_count, it.publicArticleBookmarks.size)
                 } ?: stringRes(R.string.public_articles_label)
-            // TODO: Match the implementations in the pair below to the pair above.
-            BookmarkType.HashtagBookmark -> stringRes(R.string.public_hashtags_label)
-            BookmarkType.LinkBookmark -> stringRes(R.string.public_links_label)
         }
 
     TabRow(
