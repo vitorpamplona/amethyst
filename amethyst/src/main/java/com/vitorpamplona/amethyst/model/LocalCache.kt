@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -967,6 +968,12 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: TrustedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: TrustProviderListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2856,6 +2863,7 @@ object LocalCache : ILocalCache {
                 is TorrentEvent -> consume(event, relay, wasVerified)
                 is TorrentCommentEvent -> consume(event, relay, wasVerified)
                 is TrustedRelayListEvent -> consume(event, relay, wasVerified)
+                is TrustProviderListEvent -> consume(event, relay, wasVerified)
                 is VideoHorizontalEvent -> consume(event, relay, wasVerified)
                 is VideoNormalEvent -> consume(event, relay, wasVerified)
                 is VideoVerticalEvent -> consume(event, relay, wasVerified)

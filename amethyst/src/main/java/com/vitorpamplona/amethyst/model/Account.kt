@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
+import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
@@ -119,6 +121,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -207,12 +210,17 @@ import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Locale
@@ -283,6 +291,9 @@ class Account(
 
     val muteListDecryptionCache = MuteListDecryptionCache(signer)
     val muteList = MuteListState(signer, cache, muteListDecryptionCache, scope, settings)
+
+    val trustProviderListDecryptionCache = TrustProviderListDecryptionCache(signer)
+    val trustProviderList = TrustProviderListState(signer, cache, trustProviderListDecryptionCache, scope, settings)
 
     val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
     val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
@@ -1715,6 +1726,25 @@ class Account(
                 innerReports
         ).toSet()
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun loadUserCardFlow(target: HexKey): Flow<Int?> =
+        trustProviderList.liveUserRankProvider
+            .transformLatest { provider ->
+                if (provider != null) {
+                    emitAll(
+                        cache
+                            .getOrCreateAddressableNote(
+                                ContactCardEvent.createAddress(provider.pubkey, target),
+                            ).flow()
+                            .metadata.stateFlow,
+                    )
+                } else {
+                    emit(null)
+                }
+            }.map {
+                (it?.note?.event as? ContactCardEvent)?.rank()
+            }.flowOn(Dispatchers.IO)
 
     suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
 

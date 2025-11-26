@@ -37,7 +37,9 @@ class AuthCoordinator(
     scope: CoroutineScope,
 ) {
     private val authWithAccounts = ListWithUniqueSetCache<ScreenAuthAccount, Account> { it.account }
-    private val tempAccount = NostrSignerSync()
+    private val tempAccount by lazy {
+        NostrSignerSync()
+    }
 
     val receiver =
         RelayAuthenticator(

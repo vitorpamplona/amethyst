@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -59,6 +60,7 @@ val BasicAccountInfoKinds2 =
         ProxyRelayListEvent.KIND,
         HashtagListEvent.KIND,
         GeohashListEvent.KIND,
+        TrustProviderListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(

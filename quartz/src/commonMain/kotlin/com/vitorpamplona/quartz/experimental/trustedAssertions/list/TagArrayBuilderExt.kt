@@ -18,28 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.sha256
+package com.vitorpamplona.quartz.experimental.trustedAssertions.list
 
-import java.io.InputStream
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceType
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-val pool = Sha256Pool(10) // max parallel operations
+fun TagArrayBuilder<TrustProviderListEvent>.serviceProvider(
+    service: ServiceType,
+    pubkey: HexKey,
+    relayUrl: NormalizedRelayUrl,
+) = addUnique(ServiceProviderTag.assemble(service, pubkey, relayUrl))
 
-actual fun sha256(data: ByteArray) = pool.hash(data)
+fun TagArrayBuilder<TrustProviderListEvent>.serviceProvider(provider: ServiceProviderTag) = addUnique(provider.toTagArray())
 
-/**
- * Calculate SHA256 hash while counting bytes read from the stream.
- * Returns both the hash and the number of bytes processed.
- * This is more efficient than reading the stream twice.
- *
- * @param inputStream The input stream to hash
- * @param bufferSize Size of chunks to read (default 8KB)
- * @return Pair of (hash bytes, bytes read count)
- */
-fun sha256StreamWithCount(
-    inputStream: InputStream,
-    bufferSize: Int = 8192,
-): Pair<ByteArray, Long> {
-    val countingStream = CountingInputStream(inputStream)
-    val hash = pool.hashStream(countingStream, bufferSize)
-    return Pair(hash, countingStream.bytesRead)
-}
+fun TagArrayBuilder<TrustProviderListEvent>.serviceProviders(providers: List<ServiceProviderTag>) = addAll(providers.map { it.toTagArray() })

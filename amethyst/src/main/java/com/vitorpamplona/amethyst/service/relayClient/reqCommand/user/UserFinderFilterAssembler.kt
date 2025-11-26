@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserOutboxFinderSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserCardsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserReportsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -46,6 +47,7 @@ class UserFinderFilterAssembler(
             UserOutboxFinderSubAssembler(client, cache, failureTracker, ::allKeys),
             UserWatcherSubAssembler(client, cache, ::allKeys),
             UserReportsSubAssembler(client, ::allKeys),
+            UserCardsSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

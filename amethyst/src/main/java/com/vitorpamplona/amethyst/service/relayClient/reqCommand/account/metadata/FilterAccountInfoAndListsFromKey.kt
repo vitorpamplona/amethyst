@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -65,6 +66,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         ProxyRelayListEvent.KIND,
         HashtagListEvent.KIND,
         GeohashListEvent.KIND,
+        TrustProviderListEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
