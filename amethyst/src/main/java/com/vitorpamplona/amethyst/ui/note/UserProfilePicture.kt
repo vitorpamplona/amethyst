@@ -419,7 +419,7 @@ fun ScoreTag55Preview() {
             var size = 75.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "AABBCC",
+                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
                     userPicture = "http://null",
                     userName = "vitor",
                     size = size,
@@ -432,7 +432,7 @@ fun ScoreTag55Preview() {
             size = 55.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "AABBCC",
+                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
                     userPicture = "http://null",
                     userName = "vitor",
                     size = size,
@@ -445,7 +445,7 @@ fun ScoreTag55Preview() {
             size = 35.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "AABBCC",
+                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
                     userPicture = "http://null",
                     userName = "vitor",
                     size = size,
@@ -458,7 +458,7 @@ fun ScoreTag55Preview() {
             size = 25.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "AABBCC",
+                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
                     userPicture = "http://null",
                     userName = "vitor",
                     size = size,
