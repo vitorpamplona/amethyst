@@ -40,6 +40,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarks
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollows
@@ -58,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -297,6 +299,21 @@ fun NoteDropDownMenu(
             )
         }
         HorizontalDivider(thickness = DividerThickness)
+        note.let {
+            val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.manage_bookmark_label, noteBookmarkType)) },
+                onClick = {
+                    if (note.event is LongTextNoteEvent) {
+                        val noteAddress = (note as AddressableNote).address
+                        nav.nav(Route.ArticleBookmarkManagement(noteAddress))
+                    } else {
+                        nav.nav(Route.PostBookmarkManagement(note.idHex))
+                    }
+                    onDismiss()
+                },
+            )
+        }
         if (state.isPrivateBookmarkNote) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.remove_from_private_bookmarks)) },

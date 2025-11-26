@@ -112,6 +112,7 @@
 
     <string name="error_parsing_preview_for">"Error parsing preview for %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
+    <string name="article">Article</string>
     <string name="new_channel">New Channel</string>
     <string name="channel_name">Channel Name</string>
     <string name="my_awesome_group">My Awesome Group</string>
@@ -406,6 +407,7 @@
     <string name="private_articles_count">Private Articles(%1$s)</string>
     <string name="public_articles_label">Public Articles</string>
     <string name="public_articles_count">Public Articles(%1$s)</string>
+    <string name="manage_bookmark_label">Manage %1$s in Bookmark Lists</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
     <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
