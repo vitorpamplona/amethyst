@@ -29,8 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -67,6 +65,8 @@ class User(
 
     var relaysBeingUsed = mapOf<NormalizedRelayUrl, RelayInfo>()
         private set
+
+    var flowSet: UserFlowSet? = null
 
     fun pubkey() = Hex.decode(pubkeyHex)
 
@@ -251,10 +251,6 @@ class User(
 
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
 
-    fun isFollowingHashtag(tag: String) = latestContactList?.isTaggedHash(tag) ?: false
-
-    fun isFollowingGeohash(geoTag: String) = latestContactList?.isTaggedGeoHash(geoTag) ?: false
-
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
     suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
@@ -302,8 +298,6 @@ class User(
     }
 
     fun anyNameStartsWith(username: String): Boolean = info?.anyNameStartsWith(username) ?: false
-
-    var flowSet: UserFlowSet? = null
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {

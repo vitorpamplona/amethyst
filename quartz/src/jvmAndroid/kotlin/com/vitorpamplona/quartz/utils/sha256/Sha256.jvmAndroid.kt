@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.utils.sha256
 
 import java.io.InputStream
 
-val pool = Sha256Pool(5) // max parallel operations
+val pool = Sha256Pool(10) // max parallel operations
 
 actual fun sha256(data: ByteArray) = pool.hash(data)
 
