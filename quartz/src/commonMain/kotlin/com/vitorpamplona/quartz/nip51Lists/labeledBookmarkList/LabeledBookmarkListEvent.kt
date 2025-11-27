@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.replaceAll
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -74,6 +75,8 @@ class LabeledBookmarkListEvent(
     fun nameOrTitle() = name() ?: title()
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun countBookmarks() = tags.count(BookmarkIdTag::isTagged)
 
@@ -261,6 +264,7 @@ class LabeledBookmarkListEvent(
         suspend fun create(
             name: String = "",
             description: String? = null,
+            image: String? = null,
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
             dTag: String = Uuid.random().toString(),
@@ -269,7 +273,8 @@ class LabeledBookmarkListEvent(
         ): LabeledBookmarkListEvent {
             val template =
                 build(name, publicBookmarks, privateBookmarks, signer, dTag, createdAt) {
-                    if (description != null) addUnique(DescriptionTag.assemble(description))
+                    if (description != null) description(description)
+                    if (image != null) image(image)
                 }
             return signer.sign(template)
         }

@@ -30,11 +30,10 @@ data class LabeledBookmarkList(
     val identifier: String,
     val title: String,
     val description: String?,
+    val image: String?,
     val privateBookmarks: Set<BookmarkIdTag> = emptySet(),
     val publicBookmarks: Set<BookmarkIdTag> = emptySet(),
 ) {
-    // TODO: Add methods for LInk and Hashtag, after their implementation.
-
     val privatePostBookmarks = privateBookmarks.filter { it is EventBookmark }.map { bookmarkIdTag -> bookmarkIdTag as EventBookmark }
     val publicPostBookmarks = publicBookmarks.filter { it is EventBookmark }.map { bookmarkIdTag -> bookmarkIdTag as EventBookmark }
 

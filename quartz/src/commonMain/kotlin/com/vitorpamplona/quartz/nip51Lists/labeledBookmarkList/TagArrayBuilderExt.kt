@@ -22,8 +22,14 @@ package com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 
 fun TagArrayBuilder<LabeledBookmarkListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
 
 fun TagArrayBuilder<LabeledBookmarkListEvent>.bookmarks(bookmarks: List<BookmarkIdTag>) = addAll(bookmarks.map { it.toTagArray() })
+
+fun TagArrayBuilder<LabeledBookmarkListEvent>.description(listDescription: String) = addUnique(DescriptionTag.assemble(listDescription))
+
+fun TagArrayBuilder<LabeledBookmarkListEvent>.image(url: String) = addUnique(ImageTag.assemble(url))

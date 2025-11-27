@@ -30,9 +30,13 @@ import com.vitorpamplona.amethyst.model.events
 import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.amethyst.model.updateFlow
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.update
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.description
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.image
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.name
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -85,6 +89,7 @@ class LabeledBookmarkListsState(
             identifier = dTag(),
             title = nameOrTitle() ?: dTag(),
             description = description(),
+            image = image(),
             privateBookmarks = privateBookmarks(signer)?.toSet() ?: emptySet(),
             publicBookmarks = publicBookmarks().toSet(),
         )
@@ -102,6 +107,8 @@ class LabeledBookmarkListsState(
         this.firstOrNull {
             it.identifier == bookmarkListId
         }
+
+    fun getBookmarkList(dTag: String) = listFeedFlow.value.getList(bookmarkListId = dTag)
 
     fun DeletionEvent.hasAnyDeletedBookmarkLists() = deleteAddressesWithKind(LabeledBookmarkListEvent.KIND) || deletesAnyEventIn(labeledBookmarkListEventIds.value)
 
@@ -146,6 +153,7 @@ class LabeledBookmarkListsState(
     suspend fun addLabeledBookmarkList(
         listName: String,
         listDescription: String? = null,
+        listImage: String? = null,
         firstBookmark: BookmarkIdTag? = null,
         isBookmarkPrivate: Boolean = false,
         account: Account,
@@ -154,10 +162,32 @@ class LabeledBookmarkListsState(
             LabeledBookmarkListEvent.create(
                 name = listName,
                 description = listDescription,
+                image = listImage,
                 publicBookmarks = if (!isBookmarkPrivate && firstBookmark != null) listOf(firstBookmark) else emptyList(),
                 privateBookmarks = if (isBookmarkPrivate && firstBookmark != null) listOf(firstBookmark) else emptyList(),
                 signer = account.signer,
             )
+        account.sendMyPublicAndPrivateOutbox(newList)
+    }
+
+    suspend fun updateMetadata(
+        listName: String?,
+        listDescription: String?,
+        listImage: String?,
+        bookmarkList: LabeledBookmarkList,
+        account: Account,
+    ) {
+        val listEvent = getLabeledBookmarkListEvent(bookmarkList.identifier)
+
+        val template =
+            listEvent.update {
+                if (listName != null) name(listName)
+                if (listDescription != null) description(listDescription)
+                if (listImage != null) image(listImage)
+            }
+
+        val newList = signer.sign(template)
+
         account.sendMyPublicAndPrivateOutbox(newList)
     }
 

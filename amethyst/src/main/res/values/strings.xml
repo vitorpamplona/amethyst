@@ -117,6 +117,7 @@
     <string name="channel_name">Channel Name</string>
     <string name="my_awesome_group">My Awesome Group</string>
     <string name="picture_url">Picture Url</string>
+    <string name="optional_picture_url">Picture Url(Optional)</string>
     <string name="description">Description</string>
     <string name="no_description">Description not found</string>
     <string name="about_us">"About us.. "</string>
@@ -391,6 +392,8 @@
 
     <string name="bookmark_lists">Bookmark Lists</string>
     <string name="bookmark_list_icon_label">Icon for bookmark list</string>
+    <string name="bookmark_list_creation_screen_title">New Bookmark List</string>
+    <string name="bookmark_list_edit_sub_title">Bookmark List Metadata</string>
     <string name="bookmark_list_clone_btn_label">Clone Bookmark List</string>
     <string name="bookmark_list_broadcast_btn_label">Broadcast Bookmark List</string>
     <string name="bookmark_list_delete_btn_label">Delete Bookmark List</string>
@@ -418,6 +421,7 @@
     <string name="public_bookmark_add_action_label">Add as public bookmark</string>
     <string name="private_bookmark_add_action_label">Add as private bookmark</string>
     <string name="bookmark_remove_action_label">Remove from Bookmark List</string>
+    <string name="bookmark_list_explainer">Bookmark lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
     <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
