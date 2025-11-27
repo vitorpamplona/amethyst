@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display
 
 import android.content.Intent
 import androidx.compose.material3.DropdownMenu
@@ -26,8 +26,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,19 +36,16 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarks
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollows
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
+import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
+import com.vitorpamplona.amethyst.ui.note.elements.WatchBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -59,14 +54,13 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun MoreOptionsButton(
+fun BookmarkGroupItemOptions(
     baseNote: Note,
+    onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -80,9 +74,10 @@ fun MoreOptionsButton(
         VerticalDotsIcon()
 
         if (popupExpanded.value) {
-            NoteDropDownMenu(
+            BookmarkGroupItemOptionsMenu(
                 note = baseNote,
                 onDismiss = { popupExpanded.value = false },
+                onDeleteBookmarkItem = onDeleteBookmarkItem,
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
@@ -91,20 +86,11 @@ fun MoreOptionsButton(
     }
 }
 
-@Immutable
-data class DropDownParams(
-    val isFollowingAuthor: Boolean,
-    val isPrivateBookmarkNote: Boolean,
-    val isPublicBookmarkNote: Boolean,
-    val isLoggedUser: Boolean,
-    val isSensitive: Boolean,
-    val showSensitiveContent: Boolean?,
-)
-
 @Composable
-fun NoteDropDownMenu(
+fun BookmarkGroupItemOptionsMenu(
     note: Note,
     onDismiss: () -> Unit,
+    onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -163,6 +149,19 @@ fun NoteDropDownMenu(
         }
 
         val scope = rememberCoroutineScope()
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.bookmark_remove_action_label)) },
+            onClick = {
+                onDeleteBookmarkItem()
+                onDismiss()
+            },
+        )
+        // TODO: Work on moving feature below
+//        DropdownMenuItem(
+//            text = { Text("Move to Public") },
+//            onClick =
+//        )
+        HorizontalDivider(thickness = DividerThickness)
 
         if (!state.isFollowingAuthor) {
             DropdownMenuItem(
@@ -185,14 +184,14 @@ fun NoteDropDownMenu(
             )
             HorizontalDivider(thickness = DividerThickness)
         }
-        DropdownMenuItem(
-            text = { Text(text = stringRes(R.string.follow_set_add_author_from_note_action)) },
-            onClick = {
-                val authorHexKey = note.author?.pubkeyHex ?: return@DropdownMenuItem
-                nav.nav(Route.PeopleListManagement(authorHexKey))
-                onDismiss()
-            },
-        )
+//        DropdownMenuItem(
+//            text = { Text(text = stringRes(R.string.follow_set_add_author_from_note_action)) },
+//            onClick = {
+//                val authorHexKey = note.author?.pubkeyHex ?: return@DropdownMenuItem
+//                nav.nav(Route.PeopleListManagement(authorHexKey))
+//                onDismiss()
+//            },
+//        )
         DropdownMenuItem(
             text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
@@ -299,56 +298,6 @@ fun NoteDropDownMenu(
             )
         }
         HorizontalDivider(thickness = DividerThickness)
-        note.let {
-            val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.manage_bookmark_label, noteBookmarkType)) },
-                onClick = {
-                    if (note.event is LongTextNoteEvent) {
-                        val noteAddress = (note as AddressableNote).address
-                        nav.nav(Route.ArticleBookmarkManagement(noteAddress))
-                    } else {
-                        nav.nav(Route.PostBookmarkManagement(note.idHex))
-                    }
-                    onDismiss()
-                },
-            )
-        }
-        if (state.isPrivateBookmarkNote) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.remove_from_private_bookmarks)) },
-                onClick = {
-                    accountViewModel.removePrivateBookmark(note)
-                    onDismiss()
-                },
-            )
-        } else {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.add_to_private_bookmarks)) },
-                onClick = {
-                    accountViewModel.addPrivateBookmark(note)
-                    onDismiss()
-                },
-            )
-        }
-        if (state.isPublicBookmarkNote) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.remove_from_public_bookmarks)) },
-                onClick = {
-                    accountViewModel.removePublicBookmark(note)
-                    onDismiss()
-                },
-            )
-        } else {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.add_to_public_bookmarks)) },
-                onClick = {
-                    accountViewModel.addPublicBookmark(note)
-                    onDismiss()
-                },
-            )
-        }
-        HorizontalDivider(thickness = DividerThickness)
         if (state.isLoggedUser) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.request_deletion)) },
@@ -369,35 +318,6 @@ fun NoteDropDownMenu(
         ReportNoteDialog(note = note, accountViewModel = accountViewModel) {
             reportDialogShowing = false
             onDismiss()
-        }
-    }
-}
-
-@Composable
-fun WatchBookmarksFollowsAndAccount(
-    note: Note,
-    accountViewModel: AccountViewModel,
-    onNew: (DropDownParams) -> Unit,
-) {
-    val followState by observeUserFollows(accountViewModel.userProfile(), accountViewModel)
-    val bookmarkState by observeUserBookmarks(accountViewModel.userProfile(), accountViewModel)
-    val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
-
-    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-        val newState =
-            DropDownParams(
-                isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                isPrivateBookmarkNote = accountViewModel.account.bookmarkState.isInPrivateBookmarks(note),
-                isPublicBookmarkNote = accountViewModel.account.bookmarkState.isInPublicBookmarks(note),
-                isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
-                showSensitiveContent = showSensitiveContent,
-            )
-
-        launch(Dispatchers.Main) {
-            onNew(
-                newState,
-            )
         }
     }
 }

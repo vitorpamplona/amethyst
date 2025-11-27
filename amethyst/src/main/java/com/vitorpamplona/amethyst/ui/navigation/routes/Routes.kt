@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route.Community
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -46,6 +48,33 @@ sealed class Route {
     @Serializable object PrivacyOptions : Route()
 
     @Serializable object Bookmarks : Route()
+
+    @Serializable object BookmarkGroups : Route()
+
+    @Serializable data class BookmarkGroupView(
+        val dTag: String,
+        val bookmarkType: BookmarkType,
+    ) : Route()
+
+    @Serializable data class BookmarkGroupMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class PostBookmarkManagement(
+        val postId: String,
+    ) : Route()
+
+    @Serializable data class ArticleBookmarkManagement(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
 
     @Serializable object Drafts : Route()
 
