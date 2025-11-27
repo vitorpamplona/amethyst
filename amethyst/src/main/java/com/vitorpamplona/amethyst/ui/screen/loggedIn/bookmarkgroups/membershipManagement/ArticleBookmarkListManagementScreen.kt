@@ -83,7 +83,7 @@ private fun ListManagementView(
             TopBarWithBackButton(caption = stringRes(R.string.article_bookmark_management_title), nav::popBack)
         },
         floatingActionButton = {
-            NewListButton { }
+            NewListButton { nav.nav(Route.BookmarkGroupMetadataEdit()) }
         },
     ) { contentPadding ->
         Column(

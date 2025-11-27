@@ -32,8 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
@@ -52,35 +50,15 @@ fun ListOfBookmarkGroupsScreen(
 ) {
     ListOfBookmarkGroupsFeed(
         listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
-        addBookmarkGroup = { title, description ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.addLabeledBookmarkList(
-                    listName = title,
-                    listDescription = description,
-                    account = accountViewModel.account,
-                )
-            }
-        },
+        addBookmarkGroup = { nav.nav(Route.BookmarkGroupMetadataEdit()) },
         openBookmarkGroup = { identifier, bookmarkType ->
             nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
         },
-        renameBookmarkGroup = { bookmarkGroup, newName ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.renameBookmarkList(
-                    newName = newName,
-                    bookmarkList = bookmarkGroup,
-                    account = accountViewModel.account,
-                )
-            }
+        renameBookmarkGroup = { bookmarkGroup ->
+            nav.nav(Route.BookmarkGroupMetadataEdit(bookmarkGroup.identifier))
         },
-        changeBookmarkGroupDescription = { bookmarkGroup, newDescription ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.labeledBookmarkLists.modifyListDescription(
-                    newDescription = newDescription,
-                    bookmarkList = bookmarkGroup,
-                    account = accountViewModel.account,
-                )
-            }
+        changeBookmarkGroupDescription = { bookmarkGroup ->
+            nav.nav(Route.BookmarkGroupMetadataEdit(bookmarkGroup.identifier))
         },
         cloneBookmarkGroup = { bookmarkGroup, customName, customDesc ->
             accountViewModel.launchSigner {
@@ -107,10 +85,10 @@ fun ListOfBookmarkGroupsScreen(
 @Composable
 fun ListOfBookmarkGroupsFeed(
     listSource: StateFlow<List<LabeledBookmarkList>>,
-    addBookmarkGroup: (title: String, description: String?) -> Unit,
+    addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
-    renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList, newName: String) -> Unit,
-    changeBookmarkGroupDescription: (bookmarkGroup: LabeledBookmarkList, newDescription: String?) -> Unit,
+    renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
+    changeBookmarkGroupDescription: (bookmarkGroup: LabeledBookmarkList) -> Unit,
     cloneBookmarkGroup: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
     deleteBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
     nav: INav,
@@ -120,7 +98,7 @@ fun ListOfBookmarkGroupsFeed(
             TopBarWithBackButton(caption = stringRes(R.string.bookmark_lists), nav::popBack)
         },
         floatingActionButton = {
-            BookmarkGroupFabAndMenu(onAddGroup = addBookmarkGroup)
+            BookmarkGroupFab(onAddGroup = addBookmarkGroup)
         },
     ) { paddingValues ->
         Column(
@@ -143,9 +121,7 @@ fun ListOfBookmarkGroupsFeed(
 }
 
 @Composable
-fun BookmarkGroupFabAndMenu(onAddGroup: (name: String, description: String?) -> Unit) {
-    val isSetAdditionDialogOpen = remember { mutableStateOf(false) }
-
+fun BookmarkGroupFab(onAddGroup: () -> Unit) {
     ExtendedFloatingActionButton(
         text = {
             Text(text = stringRes(R.string.follow_set_create_btn_label))
@@ -156,21 +132,8 @@ fun BookmarkGroupFabAndMenu(onAddGroup: (name: String, description: String?) -> 
                 contentDescription = null,
             )
         },
-        onClick = {
-            isSetAdditionDialogOpen.value = true
-        },
+        onClick = onAddGroup,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
     )
-
-    if (isSetAdditionDialogOpen.value) {
-        NewBookmarkGroupCreationDialog(
-            onDismiss = {
-                isSetAdditionDialogOpen.value = false
-            },
-            onCreateGroup = { name, description ->
-                onAddGroup(name, description)
-            },
-        )
-    }
 }

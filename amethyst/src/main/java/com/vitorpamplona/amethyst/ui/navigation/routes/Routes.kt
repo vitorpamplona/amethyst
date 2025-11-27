@@ -56,6 +56,10 @@ sealed class Route {
         val bookmarkType: BookmarkType,
     ) : Route()
 
+    @Serializable data class BookmarkGroupMetadataEdit(
+        val dTag: String? = null,
+    ) : Route()
+
     @Serializable data class PostBookmarkManagement(
         val postId: String,
     ) : Route()

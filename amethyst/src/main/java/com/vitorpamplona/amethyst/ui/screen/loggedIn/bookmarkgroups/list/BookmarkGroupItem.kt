@@ -51,12 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
@@ -79,8 +76,8 @@ fun BookmarkGroupItem(
     modifier: Modifier = Modifier,
     bookmarkList: LabeledBookmarkList,
     onClick: (bookmarkItemType: BookmarkType) -> Unit,
-    onRename: (String) -> Unit,
-    onDescriptionChange: (String?) -> Unit,
+    onRename: () -> Unit,
+    onDescriptionChange: () -> Unit,
     onClone: (customName: String?, customDescription: String?) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -252,8 +249,8 @@ private fun BookmarkGroupOptionsButton(
     modifier: Modifier = Modifier,
     bookmarkGroupName: String,
     bookmarkGroupDescription: String?,
-    onGroupRename: (String) -> Unit,
-    onGroupDescriptionChange: (String?) -> Unit,
+    onGroupRename: () -> Unit,
+    onGroupDescriptionChange: () -> Unit,
     onGroupCloneCreate: (optionalName: String?, optionalDec: String?) -> Unit,
     onGroupDelete: () -> Unit,
 ) {
@@ -283,17 +280,12 @@ private fun GroupOptionsMenu(
     isExpanded: Boolean,
     groupName: String,
     groupDescription: String?,
-    onGroupRename: (String) -> Unit,
-    onGroupDescriptionChange: (String?) -> Unit,
+    onGroupRename: () -> Unit,
+    onGroupDescriptionChange: () -> Unit,
     onGroupClone: (optionalNewName: String?, optionalNewDesc: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val isRenameDialogOpen = remember { mutableStateOf(false) }
-    val renameString = remember { mutableStateOf("") }
-
-    val isDescriptionModDialogOpen = remember { mutableStateOf(false) }
-
     val isCopyDialogOpen = remember { mutableStateOf(false) }
     val optionalCloneName = remember { mutableStateOf<String?>(null) }
     val optionalCloneDescription = remember { mutableStateOf<String?>(null) }
@@ -307,7 +299,7 @@ private fun GroupOptionsMenu(
                 Text(text = stringRes(R.string.follow_set_rename_btn_label))
             },
             onClick = {
-                isRenameDialogOpen.value = true
+                onGroupRename()
                 onDismiss()
             },
         )
@@ -316,7 +308,7 @@ private fun GroupOptionsMenu(
                 Text(text = stringRes(R.string.follow_set_desc_modify_label))
             },
             onClick = {
-                isDescriptionModDialogOpen.value = true
+                onGroupDescriptionChange()
                 onDismiss()
             },
         )
@@ -339,28 +331,6 @@ private fun GroupOptionsMenu(
         )
     }
 
-    if (isRenameDialogOpen.value) {
-        GroupRenameDialog(
-            currentName = groupName,
-            newName = renameString.value,
-            onStringRenameChange = {
-                renameString.value = it
-            },
-            onDismissDialog = { isRenameDialogOpen.value = false },
-            onGroupRename = {
-                onGroupRename(renameString.value)
-            },
-        )
-    }
-
-    if (isDescriptionModDialogOpen.value) {
-        GroupModifyDescriptionDialog(
-            currentDescription = groupDescription,
-            onDismissDialog = { isDescriptionModDialogOpen.value = false },
-            onModifyDescription = onGroupDescriptionChange,
-        )
-    }
-
     if (isCopyDialogOpen.value) {
         GroupCloneDialog(
             optionalNewName = optionalCloneName.value,
@@ -377,129 +347,6 @@ private fun GroupOptionsMenu(
             onDismiss = { isCopyDialogOpen.value = false },
         )
     }
-}
-
-@Composable
-private fun GroupRenameDialog(
-    modifier: Modifier = Modifier,
-    currentName: String,
-    newName: String,
-    onStringRenameChange: (String) -> Unit,
-    onDismissDialog: () -> Unit,
-    onGroupRename: (String) -> Unit,
-) {
-    val renameIndicator =
-        buildAnnotatedString {
-            append(stringRes(R.string.follow_set_rename_dialog_indicator_first_part) + " ")
-            withStyle(
-                SpanStyle(
-                    fontWeight = FontWeight.Bold,
-                    fontStyle = FontStyle.Normal,
-                    fontSize = 15.sp,
-                ),
-            ) {
-                append("\"" + currentName + "\"")
-            }
-            append(" " + stringRes(R.string.follow_set_rename_dialog_indicator_second_part))
-        }
-
-    AlertDialog(
-        onDismissRequest = onDismissDialog,
-        title = {
-            Text(text = stringRes(R.string.follow_set_rename_btn_label))
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(Size5dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = renameIndicator,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Light,
-                    fontStyle = FontStyle.Italic,
-                )
-                TextField(
-                    value = newName,
-                    onValueChange = onStringRenameChange,
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onGroupRename(newName)
-                    onDismissDialog()
-                },
-            ) { Text(text = stringRes(R.string.rename)) }
-        },
-        dismissButton = {
-            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
-        },
-    )
-}
-
-@Composable
-private fun GroupModifyDescriptionDialog(
-    modifier: Modifier = Modifier,
-    currentDescription: String?,
-    onDismissDialog: () -> Unit,
-    onModifyDescription: (String?) -> Unit,
-) {
-    val updatedDescription = remember { mutableStateOf<String?>(null) }
-
-    val modifyIndicatorLabel =
-        if (currentDescription == null) {
-            stringRes(R.string.follow_set_empty_desc_label)
-        } else {
-            buildAnnotatedString {
-                append(stringRes(R.string.follow_set_current_desc_label) + " ")
-                withStyle(
-                    SpanStyle(
-                        fontWeight = FontWeight.Bold,
-                        fontStyle = FontStyle.Normal,
-                        fontSize = 15.sp,
-                    ),
-                ) {
-                    append("\"" + currentDescription + "\"")
-                }
-            }.text
-        }
-
-    AlertDialog(
-        onDismissRequest = onDismissDialog,
-        title = {
-            Text(text = stringRes(R.string.follow_set_desc_modify_label))
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(Size5dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = modifyIndicatorLabel,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Light,
-                    fontStyle = FontStyle.Italic,
-                )
-                TextField(
-                    value = updatedDescription.value ?: "",
-                    onValueChange = { updatedDescription.value = it },
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onModifyDescription(updatedDescription.value)
-                    onDismissDialog()
-                },
-            ) { Text(text = stringRes(R.string.follow_set_desc_modify_btn_label)) }
-        },
-        dismissButton = {
-            Button(onClick = onDismissDialog) { Text(text = stringRes(R.string.cancel)) }
-        },
-    )
 }
 
 @Composable

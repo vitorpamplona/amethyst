@@ -49,8 +49,8 @@ import kotlinx.coroutines.flow.StateFlow
 fun ListOfBookmarkGroupsFeedView(
     groupListFeedSource: StateFlow<List<LabeledBookmarkList>>,
     onOpenItem: (String, BookmarkType) -> Unit,
-    onRenameItem: (targetBookmarkGroup: LabeledBookmarkList, newName: String) -> Unit,
-    onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList, newDescription: String?) -> Unit,
+    onRenameItem: (targetBookmarkGroup: LabeledBookmarkList) -> Unit,
+    onItemDescriptionChange: (bookmarkGroup: LabeledBookmarkList) -> Unit,
     onItemClone: (bookmarkGroup: LabeledBookmarkList, customName: String?, customDesc: String?) -> Unit,
     onDeleteItem: (bookmarkGroup: LabeledBookmarkList) -> Unit,
 ) {
@@ -71,8 +71,8 @@ fun ListOfBookmarkGroupsFeedView(
                     modifier = Modifier.fillMaxSize().animateItem(),
                     bookmarkList = groupItem,
                     onClick = { bookmarkType -> onOpenItem(groupItem.identifier, bookmarkType) },
-                    onRename = { onRenameItem(groupItem, it) },
-                    onDescriptionChange = { onItemDescriptionChange(groupItem, it) },
+                    onRename = { onRenameItem(groupItem) },
+                    onDescriptionChange = { onItemDescriptionChange(groupItem) },
                     onClone = { cloneName, cloneDescription -> onItemClone(groupItem, cloneName, cloneDescription) },
                     onDelete = { onDeleteItem(groupItem) },
                 )
