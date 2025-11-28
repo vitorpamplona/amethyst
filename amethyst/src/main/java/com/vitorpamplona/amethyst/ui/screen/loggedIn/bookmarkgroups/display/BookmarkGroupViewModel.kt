@@ -111,7 +111,7 @@ class BookmarkGroupViewModel(
         isCurrentlyPrivate: Boolean,
     ) {
         removeBookmarkFromGroup(groupIdentifier, bookmark, isCurrentlyPrivate)
-        delay(1000L)
+        delay(1500L)
         addBookmarkToGroup(groupIdentifier, bookmark, !isCurrentlyPrivate)
     }
 
