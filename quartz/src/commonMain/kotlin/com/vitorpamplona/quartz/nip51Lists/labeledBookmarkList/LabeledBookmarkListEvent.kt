@@ -144,6 +144,31 @@ class LabeledBookmarkListEvent(
                 )
             }
 
+        suspend fun moveBookmark(
+            earlierVersion: LabeledBookmarkListEvent,
+            bookmarkIdTag: BookmarkIdTag,
+            isCurrentlyPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): LabeledBookmarkListEvent =
+            if (isCurrentlyPrivate) {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                resign(
+                    privateTags = privateTags.remove(bookmarkIdTag.toTagArray()),
+                    tags = earlierVersion.tags.plus(bookmarkIdTag.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                resign(
+                    privateTags = privateTags.plus(bookmarkIdTag.toTagArray()),
+                    tags = earlierVersion.tags.remove(bookmarkIdTag.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+
         suspend fun removeBookmark(
             earlierVersion: LabeledBookmarkListEvent,
             bookmarkIdTag: BookmarkIdTag,

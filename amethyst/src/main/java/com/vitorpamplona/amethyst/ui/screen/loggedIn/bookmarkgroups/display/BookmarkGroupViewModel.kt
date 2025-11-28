@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -110,9 +109,12 @@ class BookmarkGroupViewModel(
         bookmark: BookmarkIdTag,
         isCurrentlyPrivate: Boolean,
     ) {
-        removeBookmarkFromGroup(groupIdentifier, bookmark, isCurrentlyPrivate)
-        delay(1500L)
-        addBookmarkToGroup(groupIdentifier, bookmark, !isCurrentlyPrivate)
+        account.labeledBookmarkLists.moveBookmarkInList(
+            bookmark,
+            groupIdentifier,
+            isCurrentlyPrivate,
+            account,
+        )
     }
 
     suspend fun removePostBookmark(
