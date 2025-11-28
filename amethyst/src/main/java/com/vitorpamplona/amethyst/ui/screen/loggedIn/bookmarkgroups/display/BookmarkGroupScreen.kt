@@ -162,6 +162,15 @@ fun BookmarkGroupScreenView(
                         bookmarkGroupViewModel,
                         pagerState,
                         accountViewModel,
+                        movePostBookmark = { postId, isPrivate ->
+                            accountViewModel.launchSigner {
+                                bookmarkGroupViewModel.movePostBookmark(
+                                    groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                    postId = postId,
+                                    isCurrentlyPrivate = isPrivate,
+                                )
+                            }
+                        },
                         deletePostBookmark = { postId, isPrivate ->
                             accountViewModel.launchSigner {
                                 bookmarkGroupViewModel.removePostBookmark(
@@ -178,6 +187,15 @@ fun BookmarkGroupScreenView(
                         bookmarkGroupViewModel,
                         pagerState,
                         accountViewModel,
+                        moveArticleBookmark = { articleAddress, isPrivate ->
+                            accountViewModel.launchSigner {
+                                bookmarkGroupViewModel.moveArticleBookmark(
+                                    groupIdentifier = bookmarkGroupViewModel.bookmarkGroupIdentifier,
+                                    articleAddress = articleAddress,
+                                    isCurrentlyPrivate = isPrivate,
+                                )
+                            }
+                        },
                         deleteArticleBookmark = { articleAddress, isPrivate ->
                             accountViewModel.launchSigner {
                                 bookmarkGroupViewModel.removeArticleBookmark(

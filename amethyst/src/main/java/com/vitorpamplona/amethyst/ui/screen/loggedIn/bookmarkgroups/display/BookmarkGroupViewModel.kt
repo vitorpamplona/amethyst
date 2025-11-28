@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -69,8 +70,6 @@ class BookmarkGroupViewModel(
             .map { group -> group.privateArticleBookmarks.map { account.cache.getOrCreateAddressableNote(it.address) } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // TODO: Add implementations for Hashtag and Link bookmarks
-
     suspend fun deleteBookmarkGroup(groupIdentifier: String) {
         account.labeledBookmarkLists.deleteBookmarkList(groupIdentifier, account)
     }
@@ -86,6 +85,34 @@ class BookmarkGroupViewModel(
             isPrivate,
             account,
         )
+    }
+
+    suspend fun movePostBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        postId: String,
+        isCurrentlyPrivate: Boolean,
+    ) {
+        val eventBookmark = EventBookmark(postId)
+        moveBookmark(groupIdentifier, eventBookmark, isCurrentlyPrivate)
+    }
+
+    suspend fun moveArticleBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        articleAddress: Address,
+        isCurrentlyPrivate: Boolean,
+    ) {
+        val eventBookmark = AddressBookmark(articleAddress)
+        moveBookmark(groupIdentifier, eventBookmark, isCurrentlyPrivate)
+    }
+
+    suspend fun moveBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        bookmark: BookmarkIdTag,
+        isCurrentlyPrivate: Boolean,
+    ) {
+        removeBookmarkFromGroup(groupIdentifier, bookmark, isCurrentlyPrivate)
+        delay(1000L)
+        addBookmarkToGroup(groupIdentifier, bookmark, !isCurrentlyPrivate)
     }
 
     suspend fun removePostBookmark(
