@@ -159,7 +159,7 @@ fun BookmarkGroupItemOptionsMenu(
 
         val scope = rememberCoroutineScope()
         DropdownMenuItem(
-            text = { Text(if (isBookmarkItemPrivate) "Move to Public" else "Move to Private") },
+            text = { Text(stringRes(if (isBookmarkItemPrivate) R.string.move_bookmark_to_public_label else R.string.move_bookmark_to_private_label)) },
             onClick = if (isBookmarkItemPrivate) onMoveBookmarkToPublic else onMoveBookmarkToPrivate,
         )
         DropdownMenuItem(
