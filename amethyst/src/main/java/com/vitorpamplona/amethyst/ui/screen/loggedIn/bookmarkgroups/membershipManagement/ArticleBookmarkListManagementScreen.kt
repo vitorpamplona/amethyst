@@ -110,6 +110,8 @@ private fun ListManagementView(
                             listTitle = bookmarkList.title,
                             isPublicMemberBookmark = maybePublicBookmark != null,
                             isPrivateMemberBookmark = maybePrivateBookmark != null,
+                            totalPostBookmarkSize = bookmarkList.publicPostBookmarks.size + bookmarkList.privatePostBookmarks.size,
+                            totalArticleBookmarkSize = bookmarkList.publicArticleBookmarks.size + bookmarkList.privateArticleBookmarks.size,
                             onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.ArticleBookmark)) },
                             onAddBookmarkToGroup = { shouldBePrivate ->
                                 accountViewModel.launchSigner {
