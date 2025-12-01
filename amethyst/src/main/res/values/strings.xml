@@ -422,6 +422,8 @@
     <string name="private_bookmark_add_action_label">Add as private bookmark</string>
     <string name="bookmark_remove_action_label">Remove from Bookmark List</string>
     <string name="bookmark_list_explainer">Bookmark lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>
+    <string name="move_bookmark_to_public_label">Move to Public</string>
+    <string name="move_bookmark_to_private_label">Move to Private</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
     <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>

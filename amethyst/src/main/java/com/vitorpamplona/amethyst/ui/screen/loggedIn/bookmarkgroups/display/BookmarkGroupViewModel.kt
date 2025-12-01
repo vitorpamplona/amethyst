@@ -69,8 +69,6 @@ class BookmarkGroupViewModel(
             .map { group -> group.privateArticleBookmarks.map { account.cache.getOrCreateAddressableNote(it.address) } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // TODO: Add implementations for Hashtag and Link bookmarks
-
     suspend fun deleteBookmarkGroup(groupIdentifier: String) {
         account.labeledBookmarkLists.deleteBookmarkList(groupIdentifier, account)
     }
@@ -84,6 +82,37 @@ class BookmarkGroupViewModel(
             bookmark,
             groupIdentifier,
             isPrivate,
+            account,
+        )
+    }
+
+    suspend fun movePostBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        postId: String,
+        isCurrentlyPrivate: Boolean,
+    ) {
+        val eventBookmark = EventBookmark(postId)
+        moveBookmark(groupIdentifier, eventBookmark, isCurrentlyPrivate)
+    }
+
+    suspend fun moveArticleBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        articleAddress: Address,
+        isCurrentlyPrivate: Boolean,
+    ) {
+        val eventBookmark = AddressBookmark(articleAddress)
+        moveBookmark(groupIdentifier, eventBookmark, isCurrentlyPrivate)
+    }
+
+    suspend fun moveBookmark(
+        groupIdentifier: String = bookmarkGroupIdentifier,
+        bookmark: BookmarkIdTag,
+        isCurrentlyPrivate: Boolean,
+    ) {
+        account.labeledBookmarkLists.moveBookmarkInList(
+            bookmark,
+            groupIdentifier,
+            isCurrentlyPrivate,
             account,
         )
     }

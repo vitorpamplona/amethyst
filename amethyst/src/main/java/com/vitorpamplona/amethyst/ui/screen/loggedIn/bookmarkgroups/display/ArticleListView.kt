@@ -43,6 +43,7 @@ fun RenderArticleList(
     bookmarkGroupViewModel: BookmarkGroupViewModel,
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
+    moveArticleBookmark: (articleAddress: Address, fromPrivate: Boolean) -> Unit,
     deleteArticleBookmark: (articleAddress: Address, isPrivate: Boolean) -> Unit,
     nav: INav,
     modifier: Modifier = Modifier,
@@ -56,6 +57,10 @@ fun RenderArticleList(
                 ArticleList(
                     modifier = Modifier.fillMaxSize(),
                     articles = publicArticles,
+                    isArticleBookmarkPrivate = false,
+                    onMoveBookmarkToPrivate = { articleAddress ->
+                        moveArticleBookmark(articleAddress, false)
+                    },
                     onDeleteArticleBookmark = { articleAddress ->
                         deleteArticleBookmark(articleAddress, false)
                     },
@@ -66,6 +71,10 @@ fun RenderArticleList(
                 ArticleList(
                     modifier = Modifier.fillMaxSize(),
                     articles = privateArticles,
+                    isArticleBookmarkPrivate = true,
+                    onMoveBookmarkToPublic = { articleAddress ->
+                        moveArticleBookmark(articleAddress, true)
+                    },
                     onDeleteArticleBookmark = { articleAddress ->
                         deleteArticleBookmark(articleAddress, true)
                     },
@@ -80,6 +89,9 @@ fun RenderArticleList(
 fun ArticleList(
     modifier: Modifier = Modifier,
     articles: List<AddressableNote>,
+    isArticleBookmarkPrivate: Boolean,
+    onMoveBookmarkToPublic: (articleAddress: Address) -> Unit = {},
+    onMoveBookmarkToPrivate: (articleAddress: Address) -> Unit = {},
     onDeleteArticleBookmark: (Address) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -101,6 +113,9 @@ fun ArticleList(
                 moreOptions = {
                     BookmarkGroupItemOptions(
                         baseNote = item,
+                        isBookmarkItemPrivate = isArticleBookmarkPrivate,
+                        onMoveBookmarkToPublic = { onMoveBookmarkToPublic(item.address) },
+                        onMoveBookmarkToPrivate = { onMoveBookmarkToPrivate(item.address) },
                         onDeleteBookmarkItem = {
                             onDeleteArticleBookmark(item.address)
                         },

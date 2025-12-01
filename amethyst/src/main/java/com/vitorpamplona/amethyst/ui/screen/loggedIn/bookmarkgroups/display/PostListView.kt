@@ -42,6 +42,7 @@ fun RenderPostList(
     bookmarkGroupViewModel: BookmarkGroupViewModel,
     pagerState: PagerState,
     accountViewModel: AccountViewModel,
+    movePostBookmark: (postId: String, fromPrivate: Boolean) -> Unit,
     deletePostBookmark: (postId: String, isPrivate: Boolean) -> Unit,
     nav: INav,
     modifier: Modifier = Modifier,
@@ -55,6 +56,10 @@ fun RenderPostList(
                 PostList(
                     modifier = Modifier.fillMaxSize(),
                     posts = publicPosts,
+                    isPostBookmarkPrivate = false,
+                    onMoveBookmarkToPrivate = { postId ->
+                        movePostBookmark(postId, false)
+                    },
                     onDeletePostBookmark = { postId ->
                         deletePostBookmark(postId, false)
                     },
@@ -65,6 +70,10 @@ fun RenderPostList(
                 PostList(
                     modifier = Modifier.fillMaxSize(),
                     posts = privatePosts,
+                    isPostBookmarkPrivate = true,
+                    onMoveBookmarkToPublic = { postId ->
+                        movePostBookmark(postId, true)
+                    },
                     onDeletePostBookmark = { postId ->
                         deletePostBookmark(postId, true)
                     },
@@ -79,6 +88,9 @@ fun RenderPostList(
 private fun PostList(
     modifier: Modifier = Modifier,
     posts: List<Note>,
+    isPostBookmarkPrivate: Boolean,
+    onMoveBookmarkToPublic: (postId: String) -> Unit = {},
+    onMoveBookmarkToPrivate: (postId: String) -> Unit = {},
     onDeletePostBookmark: (postId: String) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -100,6 +112,9 @@ private fun PostList(
                 moreOptions = {
                     BookmarkGroupItemOptions(
                         baseNote = item,
+                        isBookmarkItemPrivate = isPostBookmarkPrivate,
+                        onMoveBookmarkToPublic = { onMoveBookmarkToPublic(item.idHex) },
+                        onMoveBookmarkToPrivate = { onMoveBookmarkToPrivate(item.idHex) },
                         onDeleteBookmarkItem = { onDeletePostBookmark(item.idHex) },
                         accountViewModel = accountViewModel,
                         nav = nav,
