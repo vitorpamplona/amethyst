@@ -35,7 +35,7 @@ class LoginRequest {
                 Permission(CommandType.NIP04_ENCRYPT),
                 Permission(CommandType.NIP04_DECRYPT),
                 Permission(CommandType.NIP44_DECRYPT),
-                Permission(CommandType.NIP44_DECRYPT),
+                Permission(CommandType.NIP44_ENCRYPT),
                 Permission(CommandType.DECRYPT_ZAP_EVENT),
             )
 

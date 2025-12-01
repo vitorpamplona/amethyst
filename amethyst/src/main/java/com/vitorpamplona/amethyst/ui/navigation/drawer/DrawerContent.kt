@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Key
@@ -449,6 +450,14 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Bookmarks,
+        )
+
+        NavigationRow(
+            title = R.string.bookmark_lists,
+            icon = Icons.Outlined.CollectionsBookmark,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.BookmarkGroups,
         )
 
         NavigationRow(

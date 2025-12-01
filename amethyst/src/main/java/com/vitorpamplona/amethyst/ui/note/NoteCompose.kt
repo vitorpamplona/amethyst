@@ -241,6 +241,7 @@ fun NoteCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    moreOptions: (@Composable () -> Unit)? = null,
 ) {
     WatchNoteEvent(
         baseNote = baseNote,
@@ -269,6 +270,7 @@ fun NoteCompose(
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                moreOptions = moreOptions,
             )
         }
     }
@@ -288,6 +290,7 @@ fun AcceptableNote(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    moreOptions: (@Composable () -> Unit)?,
 ) {
     if (isQuotedNote || isBoostedNote) {
         val noteEvent = baseNote.event
@@ -333,6 +336,7 @@ fun AcceptableNote(
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
                         nav = nav,
+                        moreOptions = moreOptions,
                     )
                 }
         }
@@ -379,6 +383,7 @@ fun AcceptableNote(
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
                         nav = nav,
+                        moreOptions = moreOptions,
                     )
                 }
         }
@@ -438,6 +443,7 @@ private fun CheckNewAndRenderNote(
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
+    moreOptions: (@Composable () -> Unit)? = null,
 ) {
     val backgroundColor =
         calculateBackgroundColor(
@@ -466,6 +472,7 @@ private fun CheckNewAndRenderNote(
             quotesLeft = quotesLeft,
             accountViewModel = accountViewModel,
             nav = nav,
+            moreOptions = moreOptions,
         )
     }
 }
@@ -513,6 +520,7 @@ fun InnerNoteWithReactions(
     quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
+    moreOptions: (@Composable () -> Unit)? = null,
 ) {
     val notBoostedNorQuote = !isBoostedNote && !isQuotedNote
     val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
@@ -556,6 +564,7 @@ fun InnerNoteWithReactions(
                 editState = editState,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                moreOptions = moreOptions,
             )
 
             RenderApprovalIfNeeded(baseNote, accountViewModel, nav)
@@ -638,6 +647,7 @@ fun NoteBody(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    moreOptions: (@Composable () -> Unit)? = null,
 ) {
     FirstUserInfoRow(
         baseNote = baseNote,
@@ -645,6 +655,7 @@ fun NoteBody(
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        moreOptions = moreOptions,
     )
 
     if (showSecondRow) {
@@ -1137,6 +1148,7 @@ fun FirstUserInfoRow(
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    moreOptions: (@Composable () -> Unit)? = null,
 ) {
     Row(verticalAlignment = CenterVertically, modifier = UserNameRowHeight) {
         val isRepost = baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent
@@ -1187,7 +1199,11 @@ fun FirstUserInfoRow(
 
         TimeAgo(baseNote)
 
-        MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+        if (moreOptions == null) {
+            MoreOptionsButton(baseNote, editState, accountViewModel, nav)
+        } else {
+            moreOptions()
+        }
     }
 }
 

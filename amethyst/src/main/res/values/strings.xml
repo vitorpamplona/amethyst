@@ -112,10 +112,12 @@
 
     <string name="error_parsing_preview_for">"Error parsing preview for %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
+    <string name="article">Article</string>
     <string name="new_channel">New Channel</string>
     <string name="channel_name">Channel Name</string>
     <string name="my_awesome_group">My Awesome Group</string>
     <string name="picture_url">Picture Url</string>
+    <string name="optional_picture_url">Picture Url(Optional)</string>
     <string name="description">Description</string>
     <string name="no_description">Description not found</string>
     <string name="about_us">"About us.. "</string>
@@ -387,6 +389,39 @@
     <string name="add_to_public_bookmarks">Add to Public Bookmarks</string>
     <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
+
+    <string name="bookmark_lists">Bookmark Lists</string>
+    <string name="bookmark_list_icon_label">Icon for bookmark list</string>
+    <string name="bookmark_list_creation_screen_title">New Bookmark List</string>
+    <string name="bookmark_list_edit_sub_title">Bookmark List Metadata</string>
+    <string name="bookmark_list_clone_btn_label">Clone Bookmark List</string>
+    <string name="bookmark_list_broadcast_btn_label">Broadcast Bookmark List</string>
+    <string name="bookmark_list_delete_btn_label">Delete Bookmark List</string>
+    <string name="bookmark_list_posts_btn_label">View Posts</string>
+    <string name="bookmark_list_articles_btn_label">View Articles</string>
+    <string name="bookmark_list_links_btn_label">View Links</string>
+    <string name="bookmark_list_hashtags_btn_label">View Hashtags</string>
+    <string name="bookmark_list_feed_empty_msg">You do not have any bookmark lists yet. Tap the new button below to make one.</string>
+    <string name="private_posts_label">Private Posts</string>
+    <string name="private_posts_count">Private Posts(%1$s)</string>
+    <string name="public_posts_label">Public Posts</string>
+    <string name="public_posts_count">Public Posts(%1$s)</string>
+    <string name="private_articles_label">Private Articles</string>
+    <string name="private_articles_count">Private Articles(%1$s)</string>
+    <string name="public_articles_label">Public Articles</string>
+    <string name="public_articles_count">Public Articles(%1$s)</string>
+    <string name="manage_bookmark_label">Manage %1$s in Bookmark Lists</string>
+    <string name="post_bookmark_management_title">Bookmark this post</string>
+    <string name="article_bookmark_management_title">Bookmark this article</string>
+    <string name="public_bookmark_presence_indicator">is a public bookmark here</string>
+    <string name="private_bookmark_presence_indicator">is a private bookmark here</string>
+    <string name="bookmark_absence_indicator">is not a bookmark here</string>
+    <string name="bookmark_remove_action_desc">Remove bookmark from list</string>
+    <string name="bookmark_add_action_desc">Add bookmark to list</string>
+    <string name="public_bookmark_add_action_label">Add as public bookmark</string>
+    <string name="private_bookmark_add_action_label">Add as private bookmark</string>
+    <string name="bookmark_remove_action_label">Remove from Bookmark List</string>
+    <string name="bookmark_list_explainer">Bookmark lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>
 
     <string name="wallet_connect_service">Wallet Connect Service</string>
     <string name="wallet_connect_service_explainer">Authorizes a Nostr Secret to pay zaps without leaving the app. Keep the secret safe and use a private relay if possible</string>
