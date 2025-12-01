@@ -60,6 +60,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun BookmarkGroupItemOptions(
     baseNote: Note,
+    isBookmarkItemPrivate: Boolean,
+    onMoveBookmarkToPublic: () -> Unit,
+    onMoveBookmarkToPrivate: () -> Unit,
     onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
@@ -76,7 +79,10 @@ fun BookmarkGroupItemOptions(
         if (popupExpanded.value) {
             BookmarkGroupItemOptionsMenu(
                 note = baseNote,
+                isBookmarkItemPrivate = isBookmarkItemPrivate,
                 onDismiss = { popupExpanded.value = false },
+                onMoveBookmarkToPublic = onMoveBookmarkToPublic,
+                onMoveBookmarkToPrivate = onMoveBookmarkToPrivate,
                 onDeleteBookmarkItem = onDeleteBookmarkItem,
                 editState = editState,
                 accountViewModel = accountViewModel,
@@ -89,7 +95,10 @@ fun BookmarkGroupItemOptions(
 @Composable
 fun BookmarkGroupItemOptionsMenu(
     note: Note,
+    isBookmarkItemPrivate: Boolean,
     onDismiss: () -> Unit,
+    onMoveBookmarkToPublic: () -> Unit,
+    onMoveBookmarkToPrivate: () -> Unit,
     onDeleteBookmarkItem: () -> Unit,
     editState: State<GenericLoadable<EditState>>? = null,
     accountViewModel: AccountViewModel,
@@ -150,17 +159,16 @@ fun BookmarkGroupItemOptionsMenu(
 
         val scope = rememberCoroutineScope()
         DropdownMenuItem(
+            text = { Text(stringRes(if (isBookmarkItemPrivate) R.string.move_bookmark_to_public_label else R.string.move_bookmark_to_private_label)) },
+            onClick = if (isBookmarkItemPrivate) onMoveBookmarkToPublic else onMoveBookmarkToPrivate,
+        )
+        DropdownMenuItem(
             text = { Text(stringRes(R.string.bookmark_remove_action_label)) },
             onClick = {
                 onDeleteBookmarkItem()
                 onDismiss()
             },
         )
-        // TODO: Work on moving feature below
-//        DropdownMenuItem(
-//            text = { Text("Move to Public") },
-//            onClick =
-//        )
         HorizontalDivider(thickness = DividerThickness)
 
         if (!state.isFollowingAuthor) {

@@ -265,6 +265,23 @@ class LabeledBookmarkListsState(
         account.sendMyPublicAndPrivateOutbox(updatedList)
     }
 
+    suspend fun moveBookmarkInList(
+        bookmark: BookmarkIdTag,
+        bookmarkListIdentifier: String,
+        isBookmarkCurrentlyPrivate: Boolean,
+        account: Account,
+    ) {
+        val bookmarkList = getLabeledBookmarkListEvent(bookmarkListIdentifier)
+        val updatedList =
+            LabeledBookmarkListEvent.moveBookmark(
+                earlierVersion = bookmarkList,
+                bookmarkIdTag = bookmark,
+                isCurrentlyPrivate = isBookmarkCurrentlyPrivate,
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(updatedList)
+    }
+
     suspend fun removeBookmarkFromList(
         bookmark: BookmarkIdTag,
         bookmarkListIdentifier: String,

@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipM
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
@@ -48,11 +48,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.BookmarkMembershipStatusAndNumberDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun BookmarkGroupManagementItem(
@@ -60,6 +62,8 @@ fun BookmarkGroupManagementItem(
     listTitle: String,
     isPrivateMemberBookmark: Boolean,
     isPublicMemberBookmark: Boolean,
+    totalPostBookmarkSize: Int,
+    totalArticleBookmarkSize: Int,
     onClick: () -> Unit,
     onAddBookmarkToGroup: (shouldBookmarkBePrivate: Boolean) -> Unit,
     onRemoveBookmarkFromGroup: () -> Unit,
@@ -77,13 +81,19 @@ fun BookmarkGroupManagementItem(
             BookmarkStatusInList(isPublicMemberBookmark, isPrivateMemberBookmark)
         },
         leadingContent = {
-            Box(
-                contentAlignment = Alignment.Center,
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CollectionsBookmark,
                     contentDescription = stringRes(R.string.bookmark_list_icon_label),
                     modifier = Size50Modifier,
+                )
+                Spacer(StdVertSpacer)
+                BookmarkMembershipStatusAndNumberDisplay(
+                    postBookmarksSize = totalPostBookmarkSize,
+                    articleBookmarksSize = totalArticleBookmarkSize,
                 )
             }
         },

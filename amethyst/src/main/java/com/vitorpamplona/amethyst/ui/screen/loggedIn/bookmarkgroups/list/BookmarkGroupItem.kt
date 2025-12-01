@@ -32,8 +32,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -70,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun BookmarkGroupItem(
@@ -135,13 +134,12 @@ fun BookmarkGroupItem(
                             contentDescription = stringRes(R.string.bookmark_list_icon_label),
                             modifier = Size40Modifier,
                         )
-                        // TODO: Fix the component below, with per-category stats
-//                        Spacer(StdVertSpacer)
-//                        BookmarkMembershipStatusAndNumberDisplay(
-//                            modifier = Modifier.align(Alignment.CenterHorizontally),
-//                            privateBookmarksSize = bookmarkList.privateBookmarks.size,
-//                            publicBookmarksSize = bookmarkList.publicBookmarks.size,
-//                        )
+                        Spacer(StdVertSpacer)
+                        BookmarkMembershipStatusAndNumberDisplay(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            postBookmarksSize = bookmarkList.publicPostBookmarks.size + bookmarkList.privatePostBookmarks.size,
+                            articleBookmarksSize = bookmarkList.publicArticleBookmarks.size + bookmarkList.privateArticleBookmarks.size,
+                        )
                     }
                 },
             )
@@ -193,49 +191,49 @@ private fun BookmarkGroupActions(
 
 @Composable
 fun BookmarkMembershipStatusAndNumberDisplay(
-    modifier: Modifier,
-    privateBookmarksSize: Int,
-    publicBookmarksSize: Int,
+    modifier: Modifier = Modifier,
+    postBookmarksSize: Int,
+    articleBookmarksSize: Int,
 ) {
     Row(
         modifier = modifier.offset(y = (-5).dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = SpacedBy5dp,
     ) {
-        if (privateBookmarksSize <= 0 && publicBookmarksSize <= 0) {
+        if (postBookmarksSize <= 0 && articleBookmarksSize <= 0) {
             Text(
                 text = stringRes(R.string.follow_set_empty_label2),
                 fontSize = Font10SP,
             )
         } else {
-            if (privateBookmarksSize > 0) {
+            if (postBookmarksSize > 0) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Lock,
+                        painter = painterResource(R.drawable.post),
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )
                     Text(
-                        text = privateBookmarksSize.toString(),
+                        text = postBookmarksSize.toString(),
                         fontSize = Font10SP,
                     )
                 }
             }
-            if (publicBookmarksSize > 0) {
+            if (articleBookmarksSize > 0) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = SpacedBy2dp,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Public,
+                        imageVector = Icons.AutoMirrored.Outlined.Article,
                         modifier = Size10Modifier,
                         contentDescription = null,
                     )
                     Text(
-                        text = publicBookmarksSize.toString(),
+                        text = articleBookmarksSize.toString(),
                         fontSize = Font10SP,
                     )
                 }
