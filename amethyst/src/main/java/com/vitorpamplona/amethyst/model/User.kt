@@ -298,7 +298,6 @@ class UserFlowSet(
     val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
     val followers = UserBundledRefresherFlow(u)
-    val reports = UserBundledRefresherFlow(u)
     val usedRelays = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
@@ -307,7 +306,6 @@ class UserFlowSet(
         metadata.hasObservers() ||
             follows.hasObservers() ||
             followers.hasObservers() ||
-            reports.hasObservers() ||
             usedRelays.hasObservers() ||
             zaps.hasObservers() ||
             statuses.hasObservers()

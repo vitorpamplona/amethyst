@@ -798,9 +798,6 @@ object LocalCache : ILocalCache {
             is ReactionEvent ->
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
-            is ReportEvent ->
-                event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
-                    event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
             is ChannelMessageEvent ->
                 event
                     .tagsWithoutCitations()
@@ -1511,39 +1508,22 @@ object LocalCache : ILocalCache {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
 
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
+        val new = consumeRegularEvent(event, relay, wasVerified)
 
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (wasVerified || justVerify(event)) {
+        if (new) {
             val authorsReported = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubkey) }
-            val repliesTo = computeReplyTo(event)
+            val eventsReported =
+                event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
+                    event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
 
-            note.loadEvent(event, author, repliesTo)
-
-            // Log.d("RP", "New Report ${event.content} by ${note.author?.toBestDisplayName()}
-            // ${formattedDateTime(event.createdAt)}")
-            // Adds notifications to users.
-            if (repliesTo.isEmpty()) {
+            if (eventsReported.isEmpty()) {
                 authorsReported.forEach { author ->
                     author.reports().addReport(note)
                 }
             } else {
-                repliesTo.forEach { it.addReport(note) }
-
-                authorsReported.forEach {
-                    // doesn't add to reports, but triggers recounts
-                    it.flowSet?.reports?.invalidateData()
-                }
+                eventsReported.forEach { it.addReport(note) }
             }
-
-            refreshNewNoteObservers(note)
 
             return true
         }
@@ -2472,9 +2452,16 @@ object LocalCache : ILocalCache {
             }
         }
         if (noteEvent is ReportEvent) {
-            noteEvent.reportedAuthor().mapNotNull {
-                val author = getUserIfExists(it.pubkey)
-                author?.reportsOrNull()?.removeReport(note)
+            noteEvent.reportedAuthor().forEach {
+                getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(note)
+            }
+
+            noteEvent.reportedPost().forEach {
+                getNoteIfExists(it.eventId)?.removeReport(note)
+            }
+
+            noteEvent.reportedAddresses().forEach {
+                getAddressableNoteIfExists(it.address)?.removeReport(note)
             }
         }
 

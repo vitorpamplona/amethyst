@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 class UserReportCache : UserDependencies {
@@ -83,6 +84,11 @@ class UserReportCache : UserDependencies {
     fun reportsBy(user: User): Set<Note> = receivedReportsByAuthor.value[user] ?: emptySet()
 
     fun count() = receivedReportsByAuthor.value.values.sumOf { it.size }
+
+    fun countFlow() =
+        receivedReportsByAuthor.map { reportPerAuthor ->
+            reportPerAuthor.values.sumOf { it.size }
+        }
 
     fun countReportAuthorsBy(users: Set<HexKey>): Int = receivedReportsByAuthor.value.count { it.key.pubkeyHex in users }
 

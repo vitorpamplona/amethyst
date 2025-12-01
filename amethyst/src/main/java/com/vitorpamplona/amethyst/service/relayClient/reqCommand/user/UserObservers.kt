@@ -44,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
@@ -596,17 +597,7 @@ fun observeUserReportCount(
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .reports
-                .stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.reportsOrNull()?.count() ?: 0
-                }.distinctUntilChanged()
-        }
+    val flow = remember(user) { user.reports().countFlow() }
 
     return flow.collectAsStateWithLifecycle(0)
 }
