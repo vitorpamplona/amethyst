@@ -32,6 +32,7 @@ class Nip11RelayInformation(
     val icon: String? = null,
     val pubkey: String? = null,
     val contact: String? = null,
+    @Serializable(with = FlexibleIntListSerializer::class)
     val supported_nips: List<Int>? = null,
     val supported_nip_extensions: List<String>? = null,
     val software: String? = null,
