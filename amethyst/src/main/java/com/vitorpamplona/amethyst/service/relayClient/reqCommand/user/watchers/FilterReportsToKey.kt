@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -31,25 +30,19 @@ val ReportKindList = listOf(ReportEvent.KIND)
 
 fun filterReportsToKeysFromTrusted(
     targets: Set<HexKey>,
-    trustedAccounts: Map<NormalizedRelayUrl, Set<HexKey>>,
-    since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    if (targets.isEmpty() || trustedAccounts.isEmpty()) return emptyList()
-    val sortedTargets = mapOf("p" to targets.sorted())
-    return trustedAccounts.mapNotNull {
-        if (it.value.isNotEmpty()) {
-            RelayBasedFilter(
-                relay = it.key,
-                filter =
-                    Filter(
-                        kinds = ReportKindList,
-                        authors = it.value.sorted(),
-                        tags = sortedTargets,
-                        since = since?.get(it.key)?.time,
-                    ),
-            )
-        } else {
-            null
-        }
-    }
+    trustedAccounts: List<HexKey>,
+    relay: NormalizedRelayUrl,
+    since: Long?,
+): RelayBasedFilter? {
+    if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
+    return RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = ReportKindList,
+                authors = trustedAccounts,
+                tags = mapOf("p" to targets.sorted()),
+                since = since,
+            ),
+    )
 }

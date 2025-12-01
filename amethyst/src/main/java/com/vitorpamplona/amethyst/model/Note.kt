@@ -746,11 +746,10 @@ open class Note(
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
-        return reports.isNotEmpty() ||
-            (
-                author?.reports?.any { it.value.firstOrNull { (it.createdAt() ?: 0L) > dayAgo } != null }
-                    ?: false
-            )
+
+        if (reports.isNotEmpty()) return true
+
+        return author?.reportsOrNull()?.hasReportNewerThan(dayAgo) ?: false
     }
 
     fun isNewThread(): Boolean =

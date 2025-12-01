@@ -36,7 +36,7 @@ class EOSERelayList {
     ) {
         val eose = relayList[relayUrl]
         if (eose == null) {
-            relayList.put(relayUrl, MutableTime(time))
+            relayList[relayUrl] = MutableTime(time)
         } else {
             eose.updateIfNewer(time)
         }

@@ -34,7 +34,7 @@ class ReportAction {
             by: User,
             signer: NostrSigner,
         ): ReportEvent? {
-            if (user.hasReport(by, type)) {
+            if (user.reports().hasReport(by, type)) {
                 // has already reported this note
                 return null
             }

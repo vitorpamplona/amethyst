@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReports
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -34,6 +32,5 @@ fun WatchReportsAndUpdateFeed(
     feedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val userState by observeUserReports(baseUser, accountViewModel)
-    LaunchedEffect(userState) { feedViewModel.invalidateData() }
+    observeUserReports(baseUser, accountViewModel) { feedViewModel.invalidateData() }
 }

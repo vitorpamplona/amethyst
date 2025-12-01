@@ -32,14 +32,15 @@ class UserProfileReportsFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = user.pubkeyHex
 
-    override fun feed(): List<Note> = sort(innerApplyFilter(user.reports.values.flatten()))
+    override fun feed(): List<Note> = sort(innerApplyFilter(user.reportsOrNull()?.all() ?: emptyList()))
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
         collection
-            .filter { it.event is ReportEvent && it.event?.isTaggedUser(user.pubkeyHex) == true }
-            .toSet()
+            .filterTo(mutableSetOf<Note>()) {
+                it.event is ReportEvent && it.event?.isTaggedUser(user.pubkeyHex) == true
+            }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 

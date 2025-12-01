@@ -1659,15 +1659,21 @@ class Account(
         }
 
         if (!settings.syncedSettings.security.warnAboutPostsWithReports) {
-            return !isHidden(user) &&
-                // if user hasn't hided this author
-                user.reportsBy(userProfile()).isEmpty() // if user has not reported this post
+            if (isHidden(user)) return false
+
+            val reports = user.reportsOrNull() ?: return true
+
+            return reports.reportsBy(userProfile()).isEmpty() // if user has not reported this post
         }
-        return !isHidden(user) &&
-            // if user hasn't hided this author
-            user.reportsBy(userProfile()).isEmpty() &&
+
+        if (isHidden(user)) return false
+
+        val reports = user.reportsOrNull() ?: return true
+
+        // if user hasn't hided this author
+        return reports.reportsBy(userProfile()).isEmpty() &&
             // if user has not reported this post
-            user.countReportAuthorsBy(followingKeySet()) < 5
+            reports.countReportAuthorsBy(followingKeySet()) < 5
     }
 
     private fun isAcceptableDirect(note: Note): Boolean {
@@ -1720,7 +1726,7 @@ class Account(
 
         return (
             note.reportsBy(kind3FollowList.flow.value.authorsPlusMe) +
-                (note.author?.reportsBy(kind3FollowList.flow.value.authorsPlusMe) ?: emptyList()) +
+                (note.author?.reportsOrNull()?.reportsBy(kind3FollowList.flow.value.authorsPlusMe) ?: emptyList()) +
                 innerReports
         ).toSet()
     }

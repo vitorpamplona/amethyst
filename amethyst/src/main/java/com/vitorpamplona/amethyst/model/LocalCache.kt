@@ -1332,7 +1332,7 @@ object LocalCache : ILocalCache {
                 ?.mapNotNull { it.getOrNull(1) }
                 ?.mapNotNull { checkGetOrCreateUser(it) }
 
-        mentions?.forEach { user -> user.removeReport(deleteNote) }
+        mentions?.forEach { user -> user.reportsOrNull()?.removeReport(deleteNote) }
 
         // Counts the replies
         deleteNote.replyTo?.forEach { masterNote ->
@@ -1515,7 +1515,7 @@ object LocalCache : ILocalCache {
         if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
-            val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubkey) }
+            val authorsReported = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubkey) }
             val repliesTo = computeReplyTo(event)
 
             note.loadEvent(event, author, repliesTo)
@@ -1524,11 +1524,13 @@ object LocalCache : ILocalCache {
             // ${formattedDateTime(event.createdAt)}")
             // Adds notifications to users.
             if (repliesTo.isEmpty()) {
-                mentions.forEach { it.addReport(note) }
+                authorsReported.forEach { author ->
+                    author.reports().addReport(note)
+                }
             } else {
                 repliesTo.forEach { it.addReport(note) }
 
-                mentions.forEach {
+                authorsReported.forEach {
                     // doesn't add to reports, but triggers recounts
                     it.flowSet?.reports?.invalidateData()
                 }
@@ -2465,7 +2467,7 @@ object LocalCache : ILocalCache {
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().mapNotNull {
                 val author = getUserIfExists(it.pubkey)
-                author?.removeReport(note)
+                author?.reportsOrNull()?.removeReport(note)
             }
         }
 

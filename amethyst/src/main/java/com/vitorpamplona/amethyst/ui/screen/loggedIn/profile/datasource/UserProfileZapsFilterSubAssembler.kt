@@ -32,7 +32,7 @@ class UserProfileZapsFilterSubAssembler(
     override fun updateFilter(
         key: UserProfileQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
+    ): List<RelayBasedFilter> =
         listOfNotNull(
             filterUserProfileZapsReceived(user(key), since),
         ).flatten()

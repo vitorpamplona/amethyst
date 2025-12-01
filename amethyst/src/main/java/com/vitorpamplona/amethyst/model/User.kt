@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
@@ -35,8 +35,6 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -44,6 +42,9 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
+import kotlin.plus
+
+interface UserDependencies
 
 @Stable
 class User(
@@ -51,14 +52,15 @@ class User(
     val nip65RelayListNote: Note,
     val dmRelayListNote: Note,
 ) {
+    private var reports: UserReportCache? = null
+
+    // private var deps = ScatterMap<KClass<out UserDependencies>, UserDependencies>()
+
     var info: UserMetadata? = null
 
     var latestMetadata: MetadataEvent? = null
     var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
-
-    var reports = mapOf<User, Set<Note>>()
-        private set
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -143,30 +145,6 @@ class User(
         }
     }
 
-    fun addReport(note: Note) {
-        val author = note.author ?: return
-
-        val reportsBy = reports[author]
-        if (reportsBy == null) {
-            reports = reports + Pair(author, setOf(note))
-            flowSet?.reports?.invalidateData()
-        } else if (!reportsBy.contains(note)) {
-            reports = reports + Pair(author, reportsBy + note)
-            flowSet?.reports?.invalidateData()
-        }
-    }
-
-    fun removeReport(deleteNote: Note) {
-        val author = deleteNote.author ?: return
-
-        if (reports[author]?.contains(deleteNote) == true) {
-            reports[author]?.let {
-                reports = reports + Pair(author, it.minus(deleteNote))
-                flowSet?.reports?.invalidateData()
-            }
-        }
-    }
-
     fun addZap(
         zapRequest: Note,
         zap: Note?,
@@ -198,20 +176,6 @@ class User(
 
         return amount
     }
-
-    fun reportsBy(user: User): Set<Note> = reports[user] ?: emptySet()
-
-    fun countReportAuthorsBy(users: Set<HexKey>): Int = reports.count { it.key.pubkeyHex in users }
-
-    fun reportsBy(users: Set<HexKey>): List<Note> =
-        reports
-            .mapNotNull {
-                if (it.key.pubkeyHex in users) {
-                    it.value
-                } else {
-                    null
-                }
-            }.flatten()
 
     fun addRelayBeingUsed(
         relay: NormalizedRelayUrl,
@@ -255,13 +219,13 @@ class User(
 
     suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
-    fun hasReport(
-        loggedIn: User,
-        type: ReportType,
-    ): Boolean =
-        reports[loggedIn]?.firstOrNull {
-            (it.event as? ReportEvent)?.reportedAuthor()?.any { it.type == type } ?: false
-        } != null
+    fun reportsOrNull(): UserReportCache? = reports
+
+    fun reports(): UserReportCache = reports ?: UserReportCache().also { reports = it }
+
+    // fun reportsOrNull(): UserReports? = deps[UserReports::class] as? UserReports
+
+    // fun reports(): UserReports = deps.getOrPut(UserReports::class) { UserReports() } as UserReports
 
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false
@@ -373,3 +337,13 @@ class UserBundledRefresherFlow(
 class UserState(
     val user: User,
 )
+
+fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
+
+fun Set<User>.toSortedHexes() = map { it.pubkeyHex }.sorted()
+
+fun List<User>.toHexes() = map { it.pubkeyHex }
+
+fun List<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
+
+fun List<User>.toSortedHexes() = map { it.pubkeyHex }.sorted()

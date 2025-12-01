@@ -46,6 +46,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import java.math.BigDecimal
@@ -569,15 +570,20 @@ fun observeUserZapAmount(
 fun observeUserReports(
     user: User,
     accountViewModel: AccountViewModel,
-): State<UserState?> {
+    onUpdate: () -> Unit,
+) {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .flow()
-        .reports.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow =
+        remember(user, onUpdate) {
+            user
+                .reports()
+                .receivedReportsByAuthor
+                .onEach { onUpdate() }
+                .onStart { onUpdate() }
+        }.collectAsStateWithLifecycle(emptyMap())
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -598,8 +604,7 @@ fun observeUserReportCount(
                 .stateFlow
                 .sample(1000)
                 .mapLatest { userState ->
-                    userState.user.reports.values
-                        .sumOf { it.size }
+                    userState.user.reportsOrNull()?.count() ?: 0
                 }.distinctUntilChanged()
         }
 

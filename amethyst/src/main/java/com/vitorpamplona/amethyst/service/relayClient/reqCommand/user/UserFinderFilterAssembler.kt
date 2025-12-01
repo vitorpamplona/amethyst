@@ -46,7 +46,7 @@ class UserFinderFilterAssembler(
         listOf(
             UserOutboxFinderSubAssembler(client, cache, failureTracker, ::allKeys),
             UserWatcherSubAssembler(client, cache, ::allKeys),
-            UserReportsSubAssembler(client, ::allKeys),
+            UserReportsSubAssembler(client, cache, ::allKeys),
             UserCardsSubAssembler(client, ::allKeys),
         )
 
