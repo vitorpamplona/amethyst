@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,7 +30,7 @@ import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
 
 @Composable
 fun UserDisplayNameLayout(
-    picture: @Composable () -> Unit,
+    picture: @Composable BoxScope.() -> Unit,
     name: @Composable () -> Unit,
 ) {
     Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {

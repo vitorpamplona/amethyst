@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.model.Note
@@ -31,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.ui.note.InnerUserPicture
+import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderUserCards
 import com.vitorpamplona.amethyst.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.UserDisplayNameLayout
@@ -73,6 +75,8 @@ private fun WatchAndDisplayUser(
                     FollowingIcon(Size5Modifier)
                 }
             }
+
+            ObserveAndRenderUserCards(author, Size20dp, Modifier.align(Alignment.BottomCenter), accountViewModel)
         },
         name = {
             if (userState != null) {
