@@ -49,8 +49,8 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -177,10 +177,10 @@ fun RenderFollowSetThumb(
                     mainImageModifier = FollowSetImageModifier,
                     loadedImageModifier = Modifier,
                     accountViewModel = accountViewModel,
-                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
-                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                    onLoadingBackground = { DefaultImageBannerBackground(baseNote, accountViewModel) },
+                    onError = { DefaultImageBanner(baseNote, accountViewModel) },
                 )
-            } ?: run { DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier) }
+            } ?: run { DefaultImageBanner(baseNote, accountViewModel, FollowSetImageModifier) }
 
             GalleryUnloaded(card.users, StdPadding, accountViewModel, nav)
         }

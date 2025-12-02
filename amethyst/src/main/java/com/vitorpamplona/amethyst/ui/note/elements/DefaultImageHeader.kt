@@ -61,6 +61,17 @@ fun DefaultImageHeader(
 }
 
 @Composable
+fun DefaultImageBanner(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = SimpleHeaderImage,
+) {
+    WatchAuthor(baseNote = note, accountViewModel) {
+        BannerImage(it, modifier, accountViewModel)
+    }
+}
+
+@Composable
 fun DefaultImageHeaderBackground(
     note: Note,
     accountViewModel: AccountViewModel,
@@ -74,6 +85,17 @@ fun DefaultImageHeaderBackground(
                 BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
             }
         }
+    }
+}
+
+@Composable
+fun DefaultImageBannerBackground(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = SimpleHeaderImage,
+) {
+    WatchAuthor(baseNote = note, accountViewModel) {
+        BannerImage(it, modifier.blur(Size16dp), accountViewModel)
     }
 }
 
