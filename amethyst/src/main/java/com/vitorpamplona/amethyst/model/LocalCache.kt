@@ -2480,19 +2480,25 @@ object LocalCache : ILocalCache {
         checkNotInMainThread()
 
         val now = TimeUtils.now()
-        val toBeRemoved = notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
+        val versionsToBeRemoved = notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
+        val addressesToBeRemoved = addressables.filter { _, it -> it.event?.isExpirationBefore(now) == true }
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
-        toBeRemoved.forEach {
+        versionsToBeRemoved.forEach {
+            removeFromCache(it)
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        addressesToBeRemoved.forEach {
             removeFromCache(it)
             childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
         removeFromCache(childrenToBeRemoved)
 
-        if (toBeRemoved.size > 1) {
-            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
+        if (versionsToBeRemoved.size > 1 || addressesToBeRemoved.size > 1) {
+            println("PRUNE: ${versionsToBeRemoved.size} events and ${addressesToBeRemoved.size} expired.")
         }
     }
 
