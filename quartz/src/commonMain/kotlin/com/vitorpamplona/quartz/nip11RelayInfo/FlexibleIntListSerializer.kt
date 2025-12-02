@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip11RelayInfo
 
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -42,30 +43,30 @@ object FlexibleIntListSerializer : KSerializer<List<Int>?> {
     override fun deserialize(decoder: Decoder): List<Int>? {
         require(decoder is JsonDecoder) { "This serializer can only be used with Json format" }
 
-        val element = decoder.decodeJsonElement()
-
-        return when {
+        return when (val element = decoder.decodeJsonElement()) {
             // Handle JSON null
-            element is JsonNull -> null
+            is JsonNull -> null
 
             // Handle array format (spec-compliant): [1, 2, 3]
-            element is JsonArray -> {
+            is JsonArray -> {
                 element.mapNotNull { arrayElement ->
                     try {
                         arrayElement.jsonPrimitive.int
                     } catch (e: Exception) {
                         // Skip elements that aren't valid integers (strings, booleans, floats, etc.)
+                        Log.w("FlexibleIntListSerializer", "Invalid element in array: $arrayElement", e)
                         null
                     }
                 }
             }
 
             // Handle single integer format (malformed but found in the wild): 1
-            element is JsonPrimitive && !element.isString -> {
+            is JsonPrimitive if !element.isString -> {
                 try {
                     listOf(element.int)
                 } catch (e: Exception) {
                     // Can't parse as integer (e.g., float, boolean), treat as missing data
+                    Log.w("FlexibleIntListSerializer", "Invalid primitive: $element", e)
                     null
                 }
             }
