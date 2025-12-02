@@ -470,10 +470,8 @@ open class NewProductViewModel :
     }
 
     fun reloadRelaySet() {
-        val account = accountViewModel?.account ?: return
-
         relayList =
-            account.outboxRelays.flow.value
+            accountViewModel.account.outboxRelays.flow.value
                 .toImmutableList()
     }
 
