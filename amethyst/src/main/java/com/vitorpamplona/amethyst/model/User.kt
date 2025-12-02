@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.nip56Reports.UserReportCache
+import com.vitorpamplona.amethyst.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
@@ -53,6 +54,7 @@ class User(
     val dmRelayListNote: Note,
 ) {
     private var reports: UserReportCache? = null
+    private var cards: UserCardsCache? = null
 
     // private var deps = ScatterMap<KClass<out UserDependencies>, UserDependencies>()
 
@@ -226,6 +228,10 @@ class User(
     // fun reportsOrNull(): UserReports? = deps[UserReports::class] as? UserReports
 
     // fun reports(): UserReports = deps.getOrPut(UserReports::class) { UserReports() } as UserReports
+
+    fun cardsOrNull(): UserCardsCache? = cards
+
+    fun cards(): UserCardsCache = cards ?: UserCardsCache().also { cards = it }
 
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false

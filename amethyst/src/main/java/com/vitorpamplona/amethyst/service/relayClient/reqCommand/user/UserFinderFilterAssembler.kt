@@ -47,7 +47,7 @@ class UserFinderFilterAssembler(
             UserOutboxFinderSubAssembler(client, cache, failureTracker, ::allKeys),
             UserWatcherSubAssembler(client, cache, ::allKeys),
             UserReportsSubAssembler(client, cache, ::allKeys),
-            UserCardsSubAssembler(client, ::allKeys),
+            UserCardsSubAssembler(client, cache, ::allKeys),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

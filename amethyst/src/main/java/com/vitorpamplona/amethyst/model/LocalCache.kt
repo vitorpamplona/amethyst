@@ -1093,11 +1093,26 @@ object LocalCache : ILocalCache {
         return false
     }
 
+    fun Event.toNote() = getOrCreateNote(id)
+
+    fun AddressableEvent.toAddressableNote() = getOrCreateAddressableNote(address())
+
     fun consume(
         event: ContactCardEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ) = consumeBaseReplaceable(event, relay, wasVerified)
+    ): Boolean {
+        val note = event.toAddressableNote()
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
+
+        if (new) {
+            println("AABBCC New ContactCard about ${event.aboutUser()}")
+            val about = checkGetOrCreateUser(event.aboutUser()) ?: return new
+            about.cards().addCard(note)
+        }
+
+        return new
+    }
 
     fun consume(
         event: OtsEvent,
@@ -1335,6 +1350,9 @@ object LocalCache : ILocalCache {
             }
         }
 
+        if (deleteNote is AddressableNote && deletedEvent is ContactCardEvent) {
+            getUserIfExists(deletedEvent.aboutUser())?.cardsOrNull()?.removeCard(deleteNote)
+        }
 
         if (deletedEvent is TorrentCommentEvent) {
             deletedEvent.torrentIds()?.let {
@@ -2459,6 +2477,9 @@ object LocalCache : ILocalCache {
             noteEvent.reportedAddresses().forEach {
                 getAddressableNoteIfExists(it.address)?.removeReport(note)
             }
+        }
+        if (note is AddressableNote && noteEvent is ContactCardEvent) {
+            getUserIfExists(noteEvent.aboutUser())?.cardsOrNull()?.removeCard(note)
         }
 
         note.clearFlow()

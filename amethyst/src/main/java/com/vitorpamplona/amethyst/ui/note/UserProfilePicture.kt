@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -368,11 +369,7 @@ fun BaseUserPicture(
             }
         }
 
-        WatchUserCards(baseUser.pubkeyHex, accountViewModel) { score ->
-            if (score != null) {
-                ScoreTag(score, size, Modifier.align(Alignment.BottomCenter))
-            }
-        }
+        ObserveAndRenderUserCards(baseUser, size, Modifier.align(Alignment.BottomCenter), accountViewModel)
     }
 }
 
@@ -385,15 +382,21 @@ fun BaseUserPicture(
     outerModifier: Modifier = Modifier.size(size),
 ) {
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        LoadUserProfilePicture(baseUserHex, accountViewModel) { userProfilePicture, userName ->
-            InnerUserPicture(
-                userHex = baseUserHex,
-                userPicture = userProfilePicture,
-                userName = userName,
-                size = size,
-                modifier = innerModifier,
-                accountViewModel = accountViewModel,
-            )
+        LoadUser(baseUserHex, accountViewModel) {
+            if (it != null) {
+                ObserveAndDrawInnerUserPicture(it, size, accountViewModel, innerModifier)
+
+                ObserveAndRenderUserCards(it, size, Modifier.align(Alignment.BottomCenter), accountViewModel)
+            } else {
+                InnerUserPicture(
+                    userHex = baseUserHex,
+                    userPicture = null,
+                    userName = null,
+                    size = size,
+                    modifier = innerModifier,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
 
         WatchUserFollows(baseUserHex, accountViewModel) { newFollowingState ->
@@ -401,13 +404,26 @@ fun BaseUserPicture(
                 FollowingIcon(Modifier.size(size.div(3.5f)))
             }
         }
-
-        WatchUserCards(baseUserHex, accountViewModel) { score ->
-            if (score != null) {
-                ScoreTag(score, size, Modifier.align(Alignment.BottomCenter))
-            }
-        }
     }
+}
+
+@Composable
+fun ObserveAndDrawInnerUserPicture(
+    user: User,
+    size: Dp,
+    accountViewModel: AccountViewModel,
+    innerModifier: Modifier = Modifier,
+) {
+    val userProfile by observeUserInfo(user, accountViewModel)
+
+    InnerUserPicture(
+        userHex = user.pubkeyHex,
+        userPicture = userProfile?.profilePicture(),
+        userName = userProfile?.bestName(),
+        size = size,
+        modifier = innerModifier,
+        accountViewModel = accountViewModel,
+    )
 }
 
 @Preview
@@ -579,17 +595,15 @@ fun WatchUserFollows(
 }
 
 @Composable
-fun WatchUserCards(
-    userHex: String,
+fun ObserveAndRenderUserCards(
+    user: User,
+    size: Dp,
+    modifier: Modifier,
     accountViewModel: AccountViewModel,
-    onScoreChanges: @Composable (Int?) -> Unit,
 ) {
-    val flow =
-        remember(userHex) {
-            accountViewModel.account.loadUserCardFlow(userHex)
-        }
+    val score by observeUserContactCardsScore(user, accountViewModel)
 
-    val score by flow.collectAsStateWithLifecycle(null)
-
-    onScoreChanges(score)
+    score?.let {
+        ScoreTag(it, size, modifier)
+    }
 }

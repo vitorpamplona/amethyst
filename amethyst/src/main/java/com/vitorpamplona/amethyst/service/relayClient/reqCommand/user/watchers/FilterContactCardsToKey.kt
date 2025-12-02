@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -29,27 +28,21 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 val ContactCardKindList = listOf(ContactCardEvent.KIND)
 
-fun filterContactCardsToKeysFromTrusted(
+fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
     targets: Set<HexKey>,
-    trustedAccounts: Map<NormalizedRelayUrl, Set<HexKey>>,
-    since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    if (targets.isEmpty() || trustedAccounts.isEmpty()) return emptyList()
-    val sortedTargets = mapOf("d" to targets.sorted())
-    return trustedAccounts.mapNotNull { relayAuthors ->
-        if (relayAuthors.value.isNotEmpty()) {
-            RelayBasedFilter(
-                relay = relayAuthors.key,
-                filter =
-                    Filter(
-                        kinds = ContactCardKindList,
-                        authors = relayAuthors.value.sorted(),
-                        tags = sortedTargets,
-                        since = since?.get(relayAuthors.key)?.time,
-                    ),
-            )
-        } else {
-            null
-        }
-    }
+    trustedAccounts: List<HexKey>,
+    relay: NormalizedRelayUrl,
+    since: Long?,
+): RelayBasedFilter? {
+    if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
+    return RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = ContactCardKindList,
+                authors = trustedAccounts,
+                tags = mapOf("d" to targets.sorted()),
+                since = since,
+            ),
+    )
 }
