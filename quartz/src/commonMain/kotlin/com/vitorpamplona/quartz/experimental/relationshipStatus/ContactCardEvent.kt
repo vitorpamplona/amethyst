@@ -45,6 +45,8 @@ class ContactCardEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun aboutUser() = tags.dTag()
+
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
 
     fun petName() = tags.firstNotNullOfOrNull(PetNameTag::parse)
