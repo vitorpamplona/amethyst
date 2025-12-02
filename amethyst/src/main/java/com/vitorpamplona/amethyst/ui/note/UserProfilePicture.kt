@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
+import com.vitorpamplona.amethyst.ui.theme.Font6SP
 import com.vitorpamplona.amethyst.ui.theme.Font8SP
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -510,8 +511,10 @@ fun ScoreTag(
 ) {
     if (size > 34.dp) {
         ScoreTagRegular(score, modifier)
-    } else {
+    } else if (size > 23.dp) {
         ScoreTagSmall(score, modifier)
+    } else {
+        ScoreTagSmallest(score, modifier)
     }
 }
 
@@ -554,6 +557,27 @@ fun ScoreTagSmall(
                 .clip(SmallBorder)
                 .background(Color.Black)
                 .padding(horizontal = 3.dp, vertical = 0.dp),
+    )
+}
+
+@Composable
+fun ScoreTagSmallest(
+    score: Int,
+    modifier: Modifier,
+) {
+    Text(
+        text = score.toString(),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        fontSize = Font6SP,
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        lineHeight = Font6SP,
+        modifier =
+            modifier
+                .clip(SmallBorder)
+                .background(Color.Black)
+                .padding(horizontal = 2.dp, vertical = 0.dp),
     )
 }
 
