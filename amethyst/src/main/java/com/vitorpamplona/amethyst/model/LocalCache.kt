@@ -1329,14 +1329,22 @@ object LocalCache : ILocalCache {
     private fun deleteNote(deleteNote: Note) {
         val deletedEvent = deleteNote.event
 
-        val mentions =
-            deleteNote.event
-                ?.tags
-                ?.filter { it.firstOrNull() == "p" }
-                ?.mapNotNull { it.getOrNull(1) }
-                ?.mapNotNull { checkGetOrCreateUser(it) }
+        if (deletedEvent is ReportEvent) {
+            deletedEvent.reportedAuthor().forEach {
+                getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(deleteNote)
+            }
+        }
 
-        mentions?.forEach { user -> user.reportsOrNull()?.removeReport(deleteNote) }
+
+        if (deletedEvent is TorrentCommentEvent) {
+            deletedEvent.torrentIds()?.let {
+                getNoteIfExists(it)?.removeReply(deleteNote)
+            }
+        }
+
+        if (deletedEvent is WrappedEvent) {
+            deleteWraps(deletedEvent)
+        }
 
         // Counts the replies
         deleteNote.replyTo?.forEach { masterNote ->
@@ -1347,15 +1355,7 @@ object LocalCache : ILocalCache {
 
         getAnyChannel(deleteNote)?.removeNote(deleteNote)
 
-        (deletedEvent as? TorrentCommentEvent)?.torrentIds()?.let {
-            getNoteIfExists(it)?.removeReply(deleteNote)
-        }
-
         notes.remove(deleteNote.idHex)
-
-        if (deletedEvent is WrappedEvent) {
-            deleteWraps(deletedEvent)
-        }
 
         deleteNote.clearFlow()
 
@@ -1518,17 +1518,13 @@ object LocalCache : ILocalCache {
                     event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
 
             if (eventsReported.isEmpty()) {
-                authorsReported.forEach { author ->
-                    author.reports().addReport(note)
-                }
+                authorsReported.forEach { author -> author.reports().addReport(note) }
             } else {
                 eventsReported.forEach { it.addReport(note) }
             }
-
-            return true
         }
 
-        return false
+        return new
     }
 
     fun consume(
