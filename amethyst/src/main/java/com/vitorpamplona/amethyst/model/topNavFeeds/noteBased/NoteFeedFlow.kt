@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
@@ -220,11 +221,11 @@ class NoteFeedFlow(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun flow() =
+    override fun flow(): Flow<IFeedTopNavFilter> =
         combineTransform(metadataFlow, outboxRelays, proxyRelays) { noteState, outboxRelays, proxyRelays ->
             val noteEvent = noteState?.note?.event
             if (noteEvent == null) {
-                AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
+                emit(AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays))
             } else {
                 if (proxyRelays.isEmpty()) {
                     processByOutbox(noteEvent, outboxRelays)
