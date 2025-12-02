@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
-import com.vitorpamplona.amethyst.ui.theme.Font6SP
+import com.vitorpamplona.amethyst.ui.theme.Font8SP
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -508,19 +508,52 @@ fun ScoreTag(
     size: Dp,
     modifier: Modifier,
 ) {
+    if (size > 34.dp) {
+        ScoreTagRegular(score, modifier)
+    } else {
+        ScoreTagSmall(score, modifier)
+    }
+}
+
+@Composable
+fun ScoreTagRegular(
+    score: Int,
+    modifier: Modifier,
+) {
     Text(
         text = score.toString(),
         color = Color.White,
         fontWeight = FontWeight.Bold,
-        fontSize = if (size > 34.dp) Font10SP else Font6SP,
+        fontSize = Font10SP,
         maxLines = 1,
         overflow = TextOverflow.Clip,
-        lineHeight = if (size > 34.dp) Font10SP else Font6SP,
+        lineHeight = Font10SP,
         modifier =
             modifier
                 .clip(SmallBorder)
                 .background(Color.Black)
-                .padding(horizontal = if (size > 34.dp) 4.dp else 3.dp, vertical = 0.dp),
+                .padding(horizontal = 4.dp, vertical = 0.dp),
+    )
+}
+
+@Composable
+fun ScoreTagSmall(
+    score: Int,
+    modifier: Modifier,
+) {
+    Text(
+        text = score.toString(),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        fontSize = Font8SP,
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        lineHeight = Font8SP,
+        modifier =
+            modifier
+                .clip(SmallBorder)
+                .background(Color.Black)
+                .padding(horizontal = 3.dp, vertical = 0.dp),
     )
 }
 
@@ -602,7 +635,7 @@ fun WatchUserFollows(
 fun ObserveAndRenderUserCards(
     user: User,
     size: Dp,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
 ) {
     val score by observeUserContactCardsScore(user, accountViewModel)

@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsScore
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
@@ -624,6 +625,22 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
             Box(modifier = Size35Modifier, contentAlignment = Alignment.TopEnd) {
                 FollowingIcon(Size10Modifier)
             }
+        }
+    }
+
+    ObserveAndRenderBoxedUserCards(author, accountViewModel)
+}
+
+@Composable
+fun ObserveAndRenderBoxedUserCards(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val score by observeUserContactCardsScore(user, accountViewModel)
+
+    score?.let {
+        Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomCenter) {
+            ScoreTagSmall(it, Modifier)
         }
     }
 }
