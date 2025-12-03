@@ -618,6 +618,21 @@ fun observeUserContactCardsScore(
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
+fun observeUserContactCardsFollowerCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow = remember(user) { user.cards().followerCountStrFlow(accountViewModel.account.trustProviderList) }
+
+    return flow.collectAsStateWithLifecycle("--")
+}
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
 fun observeUserStatuses(
     user: User,
     accountViewModel: AccountViewModel,

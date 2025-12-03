@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.relationshipStatus
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.FollowerCountTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetNameTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
@@ -48,6 +49,8 @@ class ContactCardEvent(
     fun aboutUser() = tags.dTag()
 
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
+
+    fun followerCount() = tags.firstNotNullOfOrNull(FollowerCountTag::parse)
 
     fun petName() = tags.firstNotNullOfOrNull(PetNameTag::parse)
 

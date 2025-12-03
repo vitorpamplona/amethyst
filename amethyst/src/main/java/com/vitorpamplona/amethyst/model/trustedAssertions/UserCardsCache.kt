@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import java.text.NumberFormat
 
 class UserCardsCache : UserDependencies {
     val receivedCards = MutableStateFlow(mapOf<User, AddressableNote>())
@@ -106,5 +107,39 @@ class UserCardsCache : UserDependencies {
             }
         }.map {
             (it?.note?.event as? ContactCardEvent)?.rank()
+        }.flowOn(Dispatchers.IO)
+
+    val formatter = NumberFormat.getInstance()
+
+    fun followerCountStrFlow(trustProviderList: TrustProviderListState) =
+        combineTransform(receivedCards, trustProviderList.liveUserFollowerCount) { cards, provider ->
+            if (provider != null) {
+                val flow =
+                    cards.firstNotNullOfOrNull {
+                        if (it.key.pubkeyHex == provider.pubkey) {
+                            it.value
+                                .flow()
+                                .metadata.stateFlow
+                        } else {
+                            null
+                        }
+                    }
+
+                if (flow != null) {
+                    emitAll(flow)
+                } else {
+                    emit(null)
+                }
+            } else {
+                emit(null)
+            }
+        }.map {
+            val value = (it?.note?.event as? ContactCardEvent)?.followerCount()
+
+            if (value != null && value > 0) {
+                formatter.format(value)
+            } else {
+                "--"
+            }
         }.flowOn(Dispatchers.IO)
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.drawer
 
+import android.R.attr.fontWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -95,7 +96,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowerCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -121,6 +122,7 @@ import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ProviderTypes.followerCount
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
@@ -395,27 +397,39 @@ private fun FollowingAndFollowerCounts(
     Row(
         modifier = drawerSpacing.clickable(onClick = onClick),
     ) {
-        val followingCount = baseAccountUser.kind3FollowList.flow.collectAsStateWithLifecycle()
-        val followerCount by observeUserFollowerCount(baseAccountUser.userProfile(), accountViewModel)
-
-        Text(
-            text =
-                followingCount.value.authors.size
-                    .toString(),
-            fontWeight = FontWeight.Bold,
-        )
+        DisplayFollowingCount(baseAccountUser)
 
         Text(stringRes(R.string.following))
 
         Spacer(modifier = DoubleHorzSpacer)
 
-        Text(
-            text = if (followerCount > 0) followerCount.toString() else "--",
-            fontWeight = FontWeight.Bold,
-        )
+        DisplayFollowerCount(baseAccountUser, accountViewModel)
 
         Text(stringRes(R.string.followers))
     }
+}
+
+@Composable
+fun DisplayFollowingCount(baseAccountUser: Account) {
+    val followingCount by baseAccountUser.kind3FollowList.flow.collectAsStateWithLifecycle()
+
+    Text(
+        text = followingCount.authors.size.toString(),
+        fontWeight = FontWeight.Bold,
+    )
+}
+
+@Composable
+fun DisplayFollowerCount(
+    baseAccountUser: Account,
+    accountViewModel: AccountViewModel,
+) {
+    val followerCount by observeUserContactCardsFollowerCount(baseAccountUser.userProfile(), accountViewModel)
+
+    Text(
+        text = followerCount,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
