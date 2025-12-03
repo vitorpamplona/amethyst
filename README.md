@@ -254,6 +254,8 @@ implementation('com.vitorpamplona.quartz:quartz-iosarm64:<Amethyst Version>')
 implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:<Amethyst Version>')
 ```
 
+Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
+
 ### How to use
 
 Manage logged in users with the `KeyPair` class
