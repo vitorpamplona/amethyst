@@ -25,7 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowerCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -34,14 +34,7 @@ fun FollowersTabHeader(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val followerCount by observeUserFollowerCount(baseUser, accountViewModel)
+    val followerCount by observeUserContactCardsFollowerCount(baseUser, accountViewModel)
 
-    val text =
-        if (followerCount > 0) {
-            stringRes(R.string.number_followers, followerCount)
-        } else {
-            stringRes(R.string.number_followers, "--")
-        }
-
-    Text(text = text)
+    Text(text = stringRes(R.string.number_followers, followerCount))
 }
