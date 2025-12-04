@@ -32,6 +32,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 interface IAuthStatus {
@@ -44,7 +47,7 @@ object EmptyIAuthStatus : IAuthStatus {
 
 class RelayAuthenticator(
     val client: INostrClient,
-    val scope: CoroutineScope,
+    val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     val signWithAllLoggedInUsers: suspend (EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
 ) : IAuthStatus {
     private val authStatus = mutableMapOf<NormalizedRelayUrl, RelayAuthStatus>()

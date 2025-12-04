@@ -53,10 +53,7 @@ dependencies {
     // Lru Cache used in Relay stats
     implementation libs.androidx.core.ktx
 
-    // Compose's @Immutable and @Stable classes
-    implementation libs.androidx.compose.runtime
     implementation project(path: ':quartz')
-
 
     testImplementation libs.junit
 

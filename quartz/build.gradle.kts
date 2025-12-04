@@ -95,19 +95,19 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
-                implementation(project.dependencies.platform(libs.androidx.compose.bom))
+                implementation(libs.kotlinx.coroutines.core)
+
+                // For LruCache
+                implementation(libs.androidx.collection)
 
                 // @Immutable and @Stable
-                implementation(libs.androidx.compose.runtime)
+                implementation(libs.androidx.compose.runtime.annotation)
 
                 // Bitcoin secp256k1 bindings
                 api(libs.secp256k1.kmp.common)
 
                 // Kotlin serialization for the times where we need the Json tree and performance is not that important.
                 implementation(libs.kotlinx.serialization.json)
-
-                // in your shared module's dependencies block
-                // implementation( libs.kotlinx.datetime)
 
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)
@@ -126,9 +126,6 @@ kotlin {
             dependsOn(commonMain.get())
 
             dependencies {
-                // For LruCache
-                implementation(libs.androidx.collection.jvm)
-
                 // Normalizes URLs
                 api(libs.rfc3986.normalizer)
 
@@ -157,7 +154,7 @@ kotlin {
             dependsOn(jvmAndroid)
             dependencies {
                 // Bitcoin secp256k1 bindings
-                api(libs.secp256k1.kmp.jni.jvm)
+                implementation (libs.secp256k1.kmp.jni.jvm)
 
                 // LibSodium for ChaCha encryption (NIP-44)
                 implementation (libs.lazysodium.java)
@@ -177,9 +174,6 @@ kotlin {
             dependsOn(jvmAndroid)
             dependencies {
                 implementation(libs.androidx.core.ktx)
-
-                // @Immutable and @Stable
-                implementation(libs.androidx.compose.runtime)
 
                 // Bitcoin secp256k1 bindings to Android
                 api(libs.secp256k1.kmp.jni.android)

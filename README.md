@@ -239,6 +239,15 @@ openssl base64 < <my-release-key.keystore> | tr -d '\n' | tee some_signing_key.j
 
 ### Installing
 
+Add Maven Central and Google Maven to your repositories:
+
+```gradle
+repositories {
+    mavenCentral()
+    google()
+}
+```
+
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
@@ -283,8 +292,8 @@ val amberSigner = NostrSignerExternal(
 )
 ```
 
-Create a single NostrClient for the entire application and control which relays it will access by
-registering subscriptions and sending events. The pool will automatically changed based on filters +
+Create a single `NostrClient` for the entire application and control which relays it will access by
+registering subscriptions and sending events. The pool will automatically change based on filters +
 outbox events.
 
 You will need a coroutine scope to process events and if you are using OKHttp, we offer a basic
@@ -301,9 +310,11 @@ val client = NostrClient(socketBuilder, appScope)
 If you want to auth, given a logged-in `signer`:
 
 ```kt
-val authCoordinator = RelayAuthenticator(client, appScope) { challenge, relay ->
-    val authedEvent = RelayAuthEvent.create(relay.url, challenge, signer)
-    client.sendIfExists(authedEvent, relay.url)
+val authCoordinator = RelayAuthenticator(client, appScope) { authTemplate ->
+    listOf(
+        // for each signed-in user, return an event
+        signer.sign(authTemplate)
+    )
 }
 ```
 
@@ -311,8 +322,8 @@ To make a request subscription simply do:
 
 ```kt
 val metadataSub = client.req(
-    relays = listOf("wss://nos.lol", "wss://nostr.mom"),
-    filters = Filter(
+    relay = "wss://nos.lol",
+    filter = Filter(
         kinds = listOf(MetadataEvent.KIND),
         authors = listOf(signer.pubkey)
     )

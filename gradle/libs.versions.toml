@@ -14,6 +14,7 @@ benchmarkJunit4 = "1.4.1"
 biometricKtx = "1.2.0-alpha05"
 coil = "3.3.0"
 composeBom = "2025.12.00"
+composeRuntimeAnnotation = "1.10.0"
 coreKtx = "1.17.0"
 datastore = "1.2.0"
 espressoCore = "3.7.0"
@@ -26,7 +27,7 @@ jtorctl = "0.4.5.7"
 junit = "4.13.2"
 kotlin = "2.2.21"
 kotlinxCollectionsImmutable = "0.4.0"
-kotlinxDatetime = "0.7.1"
+kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerialization = "1.9.0"
 kotlinxSerializationPlugin = "2.2.21"
 languageId = "17.0.6"
@@ -77,8 +78,8 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "androidxCamera" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
-androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
-androidx-collection-jvm = { group = "androidx.collection", name = "collection-jvm", version.ref = "androidxCollection" }
+androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name = "runtime-annotation", version.ref = "composeRuntimeAnnotation" }
+androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -120,7 +121,7 @@ jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
-kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
 lazysodium-java = { group = "com.goterl", name = "lazysodium-java", version.ref = "lazysodiumJava" }
@@ -137,9 +138,6 @@ rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
-secp256k1-kmp-jni-jvm-linux = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm-linux", version.ref = "secp256k1KmpJniAndroid" }
-secp256k1-kmp-jni-jvm-darwin = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm-darwin", version.ref = "secp256k1KmpJniAndroid" }
-secp256k1-kmp-jni-jvm-mingw = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm-mingw", version.ref = "secp256k1KmpJniAndroid" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
 url-detector = { group = "io.github.url-detector", name = "url-detector", version.ref = "urlDetector" }

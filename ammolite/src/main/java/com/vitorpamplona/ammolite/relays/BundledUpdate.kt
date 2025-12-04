@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher
@@ -37,7 +36,6 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** This class is designed to have a waiting time between two calls of invalidate */
-@Stable
 class BundledUpdate(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -63,7 +61,6 @@ class BundledUpdate(
 }
 
 /** This class is designed to have a waiting time between two calls of invalidate */
-@Stable
 class BasicBundledUpdate(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -101,7 +98,6 @@ class BasicBundledUpdate(
 }
 
 /** This class is designed to have a waiting time between two calls of invalidate */
-@Stable
 class BundledInsert<T>(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -127,7 +123,6 @@ class BundledInsert<T>(
 }
 
 /** This class is designed to have a waiting time between two calls of invalidate */
-@Stable
 class BasicBundledInsert<T>(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.IO,
