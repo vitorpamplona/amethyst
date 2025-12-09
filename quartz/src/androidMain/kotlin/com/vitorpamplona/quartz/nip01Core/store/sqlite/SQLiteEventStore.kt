@@ -86,7 +86,11 @@ class SQLiteEventStore(
     ) {}
 
     fun clearDB() {
-        context.deleteDatabase(dbName)
+        val db = writableDatabase
+        fullTextSearchModule.deleteAll(db)
+        rightToVanishModule.deleteAll(db)
+        expirationModule.deleteAll(db)
+        eventIndexModule.deleteAll(db)
     }
 
     private fun innerInsertEvent(
