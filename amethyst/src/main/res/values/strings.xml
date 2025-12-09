@@ -23,6 +23,7 @@
     <string name="illegal_behavior">Illegal Behavior</string>
     <string name="other">Other</string>
     <string name="harassment">Harassment</string>
+    <string name="violence">Violence</string>
     <string name="unknown">Unknown</string>
     <string name="relay_icon">Relay Icon</string>
     <string name="unknown_author">Unknown Author</string>
