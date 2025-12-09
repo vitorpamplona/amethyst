@@ -390,6 +390,8 @@
     <string name="private_bookmark_add_action_label">निजी स्मर्त्तव्य के रूप में जोडें</string>
     <string name="bookmark_remove_action_label">स्मर्त्तव्य सूची से हटाएँ</string>
     <string name="bookmark_list_explainer">स्मर्त्तव्य सूची उपतथ्य किसी के भी द्वारा देखे जा सकते हैं नोस्टर पर। केवल आपके निजी सदस्य रहस्यीकृत होते हैं।</string>
+    <string name="move_bookmark_to_public_label">सार्वजनिक करें</string>
+    <string name="move_bookmark_to_private_label">निजी बनाएँ</string>
     <string name="wallet_connect_service">धनकोष संयोजन सेवा</string>
     <string name="wallet_connect_service_explainer">एक नोस्ट्र रहस्य को अधिकृत करता है ज्साप भुगतान करने के लिए क्रमक से बाहर चले बिना। रहस्य को सुरक्षित रखें तथा एक निजी पुनःप्रसारक का प्रयोग करें हो सके तो।</string>
     <string name="wallet_connect_service_pubkey">धनकोष संयोजन ख्याप्यकुंचिका</string>
