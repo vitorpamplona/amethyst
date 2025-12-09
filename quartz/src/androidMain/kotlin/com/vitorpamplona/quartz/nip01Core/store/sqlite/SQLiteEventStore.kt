@@ -32,8 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 
 class SQLiteEventStore(
-    context: Context,
-    dbName: String? = "events.db",
+    val context: Context,
+    val dbName: String? = "events.db",
     val relayUrl: String? = null,
 ) : SQLiteOpenHelper(context, dbName, null, DATABASE_VERSION) {
     companion object {
@@ -84,11 +84,7 @@ class SQLiteEventStore(
     ) {}
 
     fun clearDB() {
-        val db = writableDatabase
-        fullTextSearchModule.deleteAll(db)
-        rightToVanishModule.deleteAll(db)
-        expirationModule.deleteAll(db)
-        eventIndexModule.deleteAll(db)
+        context.deleteDatabase(dbName)
     }
 
     fun insertEvent(event: Event): Boolean {
