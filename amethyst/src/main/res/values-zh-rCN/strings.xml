@@ -390,6 +390,8 @@
     <string name="private_bookmark_add_action_label">添加为私密书签</string>
     <string name="bookmark_remove_action_label">从书签列表中删除</string>
     <string name="bookmark_list_explainer">书签列表元数据可以被Nostr上的任何人看到。只有您的私密成员是加密的。</string>
+    <string name="move_bookmark_to_public_label">移动到公开</string>
+    <string name="move_bookmark_to_private_label">移动到私密</string>
     <string name="wallet_connect_service">钱包绑定服务</string>
     <string name="wallet_connect_service_explainer">允许在不离开应用的情况下使用 Nostr 私钥支付打闪。请确保私钥安全；如有可能，请使用一个私人中继。</string>
     <string name="wallet_connect_service_pubkey">钱包绑定公钥</string>

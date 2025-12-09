@@ -387,6 +387,8 @@
     <string name="private_bookmark_add_action_label">Dodaj jako zakładkę prywatną</string>
     <string name="bookmark_remove_action_label">Usuń z listy zakładek</string>
     <string name="bookmark_list_explainer">Metadane listy obserwowanych są widoczne dla wszystkich użytkowników w sieci Nostr. Tylko Twoi uczestnicy prywatni są zaszyfrowani.</string>
+    <string name="move_bookmark_to_public_label">Przenieś do Publicznych</string>
+    <string name="move_bookmark_to_private_label">Przenieś do Prywatnych</string>
     <string name="wallet_connect_service">Usługa Wallet Connect</string>
     <string name="wallet_connect_service_explainer">Autoryzuje Nostr Secret do płacenia zapów bez opuszczania aplikacji. Strzeż pilnie i użyj prywatnego transmitera, jeśli to możliwe</string>
     <string name="wallet_connect_service_pubkey">Klucz publiczny Wallet Connect</string>
@@ -954,7 +956,7 @@
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedz</string>
-    <string name="boost_or_quote_description">Wypromuj lub Zacytuj</string>
+    <string name="boost_or_quote_description">Powtórz lub Zacytuj</string>
     <string name="like_description">Lubię</string>
     <string name="zap_description">Zap</string>
     <string name="change_reaction">Zmień odzew</string>
@@ -1160,7 +1162,7 @@
     <string name="public_members_count">Uczestnicy publiczni (%1$s)</string>
     <string name="add_user_to_the_list">Dodaj użytkownika do listy</string>
     <string name="remove_user_from_the_list">Usuń użytkownika z listy</string>
-    <string name="follow_list_item_label">Kategoria profilów</string>
+    <string name="follow_list_item_label">Kategoria profili</string>
     <string name="members">Uczestnicy</string>
     <string name="people_list_title">Metadane listy profili</string>
     <string name="people_list_explainer">Metadane listy obserwowanych są widoczne dla wszystkich użytkowników w sieci Nostr. Tylko Twoi uczestnicy prywatni są zaszyfrowani.</string>
