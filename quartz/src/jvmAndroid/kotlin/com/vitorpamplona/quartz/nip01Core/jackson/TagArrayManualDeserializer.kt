@@ -26,7 +26,15 @@ class TagArrayManualDeserializer {
     companion object {
         fun fromJson(jsonObject: JsonNode): Array<Array<String>> =
             jsonObject.toTypedArray {
-                it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
+                it.toTypedArray { s ->
+                    if (s.isNull) {
+                        ""
+                    } else {
+                        val text = s.asText()
+                        if (text.length < 100) text.intern()
+                        text
+                    }
+                }
             }
     }
 }
