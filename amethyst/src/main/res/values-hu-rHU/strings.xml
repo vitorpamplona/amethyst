@@ -390,6 +390,8 @@
     <string name="private_bookmark_add_action_label">Hozzáadás mint privát könyvjelző</string>
     <string name="bookmark_remove_action_label">Eltávolítás a könyvjelzőlistáról</string>
     <string name="bookmark_list_explainer">A könyvjelzőlisták metaadatai a Nostr-on bárki számára láthatók. Csak a privát tagok vannak titkosítva.</string>
+    <string name="move_bookmark_to_public_label">Áthelyezés a nyilvános könyvjelzőkbe</string>
+    <string name="move_bookmark_to_private_label">Áthelyezés a privát könyvjelzőkbe</string>
     <string name="wallet_connect_service">Wallet Connect szolgáltatás</string>
     <string name="wallet_connect_service_explainer">Hitelesíti, hogy a Nostr Secret az alkalmazásból való kilépés nélkül fizessen a Zap-et. Tartsa biztonságban a titkot, és lehetőség szerint használjon privát átjátszót</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect nyilvános kulcs</string>
