@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventIndexesModule(
     val fts: FullTextSearchModule,
+    val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) {
     fun create(db: SQLiteDatabase) {
         db.execSQL(
@@ -126,14 +127,14 @@ class EventIndexesModule(
         }
         val headerId = stmt.executeInsert()
 
-        val tagsToIndex = event.indexableTags()
+        val tagsToIndex = event.tags.filter(tagIndexStrategy::shouldIndex)
 
         val reuseStatements = mutableMapOf<Int, SQLiteStatement>()
 
         for (chunk in tagsToIndex.chunked(300)) {
             if (chunk.isNotEmpty()) {
                 val stmtTags =
-                    reuseStatements.get(chunk.size - 1) ?: run {
+                    reuseStatements[chunk.size - 1] ?: run {
                         val sql =
                             buildString {
                                 append(sqlInsertTags)
@@ -161,13 +162,11 @@ class EventIndexesModule(
         return headerId
     }
 
-    fun Event.indexableTags(): List<Tag> {
-        val indexableTagNames = extraIndexableTagNames()
-        return if (indexableTagNames.isNotEmpty()) {
-            tags.filter { it.size >= 2 && (it[0].length == 1 || it[0] in indexableTagNames) }
-        } else {
-            tags.filter { it.size >= 2 && it[0].length == 1 }
-        }
+    /**
+     * By default, we index all tags that have a single letter name and some value
+     */
+    class IndexingStrategy {
+        fun shouldIndex(tag: Tag) = tag.size >= 2 && tag[0].length == 1
     }
 
     fun planQuery(filter: Filter): String {
