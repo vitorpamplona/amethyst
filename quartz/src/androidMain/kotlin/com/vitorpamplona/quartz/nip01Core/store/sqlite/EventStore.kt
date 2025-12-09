@@ -23,15 +23,23 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import android.content.Context
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 
 class EventStore(
     context: Context,
     dbName: String? = "events.db",
     val relayUrl: String? = "wss://quartz.local",
+    val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) {
     val store = SQLiteEventStore(context, dbName, relayUrl)
 
     fun insert(event: Event) = store.insertEvent(event)
+
+    interface ITransaction {
+        fun insert(event: Event): Boolean
+    }
+
+    fun transaction(body: ITransaction.() -> Unit) = store.transaction(body)
 
     fun query(filter: Filter) = store.query(filter)
 

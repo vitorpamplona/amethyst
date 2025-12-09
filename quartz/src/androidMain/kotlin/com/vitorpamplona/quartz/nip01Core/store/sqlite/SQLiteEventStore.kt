@@ -29,19 +29,21 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 
 class SQLiteEventStore(
     val context: Context,
     val dbName: String? = "events.db",
     val relayUrl: String? = null,
+    val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) : SQLiteOpenHelper(context, dbName, null, DATABASE_VERSION) {
     companion object {
         const val DATABASE_VERSION = 1
     }
 
     val fullTextSearchModule = FullTextSearchModule()
-    val eventIndexModule = EventIndexesModule(fullTextSearchModule)
+    val eventIndexModule = EventIndexesModule(fullTextSearchModule, tagIndexStrategy)
 
     val replaceableModule = ReplaceableModule()
     val addressableModule = AddressableModule()
@@ -87,19 +89,50 @@ class SQLiteEventStore(
         context.deleteDatabase(dbName)
     }
 
+    private fun innerInsertEvent(
+        event: Event,
+        db: SQLiteDatabase,
+    ) {
+        val headerId = eventIndexModule.insert(event, db)
+        deletionModule.insert(event, headerId, db)
+        expirationModule.insert(event, headerId, db)
+        fullTextSearchModule.insert(event, headerId, db)
+        rightToVanishModule.insert(event, relayUrl, headerId, db)
+    }
+
     fun insertEvent(event: Event): Boolean {
         if (event.isExpired()) throw SQLiteConstraintException("blocked: Cannot insert an expired event")
         if (event.kind.isEphemeral()) return false
 
         val db = writableDatabase
         db.transaction {
-            val headerId = eventIndexModule.insert(event, db)
-            deletionModule.insert(event, headerId, db)
-            expirationModule.insert(event, headerId, db)
-            fullTextSearchModule.insert(event, headerId, db)
-            rightToVanishModule.insert(event, relayUrl, headerId, db)
+            innerInsertEvent(event, this)
         }
         return true
+    }
+
+    inner class Transaction(
+        val db: SQLiteDatabase,
+    ) : EventStore.ITransaction {
+        override fun insert(event: Event): Boolean {
+            if (event.isExpired()) throw SQLiteConstraintException("blocked: Cannot insert an expired event")
+            if (event.kind.isEphemeral()) return false
+
+            innerInsertEvent(event, db)
+            return true
+        }
+    }
+
+    fun transaction(body: Transaction.() -> Unit) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            with(Transaction(db)) {
+                body()
+            }
+        } finally {
+            db.endTransaction()
+        }
     }
 
     fun query(filter: Filter): List<Event> = eventIndexModule.query(filter, readableDatabase)
