@@ -32,8 +32,8 @@ enum class ReportType(
     NUDITY("nudity"),
     PROFANITY("profanity"),
     MALWARE("malware"),
-    MOD("mod"),
-    HARASSMENT("Harrassment"),
+    HARASSMENT("harassment"),
+    VIOLENCE("violence"),
     OTHER("other"),
     ;
 
@@ -43,20 +43,65 @@ enum class ReportType(
             tag: Array<String>,
         ): ReportType? =
             when (code) {
-                EXPLICIT.code -> EXPLICIT
-                ILLEGAL.code -> ILLEGAL
-                SPAM.code -> SPAM
-                IMPERSONATION.code -> IMPERSONATION
-                NUDITY.code -> NUDITY
-                PROFANITY.code -> PROFANITY
-                MALWARE.code -> MALWARE
-                MOD.code -> MOD
-                "MOD" -> MOD
-                HARASSMENT.code -> HARASSMENT
-                OTHER.code -> OTHER
+                "harassment" -> HARASSMENT
+                "Harassment" -> HARASSMENT
+                "Harrassment" -> HARASSMENT
+
+                "impersonation" -> IMPERSONATION
+                "Impersonation" -> IMPERSONATION
+                "Falsificação de identidade \uD83E\uDD78" -> IMPERSONATION
+                "Suplantación de identidad \uD83E\uDD78" -> IMPERSONATION
+                "Impersonation \uD83E\uDD78" -> IMPERSONATION
+                "Předstírání identity \uD83E\uDD78" -> IMPERSONATION
+
+                "illegal" -> ILLEGAL
+                "Illegal" -> ILLEGAL
+                "Illegal Material" -> ILLEGAL
+                "Illegal \uD83D\uDCD1" -> ILLEGAL
+                "Ilegal \uD83D\uDCD1" -> ILLEGAL
+                "Illégal \uD83D\uDCD1" -> ILLEGAL
+                "csam" -> ILLEGAL
+                "abuse" -> ILLEGAL
+                "fraud" -> ILLEGAL
+
+                "explicit" -> NUDITY
+                "explıcıt" -> NUDITY
+                "Explicit" -> NUDITY
+                "nudity" -> NUDITY
+                "Nudity" -> NUDITY
+                "Nudity \uD83C\uDF51\uD83C\uDF46" -> NUDITY
+                "sexual-content" -> NUDITY
+                "inappropriate" -> NUDITY
+                "Naaktheid \uD83C\uDF51\uD83C\uDF46" -> NUDITY
+
+                "profanity" -> PROFANITY
+                "Profanity" -> PROFANITY
+                "Profanity \uD83D\uDDEF\uFE0F" -> PROFANITY
+
+                "malware" -> MALWARE
+                "Malware" -> MALWARE
+
+                "other" -> OTHER
+                "Other" -> OTHER
+                "mod" -> OTHER
+                "Mod" -> OTHER
+                "MOD" -> OTHER
+                "ai-generated" -> OTHER
+                "duplicate" -> OTHER
+                "" -> OTHER
+
+                "spam" -> SPAM
+                "Spam" -> SPAM
+                "Spam \uD83D\uDCE3" -> SPAM
+                "Bot Activity" -> SPAM
+                "スパム \uD83D\uDCE3" -> SPAM
+                "Pourriel \uD83D\uDCE3" -> SPAM
+
+                "violence" -> VIOLENCE
+
                 else -> {
-                    Log.w("ReportedEventTag", "Report type not supported: $code ${tag.joinToString(", ")}")
-                    null
+                    Log.w("ReportedEventTag", "Report type not supported: `$code` ${tag.joinToString(", ")}")
+                    OTHER
                 }
             }
     }
