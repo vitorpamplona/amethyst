@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteStatement
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -127,25 +128,34 @@ class EventIndexesModule(
 
         val tagsToIndex = event.indexableTags()
 
-        if (tagsToIndex.isNotEmpty()) {
-            val sql =
-                buildString {
-                    append(sqlInsertTags)
-                    repeat(tagsToIndex.size - 1) {
-                        append(",(?,?,?)")
+        val reuseStatements = mutableMapOf<Int, SQLiteStatement>()
+
+        for (chunk in tagsToIndex.chunked(300)) {
+            if (chunk.isNotEmpty()) {
+                val stmtTags =
+                    reuseStatements.get(chunk.size - 1) ?: run {
+                        val sql =
+                            buildString {
+                                append(sqlInsertTags)
+                                repeat(chunk.size - 1) {
+                                    append(",(?,?,?)")
+                                }
+                            }
+
+                        val new = db.compileStatement(sql)
+                        reuseStatements[chunk.size - 1] = new
+                        new
                     }
+
+                var index = 1
+                chunk.forEach { tag ->
+                    stmtTags.bindLong(index++, headerId)
+                    stmtTags.bindString(index++, tag[0])
+                    stmtTags.bindString(index++, tag[1])
                 }
 
-            val stmtTags = db.compileStatement(sql)
-
-            var index = 1
-            tagsToIndex.forEach { tag ->
-                stmtTags.bindLong(index++, headerId)
-                stmtTags.bindString(index++, tag[0])
-                stmtTags.bindString(index++, tag[1])
+                stmtTags.executeInsert()
             }
-
-            stmtTags.executeInsert()
         }
 
         return headerId
