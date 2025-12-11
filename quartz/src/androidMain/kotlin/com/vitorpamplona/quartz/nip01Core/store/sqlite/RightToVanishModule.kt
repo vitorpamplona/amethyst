@@ -60,7 +60,9 @@ class RightToVanishModule {
             AFTER INSERT ON event_vanish
             FOR EACH ROW
             BEGIN
-                DELETE FROM event_headers WHERE created_at < NEW.created_at AND pubkey = NEW.pubkey;
+                DELETE FROM event_headers
+                WHERE created_at < NEW.created_at AND
+                      pubkey = NEW.pubkey;
             END;
             """.trimIndent(),
         )
