@@ -30,9 +30,7 @@ class TagArrayManualDeserializer {
                     if (s.isNull) {
                         ""
                     } else {
-                        val text = s.asText()
-                        if (text.length < 100) text.intern()
-                        text
+                        s.asText().intern()
                     }
                 }
             }
