@@ -56,20 +56,18 @@ class LargeDBTests {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("test_large.db")
         db = EventStore(context, "largeDBTest.db")
-        db.store.clearDB()
     }
 
     @After
     fun tearDown() {
-        db.store.clearDB()
         db.close()
     }
 
     @Test
     fun insertHeavyEvent() {
         events.first { it.id == "3f34b8cb682307ec11753de4669ce8948e95fd6fb360d79136446c5547fd235e" }.let { event ->
-            println(event.toJson())
             try {
                 val measure =
                     measureTimeMillis {

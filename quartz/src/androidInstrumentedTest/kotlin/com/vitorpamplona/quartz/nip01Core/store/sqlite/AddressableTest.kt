@@ -41,6 +41,7 @@ class AddressableTest {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("test.db")
         db = EventStore(context, "test.db", relayUrl = "testUrl")
     }
 
