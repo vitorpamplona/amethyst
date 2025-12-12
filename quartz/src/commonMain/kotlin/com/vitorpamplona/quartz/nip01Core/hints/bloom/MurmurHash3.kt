@@ -22,7 +22,8 @@ package com.vitorpamplona.quartz.nip01Core.hints.bloom
 
 class MurmurHash3 {
     companion object {
-        private const val ROUND_DOWN = 0xFFFFFFFC.toInt()
+        private const val ROUND_DOWN_32 = 0xFFFC
+        private const val ROUND_DOWN_128 = 0xFFF0
         private const val C1_32 = -0x3361d2af // 0xcc9e2d51
         private const val C2_32 = 0x1b873593
         private const val N_32: Int = -0x19ab949c // 0xe6546b64
@@ -46,17 +47,17 @@ class MurmurHash3 {
         seed: Int,
     ): Int {
         var h1 = seed
-        val roundedEnd = data.size and ROUND_DOWN // Round down to 4-byte blocks
+        val roundedEnd = data.size and ROUND_DOWN_32 // Round down to 4-byte blocks
 
         var i = 0
         var k1 = 0
         while (i < roundedEnd) {
             k1 =
                 (
-                    data[i++].toInt() and 0xFF or
-                        (data[i++].toInt() and 0xFF shl 8) or
-                        (data[i++].toInt() and 0xFF shl 16) or
-                        (data[i++].toInt() and 0xFF shl 24)
+                    data[i++].int() or
+                        (data[i++].int() shl 8) or
+                        (data[i++].int() shl 16) or
+                        (data[i++].int() shl 24)
                 ) * C1_32
 
             h1 = h1 xor k1.rotateLeft(15) * C2_32
@@ -67,33 +68,33 @@ class MurmurHash3 {
         k1 = 0
         when (data.size and 3) {
             3 -> {
-                k1 = k1 or ((data[i + 2].toInt() and 0xFF) shl 16)
-                k1 = k1 or ((data[i + 1].toInt() and 0xFF) shl 8)
-                k1 = k1 or (data[i].toInt() and 0xFF)
+                k1 = k1 or ((data[i + 2].int()) shl 16)
+                k1 = k1 or ((data[i + 1].int()) shl 8)
+                k1 = k1 or data[i].int()
 
                 k1 *= C1_32
-                k1 = (k1 shl 15) or (k1 ushr -15)
+                k1 = k1.rotateLeft(15)
                 k1 *= C2_32
 
                 h1 = h1 xor k1
             }
 
             2 -> {
-                k1 = k1 or (data[i + 1].toInt() and 0xFF shl 8)
-                k1 = k1 or (data[i].toInt() and 0xFF)
+                k1 = k1 or (data[i + 1].int() shl 8)
+                k1 = k1 or data[i].int()
 
                 k1 *= C1_32
-                k1 = (k1 shl 15) or (k1 ushr -15)
+                k1 = k1.rotateLeft(15)
                 k1 *= C2_32
 
                 h1 = h1 xor k1
             }
 
             1 -> {
-                k1 = k1 or (data[i].toInt() and 0xFF)
+                k1 = k1 or data[i].int()
 
                 k1 *= C1_32
-                k1 = (k1 shl 15) or (k1 ushr -15)
+                k1 = k1.rotateLeft(15)
                 k1 *= C2_32
 
                 h1 = h1 xor k1
@@ -115,11 +116,10 @@ class MurmurHash3 {
     ): Pair<Long, Long> {
         var h1 = seed
         var h2 = seed
-        val len = data.size
-        val nblocks = len / 16
+        val roundedEnd = data.size and ROUND_DOWN_128
 
         var i = 0
-        while (i < nblocks) {
+        while (i < roundedEnd) {
             val k1 =
                 (
                     data[i++].long() or
@@ -151,8 +151,8 @@ class MurmurHash3 {
             h2 = (h2.rotateLeft(R1_128_X64) + h1) * 5 + 0x38495ab5
         }
 
-        val index = nblocks * 16
-        val rem = len - index
+        val index = roundedEnd
+        val rem = data.size - index
         var k1 = 0L
         var k2 = 0L
 
@@ -204,8 +204,8 @@ class MurmurHash3 {
             h1 = h1 xor (k1 * C1_128_X64).rotateLeft(R1_128_X64) * C2_128_X64
         }
 
-        h1 = h1 xor len.toLong()
-        h2 = h2 xor len.toLong()
+        h1 = h1 xor data.size.toLong()
+        h2 = h2 xor data.size.toLong()
 
         h1 += h2
         h2 += h1
@@ -220,6 +220,8 @@ class MurmurHash3 {
     }
 
     fun Byte.long() = toLong() and 0xffL
+
+    fun Byte.int() = toInt() and 0xff
 
     private fun Int.fmix(): Int {
         var h = this
