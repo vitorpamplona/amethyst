@@ -50,7 +50,7 @@ class MurmurHash3 {
         val roundedEnd = data.size and ROUND_DOWN_32 // Round down to 4-byte blocks
 
         var i = 0
-        var k1 = 0
+        var k1: Int
         while (i < roundedEnd) {
             k1 =
                 (
@@ -110,7 +110,7 @@ class MurmurHash3 {
         return h1
     }
 
-    public fun hash128x64(
+    fun hash128x64(
         data: ByteArray,
         seed: Long,
     ): Pair<Long, Long> {
@@ -119,8 +119,10 @@ class MurmurHash3 {
         val roundedEnd = data.size and ROUND_DOWN_128
 
         var i = 0
+        var k1: Long
+        var k2: Long
         while (i < roundedEnd) {
-            val k1 =
+            k1 =
                 (
                     data[i++].long() or
                         (data[i++].long() shl 8) or
@@ -132,7 +134,7 @@ class MurmurHash3 {
                         (data[i++].long() shl 56)
                 ) * C1_128_X64
 
-            val k2 =
+            k2 =
                 (
                     data[i++].long() or
                         (data[i++].long() shl 8) or
@@ -151,56 +153,56 @@ class MurmurHash3 {
             h2 = (h2.rotateLeft(R1_128_X64) + h1) * 5 + 0x38495ab5
         }
 
-        val index = roundedEnd
-        val rem = data.size - index
-        var k1 = 0L
-        var k2 = 0L
+        val rem = data.size - roundedEnd
+
+        k1 = 0L
+        k2 = 0L
 
         if (rem == 15) {
-            k2 = k2 xor (data[index + 14].long() shl 48)
+            k2 = k2 xor (data[roundedEnd + 14].long() shl 48)
         }
         if (rem >= 14) {
-            k2 = k2 xor (data[index + 13].long() shl 40)
+            k2 = k2 xor (data[roundedEnd + 13].long() shl 40)
         }
         if (rem >= 13) {
-            k2 = k2 xor (data[index + 12].long() shl 32)
+            k2 = k2 xor (data[roundedEnd + 12].long() shl 32)
         }
         if (rem >= 12) {
-            k2 = k2 xor (data[index + 11].long() shl 24)
+            k2 = k2 xor (data[roundedEnd + 11].long() shl 24)
         }
         if (rem >= 11) {
-            k2 = k2 xor (data[index + 10].long() shl 16)
+            k2 = k2 xor (data[roundedEnd + 10].long() shl 16)
         }
         if (rem >= 10) {
-            k2 = k2 xor (data[index + 9].long() shl 8)
+            k2 = k2 xor (data[roundedEnd + 9].long() shl 8)
         }
         if (rem >= 9) {
-            k2 = k2 xor data[index + 8].long()
+            k2 = k2 xor data[roundedEnd + 8].long()
             h2 = h2 xor (k2 * C2_128_X64).rotateLeft(R3_128_X64) * C1_128_X64
         }
         if (rem >= 8) {
-            k1 = k1 xor (data[index + 7].long() shl 56)
+            k1 = k1 xor (data[roundedEnd + 7].long() shl 56)
         }
         if (rem >= 7) {
-            k1 = k1 xor (data[index + 6].long() shl 48)
+            k1 = k1 xor (data[roundedEnd + 6].long() shl 48)
         }
         if (rem >= 6) {
-            k1 = k1 xor (data[index + 5].long() shl 40)
+            k1 = k1 xor (data[roundedEnd + 5].long() shl 40)
         }
         if (rem >= 5) {
-            k1 = k1 xor (data[index + 4].long() shl 32)
+            k1 = k1 xor (data[roundedEnd + 4].long() shl 32)
         }
         if (rem >= 4) {
-            k1 = k1 xor (data[index + 3].long() shl 24)
+            k1 = k1 xor (data[roundedEnd + 3].long() shl 24)
         }
         if (rem >= 3) {
-            k1 = k1 xor (data[index + 2].long() shl 16)
+            k1 = k1 xor (data[roundedEnd + 2].long() shl 16)
         }
         if (rem >= 2) {
-            k1 = k1 xor (data[index + 1].long() shl 8)
+            k1 = k1 xor (data[roundedEnd + 1].long() shl 8)
         }
         if (rem >= 1) {
-            k1 = k1 xor data[index].long()
+            k1 = k1 xor data[roundedEnd].long()
             h1 = h1 xor (k1 * C1_128_X64).rotateLeft(R1_128_X64) * C2_128_X64
         }
 
