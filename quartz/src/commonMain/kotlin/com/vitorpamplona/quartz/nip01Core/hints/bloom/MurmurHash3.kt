@@ -65,39 +65,20 @@ class MurmurHash3 {
         }
 
         // processing tail (remaining bytes)
-        k1 = 0
         when (data.size and 3) {
             3 -> {
-                k1 = k1 or ((data[i + 2].int()) shl 16)
-                k1 = k1 or ((data[i + 1].int()) shl 8)
-                k1 = k1 or data[i].int()
-
-                k1 *= C1_32
-                k1 = k1.rotateLeft(15)
-                k1 *= C2_32
-
-                h1 = h1 xor k1
+                k1 = (((data[i + 2].int()) shl 16) or ((data[i + 1].int()) shl 8) or data[i].int()) * C1_32
+                h1 = h1 xor k1.rotateLeft(15) * C2_32
             }
 
             2 -> {
-                k1 = k1 or (data[i + 1].int() shl 8)
-                k1 = k1 or data[i].int()
-
-                k1 *= C1_32
-                k1 = k1.rotateLeft(15)
-                k1 *= C2_32
-
-                h1 = h1 xor k1
+                k1 = ((data[i + 1].int() shl 8) or data[i].int()) * C1_32
+                h1 = h1 xor k1.rotateLeft(15) * C2_32
             }
 
             1 -> {
-                k1 = k1 or data[i].int()
-
-                k1 *= C1_32
-                k1 = k1.rotateLeft(15)
-                k1 *= C2_32
-
-                h1 = h1 xor k1
+                k1 = data[i].int() * C1_32
+                h1 = h1 xor k1.rotateLeft(15) * C2_32
             }
         }
 
@@ -159,50 +140,50 @@ class MurmurHash3 {
         k2 = 0L
 
         if (rem == 15) {
-            k2 = k2 xor (data[roundedEnd + 14].long() shl 48)
+            k2 = k2 or (data[roundedEnd + 14].long() shl 48)
         }
         if (rem >= 14) {
-            k2 = k2 xor (data[roundedEnd + 13].long() shl 40)
+            k2 = k2 or (data[roundedEnd + 13].long() shl 40)
         }
         if (rem >= 13) {
-            k2 = k2 xor (data[roundedEnd + 12].long() shl 32)
+            k2 = k2 or (data[roundedEnd + 12].long() shl 32)
         }
         if (rem >= 12) {
-            k2 = k2 xor (data[roundedEnd + 11].long() shl 24)
+            k2 = k2 or (data[roundedEnd + 11].long() shl 24)
         }
         if (rem >= 11) {
-            k2 = k2 xor (data[roundedEnd + 10].long() shl 16)
+            k2 = k2 or (data[roundedEnd + 10].long() shl 16)
         }
         if (rem >= 10) {
-            k2 = k2 xor (data[roundedEnd + 9].long() shl 8)
+            k2 = k2 or (data[roundedEnd + 9].long() shl 8)
         }
         if (rem >= 9) {
-            k2 = k2 xor data[roundedEnd + 8].long()
+            k2 = k2 or data[roundedEnd + 8].long()
             h2 = h2 xor (k2 * C2_128_X64).rotateLeft(R3_128_X64) * C1_128_X64
         }
         if (rem >= 8) {
-            k1 = k1 xor (data[roundedEnd + 7].long() shl 56)
+            k1 = k1 or (data[roundedEnd + 7].long() shl 56)
         }
         if (rem >= 7) {
-            k1 = k1 xor (data[roundedEnd + 6].long() shl 48)
+            k1 = k1 or (data[roundedEnd + 6].long() shl 48)
         }
         if (rem >= 6) {
-            k1 = k1 xor (data[roundedEnd + 5].long() shl 40)
+            k1 = k1 or (data[roundedEnd + 5].long() shl 40)
         }
         if (rem >= 5) {
-            k1 = k1 xor (data[roundedEnd + 4].long() shl 32)
+            k1 = k1 or (data[roundedEnd + 4].long() shl 32)
         }
         if (rem >= 4) {
-            k1 = k1 xor (data[roundedEnd + 3].long() shl 24)
+            k1 = k1 or (data[roundedEnd + 3].long() shl 24)
         }
         if (rem >= 3) {
-            k1 = k1 xor (data[roundedEnd + 2].long() shl 16)
+            k1 = k1 or (data[roundedEnd + 2].long() shl 16)
         }
         if (rem >= 2) {
-            k1 = k1 xor (data[roundedEnd + 1].long() shl 8)
+            k1 = k1 or (data[roundedEnd + 1].long() shl 8)
         }
         if (rem >= 1) {
-            k1 = k1 xor data[roundedEnd].long()
+            k1 = k1 or data[roundedEnd].long()
             h1 = h1 xor (k1 * C1_128_X64).rotateLeft(R1_128_X64) * C2_128_X64
         }
 
