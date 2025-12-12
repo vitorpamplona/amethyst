@@ -98,7 +98,9 @@
     <string name="public_chat_feed">সার্বজনীন কথোপকথন</string>
     <string name="global_feed">বৈশ্বিক পাতা</string>
     <string name="search_feed">অনুসন্ধান পাতা</string>
+    <string name="add_a_user">একজন ব্যবহারকারী যোগ করুন</string>
     <string name="add_a_relay">একটি রিলে যুক্ত করুন</string>
+    <string name="profile_name">নাম</string>
     <string name="display_name">প্রদর্শিত নাম</string>
     <string name="my_display_name">আমার প্রদর্শিত নাম</string>
     <string name="username">ইউজারনেম</string>
@@ -278,6 +280,8 @@
     <string name="add_to_public_bookmarks">সর্বজনীন বুকমার্কে যুক্ত করুন</string>
     <string name="remove_from_private_bookmarks">ব্যক্তিগত বুকমার্ক থেকে সরিয়ে দিন</string>
     <string name="remove_from_public_bookmarks">সর্বজনীন বুকমার্ক থেকে সরিয়ে দিন</string>
+    <string name="public_articles_label">পাবলিক প্রবন্ধ</string>
+    <string name="public_articles_count">পাবলিক প্রবন্ধ(%1$s)</string>
     <string name="wallet_connect_service">ওয়ালেট সংযোগের পরিষেবা</string>
     <string name="wallet_connect_service_explainer">অ্যাপ থেকে বের না হয়েই জ্যাপ প্রদান করতে একটি নস্টার-সিক্রেট অনুমোদন করা হয়ে থাকে। এই নস্টার-সিক্রেটটি নিরাপদে রাখুন এবং সম্ভব হলে একটি ব্যক্তিগত রিলে ব্যবহার করুন</string>
     <string name="wallet_connect_service_pubkey">ওয়ালেট সংযোগের গণ চাবি</string>
@@ -342,6 +346,8 @@
     <string name="follow_list_kind3follows">অনুসৃত সকলেরা</string>
     <string name="follow_list_global">বৈশ্বিক</string>
     <string name="follow_list_mute_list">নিঃশব্দ তালিকা</string>
+    <string name="follow_set_type_public">সর্বজনীন</string>
+    <string name="follow_set_type_private">ব্যক্তিগত</string>
     <string name="connect_through_your_orbot_setup_markdown">        ## Tor এর মাধ্যমে Orbot এর সাথে সংযুক্ত হোন
         \n\n১. [Orbot] নামান (https://play.google.com/store/apps/details?id=org.torproject.android)
         \n২. Orbot চালু করুন

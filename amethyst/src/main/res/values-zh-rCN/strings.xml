@@ -21,6 +21,7 @@
     <string name="illegal_behavior">非法行为</string>
     <string name="other">其它</string>
     <string name="harassment">骚扰行为</string>
+    <string name="violence">暴力</string>
     <string name="unknown">未知</string>
     <string name="relay_icon">中继器图标</string>
     <string name="unknown_author">未知作者</string>
