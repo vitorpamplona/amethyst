@@ -22,45 +22,63 @@ package com.vitorpamplona.quartz.nip01Core.hints
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.bloom.MurmurHash3
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MurMur3Test {
-    class Case(
-        val bytesHex: HexKey,
+    abstract class Case<T>(
+        val bytes: ByteArray,
         val seed: Int,
-        val result: Int,
+        val result: T,
     )
+
+    class HexCase<T>(
+        hex: HexKey,
+        seed: Int,
+        result: T,
+    ) : Case<T>(hex.hexToByteArray(), seed, result)
+
+    class StringCase<T>(
+        str: String,
+        seed: Int,
+        result: T,
+    ) : Case<T>(str.encodeToByteArray(), seed, result)
 
     val testCases =
         listOf(
-            Case("9fd4e9a905ca9e1a3086fa4c0a1ed829dbf18c15ec05af95c76b78d3d2f5651b", 886838366, -525456393),
-            Case("e6c8f70f0d35a983bfebd00e5f29787c009c52971cfb4ac3a49b534b256b59cc", 1717487548, 1605080838),
-            Case("7f7113833feb31e877f193e2fc75a64e9c70252c3ae3c73373ff34430ae40ea6", 1275582690, 225480992),
-            Case("61770be6ec9df0f490743318e796e28ae34609732b61d365947871532d77d697", 514559346, 1424957638),
-            Case("375f46b4687ba3cd035db303fa294d943816e64ca6b3adcda2ae40e8ac9d91a0", 1898708424, 1730418066),
-            Case("c67044cd1d07a2aeb92b7bec973b6feb8abb9197840c59c101cacaa992489d49", 294602161, -1944496371),
-            Case("49db4bfcc4da62e38c4076843cdde1425570806f09f121f5e7f2507c5ee1db85", 910710684, 944243368),
-            Case("c5e98a30dead5ade4900b26eabae3435cfcdb64ff5e55c99641915a0c6ee73fc", 1107230285, 1550302684),
-            Case("b0ed2e7568e6b4e1d5e5bab46fde01149331b824e48a281798d7216dde8f5890", 1013875681, -1265544300),
-            Case("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", 1674416787, -1821262025),
+            HexCase("9fd4e9a905ca9e1a3086fa4c0a1ed829dbf18c15ec05af95c76b78d3d2f5651b", 886838366, -525456393),
+            HexCase("e6c8f70f0d35a983bfebd00e5f29787c009c52971cfb4ac3a49b534b256b59cc", 1717487548, 1605080838),
+            HexCase("7f7113833feb31e877f193e2fc75a64e9c70252c3ae3c73373ff34430ae40ea6", 1275582690, 225480992),
+            HexCase("61770be6ec9df0f490743318e796e28ae34609732b61d365947871532d77d697", 514559346, 1424957638),
+            HexCase("375f46b4687ba3cd035db303fa294d943816e64ca6b3adcda2ae40e8ac9d91a0", 1898708424, 1730418066),
+            HexCase("c67044cd1d07a2aeb92b7bec973b6feb8abb9197840c59c101cacaa992489d49", 294602161, -1944496371),
+            HexCase("49db4bfcc4da62e38c4076843cdde1425570806f09f121f5e7f2507c5ee1db85", 910710684, 944243368),
+            HexCase("c5e98a30dead5ade4900b26eabae3435cfcdb64ff5e55c99641915a0c6ee73fc", 1107230285, 1550302684),
+            HexCase("b0ed2e7568e6b4e1d5e5bab46fde01149331b824e48a281798d7216dde8f5890", 1013875681, -1265544300),
+            HexCase("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", 1674416787, -1821262025),
             // special cases
-            Case("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", Int.MAX_VALUE, -422576759),
-            Case("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", Int.MAX_VALUE + 1, 851385048),
-            Case("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", Int.MIN_VALUE, 851385048),
-            Case("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", 0, 1615518380),
-            Case("fd", 1, 975430984),
-            Case("00", 1, 0),
-            Case("FF", 1, -797126820),
-            Case("3033", 1, 1435178296),
-            Case("0000", 1, -2047822809),
-            Case("FFFF", 1, 1459517456),
-            Case("3652a8", 1, 103723868),
-            Case("000000", 1, 821347078),
-            Case("FFFFFF", 1, -761438248),
-            Case("00000000", 1, 2028806445),
-            Case("FFFFFFFF", 1, 919009801),
+            HexCase("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", Int.MAX_VALUE, -422576759),
+            HexCase("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", Int.MAX_VALUE + 1, 851385048),
+            HexCase("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", Int.MIN_VALUE, 851385048),
+            HexCase("805f290e865bde094d77e82fb8b338d83347bc5449a4aed9fb08afb6a53a079b", 0, 1615518380),
+            HexCase("fd", 1, 975430984),
+            HexCase("00", 1, 0),
+            HexCase("FF", 1, -797126820),
+            HexCase("3033", 1, 1435178296),
+            HexCase("0000", 1, -2047822809),
+            HexCase("FFFF", 1, 1459517456),
+            HexCase("3652a8", 1, 103723868),
+            HexCase("000000", 1, 821347078),
+            HexCase("FFFFFF", 1, -761438248),
+            HexCase("00000000", 1, 2028806445),
+            HexCase("FFFFFFFF", 1, 919009801),
+            HexCase("", 0, 0),
+            HexCase("", 1, 1364076727),
+            StringCase("a", 0x9747b28c.toInt(), 0x7FA09EA6),
+            StringCase("Hello, world!", 0x9747b28c.toInt(), 0x24884CBA),
+            StringCase("The quick brown fox jumps over the lazy dog", 0x9747b28c.toInt(), 0x2FA826CD),
         )
 
     @Test
@@ -69,7 +87,87 @@ class MurMur3Test {
         testCases.forEach {
             assertEquals(
                 it.result,
-                hasher.hash(it.bytesHex.hexToByteArray(), it.seed),
+                hasher.hash(it.bytes, it.seed),
+            )
+        }
+    }
+
+    /**
+     * Test the [MurmurHash3.hash128] algorithm.
+     *
+     *
+     * Reference data is taken from the Python library `mmh3`.
+     *
+     * @see [mmh3](https://pypi.org/project/mmh3/)
+     */
+    @Test
+    fun testApacheCodecCase() {
+        val hasher = MurmurHash3()
+
+        assertEquals(
+            Pair(-1283037231234402493, 4008679871770363303),
+            hasher.hash128x64("Test".encodeToByteArray(), 0),
+        )
+
+        assertEquals(
+            Pair(367045018717440780, -6709042769114136948),
+            hasher.hash128x64("aabbcc".hexToByteArray(), 0),
+        )
+    }
+
+    /**
+     * Test the [MurmurHash3.hash128] algorithm.
+     *
+     *
+     * Reference data is taken from the Python library `mmh3`.
+     *
+     * @see [mmh3](https://pypi.org/project/mmh3/)
+     */
+    @Test
+    fun testHash128() {
+        val hasher = MurmurHash3()
+
+        val testCases =
+            listOf(
+                HexCase("", 0, Pair(0L, 0L)),
+                HexCase("2e", 0, Pair(-2808653841080383123L, -2531784594030660343L)),
+                HexCase("2ef6", 0, Pair(-1284575471001240306L, -8226941173794461820L)),
+                HexCase("2ef6f9", 0, Pair(1645529003294647142L, 4109127559758330427L)),
+                HexCase("2ef6f9b8", 0, Pair(-4117979116203940765L, -8362902660322042742L)),
+                HexCase("2ef6f9b8f7", 0, Pair(2559943399590596158L, 4738005461125350075L)),
+                HexCase("2ef6f9b8f754", 0, Pair(-1651760031591552651L, -5386079254924224461L)),
+                HexCase("2ef6f9b8f75463", 0, Pair(-6208043960690815609L, 7862371518025305074L)),
+                HexCase("2ef6f9b8f7546390", 0, Pair(-5150023478423646337L, 8346305334874564507L)),
+                HexCase("2ef6f9b8f75463903e", 0, Pair(7658274117911906792L, -4962914659382404165L)),
+                HexCase("2ef6f9b8f75463903e4d", 0, Pair(1309458104226302269L, 570003296096149119L)),
+                HexCase("2ef6f9b8f75463903e4dc3", 0, Pair(7440169453173347487L, -3489345781066813740L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc", 0, Pair(-5698784298612201352L, 3595618450161835420L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c", 0, Pair(-3822574792738072442L, 6878153771369862041L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14", 0, Pair(3705084673301918328L, 3202155281274291907L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c1496", 0, Pair(-6797166743928506931L, -4447271093653551597L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f", 0, Pair(5240533565589385084L, -5575481185288758327L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26", 0, Pair(-8467620131382649428L, -6450630367251114468L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f2628", 0, Pair(3632866961828686471L, -5957695976089313500L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287c", 0, Pair(-6450283648077271139L, -7908632714374518059L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfc", 0, Pair(226350826556351719L, 8225586794606475685L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb9", 0, Pair(-2382996224496980401L, 2188369078123678011L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c", 0, Pair(-1337544762358780825L, 7004253486151757299L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f", 0, Pair(2889033453638709716L, -4099509333153901374L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0d", 0, Pair(-8644950936809596954L, -5144522919639618331L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5", 0, Pair(-5628571865255520773L, -839021001655132087L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5ac", 0, Pair(-5226774667293212446L, -505255961194269502L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5ac55", 0, Pair(1337107025517938142L, 3260952073019398505L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5ac55c6", 0, Pair(9149852874328582511L, 1880188360994521535L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5ac55c676", 0, Pair(-4035957988359881846L, -7709057850766490780L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5ac55c6764a", 0, Pair(-3842593823306330815L, 3805147088291453755L)),
+                HexCase("2ef6f9b8f75463903e4dc3dc5c14969f26287cfcb91c3f0dd5ac55c6764a6d", 0, Pair(4030161393619149616L, -2813603781312455238L)),
+            )
+
+        for (case in testCases) {
+            assertEquals(
+                case.result,
+                hasher.hash128x64(case.bytes, case.seed.toLong()),
+                "Case: ${case.bytes.toHexKey()}",
             )
         }
     }

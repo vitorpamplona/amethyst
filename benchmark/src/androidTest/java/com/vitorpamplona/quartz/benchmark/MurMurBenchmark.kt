@@ -34,13 +34,20 @@ class MurMurBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun hash() {
+    fun hash32() {
         val hasher = MurmurHash3()
-
         val byteArray = RandomInstance.bytes(32)
-
         benchmarkRule.measureRepeated {
             hasher.hash(byteArray, 293)
+        }
+    }
+
+    @Test
+    fun hash128() {
+        val hasher = MurmurHash3()
+        val byteArray = RandomInstance.bytes(32)
+        benchmarkRule.measureRepeated {
+            hasher.hash128x64(byteArray, 293)
         }
     }
 }
