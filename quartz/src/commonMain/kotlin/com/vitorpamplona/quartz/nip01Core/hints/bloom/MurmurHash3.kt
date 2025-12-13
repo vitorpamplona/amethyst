@@ -30,10 +30,6 @@ class MurmurHash3 {
 
         private const val C1_128_X64: Long = -0x783c846eeebdac2bL
         private const val C2_128_X64: Long = 0x4cf5ad432745937fL
-
-        private const val R1_128_X64: Int = 31
-        private const val R2_128_X64: Int = 27
-        private const val R3_128_X64: Int = 33
     }
 
     /**
@@ -127,11 +123,11 @@ class MurmurHash3 {
                         (data[i++].long() shl 56)
                 ) * C2_128_X64
 
-            h1 = h1 xor k1.rotateLeft(R1_128_X64) * C2_128_X64
-            h1 = (h1.rotateLeft(R2_128_X64) + h2) * 5 + 0x52dce729
+            h1 = h1 xor k1.rotateLeft(31) * C2_128_X64
+            h1 = (h1.rotateLeft(27) + h2) * 5 + 0x52dce729
 
-            h2 = h2 xor k2.rotateLeft(R3_128_X64) * C1_128_X64
-            h2 = (h2.rotateLeft(R1_128_X64) + h1) * 5 + 0x38495ab5
+            h2 = h2 xor k2.rotateLeft(33) * C1_128_X64
+            h2 = (h2.rotateLeft(31) + h1) * 5 + 0x38495ab5
         }
 
         val rem = data.size - roundedEnd
@@ -159,7 +155,7 @@ class MurmurHash3 {
         }
         if (rem >= 9) {
             k2 = k2 or data[roundedEnd + 8].long()
-            h2 = h2 xor (k2 * C2_128_X64).rotateLeft(R3_128_X64) * C1_128_X64
+            h2 = h2 xor (k2 * C2_128_X64).rotateLeft(33) * C1_128_X64
         }
         if (rem >= 8) {
             k1 = k1 or (data[roundedEnd + 7].long() shl 56)
@@ -184,7 +180,7 @@ class MurmurHash3 {
         }
         if (rem >= 1) {
             k1 = k1 or data[roundedEnd].long()
-            h1 = h1 xor (k1 * C1_128_X64).rotateLeft(R1_128_X64) * C2_128_X64
+            h1 = h1 xor (k1 * C1_128_X64).rotateLeft(31) * C2_128_X64
         }
 
         h1 = h1 xor data.size.toLong()
