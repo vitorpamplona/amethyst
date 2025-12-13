@@ -95,9 +95,10 @@ class MurmurHash3 {
         var h2 = seed
         val roundedEnd = data.size and ROUND_DOWN_128
 
-        var i = 0
         var k1: Long
         var k2: Long
+
+        var i = 0
         while (i < roundedEnd) {
             k1 =
                 (
@@ -124,10 +125,10 @@ class MurmurHash3 {
                 ) * C2_128_X64
 
             h1 = h1 xor k1.rotateLeft(31) * C2_128_X64
-            h1 = (h1.rotateLeft(27) + h2) * 5 + 0x52dce729
+            h1 = (h1.rotateLeft(27) + h2) * 5L + 0x52dce729L
 
             h2 = h2 xor k2.rotateLeft(33) * C1_128_X64
-            h2 = (h2.rotateLeft(31) + h1) * 5 + 0x38495ab5
+            h2 = (h2.rotateLeft(31) + h1) * 5L + 0x38495ab5L
         }
 
         val rem = data.size - roundedEnd
