@@ -234,8 +234,8 @@ kotlin {
             }
         }
 
-        val iosX64MainTest by getting {
-            dependsOn(iosTest.get()) // iosX64MainTest depends on iosTest
+        val iosX64Test by getting {
+            dependsOn(iosTest.get()) // iosX64Test depends on iosTest
         }
 
         val iosArm64Test by getting {
