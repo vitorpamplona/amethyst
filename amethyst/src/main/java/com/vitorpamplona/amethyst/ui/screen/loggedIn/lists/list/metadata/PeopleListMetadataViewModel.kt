@@ -142,8 +142,8 @@ class PeopleListMetadataViewModel : ViewModel() {
 
         try {
             val result =
-                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().upload(
+                when (account.settings.defaultFileServer.type) {
+                    ServerType.NIP96 -> Nip96Uploader().upload(
                         uri = compResult.uri,
                         contentType = compResult.contentType,
                         size = compResult.size,
@@ -155,8 +155,16 @@ class PeopleListMetadataViewModel : ViewModel() {
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
                     )
-                } else {
-                    BlossomUploader().upload(
+                    ServerType.FileDrop -> FileDropUploader().upload(
+                        uri = compResult.uri,
+                        contentType = compResult.contentType,
+                        size = compResult.size,
+                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        onProgress = {},
+                        context = context,
+                    )
+                    else -> BlossomUploader().upload(
                         uri = compResult.uri,
                         contentType = compResult.contentType,
                         size = compResult.size,

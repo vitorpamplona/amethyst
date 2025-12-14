@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.service.uploads.filedrop.FileDropUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -218,6 +219,44 @@ class UploadOrchestrator {
         }
     }
 
+    private suspend fun uploadFileDrop(
+        fileUri: Uri,
+        contentType: String?,
+        size: Long?,
+        serverBaseUrl: String,
+        contentTypeForResult: String?,
+        originalHash: String?,
+        context: Context,
+    ): UploadingFinalState {
+        updateState(0.2, UploadingState.Uploading)
+        return try {
+            val result =
+                FileDropUploader()
+                    .upload(
+                        uri = fileUri,
+                        contentType = contentType,
+                        size = size,
+                        serverBaseUrl = serverBaseUrl,
+                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                        onProgress = { percent: Float ->
+                            updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
+                        },
+                        context = context,
+                    )
+
+            verifyHeader(
+                uploadResult = result,
+                localContentType = contentType,
+                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                originalHash = originalHash,
+                originalContentType = contentTypeForResult,
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
     private suspend fun verifyHeader(
         uploadResult: MediaUploadResult,
         localContentType: String?,
@@ -309,6 +348,7 @@ class UploadOrchestrator {
             ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
             ServerType.NIP96 -> uploadNIP96(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
             ServerType.Blossom -> uploadBlossom(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            ServerType.FileDrop -> uploadFileDrop(compressed.uri, compressed.contentType, compressed.size, server.baseUrl, null, null, context)
         }
     }
 
@@ -331,6 +371,7 @@ class UploadOrchestrator {
             ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
             ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
             ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+            ServerType.FileDrop -> uploadFileDrop(encrypted.uri, encrypted.contentType, encrypted.size, server.baseUrl, compressed.contentType, encrypted.originalHash, context)
         }
     }
 }

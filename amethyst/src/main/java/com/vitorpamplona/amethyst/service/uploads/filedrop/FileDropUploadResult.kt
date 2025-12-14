@@ -18,32 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.mediaServers
+package com.vitorpamplona.amethyst.service.uploads.filedrop
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ServerName(
-    val name: String,
-    val baseUrl: String,
-    val type: ServerType = ServerType.NIP96,
+data class FileDropUploadResult(
+    val status: String,
+    val message: String? = null,
+    val cid: String,
+    val url: String,
+    val filename: String,
+    val size: Long,
+    val details: FileDropDetails,
 )
 
-enum class ServerType {
-    NIP96,
-    NIP95,
-    Blossom,
-    FileDrop,
-}
-
-val DEFAULT_MEDIA_SERVERS: List<ServerName> =
-    listOf(
-        ServerName("Nostr.Build", "https://nostr.build", ServerType.NIP96),
-        ServerName("NostrCheck.me (NIP-96)", "https://nostrcheck.me", ServerType.NIP96),
-        ServerName("Sovbit", "https://files.sovbit.host", ServerType.NIP96),
-        ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
-        ServerName("NostrCheck.me (Blossom)", "https://cdn.nostrcheck.me", ServerType.Blossom),
-        ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),
-        ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
-        ServerName("FileDrop (IPFS)", "https://filedrop.besoeasy.com", ServerType.FileDrop),
-    )
+@Serializable
+data class FileDropDetails(
+    val name: String,
+    @SerialName("size_bytes")
+    val sizeBytes: Long,
+    @SerialName("mime_type")
+    val mimeType: String,
+    val cid: String,
+    @SerialName("upload_duration_ms")
+    val uploadDurationMs: Long,
+    val timestamp: String,
+)
