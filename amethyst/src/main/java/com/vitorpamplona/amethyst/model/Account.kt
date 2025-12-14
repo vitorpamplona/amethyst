@@ -601,7 +601,7 @@ class Account(
         url: String,
         method: String,
         body: ByteArray? = null,
-    ): HTTPAuthorizationEvent? = signer.sign(HTTPAuthorizationEvent.build(url, method, body))
+    ): HTTPAuthorizationEvent = signer.sign(HTTPAuthorizationEvent.build(url, method, body))
 
     suspend fun createBlossomUploadAuth(
         hash: HexKey,

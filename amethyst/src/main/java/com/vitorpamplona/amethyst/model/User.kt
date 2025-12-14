@@ -218,7 +218,7 @@ class User(
 
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
-    suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
+    fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
     fun reportsOrNull(): UserReportCache? = reports
 
