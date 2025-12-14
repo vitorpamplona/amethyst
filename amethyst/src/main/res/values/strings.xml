@@ -1343,8 +1343,13 @@
     <string name="media_servers_blossom_section">Blossom Servers</string>
     <string name="media_servers_blossom_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
 
+    <string name="media_servers_filedrop_section">FileDrop (IPFS) Servers</string>
+    <string name="media_servers_filedrop_explainer">Add as many FileDrop servers as you want. Files are stored on IPFS</string>
+
     <string name="add_a_nip96_server">Add a NIP-96 Server</string>
     <string name="add_a_blossom_server">Add a Blossom Server</string>
+    <string name="add_a_filedrop_server">Add a FileDrop Server</string>
+    <string name="no_filedrop_server_message">No FileDrop servers configured</string>
     <string name="delete_all">Delete all</string>
     <string name="delete_all_drafts_confirmation">Are you sure you want to delete all drafts?</string>
     <string name="and_more" translatable="false">" +%1$s"</string>

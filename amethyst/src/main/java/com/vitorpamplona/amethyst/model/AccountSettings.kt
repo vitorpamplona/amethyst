@@ -115,6 +115,7 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
+    var fileDropServers: Set<String> = setOf(),
     val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(ALL_FOLLOWS),
     val defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     val defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
@@ -204,6 +205,13 @@ class AccountSettings(
     fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
+            saveAccountSettings()
+        }
+    }
+
+    fun changeFileDropServers(servers: Set<String>) {
+        if (fileDropServers != servers) {
+            fileDropServers = servers
             saveAccountSettings()
         }
     }

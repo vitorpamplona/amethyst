@@ -90,6 +90,7 @@ private object PrefKeys {
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
+    const val FILE_DROP_SERVERS = "fileDropServers"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
@@ -347,6 +348,12 @@ object LocalPreferences {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
 
+                    if (settings.fileDropServers.isNotEmpty()) {
+                        putStringSet(PrefKeys.FILE_DROP_SERVERS, settings.fileDropServers)
+                    } else {
+                        remove(PrefKeys.FILE_DROP_SERVERS)
+                    }
+
                     putOrRemove(PrefKeys.LATEST_MUTE_LIST, settings.backupMuteList)
                     putOrRemove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST, settings.backupPrivateHomeRelayList)
                     putOrRemove(PrefKeys.LATEST_APP_SPECIFIC_DATA, settings.backupAppSpecificData)
@@ -468,6 +475,7 @@ object LocalPreferences {
 
                     val pendingAttestations = parseOrNull<Map<HexKey, String>>(PrefKeys.PENDING_ATTESTATIONS) ?: mapOf()
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
+                    val fileDropServers = getStringSet(PrefKeys.FILE_DROP_SERVERS, null) ?: setOf()
 
                     val latestUserMetadata = parseEventOrNull<MetadataEvent>(PrefKeys.LATEST_USER_METADATA)
                     val latestContactList = parseEventOrNull<ContactListEvent>(PrefKeys.LATEST_CONTACT_LIST)
@@ -505,6 +513,7 @@ object LocalPreferences {
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServer,
+                        fileDropServers = fileDropServers,
                         defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
                         defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
                         defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),

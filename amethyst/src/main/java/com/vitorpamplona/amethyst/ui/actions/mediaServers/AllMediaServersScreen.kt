@@ -51,16 +51,19 @@ fun AllMediaServersScreen(
 ) {
     val nip96ServersViewModel: NIP96ServersViewModel = viewModel()
     val blossomServersViewModel: BlossomServersViewModel = viewModel()
+    val fileDropServersViewModel: FileDropServersViewModel = viewModel()
 
     nip96ServersViewModel.init(accountViewModel)
     blossomServersViewModel.init(accountViewModel)
+    fileDropServersViewModel.init(accountViewModel)
 
     LaunchedEffect(key1 = accountViewModel) {
         nip96ServersViewModel.load()
         blossomServersViewModel.load()
+        fileDropServersViewModel.load()
     }
 
-    MediaServersScaffold(nip96ServersViewModel, blossomServersViewModel) {
+    MediaServersScaffold(nip96ServersViewModel, blossomServersViewModel, fileDropServersViewModel) {
         nav.popBack()
     }
 }
@@ -70,6 +73,7 @@ fun AllMediaServersScreen(
 fun MediaServersScaffold(
     nip96ServersViewModel: NIP96ServersViewModel,
     blossomServersViewModel: BlossomServersViewModel,
+    fileDropServersViewModel: FileDropServersViewModel,
     onClose: () -> Unit,
 ) {
     Scaffold(
@@ -79,11 +83,13 @@ fun MediaServersScaffold(
                 onCancel = {
                     nip96ServersViewModel.refresh()
                     blossomServersViewModel.refresh()
+                    fileDropServersViewModel.refresh()
                     onClose()
                 },
                 onPost = {
                     nip96ServersViewModel.saveFileServers()
                     blossomServersViewModel.saveFileServers()
+                    fileDropServersViewModel.saveAndClose()
                     onClose()
                 },
             )
@@ -111,7 +117,7 @@ fun MediaServersScaffold(
                 color = MaterialTheme.colorScheme.grayText,
             )
 
-            AllMediaBody(nip96ServersViewModel, blossomServersViewModel)
+            AllMediaBody(nip96ServersViewModel, blossomServersViewModel, fileDropServersViewModel)
         }
     }
 }

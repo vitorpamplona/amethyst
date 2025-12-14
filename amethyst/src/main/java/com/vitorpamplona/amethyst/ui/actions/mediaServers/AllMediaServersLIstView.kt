@@ -59,9 +59,11 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 fun AllMediaBody(
     nip96ServersViewModel: NIP96ServersViewModel,
     blossomServersViewModel: BlossomServersViewModel,
+    fileDropServersViewModel: FileDropServersViewModel,
 ) {
     val nip96ServersState by nip96ServersViewModel.fileServers.collectAsStateWithLifecycle()
     val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
+    val fileDropServersState by fileDropServersViewModel.fileServers.collectAsStateWithLifecycle()
 
     LazyColumn(
         verticalArrangement = Arrangement.SpaceAround,
@@ -110,6 +112,27 @@ fun AllMediaBody(
             },
         )
 
+        item {
+            SettingsCategory(
+                R.string.media_servers_filedrop_section,
+                R.string.media_servers_filedrop_explainer,
+                SettingsCategorySpacingModifier,
+            )
+        }
+
+        renderMediaServerList(
+            mediaServersState = fileDropServersState,
+            keyType = "filedrop",
+            editLabel = R.string.add_a_filedrop_server,
+            emptyLabel = R.string.no_filedrop_server_message,
+            onAddServer = { server ->
+                fileDropServersViewModel.addServer(server)
+            },
+            onDeleteServer = {
+                fileDropServersViewModel.removeServer(serverUrl = it)
+            },
+        )
+
         DEFAULT_MEDIA_SERVERS.let {
             item {
                 SettingsCategoryWithButton(
@@ -125,6 +148,10 @@ fun AllMediaBody(
 
                             blossomServersViewModel.addServerList(
                                 it.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
+                            )
+
+                            fileDropServersViewModel.addServerList(
+                                it.mapNotNull { s -> if (s.type == ServerType.FileDrop) s.baseUrl else null },
                             )
                         },
                     ) {
@@ -146,6 +173,8 @@ fun AllMediaBody(
                             nip96ServersViewModel.addServer(serverUrl)
                         } else if (server.type == ServerType.Blossom) {
                             blossomServersViewModel.addServer(serverUrl)
+                        } else if (server.type == ServerType.FileDrop) {
+                            fileDropServersViewModel.addServer(serverUrl)
                         }
                     },
                 )
