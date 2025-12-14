@@ -43,9 +43,6 @@ import com.vitorpamplona.quartz.nip51Lists.followList.personFirst
 import com.vitorpamplona.quartz.nip51Lists.followList.removePerson
 import com.vitorpamplona.quartz.nip51Lists.followList.title
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
-import com.vitorpamplona.quartz.nip51Lists.peopleList.description
-import com.vitorpamplona.quartz.nip51Lists.peopleList.image
-import com.vitorpamplona.quartz.nip51Lists.peopleList.name
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

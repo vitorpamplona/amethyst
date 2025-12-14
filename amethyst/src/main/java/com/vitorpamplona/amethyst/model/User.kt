@@ -43,7 +43,6 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
-import kotlin.plus
 
 interface UserDependencies
 
