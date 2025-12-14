@@ -43,9 +43,6 @@ import com.vitorpamplona.quartz.nip51Lists.followList.personFirst
 import com.vitorpamplona.quartz.nip51Lists.followList.removePerson
 import com.vitorpamplona.quartz.nip51Lists.followList.title
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
-import com.vitorpamplona.quartz.nip51Lists.peopleList.description
-import com.vitorpamplona.quartz.nip51Lists.peopleList.image
-import com.vitorpamplona.quartz.nip51Lists.peopleList.name
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -83,14 +80,14 @@ class FollowListsState(
             .map { existingPeopleListNotes() }
             .onStart { emit(existingPeopleListNotes()) }
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Companion.Eagerly, emptyList())
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     val followListsEventIds =
         followListNotes
             .map { it.eventIdSet() }
             .onStart { emit(followListNotes.value.eventIdSet()) }
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Companion.Eagerly, emptySet())
+            .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val latestLists: StateFlow<List<FollowListEvent>> =
@@ -107,7 +104,7 @@ class FollowListsState(
             .map { it.mapToUserIdSet() }
             .onStart { emit(latestLists.value.mapToUserIdSet()) }
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Companion.Eagerly, emptySet())
+            .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     fun FollowListEvent.toUI() =
         PeopleList(
@@ -126,7 +123,7 @@ class FollowListsState(
             .map { it.toUI() }
             .onStart { emit(latestLists.value.toUI()) }
             .flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.Companion.Eagerly, emptyList())
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     fun List<PeopleList>.select(dTag: String) =
         this.firstOrNull {
@@ -142,7 +139,7 @@ class FollowListsState(
 
     fun isUserInFollowSets(user: User): Boolean = allPeopleListProfiles.value.contains(user.pubkeyHex)
 
-    fun DeletionEvent.hasDeletedAnyFollowList() = deleteAddressesWithKind(FollowListEvent.Companion.KIND) || deletesAnyEventIn(followListsEventIds.value)
+    fun DeletionEvent.hasDeletedAnyFollowList() = deleteAddressesWithKind(FollowListEvent.KIND) || deletesAnyEventIn(followListsEventIds.value)
 
     fun hasItemInNoteList(notes: Set<Note>): Boolean =
         notes.anyNotNullEvent { event ->

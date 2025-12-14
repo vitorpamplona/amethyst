@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import kotlin.toString
 
 @Composable
 fun NewBookmarkGroupCreationDialog(

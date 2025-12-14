@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.update
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip51Lists.followList.description
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.description

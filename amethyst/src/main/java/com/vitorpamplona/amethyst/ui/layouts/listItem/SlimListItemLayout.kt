@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.layouts.listItem
 
-import android.view.Surface
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,7 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -111,13 +108,13 @@ fun ChannelNamePreview() {
 
             SlimListItem(
                 headlineContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = CenterVertically) {
                         Text("This is my author", Modifier.weight(1f))
                         TimeAgo(TimeUtils.now())
                     }
                 },
                 supportingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = CenterVertically) {
                         Text("This is a message from this person", Modifier.weight(1f))
                         Spacer(modifier = Height4dpModifier)
                         NewItemsBubble()
@@ -137,13 +134,13 @@ fun ChannelNamePreview() {
 
             ListItem(
                 headlineContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = CenterVertically) {
                         Text("This is my author", Modifier.weight(1f))
                         TimeAgo(TimeUtils.now())
                     }
                 },
                 supportingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = CenterVertically) {
                         Text("This is a message from this person", Modifier.weight(1f))
                         Spacer(modifier = Height4dpModifier)
                         NewItemsBubble()
@@ -509,7 +506,7 @@ private class ListItemMeasurePolicy : MultiContentMeasurePolicy {
     }
 }
 
-private fun IntrinsicMeasureScope.calculateWidth(
+private fun calculateWidth(
     leadingWidth: Int,
     trailingWidth: Int,
     headlineWidth: Int,
@@ -646,7 +643,7 @@ private value class ListItemType private constructor(
         /** Three line list item */
         val ThreeLine = ListItemType(3)
 
-        internal operator fun invoke(
+        operator fun invoke(
             hasOverline: Boolean,
             hasSupporting: Boolean,
             isSupportingMultiline: Boolean,

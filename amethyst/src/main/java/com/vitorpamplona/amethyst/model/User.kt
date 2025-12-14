@@ -43,7 +43,6 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
-import kotlin.plus
 
 interface UserDependencies
 
@@ -219,7 +218,7 @@ class User(
 
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
-    suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
+    fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
 
     fun reportsOrNull(): UserReportCache? = reports
 
