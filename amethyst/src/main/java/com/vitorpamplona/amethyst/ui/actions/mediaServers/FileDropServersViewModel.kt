@@ -128,7 +128,7 @@ class FileDropServersViewModel : ViewModel() {
 
     fun hasServers(): Boolean = _fileServers.value.isNotEmpty()
 
-    fun saveAndClose() {
+    fun saveFileServers() {
         viewModelScope.launch {
             if (isModified) {
                 account.settings.changeFileDropServers(_fileServers.value.map { it.baseUrl }.toSet())

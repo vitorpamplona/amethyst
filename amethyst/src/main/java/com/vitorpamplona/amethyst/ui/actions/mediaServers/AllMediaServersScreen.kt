@@ -89,7 +89,7 @@ fun MediaServersScaffold(
                 onPost = {
                     nip96ServersViewModel.saveFileServers()
                     blossomServersViewModel.saveFileServers()
-                    fileDropServersViewModel.saveAndClose()
+                    fileDropServersViewModel.saveFileServers()
                     onClose()
                 },
             )
