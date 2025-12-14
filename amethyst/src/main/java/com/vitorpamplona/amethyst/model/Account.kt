@@ -304,7 +304,7 @@ class Account(
 
     val blossomServers = BlossomServerListState(signer, cache, scope, settings)
     val fileStorageServers = FileStorageServerListState(signer, cache, scope, settings)
-    val serverLists = MergedServerListState(fileStorageServers, blossomServers, scope)
+    val serverLists = MergedServerListState(fileStorageServers, blossomServers, settings, scope)
 
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)

@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.stateIn
 class MergedServerListState(
     val fileServers: FileStorageServerListState,
     val blossomServers: BlossomServerListState,
+    val settings: AccountSettings,
     val scope: CoroutineScope,
 ) {
     fun host(url: String): String =
@@ -50,20 +51,22 @@ class MergedServerListState(
     fun mergeServerList(
         nip96: List<String>?,
         blossom: List<String>?,
+        fileDrop: Set<String>?,
     ): List<ServerName> {
         val nip96servers = nip96?.map { ServerName(host(it), it, ServerType.NIP96) } ?: emptyList()
         val blossomServers = blossom?.map { ServerName(host(it), it, ServerType.Blossom) } ?: emptyList()
+        val fileDropServers = fileDrop?.map { ServerName(host(it), it, ServerType.FileDrop) } ?: emptyList()
 
-        val result = (nip96servers + blossomServers).ifEmpty { DEFAULT_MEDIA_SERVERS }
+        val result = (nip96servers + blossomServers + fileDropServers).ifEmpty { DEFAULT_MEDIA_SERVERS }
 
         return result + ServerName("NIP95", "", ServerType.NIP95)
     }
 
     val liveServerList: StateFlow<List<ServerName>> =
         combine(fileServers.flow, blossomServers.flow) { nip96s, blossoms ->
-            mergeServerList(nip96s, blossoms)
+            mergeServerList(nip96s, blossoms, settings.fileDropServers)
         }.onStart {
-            emit(mergeServerList(fileServers.flow.value, blossomServers.flow.value))
+            emit(mergeServerList(fileServers.flow.value, blossomServers.flow.value, settings.fileDropServers))
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
