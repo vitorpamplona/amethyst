@@ -184,7 +184,7 @@ class FileDropUploader {
     fun convertToMediaResult(result: FileDropUploadResult): MediaUploadResult =
         MediaUploadResult(
             url = result.url,
-            type = result.details.mimeType,
+            type = result.mimeType,
             sha256 = result.cid,
             size = result.size,
             ipfs = "ipfs://${result.cid}",

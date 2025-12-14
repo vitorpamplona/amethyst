@@ -26,23 +26,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class FileDropUploadResult(
     val status: String,
-    val message: String? = null,
     val cid: String,
     val url: String,
     val filename: String,
     val size: Long,
-    val details: FileDropDetails,
-)
-
-@Serializable
-data class FileDropDetails(
-    val name: String,
-    @SerialName("size_bytes")
-    val sizeBytes: Long,
     @SerialName("mime_type")
     val mimeType: String,
-    val cid: String,
     @SerialName("upload_duration_ms")
-    val uploadDurationMs: Long,
-    val timestamp: String,
+    val uploadDurationMs: Long? = null,
+    val timestamp: String? = null,
 )
