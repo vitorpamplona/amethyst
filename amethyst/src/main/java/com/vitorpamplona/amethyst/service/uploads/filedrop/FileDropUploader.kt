@@ -185,7 +185,7 @@ class FileDropUploader {
         MediaUploadResult(
             url = result.url,
             type = result.mimeType,
-            sha256 = result.cid,
+            sha256 = null, // FileDrop returns IPFS CID, not hex-encoded SHA256
             size = result.size,
             ipfs = "ipfs://${result.cid}",
         )
