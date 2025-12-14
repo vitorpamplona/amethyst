@@ -21,6 +21,7 @@
     <string name="illegal_behavior">Antyspołeczne zachowanie</string>
     <string name="other">Inne</string>
     <string name="harassment">Nękanie</string>
+    <string name="violence">Przemoc</string>
     <string name="unknown">Nieznani</string>
     <string name="relay_icon">Ikona transmitera</string>
     <string name="unknown_author">Autor nieznany</string>
@@ -60,8 +61,8 @@
     <string name="signer_not_found_exception_description">Czy aplikacja sygnatariusza została odinstalowana? Sprawdź, czy aplikacja sygnatariusza jest zainstalowana i czy ma to konto. Wyloguj się i zaloguj ponownie, jeśli aplikacja sygnatariusza uległa zmianie.</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Liczba wyświetleń</string>
-    <string name="boost">Promuj</string>
-    <string name="boosted">promowany</string>
+    <string name="boost">Powtórz</string>
+    <string name="boosted">powtórzony</string>
     <string name="edited">edytowano</string>
     <string name="edited_number">edytuj #%1$s</string>
     <string name="original">oryginalny</string>
