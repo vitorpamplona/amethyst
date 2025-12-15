@@ -479,16 +479,12 @@ private fun NewPostScreenBody(
             )
         }
 
-        BottomRowActions(postViewModel, accountViewModel)
+        BottomRowActions(postViewModel)
     }
 }
 
 @Composable
-private fun BottomRowActions(
-    postViewModel: ShortNotePostViewModel,
-    accountViewModel: AccountViewModel,
-) {
-    val context = LocalContext.current
+private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     val scrollState = rememberScrollState()
     Row(
         modifier =

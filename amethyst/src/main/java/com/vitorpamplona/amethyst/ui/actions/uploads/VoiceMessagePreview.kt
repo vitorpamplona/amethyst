@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import android.content.Context
 import android.media.MediaPlayer
 import android.util.Log
 import androidx.compose.foundation.background
@@ -77,7 +76,7 @@ fun VoiceMessagePreview(
 
     // Initialize MediaPlayer
     DisposableEffect(voiceMetadata.url, localFile) {
-        val player = createMediaPlayer(context, voiceMetadata.url, localFile)
+        val player = createMediaPlayer(voiceMetadata.url, localFile)
         player?.setOnCompletionListener {
             isPlaying = false
             progress = 0f
@@ -242,7 +241,6 @@ fun VoiceMessagePreview(
 }
 
 private fun createMediaPlayer(
-    context: Context,
     url: String,
     localFile: File?,
 ): MediaPlayer? =
@@ -256,5 +254,6 @@ private fun createMediaPlayer(
             prepare()
         }
     } catch (e: Exception) {
+        Log.w("VoiceMessagePreview", "Failed to create MediaPlayer", e)
         null
     }

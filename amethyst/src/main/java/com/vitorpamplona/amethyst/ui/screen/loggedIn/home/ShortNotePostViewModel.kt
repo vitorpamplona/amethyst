@@ -235,7 +235,7 @@ open class ShortNotePostViewModel :
 
     fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
 
-    fun user(): User? = account.userProfile()
+    fun user(): User = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -534,15 +534,16 @@ open class ShortNotePostViewModel :
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         // Check if this is a voice message
         voiceMetadata?.let { audioMeta ->
-            return if (originalNote != null) {
+            // Only create voice reply if original note is also a VoiceEvent
+            val originalVoiceHint = originalNote?.toEventHint<VoiceEvent>()
+            return if (originalVoiceHint != null) {
                 // Create voice reply event
-                @Suppress("UNCHECKED_CAST")
                 VoiceReplyEvent.build(
                     voiceMessage = audioMeta,
-                    replyingTo = originalNote!!.toEventHint<Event>() as com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle<VoiceEvent>,
+                    replyingTo = originalVoiceHint,
                 )
             } else {
-                // Create root voice event
+                // Create root voice event (no reply or original is not a voice message)
                 VoiceEvent.build(
                     voiceMessage = audioMeta,
                 )
