@@ -66,12 +66,17 @@ fun RecordAudioBox(
         }
     }
 
-    // Start recording once permission is granted AND user wants to record
-    LaunchedEffect(recordPermissionState.status.isGranted, wantsToRecord) {
-        if (recordPermissionState.status.isGranted && wantsToRecord && mediaRecorder.value == null) {
+    fun startRecording() {
+        if (mediaRecorder.value == null) {
             elapsedSeconds = 0
             mediaRecorder.value = VoiceMessageRecorder()
             mediaRecorder.value?.start(context, scope)
+        }
+    }
+
+    LaunchedEffect(recordPermissionState.status.isGranted, wantsToRecord) {
+        if (recordPermissionState.status.isGranted && wantsToRecord) {
+            startRecording()
         }
     }
 
@@ -97,10 +102,9 @@ fun RecordAudioBox(
             wantsToRecord = true
             if (!recordPermissionState.status.isGranted) {
                 recordPermissionState.launchPermissionRequest()
-            } else if (mediaRecorder.value == null) {
-                elapsedSeconds = 0
-                mediaRecorder.value = VoiceMessageRecorder()
-                mediaRecorder.value?.start(context, scope)
+            } else {
+                // Start immediately for responsive UX when permission already granted
+                startRecording()
             }
         },
         onRelease = {
