@@ -761,6 +761,7 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
         isUploadingVoice = false
@@ -932,12 +933,26 @@ open class ShortNotePostViewModel :
         }
 
     fun removeVoiceMessage() {
+        deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
         voiceMetadata = null
         voiceSelectedServer = null
         isUploadingVoice = false
         voiceOrchestrator = null
+    }
+
+    private fun deleteVoiceLocalFile() {
+        voiceLocalFile?.let { file ->
+            try {
+                if (file.exists()) {
+                    file.delete()
+                    Log.d("ShortNotePostViewModel", "Deleted voice file: ${file.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("ShortNotePostViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
+            }
+        }
     }
 
     suspend fun uploadVoiceMessageSync(
@@ -978,6 +993,9 @@ open class ShortNotePostViewModel :
                                     duration = recording.duration,
                                     waveform = recording.amplitudes,
                                 )
+                            // Delete the local file after successful upload
+                            deleteVoiceLocalFile()
+                            voiceLocalFile = null
                             voiceRecording = null
                         }
                         is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
