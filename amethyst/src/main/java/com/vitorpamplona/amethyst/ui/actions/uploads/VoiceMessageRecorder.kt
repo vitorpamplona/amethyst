@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
+import android.util.Log
 import androidx.media3.common.MimeTypes
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -53,7 +54,7 @@ class VoiceMessageRecorder {
             MediaRecorder()
         }
 
-    suspend fun start(
+    fun start(
         context: Context,
         scope: CoroutineScope,
     ) {
@@ -88,8 +89,15 @@ class VoiceMessageRecorder {
             }
     }
 
-    suspend fun stop(): RecordingResult? {
-        recorder?.stop()
+    fun stop(): RecordingResult? {
+        job?.cancel()
+        job = null
+
+        try {
+            recorder?.stop()
+        } catch (e: RuntimeException) {
+            Log.w("VoiceMessageRecorder", "Failed to stop recording... Too short?", e)
+        }
         recorder?.reset()
         recorder = null
         val currentTime = TimeUtils.now()
