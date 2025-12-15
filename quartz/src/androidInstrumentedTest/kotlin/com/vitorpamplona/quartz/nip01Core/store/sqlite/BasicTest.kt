@@ -25,10 +25,13 @@ import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -202,6 +205,44 @@ class BasicTest {
 
         db.query(Filter(tags = mapOf("I" to listOf("geo:drt3n")))) { event ->
             assertEquals(comment.toJson(), event.toJson())
+        }
+    }
+
+    @Test
+    fun hashCodeTest() {
+        val note1 =
+            signer.sign(
+                TextNoteEvent.build("test1") {
+                    hashtag("AaAa")
+                },
+            )
+        val note2 =
+            signer.sign(
+                TextNoteEvent.build("test2") {
+                    hashtag("AaAa")
+                },
+            )
+        val note3 =
+            signer.sign(
+                TextNoteEvent.build("test3") {
+                    hashtag("BBBB")
+                },
+            )
+
+        db.insertEvent(note1)
+        db.insertEvent(note2)
+        db.insertEvent(note3)
+
+        val list =
+            db.query(
+                Filter(
+                    tags = mapOf("t" to listOf("AaAa")),
+                ),
+            )
+
+        assertEquals(2, list.size)
+        list.forEach {
+            assertTrue(it.isTaggedHash("AaAa"))
         }
     }
 }
