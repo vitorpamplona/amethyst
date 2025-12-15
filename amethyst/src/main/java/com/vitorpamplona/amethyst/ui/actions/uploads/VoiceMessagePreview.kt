@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,9 +78,20 @@ fun VoiceMessagePreview(
     // Initialize MediaPlayer
     DisposableEffect(voiceMetadata.url, localFile) {
         val player = createMediaPlayer(context, voiceMetadata.url, localFile)
+        player?.setOnCompletionListener {
+            isPlaying = false
+            progress = 0f
+        }
         mediaPlayer = player
 
         onDispose {
+            // Stop playback and clean up
+            try {
+                player?.stop()
+            } catch (e: IllegalStateException) {
+                // Player might already be stopped
+                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped)", e)
+            }
             player?.release()
             mediaPlayer = null
             isPlaying = false
@@ -87,19 +99,37 @@ fun VoiceMessagePreview(
     }
 
     // Update progress while playing
-    LaunchedEffect(isPlaying) {
-        if (isPlaying && mediaPlayer != null) {
-            while (isActive && isPlaying) {
-                val player = mediaPlayer
-                if (player != null && player.isPlaying) {
-                    val current = player.currentPosition.toFloat()
-                    val duration = player.duration.toFloat()
-                    progress = if (duration > 0) current / duration else 0f
-                    delay(100)
-                } else {
+    LaunchedEffect(mediaPlayer, isPlaying) {
+        // Capture player reference to avoid reading volatile state repeatedly
+        val player = mediaPlayer
+        if (player != null && isPlaying) {
+            while (isActive) {
+                try {
+                    if (player.isPlaying) {
+                        val current = player.currentPosition.toFloat()
+                        val duration = player.duration.toFloat()
+                        // Validate values before calculating progress
+                        val newProgress =
+                            if (duration > 0 && current >= 0) {
+                                (current / duration).coerceIn(0f, 1f)
+                            } else {
+                                0f
+                            }
+                        // Only update if value is valid (not NaN or Infinity)
+                        if (newProgress.isFinite()) {
+                            progress = newProgress
+                        }
+                    } else {
+                        // Player stopped, exit loop and let LaunchedEffect restart
+                        break
+                    }
+                } catch (e: IllegalStateException) {
+                    // Player in invalid state, stop tracking
+                    Log.w("VoiceMessagePreview", "MediaPlayer in invalid state during progress tracking", e)
                     isPlaying = false
-                    progress = 0f
+                    break
                 }
+                delay(100)
             }
         }
     }
@@ -121,17 +151,25 @@ fun VoiceMessagePreview(
             // Play/Pause Button
             IconButton(
                 onClick = {
-                    mediaPlayer?.let { player ->
-                        if (isPlaying) {
-                            player.pause()
-                            isPlaying = false
-                        } else {
-                            if (progress >= 1f) {
-                                player.seekTo(0)
-                                progress = 0f
+                    val player = mediaPlayer
+                    if (player != null) {
+                        try {
+                            if (isPlaying) {
+                                player.pause()
+                                isPlaying = false
+                            } else {
+                                // Validate progress before comparison
+                                if (progress.isFinite() && progress >= 1f) {
+                                    player.seekTo(0)
+                                    progress = 0f
+                                }
+                                player.start()
+                                isPlaying = true
                             }
-                            player.start()
-                            isPlaying = true
+                        } catch (e: IllegalStateException) {
+                            // MediaPlayer in invalid state, ignore
+                            Log.w("VoiceMessagePreview", "MediaPlayer operation failed in onClick handler", e)
+                            isPlaying = false
                         }
                     }
                 },
@@ -157,16 +195,29 @@ fun VoiceMessagePreview(
                     waveformBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)),
                     progressBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary)),
                     onProgressChange = { newProgress ->
-                        mediaPlayer?.let { player ->
-                            val newPosition = (newProgress * player.duration).toInt()
-                            player.seekTo(newPosition)
-                            progress = newProgress
+                        // Validate incoming progress value
+                        if (newProgress.isFinite() && newProgress >= 0f && newProgress <= 1f) {
+                            val player = mediaPlayer
+                            if (player != null) {
+                                try {
+                                    val duration = player.duration
+                                    // Only seek if duration is valid
+                                    if (duration > 0) {
+                                        val newPosition = (newProgress * duration).toInt()
+                                        player.seekTo(newPosition)
+                                        progress = newProgress
+                                    }
+                                } catch (e: IllegalStateException) {
+                                    // MediaPlayer in invalid state, ignore
+                                    Log.w("VoiceMessagePreview", "MediaPlayer seek failed in onProgressChange", e)
+                                }
+                            }
                         }
                     },
                 )
 
                 Text(
-                    text = formatDuration(voiceMetadata.duration ?: 0),
+                    text = formatSecondsToTime(voiceMetadata.duration ?: 0),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
@@ -203,17 +254,7 @@ private fun createMediaPlayer(
                 setDataSource(url)
             }
             prepare()
-            setOnCompletionListener {
-                // Reset to beginning when playback completes
-                seekTo(0)
-            }
         }
     } catch (e: Exception) {
         null
     }
-
-private fun formatDuration(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return String.format("%d:%02d", minutes, secs)
-}

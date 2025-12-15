@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 import android.Manifest
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -39,6 +40,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickAndHoldBoxComposable
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -50,15 +52,41 @@ fun RecordAudioBox(
     val mediaRecorder = remember { mutableStateOf<VoiceMessageRecorder?>(null) }
     val context = LocalContext.current
     var elapsedSeconds by remember { mutableIntStateOf(0) }
+    var wantsToRecord by remember { mutableStateOf(false) }
+
+    // Must be called at Composable scope, not in callback
+    val recordPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            wantsToRecord = false
+            mediaRecorder.value?.stop()
+            mediaRecorder.value = null
+        }
+    }
+
+    // Start recording once permission is granted AND user wants to record
+    LaunchedEffect(recordPermissionState.status.isGranted, wantsToRecord) {
+        if (recordPermissionState.status.isGranted && wantsToRecord && mediaRecorder.value == null) {
+            elapsedSeconds = 0
+            mediaRecorder.value = VoiceMessageRecorder()
+            mediaRecorder.value?.start(context, scope)
+        }
+    }
 
     // Track elapsed time while recording
     LaunchedEffect(mediaRecorder.value) {
-        if (mediaRecorder.value != null) {
-            while (mediaRecorder.value != null) {
+        // Capture the current recorder state to avoid repeated reads of volatile state
+        val currentRecorder = mediaRecorder.value
+        if (currentRecorder != null) {
+            // Loop while coroutine is active - LaunchedEffect will cancel when mediaRecorder.value changes
+            while (isActive) {
                 delay(1000)
                 elapsedSeconds++
             }
         } else {
+            // Reset elapsed time when not recording
             elapsedSeconds = 0
         }
     }
@@ -66,19 +94,17 @@ fun RecordAudioBox(
     ClickAndHoldBoxComposable(
         modifier = modifier,
         onPress = {
-            val recordPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
-            val scope = rememberCoroutineScope()
-            LaunchedEffect(Unit) {
-                if (!recordPermissionState.status.isGranted) {
-                    recordPermissionState.launchPermissionRequest()
-                } else {
-                    elapsedSeconds = 0
-                    mediaRecorder.value = VoiceMessageRecorder()
-                    mediaRecorder.value?.start(context, scope)
-                }
+            wantsToRecord = true
+            if (!recordPermissionState.status.isGranted) {
+                recordPermissionState.launchPermissionRequest()
+            } else if (mediaRecorder.value == null) {
+                elapsedSeconds = 0
+                mediaRecorder.value = VoiceMessageRecorder()
+                mediaRecorder.value?.start(context, scope)
             }
         },
         onRelease = {
+            wantsToRecord = false
             val result = mediaRecorder.value?.stop()
             mediaRecorder.value = null
             if (result != null) {
@@ -94,6 +120,7 @@ fun RecordAudioBox(
             }
         },
         onCancel = {
+            wantsToRecord = false
             mediaRecorder.value?.stop()
             mediaRecorder.value = null
         },

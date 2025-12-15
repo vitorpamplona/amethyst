@@ -228,21 +228,11 @@ fun FloatingRecordingIndicator(
             )
 
             Text(
-                text = "Recording ${formatSeconds(elapsedSeconds)}",
+                text = "Recording ${formatSecondsToTime(elapsedSeconds)}",
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
             )
         }
-    }
-}
-
-private fun formatSeconds(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return if (minutes > 0) {
-        String.format("%d:%02d", minutes, secs)
-    } else {
-        String.format("0:%02d", secs)
     }
 }

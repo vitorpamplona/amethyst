@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,12 +62,14 @@ fun RecordVoiceButton(onVoiceTaken: (RecordingResult) -> Unit) {
                 onVoiceTaken(recording)
             },
         ) { recordingState, elapsed ->
-            // Update parent state to trigger recompositions
-            if (isRecording != recordingState) {
-                isRecording = recordingState
-            }
-            if (elapsedSeconds != elapsed) {
-                elapsedSeconds = elapsed
+            // Update parent state after composition completes
+            SideEffect {
+                if (isRecording != recordingState) {
+                    isRecording = recordingState
+                }
+                if (elapsedSeconds != elapsed) {
+                    elapsedSeconds = elapsed
+                }
             }
 
             Box(
