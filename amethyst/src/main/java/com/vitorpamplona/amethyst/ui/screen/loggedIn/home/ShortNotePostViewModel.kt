@@ -965,6 +965,14 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         val recording = voiceRecording ?: return
+        val appContext = Amethyst.instance.appContext
+        val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
+        val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
+        val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
+        val uploadVoiceUnexpected = stringRes(appContext, R.string.upload_error_voice_message_unexpected_state)
+        val uploadVoiceExceptionMessage: (String) -> String = { detail ->
+            stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
+        }
 
         isUploadingVoice = true
 
@@ -982,7 +990,7 @@ open class ShortNotePostViewModel :
                     compressionQuality = CompressorQuality.UNCOMPRESSED,
                     server = server,
                     account = account,
-                    context = Amethyst.instance.appContext,
+                    context = appContext,
                     useH265 = false,
                 )
 
@@ -1006,20 +1014,20 @@ open class ShortNotePostViewModel :
                         is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
                             // For NIP95, we need to create the event and get the nevent URL
                             // This is handled differently - skip for now
-                            onError("Upload Error", "NIP95 not yet supported for voice messages")
+                            onError(uploadErrorTitle, uploadVoiceNip95NotSupported)
                         }
                     }
                 }
                 is UploadingState.Error -> {
-                    onError("Upload Error", "Failed to upload voice message")
+                    onError(uploadErrorTitle, uploadVoiceFailed)
                     voiceRecording = null
                 }
                 else -> {
-                    onError("Upload Error", "Unexpected upload state")
+                    onError(uploadErrorTitle, uploadVoiceUnexpected)
                 }
             }
         } catch (e: Exception) {
-            onError("Upload Error", e.message ?: e.javaClass.simpleName)
+            onError(uploadErrorTitle, uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName))
             voiceRecording = null
         } finally {
             isUploadingVoice = false

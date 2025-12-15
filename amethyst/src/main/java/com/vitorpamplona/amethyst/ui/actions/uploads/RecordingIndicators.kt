@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Animated expanding circles that pulse outward from the recording button
@@ -176,6 +178,9 @@ fun FloatingRecordingIndicator(
 ) {
     if (!isRecording) return
 
+    val recordingLabel = stringRes(id = R.string.recording_indicator_description)
+    val recordingWithTime = stringRes(id = R.string.recording_indicator_with_time, formatSecondsToTime(elapsedSeconds))
+
     Box(
         modifier =
             modifier
@@ -207,7 +212,7 @@ fun FloatingRecordingIndicator(
 
             Icon(
                 imageVector = Icons.Default.FiberManualRecord,
-                contentDescription = "Recording",
+                contentDescription = recordingLabel,
                 tint = Color.White,
                 modifier =
                     Modifier
@@ -216,7 +221,7 @@ fun FloatingRecordingIndicator(
             )
 
             Text(
-                text = "Recording ${formatSecondsToTime(elapsedSeconds)}",
+                text = recordingWithTime,
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
