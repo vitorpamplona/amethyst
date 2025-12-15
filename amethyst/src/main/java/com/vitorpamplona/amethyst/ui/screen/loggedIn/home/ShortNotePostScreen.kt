@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -405,12 +406,16 @@ private fun NewPostScreenBody(
             )
         }
 
-        BottomRowActions(postViewModel)
+        BottomRowActions(postViewModel, accountViewModel)
     }
 }
 
 @Composable
-private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
+private fun BottomRowActions(
+    postViewModel: ShortNotePostViewModel,
+    accountViewModel: AccountViewModel,
+) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -437,6 +442,17 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         TakeVideoButton(
             onVideoTaken = {
                 postViewModel.selectImage(it)
+            },
+        )
+
+        RecordVoiceButton(
+            onVoiceTaken = { recording ->
+                postViewModel.selectVoiceRecording(recording)
+                postViewModel.uploadVoiceMessage(
+                    accountViewModel.account.settings.defaultFileServer,
+                    accountViewModel.toastManager::toast,
+                    context,
+                )
             },
         )
 
