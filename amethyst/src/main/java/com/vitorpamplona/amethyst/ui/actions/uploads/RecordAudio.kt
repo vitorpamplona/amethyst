@@ -24,9 +24,12 @@ import android.Manifest
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -35,16 +38,30 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickAndHoldBoxComposable
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RecordAudioBox(
     modifier: Modifier,
     onRecordTaken: (RecordingResult) -> Unit,
-    content: @Composable (Boolean) -> Unit,
+    content: @Composable (Boolean, Int) -> Unit,
 ) {
     val mediaRecorder = remember { mutableStateOf<VoiceMessageRecorder?>(null) }
     val context = LocalContext.current
+    var elapsedSeconds by remember { mutableIntStateOf(0) }
+
+    // Track elapsed time while recording
+    LaunchedEffect(mediaRecorder.value) {
+        if (mediaRecorder.value != null) {
+            while (mediaRecorder.value != null) {
+                delay(1000)
+                elapsedSeconds++
+            }
+        } else {
+            elapsedSeconds = 0
+        }
+    }
 
     ClickAndHoldBoxComposable(
         modifier = modifier,
@@ -55,6 +72,7 @@ fun RecordAudioBox(
                 if (!recordPermissionState.status.isGranted) {
                     recordPermissionState.launchPermissionRequest()
                 } else {
+                    elapsedSeconds = 0
                     mediaRecorder.value = VoiceMessageRecorder()
                     mediaRecorder.value?.start(context, scope)
                 }
@@ -62,6 +80,7 @@ fun RecordAudioBox(
         },
         onRelease = {
             val result = mediaRecorder.value?.stop()
+            mediaRecorder.value = null
             if (result != null) {
                 onRecordTaken(result)
             } else {
@@ -76,7 +95,8 @@ fun RecordAudioBox(
         },
         onCancel = {
             mediaRecorder.value?.stop()
+            mediaRecorder.value = null
         },
-        content,
+        content = @Composable { isRecording -> content(isRecording, elapsedSeconds) },
     )
 }
