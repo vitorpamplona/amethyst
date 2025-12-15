@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -133,47 +132,36 @@ fun ExpandingCirclesAnimation(
 
     if (!isRecording) return
 
-    Layout(
-        modifier = modifier,
-        content = {
-            // Circle 1
-            Box(
-                modifier =
-                    Modifier
-                        .scale(scale1)
-                        .alpha(alpha1)
-                        .background(primaryColor.copy(alpha = 0.3f), CircleShape),
-            )
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        // Circle 1
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .scale(scale1)
+                    .alpha(alpha1)
+                    .background(primaryColor.copy(alpha = 0.3f), CircleShape),
+        )
 
-            // Circle 2
-            Box(
-                modifier =
-                    Modifier
-                        .scale(scale2)
-                        .alpha(alpha2)
-                        .background(primaryColor.copy(alpha = 0.2f), CircleShape),
-            )
+        // Circle 2
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .scale(scale2)
+                    .alpha(alpha2)
+                    .background(primaryColor.copy(alpha = 0.2f), CircleShape),
+        )
 
-            // Circle 3
-            Box(
-                modifier =
-                    Modifier
-                        .scale(scale3)
-                        .alpha(alpha3)
-                        .background(primaryColor.copy(alpha = 0.1f), CircleShape),
-            )
-        },
-    ) { measurables, constraints ->
-        // All circles are centered at the same position
-        val placeables = measurables.map { it.measure(constraints) }
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            placeables.forEach { placeable ->
-                placeable.placeRelative(
-                    x = (constraints.maxWidth - placeable.width) / 2,
-                    y = (constraints.maxHeight - placeable.height) / 2,
-                )
-            }
-        }
+        // Circle 3
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .scale(scale3)
+                    .alpha(alpha3)
+                    .background(primaryColor.copy(alpha = 0.1f), CircleShape),
+        )
     }
 }
 
