@@ -108,7 +108,7 @@ class PrivateDmEvent(
         fun prepareMessageToEncrypt(
             msg: String,
             iMetas: List<IMetaTag>? = null,
-            advertiseNip18: Boolean = true,
+            advertiseNip18: Boolean = false,
         ): String {
             var message = msg
             iMetas?.forEach {
