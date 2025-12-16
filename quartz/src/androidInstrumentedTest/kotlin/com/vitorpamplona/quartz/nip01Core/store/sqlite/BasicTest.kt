@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -203,7 +204,7 @@ class BasicTest {
         db.insertEvent(comment)
         db.insertEvent(profile)
 
-        db.query(Filter(tags = mapOf("I" to listOf("geo:drt3n")))) { event ->
+        db.query<Event>(Filter(tags = mapOf("I" to listOf("geo:drt3n")))) { event ->
             assertEquals(comment.toJson(), event.toJson())
         }
     }
@@ -234,7 +235,7 @@ class BasicTest {
         db.insertEvent(note3)
 
         val list =
-            db.query(
+            db.query<TextNoteEvent>(
                 Filter(
                     tags = mapOf("t" to listOf("AaAa")),
                 ),

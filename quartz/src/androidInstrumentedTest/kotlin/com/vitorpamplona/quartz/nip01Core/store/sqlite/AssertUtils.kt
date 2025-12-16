@@ -24,11 +24,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import junit.framework.TestCase
 
-fun EventStore.assertQuery(
-    expected: Event?,
+fun <T : Event> EventStore.assertQuery(
+    expected: T?,
     filter: Filter,
 ) {
-    val queryResult = query(filter)
+    val queryResult = query<T>(filter)
     val countResult = count(filter)
     if (expected == null) {
         TestCase.assertEquals(0, queryResult.size)
@@ -40,11 +40,11 @@ fun EventStore.assertQuery(
     }
 }
 
-fun EventStore.assertQuery(
-    expected: List<Event>,
+fun <T : Event> EventStore.assertQuery(
+    expected: List<T>,
     filter: Filter,
 ) {
-    val queryResult = query(filter)
+    val queryResult = query<T>(filter)
     val countResult = count(filter)
     TestCase.assertEquals(expected.size, queryResult.size)
     TestCase.assertEquals(expected.size, countResult)
@@ -53,11 +53,11 @@ fun EventStore.assertQuery(
     }
 }
 
-fun SQLiteEventStore.assertQuery(
-    expected: Event?,
+fun <T : Event> SQLiteEventStore.assertQuery(
+    expected: T?,
     filter: Filter,
 ) {
-    val queryResult = query(filter)
+    val queryResult = query<T>(filter)
     val countResult = count(filter)
     if (expected == null) {
         TestCase.assertEquals(0, queryResult.size)
@@ -69,11 +69,11 @@ fun SQLiteEventStore.assertQuery(
     }
 }
 
-fun SQLiteEventStore.assertQuery(
-    expected: List<Event>,
+fun <T : Event> SQLiteEventStore.assertQuery(
+    expected: List<T>,
     filter: Filter,
 ) {
-    val queryResult = query(filter)
+    val queryResult = query<T>(filter)
     val countResult = count(filter)
     TestCase.assertEquals(expected.size, queryResult.size)
     TestCase.assertEquals(expected.size, countResult)
