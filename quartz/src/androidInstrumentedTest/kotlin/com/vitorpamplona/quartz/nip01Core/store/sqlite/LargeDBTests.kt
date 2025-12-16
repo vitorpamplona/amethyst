@@ -63,6 +63,8 @@ class LargeDBTests {
     @After
     fun tearDown() {
         db.close()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("test_large.db")
     }
 
     @Test

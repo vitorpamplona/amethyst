@@ -179,9 +179,13 @@ class EventIndexesModule(
         filter: Filter,
         db: SQLiteDatabase,
     ): List<Event> {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter) ?: return db.runQuery(makeEverythingQuery())
+        val rowIdSubQuery = prepareRowIDSubQueries(filter)
 
-        return db.runQuery(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args)
+        return if (rowIdSubQuery == null) {
+            db.runQuery(makeEverythingQuery())
+        } else {
+            db.runQuery(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args)
+        }
     }
 
     fun query(

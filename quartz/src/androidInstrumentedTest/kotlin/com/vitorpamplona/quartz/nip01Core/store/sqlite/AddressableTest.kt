@@ -48,6 +48,8 @@ class AddressableTest {
     @After
     fun tearDown() {
         db.close()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase("test.db")
     }
 
     @Test
