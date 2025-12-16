@@ -158,7 +158,14 @@
     <string name="record_a_message">Nahrajte zprávu</string>
     <string name="record_a_message_title">Nahrajte zprávu</string>
     <string name="record_a_message_description">Stiskněte a podržte pro nahrání zprávy</string>
+    <string name="recording_indicator_description">Nahrávání</string>
+    <string name="recording_indicator_with_time">Nahrávání %1$s</string>
     <string name="uploading">Nahrávání…</string>
+    <string name="upload_error_title">Chyba nahrávání</string>
+    <string name="upload_error_voice_message_failed">Nepodařilo se nahrát hlasovou zprávu</string>
+    <string name="upload_error_voice_message_unexpected_state">Neočekávaný stav nahrávání</string>
+    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 zatím není pro hlasové zprávy podporován</string>
+    <string name="upload_error_voice_message_exception">Nahrávání hlasu selhalo: %1$s</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel nemá nastavenou LN adresu pro přijímání sats</string>
     <string name="reply_here">"Odpověď zde…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Zkopíruje ID poznámky do schránky pro sdílení</string>
@@ -1176,12 +1183,4 @@
     <string name="follow_pack_broadcast">Broadcast sady doporučení</string>
     <string name="follow_set_delete">Smazat seznam</string>
     <string name="follow_pack_delete">Smazat sadu doporučení</string>
-    <string name="recording_indicator_description">Nahrávání</string>
-    <string name="recording_indicator_with_time">Nahrávání %1$s</string>
-    <string name="upload_error_title">Chyba nahrávání</string>
-    <string name="upload_error_voice_message_failed">Nepodařilo se nahrát hlasovou zprávu</string>
-    <string name="upload_error_voice_message_unexpected_state">Neočekávaný stav nahrávání</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 zatím není pro hlasové zprávy podporován</string>
-    <string name="upload_error_voice_message_exception">Nahrávání hlasu selhalo: %1$s</string>
-
 </resources>

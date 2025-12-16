@@ -160,7 +160,14 @@ erie gespeichert</string>
     <string name="record_a_message">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_title">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>
+    <string name="recording_indicator_description">Aufnahme</string>
+    <string name="recording_indicator_with_time">Aufnahme %1$s</string>
     <string name="uploading">Hochladen…</string>
+    <string name="upload_error_title">Upload-Fehler</string>
+    <string name="upload_error_voice_message_failed">Sprachnachricht konnte nicht hochgeladen werden</string>
+    <string name="upload_error_voice_message_unexpected_state">Unerwarteter Upload-Status</string>
+    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
+    <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
     <string name="reply_here">"Hier antworten…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiert die Notiz-ID zum Teilen in die Zwischenablage</string>
@@ -1181,12 +1188,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_pack_broadcast">Empfehlungspaket veröffentlichen</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
-    <string name="recording_indicator_description">Aufnahme</string>
-    <string name="recording_indicator_with_time">Aufnahme %1$s</string>
-    <string name="upload_error_title">Upload-Fehler</string>
-    <string name="upload_error_voice_message_failed">Sprachnachricht konnte nicht hochgeladen werden</string>
-    <string name="upload_error_voice_message_unexpected_state">Unerwarteter Upload-Status</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
-    <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
-
 </resources>
