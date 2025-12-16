@@ -1176,4 +1176,12 @@
     <string name="follow_pack_broadcast">Transmitir pacote de recomendações</string>
     <string name="follow_set_delete">Excluir lista</string>
     <string name="follow_pack_delete">Excluir pacote de recomendações</string>
+    <string name="recording_indicator_description">Gravando</string>
+    <string name="recording_indicator_with_time">Gravando %1$s</string>
+    <string name="upload_error_title">Erro de upload</string>
+    <string name="upload_error_voice_message_failed">Falha ao enviar mensagem de voz</string>
+    <string name="upload_error_voice_message_unexpected_state">Estado de upload inesperado</string>
+    <string name="upload_error_voice_message_nip95_not_supported">O NIP-95 ainda não é suportado para mensagens de voz</string>
+    <string name="upload_error_voice_message_exception">Falha no upload de voz: %1$s</string>
+
 </resources>

@@ -1181,4 +1181,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_pack_broadcast">Empfehlungspaket veröffentlichen</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
+    <string name="recording_indicator_description">Aufnahme</string>
+    <string name="recording_indicator_with_time">Aufnahme %1$s</string>
+    <string name="upload_error_title">Upload-Fehler</string>
+    <string name="upload_error_voice_message_failed">Sprachnachricht konnte nicht hochgeladen werden</string>
+    <string name="upload_error_voice_message_unexpected_state">Unerwarteter Upload-Status</string>
+    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
+    <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
+
 </resources>

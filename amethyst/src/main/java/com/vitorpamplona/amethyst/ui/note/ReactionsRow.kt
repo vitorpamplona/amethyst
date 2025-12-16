@@ -609,7 +609,7 @@ fun ReplyViaVoiceReaction(
         onRecordTaken = { audio ->
             accountViewModel.sendVoiceReply(baseNote, audio, context)
         },
-    ) {
+    ) { _, _ ->
         VoiceReplyIcon(iconSizeModifier, grayTint)
     }
 

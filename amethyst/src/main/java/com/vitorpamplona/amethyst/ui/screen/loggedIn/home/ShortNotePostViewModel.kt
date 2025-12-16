@@ -42,11 +42,15 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
@@ -116,6 +120,9 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -177,6 +184,14 @@ open class ShortNotePostViewModel :
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
+    // Voice Messages
+    var voiceRecording by mutableStateOf<RecordingResult?>(null)
+    var voiceLocalFile by mutableStateOf<java.io.File?>(null)
+    var isUploadingVoice by mutableStateOf(false)
+    var voiceMetadata by mutableStateOf<AudioMeta?>(null)
+    var voiceSelectedServer by mutableStateOf<ServerName?>(null)
+    var voiceOrchestrator by mutableStateOf<UploadOrchestrator?>(null)
+
     // Polls
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
@@ -220,7 +235,7 @@ open class ShortNotePostViewModel :
 
     fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
 
-    fun user(): User? = account.userProfile()
+    fun user(): User = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -466,6 +481,24 @@ open class ShortNotePostViewModel :
     }
 
     suspend fun sendPostSync() {
+        // Upload voice message first if it hasn't been uploaded yet
+        if (voiceRecording != null && voiceMetadata == null) {
+            val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
+            uploadVoiceMessageSync(
+                serverToUse,
+                { _, _ -> }, // Error handling is done by checking voiceMetadata below
+            )
+            // Abort if upload failed - don't post without voice data
+            if (voiceMetadata == null) {
+                Log.w("ShortNotePostViewModel", "Voice upload failed, aborting post")
+                return
+            }
+            // Update default server if voice message was successfully uploaded
+            if (voiceSelectedServer != null && voiceSelectedServer?.type != ServerType.NIP95) {
+                account.settings.changeDefaultFileServer(voiceSelectedServer!!)
+            }
+        }
+
         val template = createTemplate() ?: return
         val extraNotesToBroadcast = mutableListOf<Event>()
 
@@ -504,6 +537,24 @@ open class ShortNotePostViewModel :
     }
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
+        // Check if this is a voice message
+        voiceMetadata?.let { audioMeta ->
+            // Only create voice reply if original note is also a VoiceEvent
+            val originalVoiceHint = originalNote?.toEventHint<VoiceEvent>()
+            return if (originalVoiceHint != null) {
+                // Create voice reply event
+                VoiceReplyEvent.build(
+                    voiceMessage = audioMeta,
+                    replyingTo = originalVoiceHint,
+                )
+            } else {
+                // Create root voice event (no reply or original is not a voice message)
+                VoiceEvent.build(
+                    voiceMessage = audioMeta,
+                )
+            }
+        }
+
         val tagger =
             NewMessageTagger(
                 message.text,
@@ -715,6 +766,13 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        deleteVoiceLocalFile()
+        voiceRecording = null
+        voiceLocalFile = null
+        isUploadingVoice = false
+        voiceMetadata = null
+        voiceSelectedServer = null
+        voiceOrchestrator = null
         pTags = null
 
         wantsPoll = false
@@ -833,9 +891,16 @@ open class ShortNotePostViewModel :
 
     private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> = mutableStateMapOf(Pair(0, ""), Pair(1, ""))
 
-    fun canPost(): Boolean =
-        message.text.isNotBlank() &&
+    fun canPost(): Boolean {
+        // Voice messages can be posted without text (with either uploaded or pending recording)
+        if (voiceMetadata != null || voiceRecording != null) {
+            return !isUploadingVoice && !isUploadingImage
+        }
+
+        // Regular text/media posts require text
+        return message.text.isNotBlank() &&
             !isUploadingImage &&
+            !isUploadingVoice &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             (
@@ -847,6 +912,7 @@ open class ShortNotePostViewModel :
                     )
             ) &&
             multiOrchestrator == null
+    }
 
     fun insertAtCursor(newElement: String) {
         message = message.insertUrlAtCursor(newElement)
@@ -854,6 +920,121 @@ open class ShortNotePostViewModel :
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
         multiOrchestrator = MultiOrchestrator(uris)
+    }
+
+    fun selectVoiceRecording(recording: RecordingResult) {
+        // Delete any existing temp file before replacing
+        deleteVoiceLocalFile()
+        voiceRecording = recording
+        voiceLocalFile = recording.file
+    }
+
+    fun getVoicePreviewMetadata(): AudioMeta? =
+        voiceRecording?.let { recording ->
+            AudioMeta(
+                url = "", // Empty URL for preview (local file will be used)
+                mimeType = recording.mimeType,
+                duration = recording.duration,
+                waveform = recording.amplitudes,
+            )
+        }
+
+    fun removeVoiceMessage() {
+        deleteVoiceLocalFile()
+        voiceRecording = null
+        voiceLocalFile = null
+        voiceMetadata = null
+        voiceSelectedServer = null
+        isUploadingVoice = false
+        voiceOrchestrator = null
+    }
+
+    private fun deleteVoiceLocalFile() {
+        voiceLocalFile?.let { file ->
+            try {
+                if (file.exists()) {
+                    file.delete()
+                    Log.d("ShortNotePostViewModel", "Deleted voice file: ${file.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("ShortNotePostViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
+            }
+        }
+    }
+
+    suspend fun uploadVoiceMessageSync(
+        server: ServerName,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        val recording = voiceRecording ?: return
+        val appContext = Amethyst.instance.appContext
+        val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
+        val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
+        val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
+        val uploadVoiceUnexpected = stringRes(appContext, R.string.upload_error_voice_message_unexpected_state)
+        val uploadVoiceExceptionMessage: (String) -> String = { detail ->
+            stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
+        }
+
+        isUploadingVoice = true
+
+        try {
+            val uri = android.net.Uri.fromFile(recording.file)
+            val orchestrator = UploadOrchestrator()
+            voiceOrchestrator = orchestrator
+
+            val result =
+                orchestrator.upload(
+                    uri = uri,
+                    mimeType = recording.mimeType,
+                    alt = null,
+                    contentWarningReason = null,
+                    compressionQuality = CompressorQuality.UNCOMPRESSED,
+                    server = server,
+                    account = account,
+                    context = appContext,
+                    useH265 = false,
+                )
+
+            when (result) {
+                is UploadingState.Finished -> {
+                    when (val orchestratorResult = result.result) {
+                        is UploadOrchestrator.OrchestratorResult.ServerResult -> {
+                            voiceMetadata =
+                                AudioMeta(
+                                    url = orchestratorResult.url,
+                                    mimeType = recording.mimeType,
+                                    hash = orchestratorResult.fileHeader.hash,
+                                    duration = recording.duration,
+                                    waveform = recording.amplitudes,
+                                )
+                            // Delete the local file after successful upload
+                            deleteVoiceLocalFile()
+                            voiceLocalFile = null
+                            voiceRecording = null
+                        }
+                        is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
+                            // For NIP95, we need to create the event and get the nevent URL
+                            // This is handled differently - skip for now
+                            onError(uploadErrorTitle, uploadVoiceNip95NotSupported)
+                        }
+                    }
+                }
+                is UploadingState.Error -> {
+                    onError(uploadErrorTitle, uploadVoiceFailed)
+                    voiceRecording = null
+                }
+                else -> {
+                    onError(uploadErrorTitle, uploadVoiceUnexpected)
+                }
+            }
+        } catch (e: Exception) {
+            onError(uploadErrorTitle, uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName))
+            voiceRecording = null
+        } finally {
+            isUploadingVoice = false
+            voiceOrchestrator = null
+        }
     }
 
     override fun locationFlow(): StateFlow<LocationState.LocationResult> {

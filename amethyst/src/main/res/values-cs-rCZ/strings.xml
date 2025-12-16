@@ -1176,4 +1176,12 @@
     <string name="follow_pack_broadcast">Broadcast sady doporučení</string>
     <string name="follow_set_delete">Smazat seznam</string>
     <string name="follow_pack_delete">Smazat sadu doporučení</string>
+    <string name="recording_indicator_description">Nahrávání</string>
+    <string name="recording_indicator_with_time">Nahrávání %1$s</string>
+    <string name="upload_error_title">Chyba nahrávání</string>
+    <string name="upload_error_voice_message_failed">Nepodařilo se nahrát hlasovou zprávu</string>
+    <string name="upload_error_voice_message_unexpected_state">Neočekávaný stav nahrávání</string>
+    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 zatím není pro hlasové zprávy podporován</string>
+    <string name="upload_error_voice_message_exception">Nahrávání hlasu selhalo: %1$s</string>
+
 </resources>
