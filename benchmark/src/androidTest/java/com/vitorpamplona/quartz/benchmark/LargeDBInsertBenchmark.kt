@@ -51,20 +51,20 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
         benchmarkRule.measureRepeated {
             val db =
                 this.runWithMeasurementDisabled {
+                    context.deleteDatabase("test1.db")
                     val db = EventStore(context, "test1.db")
-                    db.store.clearDB()
                     db
                 }
             firstThousandEvents.forEach { event ->
                 try {
                     db.insert(event)
                 } catch (e: SQLiteException) {
-                    Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: $event")
+                    Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
                 }
             }
             this.runWithMeasurementDisabled {
-                db.store.clearDB()
                 db.close()
+                context.deleteDatabase("test1.db")
             }
         }
     }
@@ -84,13 +84,13 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
         benchmarkRule.measureRepeated {
             val db =
                 this.runWithMeasurementDisabled {
+                    context.deleteDatabase("test1.db")
                     val db = EventStore(context, "test1.db")
-                    db.store.clearDB()
                     toBeDeletedEvents.forEach { event ->
                         try {
                             db.insert(event)
                         } catch (e: SQLiteException) {
-                            Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: $event")
+                            Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
                         }
                     }
 
@@ -106,8 +106,8 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
             }
 
             runWithMeasurementDisabled {
-                db.store.clearDB()
                 db.close()
+                context.deleteDatabase("test1.db")
             }
         }
     }
