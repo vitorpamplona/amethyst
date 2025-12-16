@@ -158,7 +158,14 @@
     <string name="record_a_message">Gravar uma mensagem</string>
     <string name="record_a_message_title">Gravar uma mensagem</string>
     <string name="record_a_message_description">Clique e segure para gravar uma mensagem</string>
+    <string name="recording_indicator_description">Gravando</string>
+    <string name="recording_indicator_with_time">Gravando %1$s</string>
     <string name="uploading">Enviando…</string>
+    <string name="upload_error_title">Erro de upload</string>
+    <string name="upload_error_voice_message_failed">Falha ao enviar mensagem de voz</string>
+    <string name="upload_error_voice_message_unexpected_state">Estado de upload inesperado</string>
+    <string name="upload_error_voice_message_nip95_not_supported">O NIP-95 ainda não é suportado para mensagens de voz</string>
+    <string name="upload_error_voice_message_exception">Falha no upload de voz: %1$s</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Usuário não tem um endereço lightning configurado para receber sats</string>
     <string name="reply_here">"responda aqui.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copia o ID do canal (note) para compartilhar</string>
@@ -1176,12 +1183,4 @@
     <string name="follow_pack_broadcast">Transmitir pacote de recomendações</string>
     <string name="follow_set_delete">Excluir lista</string>
     <string name="follow_pack_delete">Excluir pacote de recomendações</string>
-    <string name="recording_indicator_description">Gravando</string>
-    <string name="recording_indicator_with_time">Gravando %1$s</string>
-    <string name="upload_error_title">Erro de upload</string>
-    <string name="upload_error_voice_message_failed">Falha ao enviar mensagem de voz</string>
-    <string name="upload_error_voice_message_unexpected_state">Estado de upload inesperado</string>
-    <string name="upload_error_voice_message_nip95_not_supported">O NIP-95 ainda não é suportado para mensagens de voz</string>
-    <string name="upload_error_voice_message_exception">Falha no upload de voz: %1$s</string>
-
 </resources>
