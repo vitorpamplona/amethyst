@@ -109,8 +109,7 @@ class SQLiteEventStore(
         if (event.isExpired()) throw SQLiteConstraintException("blocked: Cannot insert an expired event")
         if (event.kind.isEphemeral()) return false
 
-        val db = writableDatabase
-        db.transaction {
+        writableDatabase.transaction {
             innerInsertEvent(event, this)
         }
         return true
