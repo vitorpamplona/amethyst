@@ -923,6 +923,8 @@ open class ShortNotePostViewModel :
     }
 
     fun selectVoiceRecording(recording: RecordingResult) {
+        // Delete any existing temp file before replacing
+        deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
     }
