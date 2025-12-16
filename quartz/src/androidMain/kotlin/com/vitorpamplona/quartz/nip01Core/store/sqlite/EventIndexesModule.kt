@@ -175,10 +175,10 @@ class EventIndexesModule(
         return makeQueryIn(rowIdSubQuery.sql)
     }
 
-    fun query(
+    fun <T : Event> query(
         filter: Filter,
         db: SQLiteDatabase,
-    ): List<Event> {
+    ): List<T> {
         val rowIdSubQuery = prepareRowIDSubQueries(filter)
 
         return if (rowIdSubQuery == null) {
@@ -188,10 +188,10 @@ class EventIndexesModule(
         }
     }
 
-    fun query(
+    fun <T : Event> query(
         filter: Filter,
         db: SQLiteDatabase,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) {
         val rowIdSubQuery = prepareRowIDSubQueries(filter) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
 
@@ -205,10 +205,10 @@ class EventIndexesModule(
         return makeQueryIn(unions)
     }
 
-    fun query(
+    fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteDatabase,
-    ): List<Event> {
+    ): List<T> {
         val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
 
         if (rowIdSubQueries.isEmpty()) return db.runQuery(makeEverythingQuery())
@@ -219,10 +219,10 @@ class EventIndexesModule(
         return db.runQuery(makeQueryIn(unions), args)
     }
 
-    fun query(
+    fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteDatabase,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) {
         val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
 
@@ -244,20 +244,20 @@ class EventIndexesModule(
         ORDER BY created_at DESC, id
         """.trimIndent()
 
-    private fun SQLiteDatabase.runQuery(
+    private fun <T : Event> SQLiteDatabase.runQuery(
         sql: String,
         args: List<String> = emptyList(),
-    ): List<Event> =
+    ): List<T> =
         rawQuery(sql, args.toTypedArray()).use { cursor ->
             parseResults(cursor)
         }
 
-    private fun parseResults(cursor: Cursor): List<Event> {
-        val events = ArrayList<Event>()
+    private fun <T : Event> parseResults(cursor: Cursor): List<T> {
+        val events = ArrayList<T>()
 
         while (cursor.moveToNext()) {
             events.add(
-                EventFactory.create(
+                EventFactory.create<T>(
                     cursor.getString(0).intern(),
                     cursor.getString(1).intern(),
                     cursor.getLong(2),
@@ -272,21 +272,21 @@ class EventIndexesModule(
         return events
     }
 
-    private fun SQLiteDatabase.runQueryEmitting(
+    private fun <T : Event> SQLiteDatabase.runQueryEmitting(
         sql: String,
         args: List<String> = emptyList(),
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) = rawQuery(sql, args.toTypedArray()).use { cursor ->
         emitResults(cursor, onEach)
     }
 
-    private fun emitResults(
+    private fun <T : Event> emitResults(
         cursor: Cursor,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) {
         while (cursor.moveToNext()) {
             onEach(
-                EventFactory.create(
+                EventFactory.create<T>(
                     cursor.getString(0).intern(),
                     cursor.getString(1).intern(),
                     cursor.getLong(2),
@@ -347,18 +347,18 @@ class EventIndexesModule(
     fun delete(
         filter: Filter,
         db: SQLiteDatabase,
-    ): Int? {
-        val rowIdQuery = prepareRowIDSubQueries(filter) ?: return null
+    ): Int {
+        val rowIdQuery = prepareRowIDSubQueries(filter) ?: return 0
         return db.runDelete(rowIdQuery.sql, rowIdQuery.args)
     }
 
     fun delete(
         filters: List<Filter>,
         db: SQLiteDatabase,
-    ): Int? {
+    ): Int {
         val rowIdSubqueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
 
-        if (rowIdSubqueries.isEmpty()) return null
+        if (rowIdSubqueries.isEmpty()) return 0
 
         val unions = rowIdSubqueries.joinToString(" UNION ") { it.sql }
         val args = rowIdSubqueries.flatMap { it.args }

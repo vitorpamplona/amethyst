@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 
@@ -117,7 +118,7 @@ class SQLiteEventStore(
 
     inner class Transaction(
         val db: SQLiteDatabase,
-    ) : EventStore.ITransaction {
+    ) : IEventStore.ITransaction {
         override fun insert(event: Event): Boolean {
             if (event.isExpired()) throw SQLiteConstraintException("blocked: Cannot insert an expired event")
             if (event.kind.isEphemeral()) return false
@@ -139,27 +140,31 @@ class SQLiteEventStore(
         }
     }
 
-    fun query(filter: Filter): List<Event> = eventIndexModule.query(filter, readableDatabase)
+    fun <T : Event> query(filter: Filter): List<T> = eventIndexModule.query(filter, readableDatabase)
 
-    fun query(filters: List<Filter>): List<Event> = eventIndexModule.query(filters, readableDatabase)
+    fun <T : Event> query(filters: List<Filter>): List<T> = eventIndexModule.query(filters, readableDatabase)
 
-    fun query(
+    fun <T : Event> query(
         filter: Filter,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) = eventIndexModule.query(filter, readableDatabase, onEach)
 
-    fun query(
+    fun <T : Event> query(
         filters: List<Filter>,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) = eventIndexModule.query(filters, readableDatabase, onEach)
 
     fun count(filter: Filter): Int = eventIndexModule.count(filter, readableDatabase)
 
     fun count(filters: List<Filter>): Int = eventIndexModule.count(filters, readableDatabase)
 
-    fun delete(filter: Filter): Int? = eventIndexModule.delete(filter, writableDatabase)
+    fun delete(filter: Filter) {
+        eventIndexModule.delete(filter, writableDatabase)
+    }
 
-    fun delete(filters: List<Filter>): Int? = eventIndexModule.delete(filters, writableDatabase)
+    fun delete(filters: List<Filter>) {
+        eventIndexModule.delete(filters, writableDatabase)
+    }
 
     fun delete(id: HexKey): Int = writableDatabase.delete("event_headers", "id = ?", arrayOf(id))
 

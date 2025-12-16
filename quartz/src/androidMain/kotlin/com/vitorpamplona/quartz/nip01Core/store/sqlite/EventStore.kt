@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import android.content.Context
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 
 class EventStore(
@@ -30,40 +31,36 @@ class EventStore(
     dbName: String? = "events.db",
     val relayUrl: String? = "wss://quartz.local",
     val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
-) {
+) : IEventStore {
     val store = SQLiteEventStore(context, dbName, relayUrl, tagIndexStrategy)
 
-    fun insert(event: Event) = store.insertEvent(event)
+    override fun insert(event: Event) = store.insertEvent(event)
 
-    interface ITransaction {
-        fun insert(event: Event): Boolean
-    }
+    override fun transaction(body: IEventStore.ITransaction.() -> Unit) = store.transaction(body)
 
-    fun transaction(body: ITransaction.() -> Unit) = store.transaction(body)
+    override fun <T : Event> query(filter: Filter) = store.query<T>(filter)
 
-    fun query(filter: Filter) = store.query(filter)
+    override fun <T : Event> query(filters: List<Filter>) = store.query<T>(filters)
 
-    fun query(filters: List<Filter>) = store.query(filters)
-
-    fun query(
+    override fun <T : Event> query(
         filter: Filter,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) = store.query(filter, onEach)
 
-    fun query(
+    override fun <T : Event> query(
         filters: List<Filter>,
-        onEach: (Event) -> Unit,
+        onEach: (T) -> Unit,
     ) = store.query(filters, onEach)
 
-    fun count(filter: Filter) = store.count(filter)
+    override fun count(filter: Filter) = store.count(filter)
 
-    fun count(filters: List<Filter>) = store.count(filters)
+    override fun count(filters: List<Filter>) = store.count(filters)
 
-    fun delete(filter: Filter) = store.delete(filter)
+    override fun delete(filter: Filter) = store.delete(filter)
 
-    fun delete(filters: List<Filter>) = store.delete(filters)
+    override fun delete(filters: List<Filter>) = store.delete(filters)
 
-    fun deleteExpiredEvents() = store.deleteExpiredEvents()
+    override fun deleteExpiredEvents() = store.deleteExpiredEvents()
 
-    fun close() = store.close()
+    override fun close() = store.close()
 }
