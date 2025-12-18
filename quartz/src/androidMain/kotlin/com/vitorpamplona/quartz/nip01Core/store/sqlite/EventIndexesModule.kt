@@ -258,7 +258,7 @@ class EventIndexesModule(
         }
 
     private fun <T : Event> parseResults(cursor: Cursor): List<T> {
-        val events = ArrayList<T>()
+        val events = ArrayList<T>(cursor.count)
 
         while (cursor.moveToNext()) {
             events.add(
@@ -396,29 +396,26 @@ class EventIndexesModule(
 
         val projection =
             buildString {
-                val anchorColumn: String
                 val joins = mutableListOf<String>()
 
                 if (hasHeaders) {
                     append("SELECT event_headers.row_id as row_id FROM event_headers")
-                    anchorColumn = "event_headers.row_id"
 
                     if (hasSearch) {
-                        joins.add("INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = $anchorColumn")
+                        joins.add("INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_headers.row_id")
                     }
 
                     filter.tags?.forEach { (tagName, _) ->
                         if (tagName != "d") {
-                            joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = $anchorColumn")
+                            joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = event_headers.row_id")
                         }
                     }
                 } else if (hasSearch) {
                     append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName}")
-                    anchorColumn = "${fts.tableName}.${fts.eventHeaderRowIdName}"
 
                     filter.tags?.forEach { (tagName, _) ->
                         if (tagName != "d") {
-                            joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = $anchorColumn")
+                            joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
                         }
                     }
                 } else {

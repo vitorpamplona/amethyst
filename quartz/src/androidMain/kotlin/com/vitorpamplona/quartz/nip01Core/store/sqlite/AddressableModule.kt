@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import android.database.sqlite.SQLiteDatabase
 
 class AddressableModule : IModule {
-    fun create(db: SQLiteDatabase) {
+    override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE UNIQUE INDEX addressable_idx
@@ -69,4 +69,8 @@ class AddressableModule : IModule {
             """.trimIndent(),
         )
     }
+
+    override fun drop(db: SQLiteDatabase) {}
+
+    override fun deleteAll(db: SQLiteDatabase) {}
 }
