@@ -50,10 +50,8 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         benchmarkRule.measureRepeated {
             val db =
-                this.runWithMeasurementDisabled {
-                    context.deleteDatabase("test1.db")
-                    val db = EventStore(context, "test1.db")
-                    db
+                runWithMeasurementDisabled {
+                    EventStore(context, null)
                 }
             firstThousandEvents.forEach { event ->
                 try {
@@ -62,9 +60,8 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                     Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
                 }
             }
-            this.runWithMeasurementDisabled {
+            runWithMeasurementDisabled {
                 db.close()
-                context.deleteDatabase("test1.db")
             }
         }
     }
@@ -83,9 +80,8 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
 
         benchmarkRule.measureRepeated {
             val db =
-                this.runWithMeasurementDisabled {
-                    context.deleteDatabase("test1.db")
-                    val db = EventStore(context, "test1.db")
+                runWithMeasurementDisabled {
+                    val db = EventStore(context, null)
                     toBeDeletedEvents.forEach { event ->
                         try {
                             db.insert(event)
@@ -93,7 +89,6 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
                             Log.w("LargeDBInsertBenchmark", "Error inserting event: ${e.message} for event: ${event.toJson()}")
                         }
                     }
-
                     db
                 }
 
@@ -107,7 +102,6 @@ class LargeDBInsertBenchmark : BaseLargeCacheBenchmark() {
 
             runWithMeasurementDisabled {
                 db.close()
-                context.deleteDatabase("test1.db")
             }
         }
     }
