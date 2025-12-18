@@ -41,8 +41,11 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -58,6 +61,8 @@ class VoiceReplyViewModel : ViewModel() {
     var voiceSelectedServer: ServerName? by mutableStateOf(null)
     var voiceOrchestrator: UploadOrchestrator? by mutableStateOf(null)
     var isUploading: Boolean by mutableStateOf(false)
+
+    private var uploadJob: Job? = null
 
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -109,6 +114,7 @@ class VoiceReplyViewModel : ViewModel() {
     }
 
     fun removeVoiceMessage() {
+        cancelUpload()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -116,6 +122,11 @@ class VoiceReplyViewModel : ViewModel() {
         voiceSelectedServer = null
         isUploading = false
         voiceOrchestrator = null
+    }
+
+    private fun cancelUpload() {
+        uploadJob?.cancel()
+        uploadJob = null
     }
 
     private fun deleteVoiceLocalFile() {
@@ -131,101 +142,118 @@ class VoiceReplyViewModel : ViewModel() {
         }
     }
 
-    fun canSend(): Boolean = (voiceRecording != null || voiceMetadata != null) && !isUploading
+    fun canSend(): Boolean = voiceRecording != null && !isUploading
 
     fun sendVoiceReply(onSuccess: () -> Unit) {
         val note = replyToNote ?: return
         val recording = voiceRecording ?: return
         val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
 
-        viewModelScope.launch(Dispatchers.IO) {
-            uploadAndSend(note, recording, serverToUse, onSuccess)
-        }
+        cancelUpload()
+        uploadJob =
+            viewModelScope.launch {
+                isUploading = true
+                val orchestrator = UploadOrchestrator()
+                voiceOrchestrator = orchestrator
+
+                try {
+                    val result =
+                        withContext(Dispatchers.IO) {
+                            val uri = android.net.Uri.fromFile(recording.file)
+                            orchestrator.upload(
+                                uri = uri,
+                                mimeType = recording.mimeType,
+                                alt = null,
+                                contentWarningReason = null,
+                                compressionQuality = CompressorQuality.UNCOMPRESSED,
+                                server = serverToUse,
+                                account = accountViewModel.account,
+                                context = Amethyst.instance.appContext,
+                                useH265 = false,
+                            )
+                        }
+
+                    handleUploadResult(note, recording, serverToUse, result, onSuccess)
+                } catch (e: CancellationException) {
+                    // User canceled, or ViewModel cleared.
+                } catch (e: Exception) {
+                    val appContext = Amethyst.instance.appContext
+                    val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
+                    val uploadVoiceExceptionMessage: (String) -> String = { detail ->
+                        stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
+                    }
+                    accountViewModel.toastManager.toast(
+                        uploadErrorTitle,
+                        uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName),
+                    )
+                } finally {
+                    isUploading = false
+                    voiceOrchestrator = null
+                    uploadJob = null
+                }
+            }
     }
 
-    private suspend fun uploadAndSend(
+    private suspend fun handleUploadResult(
         note: Note,
         recording: RecordingResult,
         server: ServerName,
+        result: UploadingState,
         onSuccess: () -> Unit,
     ) {
         val appContext = Amethyst.instance.appContext
         val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
         val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
-        val uploadVoiceExceptionMessage: (String) -> String = { detail ->
-            stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
-        }
 
-        isUploading = true
-
-        try {
-            val uri = android.net.Uri.fromFile(recording.file)
-            val orchestrator = UploadOrchestrator()
-            voiceOrchestrator = orchestrator
-
-            val result =
-                orchestrator.upload(
-                    uri = uri,
-                    mimeType = recording.mimeType,
-                    alt = null,
-                    contentWarningReason = null,
-                    compressionQuality = CompressorQuality.UNCOMPRESSED,
-                    server = server,
-                    account = accountViewModel.account,
-                    context = appContext,
-                    useH265 = false,
-                )
-
-            when (result) {
-                is UploadingState.Finished -> {
-                    when (val orchestratorResult = result.result) {
-                        is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                            val audioMeta =
-                                AudioMeta(
-                                    url = orchestratorResult.url,
-                                    mimeType = recording.mimeType,
-                                    hash = orchestratorResult.fileHeader.hash,
-                                    duration = recording.duration,
-                                    waveform = recording.amplitudes,
-                                )
-
-                            val hint = note.toEventHint<VoiceEvent>()
-                            if (hint != null) {
-                                accountViewModel.account.signAndComputeBroadcast(
-                                    VoiceReplyEvent.build(audioMeta, hint),
-                                )
-                            }
-
-                            if (server.type != ServerType.NIP95) {
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            }
-
-                            deleteVoiceLocalFile()
-                            voiceLocalFile = null
-                            voiceRecording = null
-                            voiceMetadata = audioMeta
-
-                            onSuccess()
+        when (result) {
+            is UploadingState.Finished -> {
+                when (val orchestratorResult = result.result) {
+                    is UploadOrchestrator.OrchestratorResult.ServerResult -> {
+                        val hint = note.toEventHint<VoiceEvent>()
+                        if (hint == null) {
+                            accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
+                            return
                         }
-                        is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                            accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceNip95NotSupported)
+
+                        val audioMeta =
+                            AudioMeta(
+                                url = orchestratorResult.url,
+                                mimeType = recording.mimeType,
+                                hash = orchestratorResult.fileHeader.hash,
+                                duration = recording.duration,
+                                waveform = recording.amplitudes,
+                            )
+
+                        accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, hint))
+
+                        if (server.type != ServerType.NIP95) {
+                            accountViewModel.account.settings.changeDefaultFileServer(server)
                         }
+
+                        deleteVoiceLocalFile()
+                        voiceLocalFile = null
+                        voiceRecording = null
+                        voiceMetadata = audioMeta
+
+                        onSuccess()
+                    }
+                    is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
+                        accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceNip95NotSupported)
                     }
                 }
-                is UploadingState.Error -> {
-                    accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
-                }
             }
-        } catch (e: Exception) {
-            accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceExceptionMessage(e.message ?: e.javaClass.simpleName))
-        } finally {
-            isUploading = false
-            voiceOrchestrator = null
+            is UploadingState.Error -> {
+                accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
+            }
+            else -> {
+                accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
+            }
         }
     }
 
     fun cancel() {
+        cancelUpload()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -236,6 +264,7 @@ class VoiceReplyViewModel : ViewModel() {
     }
 
     override fun onCleared() {
+        cancel()
         super.onCleared()
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
     }
