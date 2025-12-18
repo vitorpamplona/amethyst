@@ -115,7 +115,7 @@ fun ClickAndHoldBox(
 @Composable
 fun ClickAndHoldBoxComposable(
     modifier: Modifier = Modifier,
-    onPress: @Composable () -> Unit,
+    onPress: () -> Unit,
     onRelease: suspend () -> Unit,
     onCancel: suspend () -> Unit,
     content: @Composable (Boolean) -> Unit,
@@ -123,15 +123,16 @@ fun ClickAndHoldBoxComposable(
     val interactionSource = remember { MutableInteractionSource() }
     var isPressed by remember { mutableStateOf(false) }
 
-    if (isPressed) {
-        onPress()
-    }
-
     LaunchedEffect(interactionSource) {
         val pressInteractions = mutableListOf<PressInteraction.Press>()
         interactionSource.interactions.collect { interaction ->
             when (interaction) {
-                is PressInteraction.Press -> pressInteractions.add(interaction)
+                is PressInteraction.Press -> {
+                    if (pressInteractions.isEmpty()) {
+                        onPress()
+                    }
+                    pressInteractions.add(interaction)
+                }
                 is PressInteraction.Release -> {
                     onRelease()
                     pressInteractions.remove(interaction.press)

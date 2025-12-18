@@ -24,11 +24,16 @@ import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
 import androidx.media3.common.MimeTypes
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -40,29 +45,43 @@ class RecordingResult(
 )
 
 class VoiceMessageRecorder {
+    @Volatile
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
     private var startTime: Long = 0
-    private var job: Job? = null
+
+    // Own scope to manage lifecycle independently from caller
+    private var recorderScope: CoroutineScope? = null
+
+    @Volatile
+    private var amplitudeSamplingJob: Job? = null
     private var amplitudes: MutableList<Float> = mutableListOf()
 
     private fun createRecorder(context: Context): MediaRecorder =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
+            MediaRecorder(context.applicationContext)
         } else {
             MediaRecorder()
         }
 
-    suspend fun start(
+    @Synchronized
+    fun start(
         context: Context,
-        scope: CoroutineScope,
+        parentScope: CoroutineScope,
     ) {
+        // Clean up any existing recording first
+        cleanup()
+
         val fileName = RandomInstance.randomChars(16) + ".mp4"
-        val outputFile = File(context.cacheDir, "/voice/$fileName")
+        val outputFile = File(context.cacheDir, "voice/$fileName")
         outputFile.parentFile?.mkdirs()
         this.outputFile = outputFile
         this.startTime = TimeUtils.now()
         this.amplitudes.clear()
+
+        // Create own scope with SupervisorJob so failures don't cascade
+        val scopeJob = SupervisorJob(parentScope.coroutineContext[Job])
+        recorderScope = CoroutineScope(Dispatchers.Main.immediate + scopeJob)
 
         createRecorder(context).apply {
             setAudioEncodingBitRate(16 * 44100)
@@ -78,31 +97,103 @@ class VoiceMessageRecorder {
             recorder = this
         }
 
-        job?.cancel()
-        job =
-            scope.launch {
-                while (recorder != null) {
-                    amplitudes.add(recorder?.maxAmplitude?.toFloat() ?: 0f)
+        // Launch amplitude sampling in our own scope
+        amplitudeSamplingJob =
+            recorderScope?.launch {
+                while (isActive) {
+                    val recorderRef = recorder ?: break
+                    try {
+                        val amplitude = recorderRef.maxAmplitude.toFloat()
+                        synchronized(amplitudes) {
+                            amplitudes.add(amplitude)
+                        }
+                    } catch (e: IllegalStateException) {
+                        // MediaRecorder might be in invalid state, stop sampling
+                        Log.w("VoiceMessageRecorder", "MediaRecorder in invalid state during amplitude sampling", e)
+                        break
+                    }
                     delay(1000)
                 }
             }
     }
 
-    suspend fun stop(): RecordingResult? {
-        recorder?.stop()
-        recorder?.reset()
-        recorder = null
+    @Synchronized
+    fun stop(): RecordingResult? {
+        if (recorder == null) {
+            cleanup()
+            return null
+        }
         val currentTime = TimeUtils.now()
         val file = outputFile
-        return if (currentTime - startTime >= 1 && file != null) {
+
+        // Capture amplitudes before cleanup
+        val amplitudesCopy =
+            synchronized(amplitudes) {
+                amplitudes.toList()
+            }
+        val duration = (currentTime - startTime).toInt()
+
+        // Clean up recorder and scope
+        cleanup()
+
+        return if (duration >= 1 && file != null) {
             RecordingResult(
                 file,
                 MimeTypes.AUDIO_AAC,
-                amplitudes,
-                (currentTime - startTime).toInt(),
+                amplitudesCopy,
+                duration,
             )
         } else {
             null
+        }
+    }
+
+    /**
+     * Cleans up all resources: stops recorder, cancels jobs, cancels scope.
+     * Safe to call multiple times.
+     */
+    @Synchronized
+    private fun cleanup() {
+        // Cancel amplitude sampling job
+        amplitudeSamplingJob?.cancel()
+        amplitudeSamplingJob = null
+
+        // Stop any remaining coroutines before touching the recorder
+        recorderScope?.cancel()
+        recorderScope = null
+
+        // Swap local reference so we always null out the volatile field
+        val recorderToRelease = recorder
+        recorder = null
+
+        recorderToRelease?.let { mediaRecorder ->
+            try {
+                mediaRecorder.stop()
+            } catch (e: IllegalStateException) {
+                Log.w("VoiceMessageRecorder", "Failed to stop MediaRecorder due to illegal state", e)
+            } catch (e: RuntimeException) {
+                // MediaRecorder.stop() can throw RuntimeException if the recording is too short
+                // or if no valid audio data was captured. This is a known Android issue.
+                Log.w("VoiceMessageRecorder", "Failed to stop MediaRecorder (recording may be too short or invalid)", e)
+            } finally {
+                try {
+                    mediaRecorder.reset()
+                } catch (resetError: Exception) {
+                    Log.w("VoiceMessageRecorder", "Failed to reset MediaRecorder before release", resetError)
+                }
+                try {
+                    mediaRecorder.release()
+                } catch (releaseError: Exception) {
+                    Log.w("VoiceMessageRecorder", "Failed to release MediaRecorder resources", releaseError)
+                }
+            }
+        }
+
+        // Reset transient state so a fresh recording always starts cleanly
+        outputFile = null
+        startTime = 0
+        synchronized(amplitudes) {
+            amplitudes.clear()
         }
     }
 }

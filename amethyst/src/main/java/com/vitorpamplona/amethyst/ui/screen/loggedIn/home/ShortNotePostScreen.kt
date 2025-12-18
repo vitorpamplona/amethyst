@@ -24,7 +24,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,32 +38,47 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
+import com.vitorpamplona.amethyst.ui.components.TextSpinner
+import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -93,6 +111,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -260,18 +279,21 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.padding(vertical = Size10dp),
-                ) {
-                    BaseUserPicture(
-                        accountViewModel.userProfile(),
-                        Size35dp,
-                        accountViewModel = accountViewModel,
-                    )
-                    MessageField(
-                        R.string.what_s_on_your_mind,
-                        postViewModel,
-                    )
+                // Only show text input if no voice message is being posted
+                if (postViewModel.voiceMetadata == null && postViewModel.voiceRecording == null) {
+                    Row(
+                        modifier = Modifier.padding(vertical = Size10dp),
+                    ) {
+                        BaseUserPicture(
+                            accountViewModel.userProfile(),
+                            Size35dp,
+                            accountViewModel = accountViewModel,
+                        )
+                        MessageField(
+                            R.string.what_s_on_your_mind,
+                            postViewModel,
+                        )
+                    }
                 }
 
                 if (postViewModel.wantsPoll) {
@@ -338,6 +360,58 @@ private fun NewPostScreenBody(
                             onCancel = { postViewModel.multiOrchestrator = null },
                             accountViewModel = accountViewModel,
                         )
+                    }
+                }
+
+                // Show preview for both uploaded messages (voiceMetadata) and pending recordings
+                (postViewModel.voiceMetadata ?: postViewModel.getVoicePreviewMetadata())?.let { metadata ->
+                    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
+                    val fileServersState =
+                        accountViewModel.account.serverLists.liveServerList
+                            .collectAsState()
+                    val fileServers = fileServersState.value
+
+                    val fileServerOptions =
+                        remember(fileServers) {
+                            fileServers
+                                .map {
+                                    if (it.type == ServerType.NIP95) {
+                                        TitleExplainer(it.name, nip95description)
+                                    } else {
+                                        TitleExplainer(it.name, it.baseUrl)
+                                    }
+                                }.toImmutableList()
+                        }
+
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        // Display voice preview or uploading progress
+                        postViewModel.voiceOrchestrator?.let { orchestrator ->
+                            VoiceUploadingProgress(orchestrator)
+                        } ?: run {
+                            VoiceMessagePreview(
+                                voiceMetadata = metadata,
+                                localFile = postViewModel.voiceLocalFile,
+                                onRemove = { postViewModel.removeVoiceMessage() },
+                            )
+                        }
+
+                        SettingsRow(R.string.file_server, R.string.file_server_description) {
+                            TextSpinner(
+                                label = "",
+                                placeholder =
+                                    fileServers
+                                        .firstOrNull { it == (postViewModel.voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer) }
+                                        ?.name
+                                        ?: fileServers[0].name,
+                                options = fileServerOptions,
+                                onSelect = { postViewModel.voiceSelectedServer = fileServers[it] },
+                            )
+                        }
                     }
                 }
 
@@ -440,6 +514,12 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             },
         )
 
+        RecordVoiceButton(
+            onVoiceTaken = { recording ->
+                postViewModel.selectVoiceRecording(recording)
+            },
+        )
+
         if (postViewModel.canUsePoll) {
             // These should be hashtag recommendations the user selects in the future.
             // val hashtag = stringRes(R.string.poll_hashtag)
@@ -500,6 +580,59 @@ private fun AddPollButton(
                 contentDescription = stringRes(id = R.string.disable_poll),
                 modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+    }
+}
+
+@Composable
+private fun VoiceUploadingProgress(orchestrator: UploadOrchestrator) {
+    val progressValue = orchestrator.progress.collectAsState().value
+    val progressStatusValue = orchestrator.progressState.collectAsState().value
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier.size(55.dp),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            val animatedProgress =
+                animateFloatAsState(
+                    targetValue = progressValue.toFloat(),
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                ).value
+
+            CircularProgressIndicator(
+                progress = { animatedProgress },
+                modifier =
+                    Size55Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.background),
+                strokeWidth = 5.dp,
+            )
+
+            val txt =
+                when (progressStatusValue) {
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Ready -> stringRes(R.string.uploading_state_ready)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Compressing -> stringRes(R.string.uploading_state_compressing)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Uploading -> stringRes(R.string.uploading_state_uploading)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.ServerProcessing -> stringRes(R.string.uploading_state_server_processing)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Downloading -> stringRes(R.string.uploading_state_downloading)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Hashing -> stringRes(R.string.uploading_state_hashing)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Finished -> stringRes(R.string.uploading_state_finished)
+                    is com.vitorpamplona.amethyst.service.uploads.UploadingState.Error -> stringRes(R.string.uploading_state_error)
+                }
+
+            Text(
+                txt,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
             )
         }
     }

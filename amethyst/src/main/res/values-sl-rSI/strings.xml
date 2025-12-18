@@ -21,6 +21,7 @@
     <string name="illegal_behavior">Nedovoljeno vedenje</string>
     <string name="other">Drugo</string>
     <string name="harassment">Nadlegovanje</string>
+    <string name="violence">Nasilje</string>
     <string name="unknown">Nepoznano</string>
     <string name="relay_icon">Ikona releja</string>
     <string name="unknown_author">Avtor neznan</string>
@@ -41,7 +42,7 @@
     <string name="report_malware">Zlonamerna programska vsebina</string>
     <string name="report_mod">Prijavi moderatorja</string>
     <string name="malware">Zlonamerna programska vsebina</string>
-    <string name="mod">Administrator</string>
+    <string name="mod">Moderator</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Uporabljaš javni ključ in javni ključi omogočajo le branje.
 Prijavi se s privatnim ključem, da omogočiš tudi pisanje</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje.
@@ -153,8 +154,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="banner_url">URL pasice</string>
     <string name="website_url">URL spletne strani</string>
     <string name="pronouns">Zaimki</string>
-    <string name="ln_address">LN Naslov</string>
-    <string name="ln_url_outdated">Zastarel LN (lightning) URL</string>
+    <string name="ln_address">Lightning naslov (LUD-16)</string>
+    <string name="ln_url_outdated">Zastarel lightning naslov (LUD-06)</string>
     <string name="save_to_gallery">Shrani v galerijo</string>
     <string name="image_saved_to_the_gallery">Slika shranjena v foto galerijo telefona</string>
     <string name="video_download_has_started_toast">Prenos videa se je začel…</string>
@@ -401,6 +402,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="private_bookmark_add_action_label">Dodaj kot zasebni zaznamek</string>
     <string name="bookmark_remove_action_label">Odstrani iz seznama zaznamkov</string>
     <string name="bookmark_list_explainer">Metapodatki seznama zaznamkov so vidni vsem na Nostru. Le tvoji zasebni člani so šifrirani.</string>
+    <string name="move_bookmark_to_public_label">Premakni v javno</string>
+    <string name="move_bookmark_to_private_label">Premakni v zasebno</string>
     <string name="wallet_connect_service">Storitev Wallet Connect</string>
     <string name="wallet_connect_service_explainer">Pooblasti Nostr skrivnost (Nostr secret) za plačevanje  z Zapi brez zapuščanja aplikacije. Nostr skrivnost (Nostr secret) hranite na varnem in, če je mogoče, uporabite zasebni rele</string>
     <string name="wallet_connect_service_pubkey">Wallet Connect javni ključ</string>

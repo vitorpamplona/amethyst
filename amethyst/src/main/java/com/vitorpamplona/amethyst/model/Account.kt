@@ -214,7 +214,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -602,7 +601,7 @@ class Account(
         url: String,
         method: String,
         body: ByteArray? = null,
-    ): HTTPAuthorizationEvent? = signer.sign(HTTPAuthorizationEvent.build(url, method, body))
+    ): HTTPAuthorizationEvent = signer.sign(HTTPAuthorizationEvent.build(url, method, body))
 
     suspend fun createBlossomUploadAuth(
         hash: HexKey,

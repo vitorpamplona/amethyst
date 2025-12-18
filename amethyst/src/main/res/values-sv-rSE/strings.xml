@@ -21,6 +21,7 @@
     <string name="illegal_behavior">Olagligt beteende</string>
     <string name="other">Annat</string>
     <string name="harassment">Trakasseri</string>
+    <string name="violence">Våld</string>
     <string name="unknown">Okänd</string>
     <string name="relay_icon">Relä ikon</string>
     <string name="unknown_author">Okänd användare</string>
@@ -157,7 +158,14 @@
     <string name="record_a_message">Spela in ett meddelande</string>
     <string name="record_a_message_title">Spela in ett meddelande</string>
     <string name="record_a_message_description">Tryck och håll in för att spela in ett meddelande</string>
+    <string name="recording_indicator_description">Spelar in</string>
+    <string name="recording_indicator_with_time">Spelar in %1$s</string>
     <string name="uploading">Laddar upp…</string>
+    <string name="upload_error_title">Uppladdningsfel</string>
+    <string name="upload_error_voice_message_failed">Misslyckades med att ladda upp röstmeddelandet</string>
+    <string name="upload_error_voice_message_unexpected_state">Oväntat uppladdningstillstånd</string>
+    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 stöds ännu inte för röstmeddelanden</string>
+    <string name="upload_error_voice_message_exception">Uppladdning av röst misslyckades: %1$s</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren har inte en Lightningadressinställning för att ta emot sats</string>
     <string name="reply_here">"svara här.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopierar antecknings-ID till urklipp för delning</string>

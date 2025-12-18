@@ -74,6 +74,13 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
 
+
+    iosX64 {
+        binaries.framework {
+            baseName = xcfName
+        }
+    }
+
     iosArm64 {
         binaries.framework {
             baseName = xcfName
@@ -208,6 +215,10 @@ kotlin {
             }
         }
 
+        val iosX64Main by getting {
+            dependsOn(iosMain.get()) // iosX64Main depends on iosMain
+        }
+
         val iosArm64Main by getting {
             dependsOn(iosMain.get()) // iosArm64Main depends on iosMain
         }
@@ -223,12 +234,16 @@ kotlin {
             }
         }
 
+        val iosX64Test by getting {
+            dependsOn(iosTest.get()) // iosX64Test depends on iosTest
+        }
+
         val iosArm64Test by getting {
-            dependsOn(iosTest.get()) // iosArm64Main depends on iosMain
+            dependsOn(iosTest.get()) // iosArm64Test depends on iosTest
         }
 
         val iosSimulatorArm64Test by getting {
-            dependsOn(iosTest.get()) // iosSimulatorArm64Main depends on iosMain
+            dependsOn(iosTest.get()) // iosSimulatorArm64Test depends on iosTest
         }
     }
 }

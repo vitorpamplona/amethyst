@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,6 +71,8 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
+
+private const val IDENTITY_ICON_CACHE_KEY = 0
 
 @Composable
 fun DrawAdditionalInfo(
@@ -192,7 +193,7 @@ fun DrawAdditionalInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
-                    painter = painterRes(resourceId = getIdentityClaimIcon(identity), getIdentityClaimIconReference(identity)),
+                    painter = painterRes(resourceId = getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
                     contentDescription = stringRes(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp),
                 )
@@ -247,14 +248,5 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
         is TelegramIdentity -> R.string.telegram
         is MastodonIdentity -> R.string.mastodon
         is GitHubIdentity -> R.string.github
-        else -> R.drawable.github
-    }
-
-fun getIdentityClaimIconReference(identity: IdentityClaimTag): Int =
-    when (identity) {
-        is TwitterIdentity -> 0
-        is TelegramIdentity -> 0
-        is MastodonIdentity -> 0
-        is GitHubIdentity -> 0
-        else -> 0
+        else -> R.string.github
     }

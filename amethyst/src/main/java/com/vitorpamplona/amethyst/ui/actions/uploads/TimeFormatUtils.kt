@@ -18,11 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.trustedAssertions.list
+package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import java.util.Locale
 
-fun TagArray.serviceProviders() = mapNotNull(ServiceProviderTag::parse)
-
-fun TagArray.serviceProviderSet() = mapNotNullTo(mutableSetOf(), ServiceProviderTag::parse)
+/**
+ * Formats seconds into a human-readable time string (M:SS or MM:SS format).
+ *
+ * @param seconds The number of seconds to format
+ * @return Formatted time string (e.g., "0:05", "1:23", "12:45")
+ */
+fun formatSecondsToTime(seconds: Int): String {
+    val minutes = seconds / 60
+    val secs = seconds % 60
+    return if (minutes > 0) {
+        String.format(Locale.getDefault(), "%d:%02d", minutes, secs)
+    } else {
+        String.format(Locale.getDefault(), "0:%02d", secs)
+    }
+}
