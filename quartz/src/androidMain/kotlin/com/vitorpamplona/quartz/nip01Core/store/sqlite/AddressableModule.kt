@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.sqlite.SQLiteDatabase
 
-class AddressableModule {
+class AddressableModule : IModule {
     fun create(db: SQLiteDatabase) {
         db.execSQL(
             """

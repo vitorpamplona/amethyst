@@ -24,8 +24,8 @@ import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 
-class DeletionRequestModule {
-    fun create(db: SQLiteDatabase) {
+class DeletionRequestModule : IModule {
+    override fun create(db: SQLiteDatabase) {
         // rejects deleted events.
         db.execSQL(
             """
@@ -60,6 +60,10 @@ class DeletionRequestModule {
             """.trimIndent(),
         )
     }
+
+    override fun drop(db: SQLiteDatabase) {}
+
+    override fun deleteAll(db: SQLiteDatabase) {}
 
     fun insert(
         event: Event,

@@ -24,8 +24,8 @@ import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 
-class ExpirationModule {
-    fun create(db: SQLiteDatabase) {
+class ExpirationModule : IModule {
+    override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE TABLE event_expirations (
@@ -51,6 +51,10 @@ class ExpirationModule {
         )
 
         db.execSQL("CREATE UNIQUE INDEX events_exp_id       ON event_expirations (event_header_row_id)")
+    }
+
+    override fun drop(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS event_expirations")
     }
 
     val insertExpiration =
@@ -86,7 +90,7 @@ class ExpirationModule {
         StatementCache.get(deleteExpiredEvents, db).execute()
     }
 
-    fun deleteAll(db: SQLiteDatabase) {
+    override fun deleteAll(db: SQLiteDatabase) {
         db.execSQL("DELETE FROM event_expirations")
     }
 }

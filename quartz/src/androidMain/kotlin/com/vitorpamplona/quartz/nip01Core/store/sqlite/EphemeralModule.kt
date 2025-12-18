@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.sqlite.SQLiteDatabase
 
-class EphemeralModule {
-    fun create(db: SQLiteDatabase) {
+class EphemeralModule : IModule {
+    override fun create(db: SQLiteDatabase) {
         // Rejects all ephemeral events.
         db.execSQL(
             """
@@ -37,4 +37,8 @@ class EphemeralModule {
             """.trimIndent(),
         )
     }
+
+    override fun drop(db: SQLiteDatabase) {}
+
+    override fun deleteAll(db: SQLiteDatabase) {}
 }

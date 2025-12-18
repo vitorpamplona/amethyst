@@ -24,8 +24,8 @@ import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 
-class RightToVanishModule {
-    fun create(db: SQLiteDatabase) {
+class RightToVanishModule : IModule {
+    override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE TABLE event_vanish (
@@ -86,6 +86,10 @@ class RightToVanishModule {
         )
     }
 
+    override fun drop(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS event_vanish")
+    }
+
     val insertRTV =
         """
         INSERT OR ROLLBACK INTO event_vanish (event_header_row_id, pubkey, created_at)
@@ -107,7 +111,7 @@ class RightToVanishModule {
         }
     }
 
-    fun deleteAll(db: SQLiteDatabase) {
+    override fun deleteAll(db: SQLiteDatabase) {
         db.execSQL("DELETE FROM event_vanish")
     }
 }

@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.sqlite.SQLiteDatabase
 
-class ReplaceableModule {
-    fun create(db: SQLiteDatabase) {
+class ReplaceableModule : IModule {
+    override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE UNIQUE INDEX replaceable_idx
@@ -67,4 +67,8 @@ class ReplaceableModule {
             """.trimIndent(),
         )
     }
+
+    override fun drop(db: SQLiteDatabase) {}
+
+    override fun deleteAll(db: SQLiteDatabase) {}
 }

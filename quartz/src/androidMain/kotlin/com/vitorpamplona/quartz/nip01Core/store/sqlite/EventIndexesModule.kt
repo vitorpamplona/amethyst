@@ -34,8 +34,8 @@ import com.vitorpamplona.quartz.utils.EventFactory
 class EventIndexesModule(
     val fts: FullTextSearchModule,
     val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
-) {
-    fun create(db: SQLiteDatabase) {
+) : IModule {
+    override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE TABLE event_headers (
@@ -90,6 +90,11 @@ class EventIndexesModule(
             END;
             """.trimIndent(),
         )
+    }
+
+    override fun drop(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS event_tags")
+        db.execSQL("DROP TABLE IF EXISTS event_headers")
     }
 
     val sqlInsertHeader =
@@ -469,7 +474,7 @@ class EventIndexesModule(
         return RowIdSubQuery("$projection WHERE $whereClause", clause.args)
     }
 
-    fun deleteAll(db: SQLiteDatabase) {
+    override fun deleteAll(db: SQLiteDatabase) {
         db.execSQL("DELETE FROM event_tags")
         db.execSQL("DELETE FROM event_headers")
     }

@@ -54,6 +54,18 @@ class SQLiteEventStore(
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule()
 
+    val modules =
+        listOf(
+            eventIndexModule,
+            replaceableModule,
+            addressableModule,
+            ephemeralModule,
+            deletionModule,
+            expirationModule,
+            rightToVanishModule,
+            fullTextSearchModule,
+        )
+
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
 
@@ -70,14 +82,9 @@ class SQLiteEventStore(
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        eventIndexModule.create(db)
-        replaceableModule.create(db)
-        addressableModule.create(db)
-        ephemeralModule.create(db)
-        deletionModule.create(db)
-        expirationModule.create(db)
-        rightToVanishModule.create(db)
-        fullTextSearchModule.create(db)
+        modules.forEach {
+            it.create(db)
+        }
     }
 
     override fun onUpgrade(
@@ -88,10 +95,7 @@ class SQLiteEventStore(
 
     fun clearDB() {
         val db = writableDatabase
-        fullTextSearchModule.deleteAll(db)
-        rightToVanishModule.deleteAll(db)
-        expirationModule.deleteAll(db)
-        eventIndexModule.deleteAll(db)
+        modules.reversed().forEach { it.deleteAll(db) }
     }
 
     private fun innerInsertEvent(

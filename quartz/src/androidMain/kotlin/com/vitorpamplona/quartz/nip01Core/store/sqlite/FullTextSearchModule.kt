@@ -25,12 +25,12 @@ import android.database.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
-class FullTextSearchModule {
+class FullTextSearchModule : IModule {
     val tableName = "event_fts"
     val eventHeaderRowIdName = "event_header_row_id"
     val contentName = "content"
 
-    fun create(db: SQLiteDatabase) {
+    override fun create(db: SQLiteDatabase) {
         val ftsVersion = FullTextSearchModule().versionFinder(db)
         db.execSQL(
             """
@@ -51,6 +51,10 @@ class FullTextSearchModule {
                 END;
             """,
         )
+    }
+
+    override fun drop(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS $tableName")
     }
 
     val insertFTS =
@@ -86,7 +90,7 @@ class FullTextSearchModule {
             3
         }
 
-    fun deleteAll(db: SQLiteDatabase) {
+    override fun deleteAll(db: SQLiteDatabase) {
         db.execSQL("DELETE FROM event_fts")
     }
 }
