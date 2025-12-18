@@ -169,6 +169,7 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -585,7 +586,7 @@ private fun ReplyReactionWithDialog(
     nav: INav,
 ) {
     if (baseNote.event is BaseVoiceEvent) {
-        ReplyViaVoiceReaction(baseNote, grayTint, accountViewModel)
+        ReplyViaVoiceReaction(baseNote, grayTint, accountViewModel, nav)
     } else {
         ReplyReaction(baseNote, grayTint, accountViewModel) {
             nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
@@ -599,15 +600,22 @@ fun ReplyViaVoiceReaction(
     baseNote: Note,
     grayTint: Color,
     accountViewModel: AccountViewModel,
+    nav: INav,
     showCounter: Boolean = true,
     iconSizeModifier: Modifier = Size19Modifier,
 ) {
-    val context = LocalContext.current
-
     RecordAudioBox(
         modifier = iconSizeModifier,
         onRecordTaken = { audio ->
-            accountViewModel.sendVoiceReply(baseNote, audio, context)
+            nav.nav {
+                Route.VoiceReply(
+                    replyToNoteId = baseNote.idHex,
+                    recordingFilePath = audio.file.absolutePath,
+                    mimeType = audio.mimeType,
+                    duration = audio.duration,
+                    amplitudes = Json.encodeToString(audio.amplitudes),
+                )
+            }
         },
     ) { _, _ ->
         VoiceReplyIcon(iconSizeModifier, grayTint)
