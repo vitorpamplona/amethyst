@@ -87,6 +87,115 @@ class MurmurHash3 {
         return h1
     }
 
+    fun hash128x64Half(
+        data: ByteArray,
+        seed: Long,
+    ): Long {
+        var h1 = seed
+        var h2 = seed
+        val roundedEnd = data.size and ROUND_DOWN_128
+
+        var k1: Long
+        var k2: Long
+
+        var i = 0
+        while (i < roundedEnd) {
+            k1 =
+                (
+                    data[i++].long() or
+                        (data[i++].long() shl 8) or
+                        (data[i++].long() shl 16) or
+                        (data[i++].long() shl 24) or
+                        (data[i++].long() shl 32) or
+                        (data[i++].long() shl 40) or
+                        (data[i++].long() shl 48) or
+                        (data[i++].long() shl 56)
+                ) * C1_128_X64
+
+            k2 =
+                (
+                    data[i++].long() or
+                        (data[i++].long() shl 8) or
+                        (data[i++].long() shl 16) or
+                        (data[i++].long() shl 24) or
+                        (data[i++].long() shl 32) or
+                        (data[i++].long() shl 40) or
+                        (data[i++].long() shl 48) or
+                        (data[i++].long() shl 56)
+                ) * C2_128_X64
+
+            h1 = h1 xor k1.rotateLeft(31) * C2_128_X64
+            h1 = (h1.rotateLeft(27) + h2) * 5L + 0x52dce729L
+
+            h2 = h2 xor k2.rotateLeft(33) * C1_128_X64
+            h2 = (h2.rotateLeft(31) + h1) * 5L + 0x38495ab5L
+        }
+
+        val rem = data.size - roundedEnd
+
+        k1 = 0L
+        k2 = 0L
+
+        if (rem == 15) {
+            k2 = k2 or (data[roundedEnd + 14].long() shl 48)
+        }
+        if (rem >= 14) {
+            k2 = k2 or (data[roundedEnd + 13].long() shl 40)
+        }
+        if (rem >= 13) {
+            k2 = k2 or (data[roundedEnd + 12].long() shl 32)
+        }
+        if (rem >= 12) {
+            k2 = k2 or (data[roundedEnd + 11].long() shl 24)
+        }
+        if (rem >= 11) {
+            k2 = k2 or (data[roundedEnd + 10].long() shl 16)
+        }
+        if (rem >= 10) {
+            k2 = k2 or (data[roundedEnd + 9].long() shl 8)
+        }
+        if (rem >= 9) {
+            k2 = (k2 or data[roundedEnd + 8].long()) * C2_128_X64
+            h2 = h2 xor k2.rotateLeft(33) * C1_128_X64
+        }
+        if (rem >= 8) {
+            k1 = k1 or (data[roundedEnd + 7].long() shl 56)
+        }
+        if (rem >= 7) {
+            k1 = k1 or (data[roundedEnd + 6].long() shl 48)
+        }
+        if (rem >= 6) {
+            k1 = k1 or (data[roundedEnd + 5].long() shl 40)
+        }
+        if (rem >= 5) {
+            k1 = k1 or (data[roundedEnd + 4].long() shl 32)
+        }
+        if (rem >= 4) {
+            k1 = k1 or (data[roundedEnd + 3].long() shl 24)
+        }
+        if (rem >= 3) {
+            k1 = k1 or (data[roundedEnd + 2].long() shl 16)
+        }
+        if (rem >= 2) {
+            k1 = k1 or (data[roundedEnd + 1].long() shl 8)
+        }
+        if (rem >= 1) {
+            k1 = (k1 or data[roundedEnd].long()) * C1_128_X64
+            h1 = h1 xor k1.rotateLeft(31) * C2_128_X64
+        }
+
+        h1 = h1 xor data.size.toLong()
+        h2 = h2 xor data.size.toLong()
+
+        h1 += h2
+        h2 += h1
+
+        h1 = h1.fmix()
+        h2 = h2.fmix()
+
+        return h1 + h2
+    }
+
     fun hash128x64(
         data: ByteArray,
         seed: Long,
@@ -155,8 +264,8 @@ class MurmurHash3 {
             k2 = k2 or (data[roundedEnd + 9].long() shl 8)
         }
         if (rem >= 9) {
-            k2 = k2 or data[roundedEnd + 8].long()
-            h2 = h2 xor (k2 * C2_128_X64).rotateLeft(33) * C1_128_X64
+            k2 = (k2 or data[roundedEnd + 8].long()) * C2_128_X64
+            h2 = h2 xor k2.rotateLeft(33) * C1_128_X64
         }
         if (rem >= 8) {
             k1 = k1 or (data[roundedEnd + 7].long() shl 56)
@@ -180,8 +289,8 @@ class MurmurHash3 {
             k1 = k1 or (data[roundedEnd + 1].long() shl 8)
         }
         if (rem >= 1) {
-            k1 = k1 or data[roundedEnd].long()
-            h1 = h1 xor (k1 * C1_128_X64).rotateLeft(31) * C2_128_X64
+            k1 = (k1 or data[roundedEnd].long()) * C1_128_X64
+            h1 = h1 xor k1.rotateLeft(31) * C2_128_X64
         }
 
         h1 = h1 xor data.size.toLong()
