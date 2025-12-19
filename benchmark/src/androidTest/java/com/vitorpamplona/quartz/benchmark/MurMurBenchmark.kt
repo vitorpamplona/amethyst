@@ -79,6 +79,15 @@ class MurMurBenchmark {
     }
 
     @Test
+    fun hash128StringHalfIncludeEncoding() {
+        val hasher = MurmurHash3()
+        val key = RandomInstance.randomChars(64)
+        benchmarkRule.measureRepeated {
+            hasher.hash128x64Half(key.encodeToByteArray(), hasher.hash128x64Half("e".encodeToByteArray(), 293L))
+        }
+    }
+
+    @Test
     fun hash128With47Bytes() {
         val hasher = MurmurHash3()
         val byteArray = RandomInstance.bytes(47)
