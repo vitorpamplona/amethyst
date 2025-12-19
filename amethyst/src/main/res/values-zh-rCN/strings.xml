@@ -158,7 +158,14 @@
     <string name="record_a_message">录制消息</string>
     <string name="record_a_message_title">录制消息</string>
     <string name="record_a_message_description">点按以录制消息</string>
+    <string name="recording_indicator_description">正在录制</string>
+    <string name="recording_indicator_with_time">正在录制 %1$s</string>
     <string name="uploading">上传中…</string>
+    <string name="upload_error_title">上传出错</string>
+    <string name="upload_error_voice_message_failed">上传语音消息失败</string>
+    <string name="upload_error_voice_message_unexpected_state">未知的上传状态</string>
+    <string name="upload_error_voice_message_nip95_not_supported">语音消息尚不支持 NIP-95</string>
+    <string name="upload_error_voice_message_exception">语音上传失败：%1$s</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未设置闪电地址以接收聪</string>
     <string name="reply_here">"🔏在此回复… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">复制笔记ID到剪贴板，供分享</string>
