@@ -21,6 +21,7 @@
     <string name="illegal_behavior">Illegális viselkedés</string>
     <string name="other">Egyéb</string>
     <string name="harassment">Zaklatás</string>
+    <string name="violence">Erőszak</string>
     <string name="unknown">Ismeretlen</string>
     <string name="relay_icon">Átjátszóikon</string>
     <string name="unknown_author">Ismeretlen szerző</string>
@@ -157,7 +158,14 @@
     <string name="record_a_message">Hangüzenet rögzítése</string>
     <string name="record_a_message_title">Hangüzenet rögzítése</string>
     <string name="record_a_message_description">Hangüzenet rögzítéséhez kattintson és tartsa lenyomva a gombot</string>
+    <string name="recording_indicator_description">Rögzítés</string>
+    <string name="recording_indicator_with_time">%1$s rögzítése</string>
     <string name="uploading">Feltöltés…</string>
+    <string name="upload_error_title">Feltöltési hiba</string>
+    <string name="upload_error_voice_message_failed">Nem sikerült feltölteni a hangüzenetet</string>
+    <string name="upload_error_voice_message_unexpected_state">Váratlan feltöltési állapot</string>
+    <string name="upload_error_voice_message_nip95_not_supported">A NIP-95 még nem támogatja a hangüzeneteket</string>
+    <string name="upload_error_voice_message_exception">Nem sikerült feltölteni a hangüzenetet: %1$s</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>
     <string name="reply_here">"Válasz írása… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">A bejegyzés azonosítóját a vágólapra másolja a Nostr-ban való megosztáshoz</string>
