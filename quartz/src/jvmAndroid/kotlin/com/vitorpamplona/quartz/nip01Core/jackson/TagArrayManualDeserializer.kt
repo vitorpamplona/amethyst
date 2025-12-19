@@ -21,12 +21,13 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 class TagArrayManualDeserializer {
     companion object {
-        fun fromJson(jsonObject: JsonNode): Array<Array<String>> =
-            jsonObject.toTypedArray {
-                it.toTypedArray { s ->
+        fun fromJson(tagArray: JsonNode): TagArray =
+            tagArray.toTypedArray { tag ->
+                tag.toTypedArray { s ->
                     if (s.isNull) {
                         ""
                     } else {

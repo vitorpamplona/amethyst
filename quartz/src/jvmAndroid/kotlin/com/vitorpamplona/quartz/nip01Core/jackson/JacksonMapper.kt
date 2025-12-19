@@ -102,7 +102,7 @@ class JacksonMapper {
 
         fun fromJson(json: JsonNode): Event = EventManualDeserializer.fromJson(json)
 
-        fun fromJsonToTagArray(json: String): Array<Array<String>> = mapper.readValue<Array<Array<String>>>(json)
+        fun fromJsonToTagArray(json: String): TagArray = mapper.readValue<TagArray>(json)
 
         inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = mapper.readValue<T>(json)
 
@@ -116,6 +116,6 @@ class JacksonMapper {
 
         fun toJson(value: OptimizedSerializable): String = mapper.writeValueAsString(value)
 
-        fun toJson(tags: Array<Array<String>>): String = mapper.writeValueAsString(tags)
+        fun toJson(tags: TagArray): String = mapper.writeValueAsString(tags)
     }
 }

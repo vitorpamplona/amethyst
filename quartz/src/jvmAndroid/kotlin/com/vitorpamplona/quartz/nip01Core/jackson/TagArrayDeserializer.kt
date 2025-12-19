@@ -21,12 +21,31 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-class TagArrayDeserializer : StdDeserializer<Array<Array<String>>>(Array<Array<String>>::class.java) {
+class TagArrayDeserializer : StdDeserializer<TagArray>(TagArray::class.java) {
+    // Needs to be very fast.
     override fun deserialize(
-        jp: JsonParser,
+        p: JsonParser,
         ctxt: DeserializationContext,
-    ): Array<Array<String>> = TagArrayManualDeserializer.fromJson(jp.codec.readTree(jp))
+    ): TagArray {
+        // doesn't check for weird payloads on purpose.
+        val outerList = ArrayList<Array<String>>()
+        while (p.nextToken() != JsonToken.END_ARRAY) {
+            val innerList = ArrayList<String>(5)
+            while (p.nextToken() != JsonToken.END_ARRAY) {
+                if (p.currentToken == JsonToken.VALUE_NULL) {
+                    innerList.add("")
+                } else {
+                    innerList.add(p.text.intern())
+                }
+            }
+
+            outerList.add(innerList.toArray(arrayOfNulls<String>(innerList.size)))
+        }
+        return outerList.toArray(arrayOfNulls<Array<String>>(outerList.size))
+    }
 }
