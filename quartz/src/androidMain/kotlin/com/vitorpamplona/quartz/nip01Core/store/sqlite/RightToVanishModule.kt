@@ -103,7 +103,7 @@ class RightToVanishModule : IModule {
         db: SQLiteDatabase,
     ) {
         if (event is RequestToVanishEvent && event.shouldVanishFrom(relayUrl)) {
-            val stmt = StatementCache.get(insertRTV, db)
+            val stmt = db.compileStatement(insertRTV)
             stmt.bindLong(1, headerId)
             stmt.bindString(2, event.pubKey)
             stmt.bindLong(3, event.createdAt)

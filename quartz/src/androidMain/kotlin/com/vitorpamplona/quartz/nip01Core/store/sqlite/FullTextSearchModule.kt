@@ -69,7 +69,7 @@ class FullTextSearchModule : IModule {
         db: SQLiteDatabase,
     ) {
         if (event is SearchableEvent) {
-            val stmt = StatementCache.get(insertFTS, db)
+            val stmt = db.compileStatement(insertFTS)
             stmt.bindLong(1, headerId)
             stmt.bindString(2, event.indexableContent())
             stmt.executeInsert()

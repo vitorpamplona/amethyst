@@ -70,7 +70,7 @@ class ExpirationModule : IModule {
     ) {
         val exp = event.expiration()
         if (exp != null && exp > 0) {
-            val stmt = StatementCache.get(insertExpiration, db)
+            val stmt = db.compileStatement(insertExpiration)
             stmt.bindLong(1, headerId)
             stmt.bindLong(2, exp)
             stmt.executeInsert()
@@ -87,7 +87,7 @@ class ExpirationModule : IModule {
         """.trimIndent()
 
     fun deleteExpiredEvents(db: SQLiteDatabase) {
-        StatementCache.get(deleteExpiredEvents, db).execute()
+        db.compileStatement(deleteExpiredEvents).execute()
     }
 
     override fun deleteAll(db: SQLiteDatabase) {
