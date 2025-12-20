@@ -23,5 +23,11 @@ package com.vitorpamplona.quartz.utils
 expect class SecureRandom() {
     fun nextInt(bound: Int): Int
 
+    fun nextLong(bound: Long): Long
+
+    fun nextInt(): Int
+
+    fun nextLong(): Long
+
     fun nextBytes(output: ByteArray)
 }

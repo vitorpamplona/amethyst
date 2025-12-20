@@ -23,7 +23,13 @@ package com.vitorpamplona.quartz.utils
 object RandomInstance {
     val randomizer = SecureRandom()
 
-    fun int(bound: Int = Int.MAX_VALUE) = randomizer.nextInt(bound)
+    fun int() = randomizer.nextInt()
+
+    fun long() = randomizer.nextLong()
+
+    fun int(bound: Int) = randomizer.nextInt(bound)
+
+    fun long(bound: Long) = randomizer.nextLong(bound)
 
     fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
 
