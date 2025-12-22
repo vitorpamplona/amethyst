@@ -41,7 +41,7 @@ class EventDeserializerTest {
 
     @Test
     fun testEventTemplate() {
-        val templateJson = """{"kind":"1","content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
+        val templateJson = """{"kind":1,"content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
         val template = EventTemplate.fromJson(templateJson)
 
         assertEquals(1, template.kind)
@@ -54,7 +54,7 @@ class EventDeserializerTest {
         val keyPair = KeyPair()
         val signer = NostrSignerInternal(keyPair)
 
-        val templateJson = """{"kind":"1","content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
+        val templateJson = """{"kind":1,"content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
         val template = EventTemplate.fromJson(templateJson)
 
         val signedEvent = signer.signerSync.sign(template)!!
