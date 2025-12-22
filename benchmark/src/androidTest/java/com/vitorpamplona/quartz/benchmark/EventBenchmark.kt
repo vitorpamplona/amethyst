@@ -77,13 +77,6 @@ class EventBenchmark {
     }
 
     @Test
-    fun parseEvent() {
-        val msg = JacksonMapper.mapper.readTree(reqResponseEvent)
-
-        benchmarkRule.measureRepeated { JacksonMapper.fromJson(msg[2]) }
-    }
-
-    @Test
     fun checkId() {
         val event = (OptimizedJsonMapper.fromJsonTo<Message>(reqResponseEvent) as EventMessage).event
         benchmarkRule.measureRepeated {
