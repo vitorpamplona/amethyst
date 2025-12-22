@@ -35,15 +35,14 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
     override fun deserialize(
         jp: JsonParser,
         ctxt: DeserializationContext,
-    ): Command? {
+    ): Command {
         // Expect to start with a JSON array token
         if (jp.currentToken != JsonToken.START_ARRAY) {
             ctxt.reportWrongTokenException(this, JsonToken.START_ARRAY, "Expected START_ARRAY token")
         }
 
-        val type = jp.nextTextValue()
         val message =
-            when (type) {
+            when (val type = jp.nextTextValue()) {
                 ReqCmd.LABEL -> {
                     val subId = jp.nextTextValue()
                     val filters = mutableListOf<Filter>()

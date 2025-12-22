@@ -31,15 +31,14 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
     override fun deserialize(
         jp: JsonParser,
         ctxt: DeserializationContext,
-    ): Message? {
+    ): Message {
         // Expect to start with a JSON array token
         if (jp.currentToken != JsonToken.START_ARRAY) {
             ctxt.reportWrongTokenException(this, JsonToken.START_ARRAY, "Expected START_ARRAY token")
         }
 
-        val type = jp.nextTextValue()
         val message =
-            when (type) {
+            when (val type = jp.nextTextValue()) {
                 EventMessage.LABEL -> {
                     val subId = jp.nextTextValue()
                     jp.nextToken()
