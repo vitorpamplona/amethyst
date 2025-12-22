@@ -40,11 +40,12 @@ class SQLiteEventStore(
     val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) : SQLiteOpenHelper(context, dbName, null, DATABASE_VERSION) {
     companion object {
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
     }
 
+    val seedModule = SeedModule()
     val fullTextSearchModule = FullTextSearchModule()
-    val eventIndexModule = EventIndexesModule(fullTextSearchModule, tagIndexStrategy)
+    val eventIndexModule = EventIndexesModule(fullTextSearchModule, seedModule, tagIndexStrategy)
 
     val replaceableModule = ReplaceableModule()
     val addressableModule = AddressableModule()
@@ -56,6 +57,7 @@ class SQLiteEventStore(
 
     val modules =
         listOf(
+            seedModule,
             eventIndexModule,
             replaceableModule,
             addressableModule,
@@ -91,7 +93,19 @@ class SQLiteEventStore(
         db: SQLiteDatabase,
         oldVersion: Int,
         newVersion: Int,
-    ) {}
+    ) {
+        // Handle all intermediate versions
+        for (version in oldVersion..<newVersion) {
+            when (version) {
+                1 -> {
+                    // Upgrade from version 1 to 2
+                    // We changed event_tags to use a probabilistic hash as tag
+                    modules.reversed().forEach { it.drop(db) }
+                    modules.forEach { it.create(db) }
+                }
+            }
+        }
+    }
 
     fun clearDB() {
         val db = writableDatabase
@@ -132,14 +146,10 @@ class SQLiteEventStore(
     }
 
     fun transaction(body: Transaction.() -> Unit) {
-        val db = writableDatabase
-        db.beginTransaction()
-        try {
-            with(Transaction(db)) {
+        writableDatabase.transaction {
+            with(Transaction(this)) {
                 body()
             }
-        } finally {
-            db.endTransaction()
         }
     }
 

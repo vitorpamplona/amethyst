@@ -34,27 +34,16 @@ class DeletionRequestModule : IModule {
             FOR EACH ROW
             BEGIN
                 -- Check for ID-based deletion record
-                SELECT RAISE(ABORT, 'blocked: a deletion event for this event id exists')
+                SELECT RAISE(ABORT, 'blocked: a deletion event exists')
                 WHERE EXISTS (
-                    SELECT 1 FROM event_headers INNER JOIN event_tags ON event_headers.row_id = event_tags.event_header_row_id
+                    SELECT 1 FROM event_headers
+                    INNER JOIN event_tags
+                    ON event_headers.row_id = event_tags.event_header_row_id
                     WHERE
                         event_headers.created_at >= NEW.created_at AND
                         event_headers.kind = 5 AND
                         event_headers.pubkey = NEW.pubkey AND
-                        event_tags.tag_name = 'e' AND
-                        event_tags.tag_value = NEW.id
-                );
-
-                -- Check for address-based deletion record
-                SELECT RAISE(ABORT, 'blocked: a deletion event for this address exists')
-                WHERE EXISTS (
-                    SELECT 1 FROM event_headers INNER JOIN event_tags ON event_headers.row_id = event_tags.event_header_row_id
-                    WHERE
-                        event_headers.created_at >= NEW.created_at AND
-                        event_headers.kind = 5 AND
-                        event_headers.pubkey = NEW.pubkey AND
-                        event_tags.tag_name = 'a' AND
-                        event_tags.tag_value = NEW.kind || ':' || NEW.pubkey || ':' || NEW.d_tag
+                        event_tags.tag_hash IN (NEW.etag_hash, NEW.atag_hash)
                 );
             END;
             """.trimIndent(),

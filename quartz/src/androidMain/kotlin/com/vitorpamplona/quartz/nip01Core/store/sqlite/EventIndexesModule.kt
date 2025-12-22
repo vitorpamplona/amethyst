@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteStatement
+import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -33,8 +33,13 @@ import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventIndexesModule(
     val fts: FullTextSearchModule,
+    val seedModule: SeedModule,
     val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) : IModule {
+    private var hasherCache: TagNameValueHasher? = null
+
+    fun hasher(db: SQLiteDatabase): TagNameValueHasher = hasherCache ?: TagNameValueHasher(seedModule.getSeed(db)).also { hasherCache = it }
+
     override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -45,6 +50,8 @@ class EventIndexesModule(
                 created_at INTEGER NOT NULL,
                 kind INTEGER NOT NULL,
                 d_tag TEXT,
+                etag_hash INTEGER NOT NULL,
+                atag_hash INTEGER,
                 tags TEXT NOT NULL,
                 content TEXT NOT NULL,
                 sig TEXT NOT NULL
@@ -55,9 +62,8 @@ class EventIndexesModule(
         db.execSQL(
             """
             CREATE TABLE event_tags (
-                event_header_row_id INTEGER,
-                tag_name TEXT NOT NULL,
-                tag_value TEXT NOT NULL,
+                event_header_row_id INTEGER NOT NULL,
+                tag_hash INTEGER NOT NULL,
                 FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
             )
             """.trimIndent(),
@@ -66,7 +72,7 @@ class EventIndexesModule(
         db.execSQL("CREATE UNIQUE INDEX event_headers_id    ON event_headers (id)")
         db.execSQL("CREATE INDEX query_by_kind_pubkey_idx   ON event_headers (created_at desc, kind, pubkey, d_tag)")
         db.execSQL("CREATE INDEX query_by_id_idx            ON event_headers (created_at desc, id)")
-        db.execSQL("CREATE INDEX query_by_tags_idx          ON event_tags (tag_name, tag_value)")
+        db.execSQL("CREATE INDEX query_by_tags_idx          ON event_tags (tag_hash)")
 
         // Prevent updates to maintain immutability
         db.execSQL(
@@ -100,23 +106,24 @@ class EventIndexesModule(
     val sqlInsertHeader =
         """
         INSERT INTO event_headers
-            (id, pubkey, created_at, kind, tags, content, sig, d_tag)
+            (id, pubkey, created_at, kind, tags, content, sig, d_tag, etag_hash, atag_hash)
         VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
 
     val sqlInsertTags =
         """
         INSERT OR ROLLBACK INTO event_tags
-            (event_header_row_id, tag_name, tag_value)
+            (event_header_row_id, tag_hash)
         VALUES
-            (?,?,?)
+            (?,?)
         """.trimIndent()
 
     fun insert(
         event: Event,
         db: SQLiteDatabase,
     ): Long {
+        val hasher = hasher(db)
         val stmt = db.compileStatement(sqlInsertHeader)
         stmt.bindString(1, event.id)
         stmt.bindString(2, event.pubKey)
@@ -126,40 +133,24 @@ class EventIndexesModule(
         stmt.bindString(6, event.content)
         stmt.bindString(7, event.sig)
         if (event is AddressableEvent) {
-            stmt.bindString(8, event.dTag())
+            val dTag = event.dTag()
+            stmt.bindString(8, dTag)
+            stmt.bindLong(9, hasher.hashETag(event.id))
+            stmt.bindLong(10, hasher.hashATag(AddressSerializer.assemble(event.kind, event.pubKey, dTag)))
         } else {
             stmt.bindNull(8)
+            stmt.bindLong(9, hasher.hashETag(event.id))
+            stmt.bindNull(10)
         }
+
         val headerId = stmt.executeInsert()
 
-        val tagsToIndex = event.tags.filter(tagIndexStrategy::shouldIndex)
+        val stmtTags = db.compileStatement(sqlInsertTags)
 
-        val reuseStatements = mutableMapOf<Int, SQLiteStatement>()
-
-        for (chunk in tagsToIndex.chunked(300)) {
-            if (chunk.isNotEmpty()) {
-                val stmtTags =
-                    reuseStatements[chunk.size - 1] ?: run {
-                        val sql =
-                            buildString {
-                                append(sqlInsertTags)
-                                repeat(chunk.size - 1) {
-                                    append(",(?,?,?)")
-                                }
-                            }
-
-                        val new = db.compileStatement(sql)
-                        reuseStatements[chunk.size - 1] = new
-                        new
-                    }
-
-                var index = 1
-                chunk.forEach { tag ->
-                    stmtTags.bindLong(index++, headerId)
-                    stmtTags.bindString(index++, tag[0])
-                    stmtTags.bindString(index++, tag[1])
-                }
-
+        event.tags.forEach { tag ->
+            if (tagIndexStrategy.shouldIndex(event.kind, tag)) {
+                stmtTags.bindLong(1, headerId)
+                stmtTags.bindLong(2, hasher.hash(tag[0], tag[1]))
                 stmtTags.executeInsert()
             }
         }
@@ -171,11 +162,17 @@ class EventIndexesModule(
      * By default, we index all tags that have a single letter name and some value
      */
     class IndexingStrategy {
-        fun shouldIndex(tag: Tag) = tag.size >= 2 && tag[0].length == 1
+        fun shouldIndex(
+            kind: Int,
+            tag: Tag,
+        ) = tag.size >= 2 && tag[0].length == 1
     }
 
-    fun planQuery(filter: Filter): String {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter) ?: return makeEverythingQuery()
+    fun planQuery(
+        filter: Filter,
+        hasher: TagNameValueHasher,
+    ): String {
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher) ?: return makeEverythingQuery()
 
         return makeQueryIn(rowIdSubQuery.sql)
     }
@@ -184,7 +181,7 @@ class EventIndexesModule(
         filter: Filter,
         db: SQLiteDatabase,
     ): List<T> {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter)
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
 
         return if (rowIdSubQuery == null) {
             db.runQuery(makeEverythingQuery())
@@ -198,13 +195,16 @@ class EventIndexesModule(
         db: SQLiteDatabase,
         onEach: (T) -> Unit,
     ) {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
 
         db.runQueryEmitting(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args, onEach)
     }
 
-    fun planQuery(filters: List<Filter>): String {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
+    fun planQuery(
+        filters: List<Filter>,
+        hasher: TagNameValueHasher,
+    ): String {
+        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher) }
         if (rowIdSubQueries.isEmpty()) return makeEverythingQuery()
         val unions = rowIdSubQueries.joinToString(" UNION ") { it.sql }
         return makeQueryIn(unions)
@@ -214,7 +214,7 @@ class EventIndexesModule(
         filters: List<Filter>,
         db: SQLiteDatabase,
     ): List<T> {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
+        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
 
         if (rowIdSubQueries.isEmpty()) return db.runQuery(makeEverythingQuery())
 
@@ -229,7 +229,7 @@ class EventIndexesModule(
         db: SQLiteDatabase,
         onEach: (T) -> Unit,
     ) {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
+        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
 
         if (rowIdSubQueries.isEmpty()) return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
 
@@ -311,7 +311,7 @@ class EventIndexesModule(
         filter: Filter,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter) ?: return db.countEverything()
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return db.countEverything()
 
         return db.countIn(rowIdSubQuery.sql, rowIdSubQuery.args)
     }
@@ -320,7 +320,7 @@ class EventIndexesModule(
         filters: List<Filter>,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
+        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
 
         if (rowIdSubQueries.isEmpty()) return db.countEverything()
 
@@ -353,7 +353,7 @@ class EventIndexesModule(
         filter: Filter,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdQuery = prepareRowIDSubQueries(filter) ?: return 0
+        val rowIdQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return 0
         return db.runDelete(rowIdQuery.sql, rowIdQuery.args)
     }
 
@@ -361,7 +361,7 @@ class EventIndexesModule(
         filters: List<Filter>,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdSubqueries = filters.mapNotNull { prepareRowIDSubQueries(it) }
+        val rowIdSubqueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
 
         if (rowIdSubqueries.isEmpty()) return 0
 
@@ -379,7 +379,10 @@ class EventIndexesModule(
     // ----------------------------
     // Inner row id selections
     // ----------------------------
-    fun prepareRowIDSubQueries(filter: Filter): RowIdSubQuery? {
+    fun prepareRowIDSubQueries(
+        filter: Filter,
+        hasher: TagNameValueHasher,
+    ): RowIdSubQuery? {
         if (!filter.isFilledFilter()) return null
 
         val hasHeaders =
@@ -453,8 +456,12 @@ class EventIndexesModule(
                     if (tagName == "d") {
                         equalsOrIn("event_headers.d_tag", tagValues)
                     } else {
-                        equals("tag$tagName.tag_name", tagName)
-                        equalsOrIn("tag$tagName.tag_value", tagValues)
+                        equalsOrIn(
+                            "tag$tagName.tag_hash",
+                            tagValues.map {
+                                hasher.hash(tagName, it)
+                            },
+                        )
                     }
                 }
 

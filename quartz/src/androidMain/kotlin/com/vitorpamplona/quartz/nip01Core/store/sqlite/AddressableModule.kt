@@ -32,39 +32,23 @@ class AddressableModule : IModule {
             """.trimIndent(),
         )
 
-        // Rejects old addressables
+        // deletes older addressables when inserting new ones
+        // if a newer addressable is inserted the unique index
+        // above will be triggered. Delete cascade will take
+        // care of the event_tags table
         db.execSQL(
             """
-            CREATE TRIGGER reject_older_addressable_event
+            CREATE TRIGGER delete_older_addressable_event
             BEFORE INSERT ON event_headers
             FOR EACH ROW
             WHEN (NEW.kind >= 30000 AND NEW.kind < 40000)
             BEGIN
-                -- Check for existing newer record
-                SELECT RAISE(ABORT, 'duplicate: A newer or equally new record already exists')
-                WHERE EXISTS (
-                    SELECT 1 FROM event_headers
-                    WHERE
-                        event_headers.created_at >= NEW.created_at AND
-                        event_headers.kind = NEW.kind AND
-                        event_headers.pubkey = NEW.pubkey AND
-                        event_headers.d_tag = NEW.d_tag
-                );
-
-                DELETE FROM event_tags
-                WHERE event_header_row_id in (
-                    SELECT row_id FROM event_headers
-                    WHERE
-                        event_headers.kind = NEW.kind AND
-                        event_headers.pubkey = NEW.pubkey AND
-                        event_headers.d_tag = NEW.d_tag
-                );
-
                 DELETE FROM event_headers
                 WHERE
                     event_headers.kind = NEW.kind AND
                     event_headers.pubkey = NEW.pubkey AND
-                    event_headers.d_tag = NEW.d_tag;
+                    event_headers.d_tag = NEW.d_tag AND
+                    event_headers.created_at < NEW.created_at;
             END;
             """.trimIndent(),
         )

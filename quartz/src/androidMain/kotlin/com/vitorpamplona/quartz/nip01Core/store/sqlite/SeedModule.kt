@@ -21,40 +21,59 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.database.sqlite.SQLiteDatabase
+import com.vitorpamplona.quartz.utils.RandomInstance
 
-class ReplaceableModule : IModule {
+class SeedModule : IModule {
     override fun create(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE seeds (seed_value INTEGER)")
+
+        val insertSeed = "INSERT INTO seeds (seed_value) VALUES (?)"
+
+        val stmt = db.compileStatement(insertSeed)
+        stmt.bindLong(1, RandomInstance.long())
+        stmt.executeInsert()
+
+        // Prevent updates to maintain immutability
         db.execSQL(
             """
-            CREATE UNIQUE INDEX replaceable_idx
-            ON event_headers (kind, pubkey)
-            WHERE (kind >= 10000 AND kind < 20000) OR (kind IN (0, 3))
+            CREATE TRIGGER block_insert_seeds
+            BEFORE INSERT ON seeds
+            BEGIN
+                SELECT RAISE(ABORT, 'Inserts are not allowed on this table');
+            END;
             """.trimIndent(),
         )
 
-        // deletes older addressables when inserting new ones
-        // if a newer addressable is inserted the unique index
-        // above will be triggered. Delete cascade will take
-        // care of the event_tags table
         db.execSQL(
             """
-            CREATE TRIGGER delete_older_replaceable_event
-            BEFORE INSERT ON event_headers
-            FOR EACH ROW
-            WHEN (NEW.kind >= 10000 AND NEW.kind < 20000) OR (NEW.kind IN (0, 3))
+            CREATE TRIGGER block_update_seeds
+            BEFORE UPDATE ON seeds
             BEGIN
-                -- Delete older records if this is the newest
-                DELETE FROM event_headers
-                WHERE
-                    event_headers.kind = NEW.kind AND
-                    event_headers.pubkey = NEW.pubkey AND
-                    event_headers.created_at < NEW.created_at;
+                SELECT RAISE(ABORT, 'Inserts are not allowed on this table');
+            END;
+            """.trimIndent(),
+        )
+
+        db.execSQL(
+            """
+            CREATE TRIGGER block_delete_seeds
+            BEFORE DELETE ON seeds
+            BEGIN
+                SELECT RAISE(ABORT, 'Inserts are not allowed on this table');
             END;
             """.trimIndent(),
         )
     }
 
-    override fun drop(db: SQLiteDatabase) {}
+    fun getSeed(db: SQLiteDatabase): Long =
+        db.rawQuery("SELECT seed_value FROM seeds LIMIT 1", null).use {
+            it.moveToFirst()
+            it.getLong(0)
+        }
+
+    override fun drop(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS seeds")
+    }
 
     override fun deleteAll(db: SQLiteDatabase) {}
 }

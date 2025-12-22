@@ -79,7 +79,7 @@ class DeletionTest {
             db.insert(note1)
             fail("Should not be able to insert a deleted event")
         } catch (e: SQLiteConstraintException) {
-            assertEquals("blocked: a deletion event for this event id exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
+            assertEquals("blocked: a deletion event exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
         }
 
         db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
@@ -124,7 +124,7 @@ class DeletionTest {
             db.insert(note1)
             fail("Should not be able to insert a deleted event")
         } catch (e: SQLiteConstraintException) {
-            assertEquals("blocked: a deletion event for this event id exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
+            assertEquals("blocked: a deletion event exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
         }
 
         db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
@@ -162,7 +162,7 @@ class DeletionTest {
             db.insert(note1)
             fail("Should not be able to insert a deleted event")
         } catch (e: SQLiteConstraintException) {
-            assertEquals("blocked: a deletion event for this address exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
+            assertEquals("blocked: a deletion event exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
         }
 
         db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))

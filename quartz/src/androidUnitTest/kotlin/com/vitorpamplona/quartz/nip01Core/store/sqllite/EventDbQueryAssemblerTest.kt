@@ -25,7 +25,8 @@ import junit.framework.TestCase
 import kotlin.test.Test
 
 class EventDbQueryAssemblerTest {
-    val builder = EventIndexesModule(FullTextSearchModule())
+    val builder = EventIndexesModule(FullTextSearchModule(), SeedModule())
+    val hasher = TagNameValueHasher(0L)
 
     val key1 = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d"
     val key2 = "f3ac434d61bc0f491a814782ccfdf9c439dae1f0bde9097ad4a245f4c495cd14"
@@ -33,7 +34,7 @@ class EventDbQueryAssemblerTest {
 
     @Test
     fun testEmpty() {
-        val sql = builder.planQuery(Filter())
+        val sql = builder.planQuery(Filter(), hasher)
         TestCase.assertEquals(
             "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC, id",
             sql,
@@ -42,7 +43,7 @@ class EventDbQueryAssemblerTest {
 
     @Test
     fun testLimit() {
-        val sql = builder.planQuery(Filter(limit = 10))
+        val sql = builder.planQuery(Filter(limit = 10), hasher)
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -63,6 +64,7 @@ class EventDbQueryAssemblerTest {
                     Filter(authors = listOf(key1), kinds = listOf(1, 1111), search = "keywords", limit = 100),
                     Filter(kinds = listOf(20), search = "cats", limit = 30),
                 ),
+                hasher,
             )
         TestCase.assertEquals(
             """
@@ -77,7 +79,7 @@ class EventDbQueryAssemblerTest {
 
     @Test
     fun testIdQuery() {
-        val sql = builder.planQuery(Filter(ids = listOf(key1)))
+        val sql = builder.planQuery(Filter(ids = listOf(key1)), hasher)
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -91,7 +93,7 @@ class EventDbQueryAssemblerTest {
 
     @Test
     fun testAuthors() {
-        val sql = builder.planQuery(Filter(authors = listOf(key1, key2)))
+        val sql = builder.planQuery(Filter(authors = listOf(key1, key2)), hasher)
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -105,7 +107,7 @@ class EventDbQueryAssemblerTest {
 
     @Test
     fun testAuthorsAndSearch() {
-        val sql = builder.planQuery(Filter(authors = listOf(key1, key2, key3), search = "keywords"))
+        val sql = builder.planQuery(Filter(authors = listOf(key1, key2, key3), search = "keywords"), hasher)
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -119,7 +121,7 @@ class EventDbQueryAssemblerTest {
 
     @Test
     fun testKindAndSearch() {
-        val sql = builder.planQuery(Filter(kinds = listOf(1, 1111, 10000), search = "keywords"))
+        val sql = builder.planQuery(Filter(kinds = listOf(1, 1111, 10000), search = "keywords"), hasher)
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
