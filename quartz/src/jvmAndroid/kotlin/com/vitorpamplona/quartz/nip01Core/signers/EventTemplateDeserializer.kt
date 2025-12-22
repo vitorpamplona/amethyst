@@ -21,13 +21,38 @@
 package com.vitorpamplona.quartz.nip01Core.signers
 
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.TagArrayDeserializer
 
 class EventTemplateDeserializer : StdDeserializer<EventTemplate<Event>>(EventTemplate::class.java) {
+    val tagsDeserializer = TagArrayDeserializer()
+    val emptyArray = emptyArray<Array<String>>()
+
     override fun deserialize(
-        jp: JsonParser,
+        p: JsonParser,
         ctxt: DeserializationContext,
-    ): EventTemplate<Event> = EventTemplateManualDeserializer.fromJson(jp.codec.readTree(jp))
+    ): EventTemplate<Event> {
+        var createdAt = 0L
+        var kind = 0
+        var tags = emptyArray
+        var content = ""
+
+        while (p.nextToken() != JsonToken.END_OBJECT) {
+            val fieldName = p.currentName()
+            p.nextToken()
+
+            when (fieldName.hashCode()) {
+                1369680106 -> createdAt = p.longValue
+                3292052 -> kind = p.intValue
+                3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
+                951530617 -> content = p.text
+                else -> p.skipChildren()
+            }
+        }
+
+        return EventTemplate(createdAt, kind, tags, content)
+    }
 }

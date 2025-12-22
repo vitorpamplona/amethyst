@@ -34,6 +34,14 @@ class BunkerResponseEvent(
             id: String,
             result: String,
             error: String? = null,
-        ) = BunkerResponseEvent(id, Event.fromJson(result))
+        ): BunkerResponseEvent {
+            val event = Event.fromJson(result)
+
+            if (event.sig.isEmpty()) {
+                throw IllegalStateException("Invalid event")
+            }
+
+            return BunkerResponseEvent(id, event)
+        }
     }
 }

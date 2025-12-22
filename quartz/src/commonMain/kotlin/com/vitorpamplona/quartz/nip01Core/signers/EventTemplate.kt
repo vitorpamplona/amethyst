@@ -38,7 +38,7 @@ class EventTemplate<T : Event>(
     fun toJson(): String = OptimizedJsonMapper.toJson(this)
 
     companion object {
-        fun fromJson(json: String): EventTemplate<Event> = OptimizedJsonMapper.fromJsonTo<EventTemplate<Event>>(json)
+        fun fromJson(json: String): EventTemplate<Event> = OptimizedJsonMapper.fromJsonToEventTemplate(json)
     }
 }
 

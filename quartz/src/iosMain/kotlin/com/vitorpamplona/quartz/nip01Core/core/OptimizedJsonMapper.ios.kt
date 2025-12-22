@@ -20,12 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+
 actual object OptimizedJsonMapper {
     actual fun fromJson(json: String): Event = TODO("Not yet implemented")
 
     actual fun toJson(event: Event): String = TODO("Not yet implemented")
 
     actual fun fromJsonToTagArray(json: String): Array<Array<String>> = TODO("Not yet implemented")
+
+    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = TODO("Not yet implemented")
+
+    actual fun fromJsonToRumor(json: String): Rumor = TODO("Not yet implemented")
 
     actual fun toJson(tags: Array<Array<String>>): String = TODO("Not yet implemented")
 

@@ -21,13 +21,49 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
+    val tagsDeserializer = TagArrayDeserializer()
+
+    val emptyArray = emptyArray<Array<String>>()
+
     override fun deserialize(
-        jp: JsonParser,
+        p: JsonParser,
         ctxt: DeserializationContext,
-    ): Event = EventManualDeserializer.fromJson(jp.codec.readTree(jp))
+    ): Event {
+        var id: HexKey = ""
+        var pubKey: HexKey = ""
+        var createdAt: Long = 0
+        var kind: Kind = 0
+        var tags: TagArray = emptyArray
+        var content: String = ""
+        var sig: HexKey = ""
+
+        while (p.nextToken() != JsonToken.END_OBJECT) {
+            val fieldName = p.currentName()
+            p.nextToken()
+
+            when (fieldName.hashCode()) {
+                3355 -> id = p.text.intern()
+                -977424830 -> pubKey = p.text.intern()
+                1369680106 -> createdAt = p.longValue
+                3292052 -> kind = p.intValue
+                3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
+                951530617 -> content = p.text
+                113873 -> sig = p.text
+                else -> p.skipChildren()
+            }
+        }
+
+        // NPE on purpose. If the object isn't fully filled, it should throw.
+        return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
+    }
 }

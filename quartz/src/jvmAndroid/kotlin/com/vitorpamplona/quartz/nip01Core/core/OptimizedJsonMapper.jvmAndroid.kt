@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 
 actual object OptimizedJsonMapper {
     inline fun <T> runCatching(parsingAction: () -> T): T =
@@ -36,6 +38,10 @@ actual object OptimizedJsonMapper {
     actual fun toJson(event: Event) = JacksonMapper.toJson(event)
 
     actual fun fromJsonToTagArray(json: String): Array<Array<String>> = runCatching { JacksonMapper.fromJsonToTagArray(json) }
+
+    actual fun fromJsonToRumor(json: String): Rumor = runCatching { JacksonMapper.fromJsonToRumor(json) }
+
+    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = runCatching { JacksonMapper.fromJsonToEventTemplate(json) }
 
     actual fun toJson(tags: Array<Array<String>>): String = JacksonMapper.toJson(tags)
 

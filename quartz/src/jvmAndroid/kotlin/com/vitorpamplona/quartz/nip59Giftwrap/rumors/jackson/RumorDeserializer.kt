@@ -21,28 +21,43 @@
 package com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson
 
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.vitorpamplona.quartz.nip01Core.jackson.TagArrayManualDeserializer
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.jackson.TagArrayDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
-import com.vitorpamplona.quartz.utils.asIntOrNull
-import com.vitorpamplona.quartz.utils.asLongOrNull
-import com.vitorpamplona.quartz.utils.asTextOrNull
 
 class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
+    val tagsDeserializer = TagArrayDeserializer()
+
     override fun deserialize(
-        jp: JsonParser,
+        p: JsonParser,
         ctxt: DeserializationContext,
     ): Rumor {
-        val jsonObject: JsonNode = jp.codec.readTree(jp)
-        return Rumor(
-            id = jsonObject.get("id")?.asTextOrNull()?.intern(),
-            pubKey = jsonObject.get("pubkey")?.asTextOrNull()?.intern(),
-            createdAt = jsonObject.get("created_at")?.asLongOrNull(),
-            kind = jsonObject.get("kind")?.asIntOrNull(),
-            tags = TagArrayManualDeserializer.fromJson(jsonObject.get("tags")),
-            content = jsonObject.get("content")?.asTextOrNull(),
-        )
+        var id: HexKey? = null
+        var pubKey: HexKey? = null
+        var createdAt: Long? = null
+        var kind: Int? = null
+        var tags: TagArray? = null
+        var content: String? = null
+
+        while (p.nextToken() != JsonToken.END_OBJECT) {
+            val fieldName = p.currentName()
+            p.nextToken()
+
+            when (fieldName.hashCode()) {
+                3355 -> id = p.text.intern()
+                -977424830 -> pubKey = p.text.intern()
+                1369680106 -> createdAt = p.longValue
+                3292052 -> kind = p.intValue
+                3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
+                951530617 -> content = p.text
+                else -> p.skipChildren()
+            }
+        }
+
+        return Rumor(id, pubKey, createdAt, kind, tags, content)
     }
 }

@@ -23,15 +23,16 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.vitorpamplona.quartz.nip01Core.jackson.EventManualDeserializer
+import com.vitorpamplona.quartz.nip01Core.jackson.EventDeserializer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.ManualFilterDeserializer
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
+    val eventDeserializer = EventDeserializer()
+
     override fun deserialize(
         jp: JsonParser,
         ctxt: DeserializationContext,
@@ -77,10 +78,9 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
 
                 EventCmd.LABEL -> {
                     jp.nextToken()
-                    val event: JsonNode = jp.codec.readTree(jp)
 
                     EventCmd(
-                        event = EventManualDeserializer.fromJson(event),
+                        event = eventDeserializer.deserialize(jp, ctxt),
                     )
                 }
 
@@ -91,9 +91,8 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
 
                 AuthCmd.LABEL -> {
                     jp.nextToken()
-                    val event: JsonNode = jp.codec.readTree(jp)
                     AuthCmd(
-                        event = EventManualDeserializer.fromJson(event) as RelayAuthEvent,
+                        event = eventDeserializer.deserialize(jp, ctxt) as RelayAuthEvent,
                     )
                 }
 
