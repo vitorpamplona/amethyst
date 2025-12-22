@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import kotlinx.serialization.json.Json
@@ -30,6 +32,10 @@ expect object OptimizedJsonMapper {
     fun fromJson(json: String): Event
 
     fun toJson(event: Event): String
+
+    fun fromJsonToMessage(json: String): Message
+
+    fun fromJsonToCommand(json: String): Command
 
     fun fromJsonToTagArray(json: String): Array<Array<String>>
 

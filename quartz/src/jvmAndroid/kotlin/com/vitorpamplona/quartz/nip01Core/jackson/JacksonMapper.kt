@@ -109,8 +109,14 @@ class JacksonMapper {
         val tagArrayTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<TagArray>())
         val rumorTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Rumor>())
         val eventTemplateTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<EventTemplate<Event>>())
+        val messageTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Message>())
+        val commandTypeInstance: JavaType = mapper.typeFactory.constructType(jacksonTypeRef<Command>())
 
         fun fromJson(json: String): Event = mapper.readValue(json, eventTypeInstance)
+
+        fun fromJsonToMessage(json: String): Message = mapper.readValue(json, messageTypeInstance)
+
+        fun fromJsonToCommand(json: String): Command = mapper.readValue(json, commandTypeInstance)
 
         fun fromJsonToTagArray(json: String): TagArray = mapper.readValue(json, tagArrayTypeInstance)
 

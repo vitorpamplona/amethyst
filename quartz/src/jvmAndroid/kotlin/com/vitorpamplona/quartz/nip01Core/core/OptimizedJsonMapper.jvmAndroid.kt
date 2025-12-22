@@ -21,31 +21,64 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 
 actual object OptimizedJsonMapper {
-    inline fun <T> runCatching(parsingAction: () -> T): T =
+    actual fun fromJson(json: String): Event =
         try {
-            parsingAction()
-            // wraps jackson errors
+            JacksonMapper.fromJson(json)
         } catch (e: com.fasterxml.jackson.core.JsonParseException) {
             throw IllegalArgumentException(e.message, e)
         }
 
-    actual fun fromJson(json: String): Event = runCatching { JacksonMapper.fromJson(json) }
-
     actual fun toJson(event: Event) = JacksonMapper.toJson(event)
 
-    actual fun fromJsonToTagArray(json: String): Array<Array<String>> = runCatching { JacksonMapper.fromJsonToTagArray(json) }
+    actual fun fromJsonToMessage(json: String): Message =
+        try {
+            JacksonMapper.fromJsonToMessage(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun fromJsonToRumor(json: String): Rumor = runCatching { JacksonMapper.fromJsonToRumor(json) }
+    actual fun fromJsonToCommand(json: String): Command =
+        try {
+            JacksonMapper.fromJsonToCommand(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = runCatching { JacksonMapper.fromJsonToEventTemplate(json) }
+    actual fun fromJsonToTagArray(json: String): Array<Array<String>> =
+        try {
+            JacksonMapper.fromJsonToTagArray(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
+
+    actual fun fromJsonToRumor(json: String): Rumor =
+        try {
+            JacksonMapper.fromJsonToRumor(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
+
+    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> =
+        try {
+            JacksonMapper.fromJsonToEventTemplate(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
     actual fun toJson(tags: Array<Array<String>>): String = JacksonMapper.toJson(tags)
 
-    actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T = runCatching { JacksonMapper.fromJsonTo<T>(json) }
+    actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
+        try {
+            JacksonMapper.fromJsonTo<T>(json)
+        } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
     actual fun toJson(value: OptimizedSerializable): String = JacksonMapper.toJson(value)
 }

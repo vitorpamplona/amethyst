@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient.Companion.DELAY_TO_RECONNECT_IN_SECS
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
@@ -124,7 +123,7 @@ open class BasicRelayClient(
 
         override fun onMessage(text: String) {
             try {
-                val msg = OptimizedJsonMapper.fromJsonTo<Message>(text)
+                val msg = OptimizedJsonMapper.fromJsonToMessage(text)
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e

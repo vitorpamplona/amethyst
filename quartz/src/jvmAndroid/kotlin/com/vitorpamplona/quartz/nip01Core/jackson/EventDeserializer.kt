@@ -63,7 +63,6 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             }
         }
 
-        // NPE on purpose. If the object isn't fully filled, it should throw.
         return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
     }
 }

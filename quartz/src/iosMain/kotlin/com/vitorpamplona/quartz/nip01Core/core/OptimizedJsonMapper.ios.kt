@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 
@@ -27,6 +29,10 @@ actual object OptimizedJsonMapper {
     actual fun fromJson(json: String): Event = TODO("Not yet implemented")
 
     actual fun toJson(event: Event): String = TODO("Not yet implemented")
+
+    actual fun fromJsonToMessage(json: String): Message = TODO("Not yet implemented")
+
+    actual fun fromJsonToCommand(json: String): Command = TODO("Not yet implemented")
 
     actual fun fromJsonToTagArray(json: String): Array<Array<String>> = TODO("Not yet implemented")
 

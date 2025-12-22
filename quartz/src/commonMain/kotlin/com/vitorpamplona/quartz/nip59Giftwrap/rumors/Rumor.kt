@@ -49,7 +49,7 @@ class Rumor(
     }
 
     companion object {
-        fun fromJson(json: String): Rumor = OptimizedJsonMapper.fromJsonTo<Rumor>(json)
+        fun fromJson(json: String): Rumor = OptimizedJsonMapper.fromJsonToRumor(json)
 
         fun toJson(event: Rumor): String = OptimizedJsonMapper.toJson(event)
 

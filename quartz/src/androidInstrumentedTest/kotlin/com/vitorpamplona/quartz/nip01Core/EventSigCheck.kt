@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verifyId
 import com.vitorpamplona.quartz.nip01Core.crypto.verifySignature
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -64,7 +63,7 @@ class EventSigCheck {
 
     @Test
     fun testUnicode2028and2029ShouldNotBeEscaped() {
-        val msg = OptimizedJsonMapper.fromJsonTo<Message>(payload1) as EventMessage
+        val msg = OptimizedJsonMapper.fromJsonToMessage(payload1) as EventMessage
 
         // Should pass
         msg.event.checkSignature()
