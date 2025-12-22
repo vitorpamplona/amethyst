@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
@@ -58,8 +59,7 @@ class BunkerResponseDeserializer : StdDeserializer<BunkerResponse>(BunkerRespons
 
                     if (result.get(0) == '{') {
                         try {
-                            return com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
-                                .parse(id, result)
+                            return BunkerResponseEvent.parse(id, result)
                         } catch (_: Exception) {
                         }
 
