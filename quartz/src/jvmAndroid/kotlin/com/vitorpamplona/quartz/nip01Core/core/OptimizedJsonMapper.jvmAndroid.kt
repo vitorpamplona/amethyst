@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.core
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 
 actual object OptimizedJsonMapper {
-    fun <T> runCatching(parsingAction: () -> T): T =
+    inline fun <T> runCatching(parsingAction: () -> T): T =
         try {
             parsingAction()
             // wraps jackson errors
