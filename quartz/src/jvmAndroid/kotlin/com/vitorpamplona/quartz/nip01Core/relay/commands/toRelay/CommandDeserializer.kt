@@ -55,7 +55,7 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     }
 
                     ReqCmd(
-                        subId = jp.nextTextValue(),
+                        subId = subId,
                         filters = filters,
                     )
                 }
