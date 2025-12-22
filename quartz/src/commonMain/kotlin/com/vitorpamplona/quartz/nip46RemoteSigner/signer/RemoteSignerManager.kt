@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -42,7 +41,7 @@ class RemoteSignerManager(
 ) {
     private val awaitingRequests = LargeCache<String, Continuation<BunkerResponse>>()
 
-    fun newResponse(responseEvent: Event) {
+    fun newResponse(responseEvent: NostrConnectEvent) {
         val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(responseEvent.content)
         awaitingRequests.get(bunkerResponse.id)?.resume(bunkerResponse)
     }

@@ -68,7 +68,9 @@ class NostrSignerRemote(
                     tags = mapOf("p" to listOf(signer.pubKey)),
                 ),
         ) { event ->
-            manager.newResponse(event)
+            if (event is NostrConnectEvent) {
+                manager.newResponse(event)
+            }
         }
 
     fun openSubscription() {
