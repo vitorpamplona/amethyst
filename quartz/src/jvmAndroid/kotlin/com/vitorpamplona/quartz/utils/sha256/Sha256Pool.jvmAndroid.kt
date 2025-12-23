@@ -35,14 +35,14 @@ class Sha256Pool(
         }
     }
 
-    private fun acquire(): Sha256Hasher {
+    fun acquire(): Sha256Hasher {
         if (pool.isEmpty()) {
             Log.w("SHA256Pool", "Pool running low in available digests")
         }
         return pool.take()
     }
 
-    private fun release(digest: Sha256Hasher) {
+    fun release(digest: Sha256Hasher) {
         digest.reset()
         pool.put(digest)
     }
@@ -51,6 +51,15 @@ class Sha256Pool(
         val hasher = acquire()
         try {
             return hasher.digest(byteArray)
+        } finally {
+            release(hasher)
+        }
+    }
+
+    inline fun hasher(action: (hasher: Sha256Hasher) -> ByteArray): ByteArray {
+        val hasher = acquire()
+        try {
+            return action(hasher)
         } finally {
             release(hasher)
         }

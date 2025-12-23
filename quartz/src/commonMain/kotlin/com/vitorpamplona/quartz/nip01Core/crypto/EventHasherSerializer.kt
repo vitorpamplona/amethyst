@@ -41,4 +41,13 @@ expect object EventHasherSerializer {
         tags: Array<Array<String>>,
         content: String,
     ): ByteArray
+
+    fun makeJsonForIdHashAndCheck(
+        id: HexKey,
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): Boolean
 }

@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.crypto
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 class EventHasher {
@@ -45,16 +44,13 @@ class EventHasher {
             content: String,
         ): String = hashIdBytes(pubKey, createdAt, kind, tags, content).toHexKey()
 
-        fun hashIdEquals(
+        fun hashIdCheck(
             id: HexKey,
             pubKey: HexKey,
             createdAt: Long,
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): Boolean {
-            val outId = hashIdBytes(pubKey, createdAt, kind, tags, content)
-            return Hex.isEqual(id, outId)
-        }
+        ): Boolean = EventHasherSerializer.makeJsonForIdHashAndCheck(id, pubKey, createdAt, kind, tags, content)
     }
 }

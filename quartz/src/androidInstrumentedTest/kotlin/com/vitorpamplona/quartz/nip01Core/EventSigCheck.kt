@@ -88,8 +88,10 @@ class EventSigCheck {
 
         val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val new2 = EventHasherSerializer.makeJsonForIdHashAndCheck(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
         assertEquals(old.toByteArray().joinToString(), new.joinToString())
+        assertTrue(new2)
         assertTrue(event.verifySignature())
         assertTrue(event.verifyId())
     }
@@ -122,11 +124,14 @@ class EventSigCheck {
 
         val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val new2 = EventHasherSerializer.makeJsonForIdHashAndCheck(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
         println(old)
         println(String(new))
+        println(new2)
 
         assertEquals(old, String(new))
+        assertTrue(new2)
         assertTrue(event.verifySignature())
         assertTrue(event.verifyId())
     }
@@ -152,13 +157,18 @@ class EventSigCheck {
                 sig = "81d08765524bd8b774585a57c76d25b1d2c09eaa23efcb075226ba8b64f42e3d9d9403e5edf888e0e58702a24abc084259e21b97e24a275021c5e36186c65f0c",
             )
 
+        println("TESTING")
+
         val old = EventHasherSerializer.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
         val new = EventHasherSerializer.fastMakeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        val new2 = EventHasherSerializer.makeJsonForIdHashAndCheck(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
         println(old)
         println(String(new))
+        println(new2)
 
         assertEquals(old.toByteArray().joinToString(), new.joinToString())
+        assertTrue(new2)
         assertTrue(event.verifySignature())
         assertTrue(event.verifyId())
     }

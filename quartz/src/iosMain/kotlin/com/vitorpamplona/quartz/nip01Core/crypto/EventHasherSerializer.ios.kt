@@ -42,4 +42,15 @@ actual object EventHasherSerializer {
     ): ByteArray {
         TODO("Not yet implemented")
     }
+
+    actual fun makeJsonForIdHashAndCheck(
+        id: HexKey,
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): Boolean {
+        TODO("Not yet implemented")
+    }
 }

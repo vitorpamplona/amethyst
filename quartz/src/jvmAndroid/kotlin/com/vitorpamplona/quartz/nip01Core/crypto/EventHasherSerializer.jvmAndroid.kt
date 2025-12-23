@@ -29,7 +29,10 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.sha256.pool
 import java.io.IOException
 
 actual object EventHasherSerializer {
@@ -108,6 +111,53 @@ actual object EventHasherSerializer {
             // shouldn't really happen, but is declared as possibility so:
             throw JsonMappingException.fromUnexpectedIOE(e)
         } finally {
+            br.releaseToPool()
+        }
+    }
+
+    /** reuses the byte buffer straight into Sha256 to avoid creating
+     *  and then sends it to the hex checker to avoid returning
+     */
+    actual fun makeJsonForIdHashAndCheck(
+        id: HexKey,
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): Boolean {
+        val br: BufferRecycler = JacksonMapper.mapper.factory._getBufferRecycler()
+        val bb = HashingByteArrayBuilder(br, pool)
+        try {
+            val generator = JacksonMapper.mapper.createGenerator(bb, JsonEncoding.UTF8)
+            generator.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8)
+            generator.use {
+                it.writeStartArray()
+                it.writeNumber(0)
+                it.writeString(pubKey)
+                it.writeNumber(createdAt)
+                it.writeNumber(kind)
+                it.writeStartArray()
+                tags.fastForEach { tag ->
+                    it.writeStartArray()
+                    tag.fastForEach { value ->
+                        it.writeString(value)
+                    }
+                    it.writeEndArray()
+                }
+                it.writeEndArray()
+                it.writeString(content)
+                it.writeEndArray()
+            }
+
+            return Hex.isEqual(id, bb.sha256())
+        } catch (e: JsonProcessingException) {
+            throw e
+        } catch (e: IOException) {
+            // shouldn't really happen, but is declared as possibility so:
+            throw JsonMappingException.fromUnexpectedIOE(e)
+        } finally {
+            bb.release()
             br.releaseToPool()
         }
     }

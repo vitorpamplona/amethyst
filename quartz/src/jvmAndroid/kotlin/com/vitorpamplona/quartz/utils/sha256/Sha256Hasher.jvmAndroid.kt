@@ -28,7 +28,15 @@ class Sha256Hasher {
 
     fun hash(byteArray: ByteArray) = digest.digest(byteArray).also { digest.reset() }
 
+    fun update(
+        input: ByteArray,
+        offset: Int,
+        length: Int,
+    ) = digest.update(input, offset, length)
+
     fun digest(byteArray: ByteArray) = digest.digest(byteArray)
+
+    fun digest() = digest.digest()
 
     fun reset() = digest.reset()
 
