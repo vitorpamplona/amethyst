@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -200,7 +200,7 @@ class VoiceReplyViewModel : ViewModel() {
             is UploadingState.Finished -> {
                 when (val orchestratorResult = result.result) {
                     is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                        val hint = note.toEventHint<VoiceEvent>()
+                        val hint = note.toEventHint<BaseVoiceEvent>()
                         if (hint == null) {
                             accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
                             return

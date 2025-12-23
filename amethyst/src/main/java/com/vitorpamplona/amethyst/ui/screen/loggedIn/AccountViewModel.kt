@@ -134,7 +134,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1154,7 +1154,7 @@ class AccountViewModel(
         context: Context,
     ) {
         if (isWriteable()) {
-            val hint = note.toEventHint<VoiceEvent>() ?: return
+            val hint = note.toEventHint<BaseVoiceEvent>() ?: return
 
             launchSigner {
                 val uploader = UploadOrchestrator()
