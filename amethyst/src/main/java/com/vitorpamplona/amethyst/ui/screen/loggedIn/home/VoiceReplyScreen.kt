@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -184,7 +185,8 @@ private fun ReRecordButton(viewModel: VoiceReplyViewModel) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = Size10dp),
+                .navigationBarsPadding()
+                .padding(vertical = 16.dp, horizontal = Size10dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (viewModel.isUploading) {
