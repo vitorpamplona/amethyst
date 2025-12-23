@@ -107,21 +107,11 @@ class VoiceReplyViewModel : ViewModel() {
         }
 
     fun selectRecording(recording: RecordingResult) {
+        cancelUpload()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
         voiceMetadata = null
-    }
-
-    fun removeVoiceMessage() {
-        cancelUpload()
-        deleteVoiceLocalFile()
-        voiceRecording = null
-        voiceLocalFile = null
-        voiceMetadata = null
-        voiceSelectedServer = null
-        isUploading = false
-        voiceOrchestrator = null
     }
 
     private fun cancelUpload() {
@@ -175,7 +165,7 @@ class VoiceReplyViewModel : ViewModel() {
 
                     handleUploadResult(note, recording, serverToUse, result, onSuccess)
                 } catch (e: CancellationException) {
-                    // User canceled, or ViewModel cleared.
+                    Log.w("VoiceReplyViewModel", "User canceled, or ViewModel cleared", e)
                 } catch (e: Exception) {
                     val appContext = Amethyst.instance.appContext
                     val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
