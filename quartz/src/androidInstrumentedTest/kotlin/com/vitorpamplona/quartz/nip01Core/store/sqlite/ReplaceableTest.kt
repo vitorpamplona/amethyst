@@ -56,20 +56,25 @@ class ReplaceableTest {
         val version2 = signer.sign(MetadataEvent.createNew("Vitor 2", createdAt = time + 1))
         val version3 = signer.sign(MetadataEvent.createNew("Vitor 3", createdAt = time + 2))
 
+        val addressableQuery = Filter(kinds = listOf(version1.kind), authors = listOf(version1.pubKey), tags = mapOf("d" to listOf(version1.dTag())))
+
         db.insert(version1)
 
         db.assertQuery(version1, Filter(ids = listOf(version1.id)))
+        db.assertQuery(version1, addressableQuery)
 
         db.insert(version2)
 
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
         db.assertQuery(version2, Filter(ids = listOf(version2.id)))
+        db.assertQuery(version3, addressableQuery)
 
         db.insert(version3)
 
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
         db.assertQuery(null, Filter(ids = listOf(version2.id)))
         db.assertQuery(version3, Filter(ids = listOf(version3.id)))
+        db.assertQuery(version3, addressableQuery)
     }
 
     @Test
@@ -78,6 +83,8 @@ class ReplaceableTest {
         val version1 = signer.sign(MetadataEvent.createNew("Vitor 1", createdAt = time))
         val version2 = signer.sign(MetadataEvent.createNew("Vitor 2", createdAt = time + 1))
         val version3 = signer.sign(MetadataEvent.createNew("Vitor 3", createdAt = time + 2))
+
+        val addressableQuery = Filter(kinds = listOf(version1.kind), authors = listOf(version1.pubKey), tags = mapOf("d" to listOf(version1.dTag())))
 
         db.insert(version3)
 
@@ -98,6 +105,7 @@ class ReplaceableTest {
         }
 
         db.assertQuery(version3, Filter(ids = listOf(version3.id)))
+        db.assertQuery(version3, addressableQuery)
         db.assertQuery(null, Filter(ids = listOf(version2.id)))
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
     }
