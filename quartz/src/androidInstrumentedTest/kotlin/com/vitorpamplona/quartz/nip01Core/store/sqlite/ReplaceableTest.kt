@@ -67,7 +67,7 @@ class ReplaceableTest {
 
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
         db.assertQuery(version2, Filter(ids = listOf(version2.id)))
-        db.assertQuery(version3, addressableQuery)
+        db.assertQuery(version2, addressableQuery)
 
         db.insert(version3)
 
