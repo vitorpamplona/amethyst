@@ -56,15 +56,12 @@ class LargeDBTests {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        context.deleteDatabase("test_large.db")
-        db = EventStore(context, "largeDBTest.db")
+        db = EventStore(context, null)
     }
 
     @After
     fun tearDown() {
         db.close()
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        context.deleteDatabase("test_large.db")
     }
 
     @Test

@@ -41,7 +41,7 @@ class ReplaceableTest {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        db = EventStore(context, null, relayUrl = "testUrl")
+        db = EventStore(context, null)
     }
 
     @After
