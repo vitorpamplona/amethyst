@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.bloom.MurmurHash3
 
 /**
@@ -32,6 +33,9 @@ class TagNameValueHasher(
     val hasher = MurmurHash3()
 
     // small performance improvements on inserting
+    val pTagHash by lazy {
+        hasher.hash128x64Half("p".encodeToByteArray(), seed)
+    }
     val eTagHash by lazy {
         hasher.hash128x64Half("e".encodeToByteArray(), seed)
     }
@@ -56,4 +60,8 @@ class TagNameValueHasher(
     fun hashATag(value: String) = hasher.hash128x64Half(value.encodeToByteArray(), aTagHash)
 
     fun hashETag(value: String) = hasher.hash128x64Half(value.encodeToByteArray(), eTagHash)
+
+    fun hashPTag(value: String) = hasher.hash128x64Half(value.encodeToByteArray(), pTagHash)
+
+    fun hash(value: HexKey) = hasher.hash128x64Half(value.encodeToByteArray(), seed)
 }
