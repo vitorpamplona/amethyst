@@ -47,6 +47,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +63,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -109,6 +112,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -205,9 +209,12 @@ private fun InnerReactionRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val voiceRecordingState = remember(baseNote.idHex) { mutableStateOf(false) }
+
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
+        weightTwo = if (voiceRecordingState.value) 2f else 1f,
         one = {
             WatchReactionsZapsBoostsAndDisplayIfExists(baseNote, accountViewModel) {
                 RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
@@ -219,6 +226,7 @@ private fun InnerReactionRow(
                 MaterialTheme.colorScheme.placeholderText,
                 accountViewModel,
                 nav,
+                voiceRecordingState = voiceRecordingState,
             )
         },
         three = {
@@ -289,6 +297,7 @@ fun ShareReaction(
 private fun GenericInnerReactionRow(
     showReactionDetail: Boolean,
     addPadding: Boolean,
+    weightTwo: Float = 1f,
     one: @Composable () -> Unit,
     two: @Composable () -> Unit,
     three: @Composable () -> Unit,
@@ -310,7 +319,7 @@ private fun GenericInnerReactionRow(
             }
         }
 
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { two() }
+        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(weightTwo)) { two() }
 
         Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { three() }
 
@@ -584,9 +593,16 @@ private fun ReplyReactionWithDialog(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
+    voiceRecordingState: MutableState<Boolean>? = null,
 ) {
     if (baseNote.event is BaseVoiceEvent) {
-        ReplyViaVoiceReaction(baseNote, grayTint, accountViewModel, nav)
+        ReplyViaVoiceReaction(
+            baseNote,
+            grayTint,
+            accountViewModel,
+            nav,
+            voiceRecordingState = voiceRecordingState,
+        )
     } else {
         ReplyReaction(baseNote, grayTint, accountViewModel) {
             nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
@@ -603,9 +619,10 @@ fun ReplyViaVoiceReaction(
     nav: INav,
     showCounter: Boolean = true,
     iconSizeModifier: Modifier = Size19Modifier,
+    voiceRecordingState: MutableState<Boolean>? = null,
 ) {
     RecordAudioBox(
-        modifier = iconSizeModifier,
+        modifier = Modifier,
         onRecordTaken = { audio ->
             nav.nav {
                 Route.VoiceReply(
@@ -617,8 +634,27 @@ fun ReplyViaVoiceReaction(
                 )
             }
         },
-    ) { _, _ ->
-        VoiceReplyIcon(iconSizeModifier, grayTint)
+    ) { isRecording, elapsedSeconds ->
+        if (voiceRecordingState != null) {
+            SideEffect {
+                if (voiceRecordingState.value != isRecording) {
+                    voiceRecordingState.value = isRecording
+                }
+            }
+        }
+        if (isRecording) {
+            FloatingRecordingIndicator(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
+                isRecording = true,
+                elapsedSeconds = elapsedSeconds,
+                isCompact = true,
+            )
+        } else {
+            VoiceReplyIcon(iconSizeModifier, grayTint)
+        }
     }
 
     if (showCounter) {
