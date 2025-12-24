@@ -117,7 +117,7 @@ class SQLiteEventStore(
         db: SQLiteDatabase,
     ) {
         val headerId = eventIndexModule.insert(event, db)
-        deletionModule.insert(event, headerId, db)
+        deletionModule.insert(event, db)
         expirationModule.insert(event, headerId, db)
         fullTextSearchModule.insert(event, headerId, db)
         rightToVanishModule.insert(event, relayUrl, headerId, db)

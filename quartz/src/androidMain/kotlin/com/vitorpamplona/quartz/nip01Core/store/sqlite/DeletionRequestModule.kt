@@ -56,7 +56,6 @@ class DeletionRequestModule : IModule {
 
     fun insert(
         event: Event,
-        headerId: Long,
         db: SQLiteDatabase,
     ) {
         if (event is DeletionEvent) {
