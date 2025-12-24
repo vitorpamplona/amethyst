@@ -33,13 +33,9 @@ import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventIndexesModule(
     val fts: FullTextSearchModule,
-    val seedModule: SeedModule,
+    val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
     val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) : IModule {
-    private var hasherCache: TagNameValueHasher? = null
-
-    fun hasher(db: SQLiteDatabase): TagNameValueHasher = hasherCache ?: TagNameValueHasher(seedModule.getSeed(db)).also { hasherCache = it }
-
     override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """

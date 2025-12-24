@@ -76,4 +76,8 @@ class SeedModule : IModule {
     }
 
     override fun deleteAll(db: SQLiteDatabase) {}
+
+    private var hasherCache: TagNameValueHasher? = null
+
+    fun hasher(db: SQLiteDatabase): TagNameValueHasher = hasherCache ?: TagNameValueHasher(getSeed(db)).also { hasherCache = it }
 }
