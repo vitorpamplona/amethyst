@@ -28,7 +28,7 @@ class ReplaceableModule : IModule {
             """
             CREATE UNIQUE INDEX replaceable_idx
             ON event_headers (kind, pubkey)
-            WHERE (kind >= 10000 AND kind < 20000) OR (kind IN (0, 3))
+            WHERE (kind IN (0, 3)) OR (kind >= 10000 AND kind < 20000)
             """.trimIndent(),
         )
 
@@ -41,14 +41,15 @@ class ReplaceableModule : IModule {
             CREATE TRIGGER delete_older_replaceable_event
             BEFORE INSERT ON event_headers
             FOR EACH ROW
-            WHEN (NEW.kind >= 10000 AND NEW.kind < 20000) OR (NEW.kind IN (0, 3))
+            WHEN (NEW.kind IN (0, 3)) OR (NEW.kind >= 10000 AND NEW.kind < 20000)
             BEGIN
                 -- Delete older records if this is the newest
                 DELETE FROM event_headers
                 WHERE
                     event_headers.kind = NEW.kind AND
                     event_headers.pubkey = NEW.pubkey AND
-                    event_headers.created_at < NEW.created_at;
+                    event_headers.created_at < NEW.created_at AND
+                    ((event_headers.kind IN (0, 3)) OR (event_headers.kind >= 10000 AND event_headers.kind < 20000));
             END;
             """.trimIndent(),
         )
