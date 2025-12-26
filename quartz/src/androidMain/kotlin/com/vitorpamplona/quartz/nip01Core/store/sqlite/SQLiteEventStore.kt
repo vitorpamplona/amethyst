@@ -54,7 +54,7 @@ class SQLiteEventStore(
 
     val deletionModule = DeletionRequestModule()
     val expirationModule = ExpirationModule()
-    val rightToVanishModule = RightToVanishModule()
+    val rightToVanishModule = RightToVanishModule(seedModule::hasher)
 
     val modules =
         listOf(
