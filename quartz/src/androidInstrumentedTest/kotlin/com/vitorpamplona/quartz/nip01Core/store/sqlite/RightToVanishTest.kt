@@ -26,6 +26,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.fail
@@ -86,5 +87,50 @@ class RightToVanishTest {
         db.assertQuery(null, Filter(ids = listOf(note1.id)))
         db.assertQuery(null, Filter(ids = listOf(note2.id)))
         db.assertQuery(note3, Filter(ids = listOf(note3.id)))
+    }
+
+    @Test
+    fun testInsertDeleteGiftWrap() {
+        val time = TimeUtils.now()
+
+        val me = NostrSignerSync()
+        val myFriend = NostrSignerSync()
+
+        val note1 = me.sign(TextNoteEvent.build("test1", createdAt = time))
+        val wrap1 = GiftWrapEvent.create(note1, me.pubKey)
+        val wrap2 = GiftWrapEvent.create(note1, myFriend.pubKey)
+
+        db.insert(wrap1)
+        db.insert(wrap2)
+
+        db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+
+        val randomVanishToWrap = signer.sign(RequestToVanishEvent.build("testUrl", createdAt = time + 2))
+
+        db.insert(randomVanishToWrap)
+
+        db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+
+        val vanish = me.sign(RequestToVanishEvent.build("testUrl", createdAt = time + 2))
+
+        db.insert(vanish)
+
+        db.assertQuery(vanish, Filter(ids = listOf(vanish.id)))
+        db.assertQuery(null, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+
+        // trying to insert again should fail.
+        try {
+            db.insert(wrap1)
+            fail("Should not be able to insert a deleted event")
+        } catch (e: SQLiteConstraintException) {
+            assertEquals("blocked: a request to vanish event exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
+        }
+
+        db.assertQuery(vanish, Filter(ids = listOf(vanish.id)))
+        db.assertQuery(null, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
     }
 }

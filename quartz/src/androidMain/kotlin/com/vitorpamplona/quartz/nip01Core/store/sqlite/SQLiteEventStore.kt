@@ -52,7 +52,7 @@ class SQLiteEventStore(
     val addressableModule = AddressableModule()
     val ephemeralModule = EphemeralModule()
 
-    val deletionModule = DeletionRequestModule()
+    val deletionModule = DeletionRequestModule(seedModule::hasher)
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
 

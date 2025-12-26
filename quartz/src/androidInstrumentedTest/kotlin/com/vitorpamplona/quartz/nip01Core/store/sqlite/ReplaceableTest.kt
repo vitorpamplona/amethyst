@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import org.junit.After
 import org.junit.Before
@@ -108,5 +109,61 @@ class ReplaceableTest {
         db.assertQuery(version3, addressableQuery)
         db.assertQuery(null, Filter(ids = listOf(version2.id)))
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
+    }
+
+    @Test
+    fun testTriggersIndexUsageKind0() {
+        val explainer =
+            db.store.explainQuery(
+                """
+                SELECT * FROM event_headers
+                WHERE
+                    event_headers.kind = 0 AND
+                    event_headers.pubkey = 'aa' AND
+                    event_headers.created_at < 1766686500 AND
+                    ((event_headers.kind IN (0, 3)) OR (event_headers.kind >= 10000 AND event_headers.kind < 20000));
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            """
+            SELECT * FROM event_headers
+            WHERE
+                event_headers.kind = 0 AND
+                event_headers.pubkey = 'aa' AND
+                event_headers.created_at < 1766686500 AND
+                ((event_headers.kind IN (0, 3)) OR (event_headers.kind >= 10000 AND event_headers.kind < 20000));
+            └── SEARCH event_headers USING INDEX replaceable_idx (kind=? AND pubkey=?)
+            """.trimIndent(),
+            explainer,
+        )
+    }
+
+    @Test
+    fun testTriggersIndexUsageKind3() {
+        val explainer =
+            db.store.explainQuery(
+                """
+                SELECT * FROM event_headers
+                WHERE
+                    event_headers.kind = 3 AND
+                    event_headers.pubkey = 'aa' AND
+                    event_headers.created_at < 1766686500 AND
+                    ((event_headers.kind IN (0, 3)) OR (event_headers.kind >= 10000 AND event_headers.kind < 20000));
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            """
+            SELECT * FROM event_headers
+            WHERE
+                event_headers.kind = 3 AND
+                event_headers.pubkey = 'aa' AND
+                event_headers.created_at < 1766686500 AND
+                ((event_headers.kind IN (0, 3)) OR (event_headers.kind >= 10000 AND event_headers.kind < 20000));
+            └── SEARCH event_headers USING INDEX replaceable_idx (kind=? AND pubkey=?)
+            """.trimIndent(),
+            explainer,
+        )
     }
 }

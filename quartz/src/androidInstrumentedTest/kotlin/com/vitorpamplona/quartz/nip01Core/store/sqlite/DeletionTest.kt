@@ -23,12 +23,15 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import androidx.test.core.app.ApplicationProvider
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import junit.framework.TestCase
 import junit.framework.TestCase.fail
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -169,5 +172,241 @@ class DeletionTest {
         db.assertQuery(null, Filter(ids = listOf(note1.id)))
         db.assertQuery(null, Filter(ids = listOf(note2.id)))
         db.assertQuery(null, Filter(ids = listOf(note3.id)))
+    }
+
+    @Test
+    fun testInsertDeleteWrap() {
+        val me = NostrSignerSync()
+        val myFriend = NostrSignerSync()
+
+        val note1 = me.sign(TextNoteEvent.build("test1"))
+        val wrap1 = GiftWrapEvent.create(note1, me.pubKey)
+        val wrap2 = GiftWrapEvent.create(note1, myFriend.pubKey)
+
+        db.insert(wrap1)
+        db.insert(wrap2)
+
+        db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+
+        val randomDeletionToWrap = signer.sign(DeletionEvent.build(listOf(wrap1)))
+
+        db.insert(randomDeletionToWrap)
+
+        db.assertQuery(randomDeletionToWrap, Filter(ids = listOf(randomDeletionToWrap.id)))
+        db.assertQuery(wrap1, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+
+        val deletion = me.sign(DeletionEvent.build(listOf(wrap1)))
+
+        db.insert(deletion)
+
+        db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
+        db.assertQuery(null, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+
+        // trying to insert again should fail.
+        try {
+            db.insert(wrap1)
+            fail("Should not be able to insert a deleted event")
+        } catch (e: SQLiteConstraintException) {
+            assertEquals("blocked: a deletion event exists (code 1811 SQLITE_CONSTRAINT_TRIGGER)", e.message)
+        }
+
+        db.assertQuery(deletion, Filter(ids = listOf(deletion.id)))
+        db.assertQuery(null, Filter(ids = listOf(wrap1.id)))
+        db.assertQuery(wrap2, Filter(ids = listOf(wrap2.id)))
+    }
+
+    @Test
+    fun testTriggersIndexUsage() {
+        val sql =
+            """
+            SELECT 1 FROM event_tags
+            INNER JOIN event_headers
+            ON event_headers.row_id = event_tags.event_header_row_id
+            WHERE
+                event_tags.tag_hash IN (3221122, 223322) AND
+                event_headers.kind = 5 AND
+                event_headers.created_at >= 1766686500 AND
+                event_headers.pubkey_owner_hash = 22332323
+            """.trimIndent()
+
+        val explainer =
+            db.store.explainQuery(sql)
+
+        TestCase.assertEquals(
+            """
+            ${sql.replace("\n","\n            ")}
+            ├── SEARCH event_tags USING COVERING INDEX query_by_tags_hash (tag_hash=?)
+            └── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            """.trimIndent(),
+            explainer,
+        )
+    }
+
+    @Test
+    fun testDeleteById() {
+        val sql =
+            db.store.deletionModule
+                .deleteSQL(
+                    pubkey = "key1",
+                    idValues = listOf("ca29c211f", "ca29c211d"),
+                    addresses = emptyList(),
+                    hasher = TagNameValueHasher(0),
+                ).first()
+
+        TestCase.assertEquals(
+            """
+            DELETE FROM event_headers
+            WHERE
+                id IN ("ca29c211f","ca29c211d") AND
+                pubkey_owner_hash = "1573573083296714675"
+            ├── SEARCH event_headers USING INDEX event_headers_id (id=?)
+            ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
+            ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
+            └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
+            """.trimIndent(),
+            db.store.explainQuery(sql.sql, sql.args),
+        )
+    }
+
+    @Test
+    fun testDeleteAddressable() {
+        val sql =
+            db.store.deletionModule
+                .deleteSQL(
+                    pubkey = "key1",
+                    idValues = emptyList(),
+                    addresses =
+                        listOf(
+                            Address(30000, "key1", "a"),
+                        ),
+                    hasher = TagNameValueHasher(0),
+                ).first()
+
+        TestCase.assertEquals(
+            """
+            DELETE FROM event_headers
+            WHERE (
+                (kind = "30000" AND pubkey = "key1" AND d_tag = "a")
+            ) AND
+                kind >= 30000 AND kind < 40000
+            ├── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+            ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
+            ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
+            └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
+            """.trimIndent(),
+            db.store.explainQuery(sql.sql, sql.args),
+        )
+    }
+
+    @Test
+    fun testDeleteAddressablesSingleKind() {
+        val sql =
+            db.store.deletionModule
+                .deleteSQL(
+                    pubkey = "key1",
+                    idValues = emptyList(),
+                    addresses =
+                        listOf(
+                            Address(30000, "key1", "a"),
+                            Address(30000, "key1", "b"),
+                            Address(30000, "key1", "c"),
+                            Address(30000, "key1", "d"),
+                        ),
+                    hasher = TagNameValueHasher(0),
+                ).first()
+
+        TestCase.assertEquals(
+            """
+            DELETE FROM event_headers
+            WHERE (
+                (kind = "30000" AND pubkey = "key1" AND d_tag IN ("a","b","c","d"))
+            ) AND
+                kind >= 30000 AND kind < 40000
+            ├── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+            ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
+            ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
+            └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
+            """.trimIndent(),
+            db.store.explainQuery(sql.sql, sql.args),
+        )
+    }
+
+    @Test
+    fun testDeleteAddressablesMultipleKinds() {
+        val sql =
+            db.store.deletionModule
+                .deleteSQL(
+                    pubkey = "key1",
+                    idValues = emptyList(),
+                    addresses =
+                        listOf(
+                            Address(30000, "key1", "a"),
+                            Address(30000, "key1", "b"),
+                            Address(30101, "key1", "c"),
+                            Address(30101, "key1", "d"),
+                            Address(30001, "key2", "e"),
+                            Address(30001, "key2", "f"),
+                        ),
+                    hasher = TagNameValueHasher(0),
+                ).first()
+
+        TestCase.assertEquals(
+            """
+            DELETE FROM event_headers
+            WHERE (
+                (kind = "30000" AND pubkey = "key1" AND d_tag IN ("a","b"))
+            OR
+                (kind = "30101" AND pubkey = "key1" AND d_tag IN ("c","d"))
+            ) AND
+                kind >= 30000 AND kind < 40000
+            ├── MULTI-INDEX OR
+            │   ├── INDEX 1
+            │   │   └── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+            │   └── INDEX 2
+            │       └── SEARCH event_headers USING COVERING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+            ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
+            ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
+            └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
+            """.trimIndent(),
+            db.store.explainQuery(sql.sql, sql.args),
+        )
+    }
+
+    @Test
+    fun testDeleteReplaceables() {
+        val sql =
+            db.store.deletionModule
+                .deleteSQL(
+                    pubkey = "key1",
+                    idValues = emptyList(),
+                    addresses =
+                        listOf(
+                            Address(10000, "key1", ""),
+                            Address(10000, "key1", ""),
+                            Address(10001, "key1", ""),
+                            Address(10001, "key1", ""),
+                            Address(10001, "key2", ""),
+                            Address(10001, "key2", ""),
+                        ),
+                    hasher = TagNameValueHasher(0),
+                ).first()
+
+        TestCase.assertEquals(
+            """
+            DELETE FROM event_headers
+            WHERE
+                kind IN ("10000","10001") AND
+                pubkey = "key1" AND
+                ((kind in (0,3)) OR (kind >= 10000 AND kind < 20000))
+            ├── SEARCH event_headers USING COVERING INDEX replaceable_idx (kind=? AND pubkey=?)
+            ├── SEARCH event_vanish USING INTEGER PRIMARY KEY (rowid=?)
+            ├── SEARCH event_expirations USING INTEGER PRIMARY KEY (rowid=?)
+            └── SEARCH event_tags USING COVERING INDEX fk_event_tags_header_id (event_header_row_id=?)
+            """.trimIndent(),
+            db.store.explainQuery(sql.sql, sql.args),
+        )
     }
 }
