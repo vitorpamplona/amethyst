@@ -29,7 +29,7 @@ class ExpirationModule : IModule {
         db.execSQL(
             """
             CREATE TABLE event_expirations (
-                event_header_row_id INTEGER,
+                event_header_row_id INTEGER PRIMARY KEY NOT NULL,
                 expiration INTEGER NOT NULL,
                 FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
             )
@@ -49,8 +49,6 @@ class ExpirationModule : IModule {
             END;
             """.trimIndent(),
         )
-
-        db.execSQL("CREATE UNIQUE INDEX events_exp_id       ON event_expirations (event_header_row_id)")
     }
 
     override fun drop(db: SQLiteDatabase) {
