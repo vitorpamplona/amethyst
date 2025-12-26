@@ -6,6 +6,17 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler)
 }
 
+sourceSets {
+    main {
+        kotlin.srcDir("src/jvmMain/kotlin")
+        resources.srcDir("src/jvmMain/resources")
+    }
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
