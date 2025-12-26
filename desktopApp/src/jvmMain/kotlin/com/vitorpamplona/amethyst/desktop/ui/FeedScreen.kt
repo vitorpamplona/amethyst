@@ -69,11 +69,16 @@ import java.util.Locale
 @Composable
 fun FeedScreen(relayManager: DesktopRelayConnectionManager) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val events = remember { mutableStateListOf<Event>() }
     val seenIds = remember { mutableSetOf<String>() }
 
-    DisposableEffect(connectedRelays) {
-        if (connectedRelays.isNotEmpty()) {
+    // Use relayStatuses.keys (configured relays) to initiate subscription,
+    // not connectedRelays (which is empty until subscriptions trigger connections)
+    val configuredRelays = relayStatuses.keys
+
+    DisposableEffect(configuredRelays) {
+        if (configuredRelays.isNotEmpty()) {
             val subId = "global-feed-${System.currentTimeMillis()}"
             val filters = listOf(
                 Filter(
@@ -85,7 +90,7 @@ fun FeedScreen(relayManager: DesktopRelayConnectionManager) {
             relayManager.subscribe(
                 subId = subId,
                 filters = filters,
-                relays = connectedRelays,
+                relays = configuredRelays,
                 listener = object : IRequestListener {
                     override fun onEvent(
                         event: Event,
