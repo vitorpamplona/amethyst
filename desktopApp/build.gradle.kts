@@ -1,0 +1,59 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
+plugins {
+    alias(libs.plugins.jetbrainsKotlinJvm)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
+}
+
+dependencies {
+    implementation(compose.desktop.currentOs)
+    implementation(compose.material3)
+    implementation(compose.materialIconsExtended)
+
+    // Quartz Nostr library (will use JVM target)
+    implementation(project(":quartz"))
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.swing)
+
+    // Networking
+    implementation(libs.okhttp)
+
+    // JSON
+    implementation(libs.jackson.module.kotlin)
+
+    // Collections
+    implementation(libs.kotlinx.collections.immutable)
+}
+
+compose.desktop {
+    application {
+        mainClass = "com.vitorpamplona.amethyst.desktop.MainKt"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+
+            packageName = "Amethyst"
+            packageVersion = "1.0.0"
+            description = "Nostr client for desktop"
+            vendor = "Amethyst Contributors"
+
+            macOS {
+                bundleID = "com.vitorpamplona.amethyst.desktop"
+                iconFile.set(project.file("src/jvmMain/resources/icon.icns"))
+            }
+
+            windows {
+                iconFile.set(project.file("src/jvmMain/resources/icon.ico"))
+                menuGroup = "Amethyst"
+                upgradeUuid = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+            }
+
+            linux {
+                iconFile.set(project.file("src/jvmMain/resources/icon.png"))
+            }
+        }
+    }
+}
