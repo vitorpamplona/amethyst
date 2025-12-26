@@ -29,8 +29,8 @@ class RightToVanishModule : IModule {
         db.execSQL(
             """
             CREATE TABLE event_vanish (
-                event_header_row_id INTEGER,
                 pubkey TEXT NOT NULL,
+                event_header_row_id INTEGER PRIMARY KEY NOT NULL,
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
             )
