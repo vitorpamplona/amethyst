@@ -82,9 +82,6 @@ class SQLiteEventStore(
         // The DB can be corrupted if the OS is shutdown before sync, which generally
         // doesn't happen on Android
         db.execSQL("PRAGMA synchronous = OFF")
-
-        // Cache to keep larger parts of the index in memory
-        db.execSQL("PRAGMA cache_size=10000;"); // Cache 10,000 pages
     }
 
     override fun onCreate(db: SQLiteDatabase) {
