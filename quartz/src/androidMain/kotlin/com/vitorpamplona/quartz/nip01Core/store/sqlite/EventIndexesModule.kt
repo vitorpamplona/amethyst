@@ -70,6 +70,8 @@ class EventIndexesModule(
         db.execSQL("CREATE UNIQUE INDEX event_headers_id       ON event_headers (id)")
         db.execSQL("CREATE INDEX query_by_kind_pubkey_dtag_idx ON event_headers (kind, pubkey, d_tag)")
         db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at desc, id)")
+        // need to check if this is actually needed.
+        db.execSQL("CREATE INDEX query_by_created_at_kind_key  ON event_headers (created_at desc, kind, pubkey)")
 
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
         db.execSQL("CREATE INDEX query_by_tags_hash            ON event_tags (tag_hash, event_header_row_id)")
@@ -162,12 +164,19 @@ class EventIndexesModule(
 
         val stmtTags = db.compileStatement(sqlInsertTags)
 
-        event.tags.forEach { tag ->
-            if (tagIndexStrategy.shouldIndex(event.kind, tag)) {
-                stmtTags.bindLong(1, headerId)
-                stmtTags.bindLong(2, hasher.hash(tag[0], tag[1]))
-                stmtTags.executeInsert()
+        // sorting helps SQLLite by avoiding
+        // rebalancing the tree every new insert
+        val indexableTags = ArrayList<Long>()
+        for (idx in event.tags.indices) {
+            if (tagIndexStrategy.shouldIndex(event.kind, event.tags[idx])) {
+                indexableTags.add(hasher.hash(event.tags[idx][0], event.tags[idx][1]))
             }
+        }
+        indexableTags.sort()
+        indexableTags.forEach {
+            stmtTags.bindLong(1, headerId)
+            stmtTags.bindLong(2, it)
+            stmtTags.executeInsert()
         }
 
         return headerId
