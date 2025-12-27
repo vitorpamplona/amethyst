@@ -8,16 +8,25 @@ Fork of [Amethyst](https://github.com/vitorpamplona/amethyst) adding Compose Mul
 
 ```
 amethyst/
-├── quartz/         # Nostr KMP library (converted to multiplatform)
+├── quartz/         # Nostr KMP library (protocol only, no UI)
 │   └── src/
-│       ├── commonMain/    # Shared Nostr protocol
+│       ├── commonMain/    # Shared Nostr protocol, data models
 │       ├── androidMain/   # Android-specific (crypto, storage)
 │       └── jvmMain/       # Desktop JVM-specific
-├── desktopApp/     # Desktop JVM application
-├── amethyst/       # Android app (existing)
-├── ammolite/       # Support module
-└── commons/        # Utilities
+├── commons/        # Shared UI components (convert to KMP)
+│   └── src/
+│       ├── commonMain/    # Shared composables, icons, state
+│       ├── androidMain/   # Android-specific UI utilities
+│       └── jvmMain/       # Desktop-specific UI utilities
+├── desktopApp/     # Desktop JVM application (layouts, navigation)
+├── amethyst/       # Android app (layouts, navigation)
+└── ammolite/       # Support module
 ```
+
+**Sharing Philosophy:**
+- `quartz/` = Business logic, protocol, data (no UI)
+- `commons/` = Shared UI components, icons, composables
+- `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
 
 ## Tech Stack
 
@@ -48,7 +57,52 @@ Use these specialized agents for domain expertise:
 - `/extract <component>` - Move composable to shared code
 - `/nip <number>` - Get NIP implementation guidance
 
-## Development Workflow
+## Feature Workflow
+
+When picking up a new task or feature, follow this process:
+
+### Step 1: Analyze Android Implementation
+
+Start by examining the existing Android Amethyst codebase:
+1. Find the relevant feature/component in `amethyst/` module
+2. Understand the current implementation patterns
+3. Identify dependencies and integrations
+
+### Step 2: Create Implementation Plan
+
+Before coding, create a plan that categorizes work into three buckets:
+
+| Category | Description | Location |
+|----------|-------------|----------|
+| **Android-Specific** | Platform APIs, navigation, layouts | `amethyst/`, `androidMain/` |
+| **Reusable (Shared)** | Business logic, UI components, state | `quartz/commonMain/`, `commons/` (convert to KMP) |
+| **Desktop-Specific** | Desktop navigation, layouts, platform APIs | `desktopApp/`, `jvmMain/` |
+
+### Step 3: Code Sharing Strategy
+
+**Share:**
+- Business logic and data models → `quartz/commonMain/`
+- Major UI components (cards, lists, dialogs) → `commons/` (convert to KMP as needed)
+- State management and ViewModels → shared
+- Icons and visual assets → `commons/commonMain/`
+
+**Keep Platform-Native:**
+- Navigation patterns (sidebar vs bottom nav)
+- Screen layouts and scaffolding
+- Platform-specific interactions (gestures, keyboard shortcuts)
+- System integrations (notifications, file pickers)
+
+### Step 4: Extract Shared Components
+
+When extracting UI components:
+1. Identify reusable composables in Android code
+2. Use `/extract <component>` to move to `commons/commonMain/`
+3. Create expect/actual declarations for platform-specific behavior
+4. Update both Android and Desktop to use shared component
+
+**Note:** `quartz/` is protocol-only (no composables). Shared UI goes in `commons/` after converting it to KMP.
+
+## Build Commands
 
 ```bash
 # Run desktop app
