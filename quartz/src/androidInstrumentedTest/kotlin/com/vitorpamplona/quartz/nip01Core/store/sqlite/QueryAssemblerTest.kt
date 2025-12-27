@@ -264,7 +264,7 @@ class QueryAssemblerTest {
     }
 
     @Test
-    fun testJustTags() {
+    fun testFollowersOf() {
         val sql =
             explain(
                 listOf(
