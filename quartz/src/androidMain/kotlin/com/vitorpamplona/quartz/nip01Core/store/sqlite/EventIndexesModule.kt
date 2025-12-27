@@ -25,8 +25,9 @@ import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -216,8 +217,13 @@ class EventIndexesModule(
         db: SQLiteDatabase,
         onEach: (T) -> Unit,
     ) {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
-        db.runQueryEmitting(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args, onEach)
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
+
+        return if (rowIdSubQuery == null) {
+            db.runQuery(makeEverythingQuery(), onEach = onEach)
+        } else {
+            db.runQuery(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args, onEach)
+        }
     }
 
     fun planQuery(
@@ -249,9 +255,13 @@ class EventIndexesModule(
         db: SQLiteDatabase,
         onEach: (T) -> Unit,
     ) {
-        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db))
 
-        db.runQueryEmitting(makeQueryIn(rowIdSubqueries.sql), rowIdSubqueries.args, onEach)
+        if (rowIdSubqueries == null) {
+            db.runQuery(makeEverythingQuery(), onEach = onEach)
+        } else {
+            db.runQuery(makeQueryIn(rowIdSubqueries.sql), rowIdSubqueries.args, onEach)
+        }
     }
 
     private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC, id"
@@ -271,55 +281,65 @@ class EventIndexesModule(
         args: List<String> = emptyList(),
     ): List<T> =
         rawQuery(sql, args.toTypedArray()).use { cursor ->
-            parseResults(cursor)
+            ArrayList<T>(cursor.count).apply {
+                while (cursor.moveToNext()) {
+                    add(cursor.toEvent())
+                }
+            }
         }
 
-    private fun <T : Event> parseResults(cursor: Cursor): List<T> {
-        val events = ArrayList<T>(cursor.count)
-
-        while (cursor.moveToNext()) {
-            events.add(
-                EventFactory.create<T>(
-                    cursor.getString(0).intern(),
-                    cursor.getString(1).intern(),
-                    cursor.getLong(2),
-                    cursor.getInt(3),
-                    OptimizedJsonMapper.fromJsonToTagArray(cursor.getString(4)),
-                    cursor.getString(5),
-                    cursor.getString(6),
-                ),
-            )
-        }
-
-        return events
-    }
-
-    private fun <T : Event> SQLiteDatabase.runQueryEmitting(
+    private inline fun <T : Event> SQLiteDatabase.runQuery(
         sql: String,
         args: List<String> = emptyList(),
         onEach: (T) -> Unit,
     ) = rawQuery(sql, args.toTypedArray()).use { cursor ->
-        emitResults(cursor, onEach)
-    }
-
-    private fun <T : Event> emitResults(
-        cursor: Cursor,
-        onEach: (T) -> Unit,
-    ) {
         while (cursor.moveToNext()) {
-            onEach(
-                EventFactory.create<T>(
-                    cursor.getString(0).intern(),
-                    cursor.getString(1).intern(),
-                    cursor.getLong(2),
-                    cursor.getInt(3),
-                    OptimizedJsonMapper.fromJsonToTagArray(cursor.getString(4)),
-                    cursor.getString(5),
-                    cursor.getString(6),
-                ),
-            )
+            onEach(cursor.toEvent())
         }
     }
+
+    private fun <T : Event> Cursor.toEvent() =
+        EventFactory.create<T>(
+            getString(0).intern(),
+            getString(1).intern(),
+            getLong(2),
+            getInt(3),
+            OptimizedJsonMapper.fromJsonToTagArray(getString(4)),
+            getString(5),
+            getString(6),
+        )
+
+    class RawEvent(
+        val id: HexKey,
+        val pubKey: HexKey,
+        val createdAt: Long,
+        val kind: Kind,
+        val jsonTags: String,
+        val content: String,
+        val sig: HexKey,
+    ) {
+        fun <T : Event> toEvent() =
+            EventFactory.create<T>(
+                id.intern(),
+                pubKey.intern(),
+                createdAt,
+                kind,
+                OptimizedJsonMapper.fromJsonToTagArray(jsonTags),
+                content,
+                sig,
+            )
+    }
+
+    private fun Cursor.toRawEvent() =
+        RawEvent(
+            getString(0),
+            getString(1),
+            getLong(2),
+            getInt(3),
+            getString(4),
+            getString(5),
+            getString(6),
+        )
 
     // --------------
     // Counts
@@ -328,9 +348,13 @@ class EventIndexesModule(
         filter: Filter,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return db.countEverything()
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
 
-        return db.countIn(rowIdSubQuery.sql, rowIdSubQuery.args)
+        return if (rowIdSubQuery == null) {
+            db.countEverything()
+        } else {
+            db.countIn(rowIdSubQuery.sql, rowIdSubQuery.args)
+        }
     }
 
     fun count(
@@ -365,8 +389,13 @@ class EventIndexesModule(
         filter: Filter,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return 0
-        return db.runDelete(rowIdQuery.sql, rowIdQuery.args)
+        val rowIdQuery = prepareRowIDSubQueries(filter, hasher(db))
+
+        return if (rowIdQuery == null) {
+            0
+        } else {
+            db.runDelete(rowIdQuery.sql, rowIdQuery.args)
+        }
     }
 
     fun delete(
