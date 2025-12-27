@@ -116,6 +116,18 @@ class SQLiteEventStore(
         modules.reversed().forEach { it.deleteAll(db) }
     }
 
+    fun vacuum() {
+        // 1. ANALYZE: Collects statistics about tables and indices
+        // to help the query planner optimize queries.
+        writableDatabase.execSQL("VACUUM")
+    }
+
+    fun analyse() {
+        // 2. VACUUM: Rebuilds the database file, reclaiming unused space
+        // and reducing fragmentation.
+        writableDatabase.execSQL("ANALYZE")
+    }
+
     private fun innerInsertEvent(
         event: Event,
         db: SQLiteDatabase,
