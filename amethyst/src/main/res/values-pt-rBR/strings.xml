@@ -1183,4 +1183,5 @@
     <string name="follow_pack_broadcast">Transmitir pacote de recomendações</string>
     <string name="follow_set_delete">Excluir lista</string>
     <string name="follow_pack_delete">Excluir pacote de recomendações</string>
+    <string name="re_record">Gravar novamente</string>
 </resources>

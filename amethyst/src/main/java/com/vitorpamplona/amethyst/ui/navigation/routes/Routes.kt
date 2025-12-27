@@ -286,6 +286,15 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class VoiceReply(
+        val replyToNoteId: String,
+        val recordingFilePath: String,
+        val mimeType: String,
+        val duration: Int,
+        val amplitudes: String, // JSON-encoded List<Float>
+    ) : Route()
+
+    @Serializable
     data class ManualZapSplitPayment(
         val paymentId: String,
     ) : Route()
@@ -334,6 +343,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
         dest.hasRoute<Route.NewShortNote>() -> entry.toRoute<Route.NewShortNote>()
+        dest.hasRoute<Route.VoiceReply>() -> entry.toRoute<Route.VoiceReply>()
         dest.hasRoute<Route.NewProduct>() -> entry.toRoute<Route.NewProduct>()
         dest.hasRoute<Route.GeoPost>() -> entry.toRoute<Route.GeoPost>()
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()

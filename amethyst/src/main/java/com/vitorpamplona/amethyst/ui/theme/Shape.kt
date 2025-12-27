@@ -190,8 +190,8 @@ val VideoReactionColumnPadding = Modifier.padding(bottom = 75.dp)
 
 val DividerThickness = 0.25.dp
 
-val ReactionRowHeight = Modifier.padding(vertical = 7.dp).height(24.dp)
-val ReactionRowHeightWithPadding = Modifier.padding(vertical = 6.dp).height(24.dp).padding(horizontal = 10.dp)
+val ReactionRowHeight = Modifier.padding(vertical = 7.dp).heightIn(min = 24.dp)
+val ReactionRowHeightWithPadding = Modifier.padding(vertical = 6.dp).heightIn(min = 24.dp).padding(horizontal = 10.dp)
 val ReactionRowHeightChat = Modifier.height(20.dp)
 val ReactionRowHeightChatMaxWidth = Modifier.height(25.dp).fillMaxWidth()
 val UserNameRowHeight = Modifier.fillMaxWidth()
