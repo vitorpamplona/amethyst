@@ -18,28 +18,48 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
-
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.util.Base64
-
-fun Base64Image.toBitmap(content: String): Bitmap {
-    val matcher = pattern.matcher(content)
-
-    if (matcher.find()) {
-        val base64String = matcher.group(2)
-        val byteArray = Base64.getDecoder().decode(base64String)
-        return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-    }
-
-    throw Exception("Unable to convert base64 to image $content")
-}
+package com.vitorpamplona.amethyst.commons.blurhash
 
 /**
- * Converts a base64 image data URI to a PlatformImage.
- * Delegates to toBitmap and wraps the result.
+ * Platform-agnostic image wrapper for blurhash encoding/decoding.
+ *
+ * On Android: wraps android.graphics.Bitmap
+ * On Desktop JVM: wraps java.awt.image.BufferedImage
  */
-fun Base64Image.toPlatformImage(content: String): PlatformImage = toBitmap(content).toPlatformImage()
+expect class PlatformImage {
+    val width: Int
+    val height: Int
+
+    /**
+     * Read ARGB pixels into the provided array.
+     * Pixels are in ARGB format (0xAARRGGBB).
+     */
+    fun getPixels(
+        pixels: IntArray,
+        offset: Int,
+        stride: Int,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+    )
+
+    /**
+     * Create a scaled copy of this image.
+     */
+    fun scale(
+        width: Int,
+        height: Int,
+    ): PlatformImage
+
+    companion object {
+        /**
+         * Create a new image from ARGB pixel array.
+         */
+        fun create(
+            pixels: IntArray,
+            width: Int,
+            height: Int,
+        ): PlatformImage
+    }
+}

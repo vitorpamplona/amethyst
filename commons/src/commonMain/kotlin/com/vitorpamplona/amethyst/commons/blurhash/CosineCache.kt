@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.blurhash
 
 import androidx.collection.LruCache
+import kotlin.math.PI
 import kotlin.math.cos
 
 object CosineCache {
@@ -54,7 +55,7 @@ object CosineCache {
             DoubleArray(height * numCompY) {
                 val y = it / numCompY
                 val j = it % numCompY
-                cos(Math.PI * y * j / height)
+                cos(PI * y * j / height)
             }.also {
                 cacheCosinesY.put(height * numCompY, it)
             }
@@ -73,7 +74,7 @@ object CosineCache {
             DoubleArray(width * numCompX) {
                 val x = it / numCompX
                 val i = it % numCompX
-                cos(Math.PI * x * i / width)
+                cos(PI * x * i / width)
             }.also { cacheCosinesX.put(width * numCompX, it) }
         }
         else -> cacheCosinesX[width * numCompX]!!

@@ -18,28 +18,48 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
+package com.vitorpamplona.amethyst.commons.blurhash
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.util.Base64
 
-fun Base64Image.toBitmap(content: String): Bitmap {
-    val matcher = pattern.matcher(content)
+actual class PlatformImage(
+    val bitmap: Bitmap,
+) {
+    actual val width: Int get() = bitmap.width
+    actual val height: Int get() = bitmap.height
 
-    if (matcher.find()) {
-        val base64String = matcher.group(2)
-        val byteArray = Base64.getDecoder().decode(base64String)
-        return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+    actual fun getPixels(
+        pixels: IntArray,
+        offset: Int,
+        stride: Int,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+    ) {
+        bitmap.getPixels(pixels, offset, stride, x, y, width, height)
     }
 
-    throw Exception("Unable to convert base64 to image $content")
+    actual fun scale(
+        width: Int,
+        height: Int,
+    ): PlatformImage = PlatformImage(Bitmap.createScaledBitmap(bitmap, width, height, false))
+
+    actual companion object {
+        actual fun create(
+            pixels: IntArray,
+            width: Int,
+            height: Int,
+        ): PlatformImage = PlatformImage(Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888))
+    }
 }
 
 /**
- * Converts a base64 image data URI to a PlatformImage.
- * Delegates to toBitmap and wraps the result.
+ * Extension to convert Android Bitmap to PlatformImage.
  */
-fun Base64Image.toPlatformImage(content: String): PlatformImage = toBitmap(content).toPlatformImage()
+fun Bitmap.toPlatformImage(): PlatformImage = PlatformImage(this)
+
+/**
+ * Extension to get the underlying Android Bitmap.
+ */
+fun PlatformImage.toAndroidBitmap(): Bitmap = this.bitmap

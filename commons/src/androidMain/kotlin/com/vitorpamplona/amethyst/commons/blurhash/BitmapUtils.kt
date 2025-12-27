@@ -21,41 +21,9 @@
 package com.vitorpamplona.amethyst.commons.blurhash
 
 import android.graphics.Bitmap
-import kotlin.math.roundToInt
 
-fun Bitmap.toBlurhash(): String {
-    val aspectRatio = this.width.toFloat() / this.height.toFloat()
-
-    if (this.width > 100 && this.height > 100) {
-        return Bitmap.createScaledBitmap(this, 100, (100 / aspectRatio).toInt(), false).toBlurhash()
-    }
-
-    val intArray = IntArray(width * height)
-    this.getPixels(intArray, 0, width, 0, 0, width, height)
-
-    val numX =
-        if (aspectRatio > 1) {
-            9
-        } else if (aspectRatio < 1) {
-            (9 * aspectRatio).roundToInt()
-        } else {
-            4
-        }
-
-    val numY =
-        if (aspectRatio > 1) {
-            (9 * (1 / aspectRatio)).roundToInt()
-        } else if (aspectRatio < 1) {
-            9
-        } else {
-            4
-        }
-
-    return BlurHashEncoder().encode(
-        intArray,
-        width,
-        height,
-        numX,
-        numY,
-    )
-}
+/**
+ * Encodes this Android Bitmap to a blurhash string.
+ * Delegates to PlatformImage.toBlurhash() for the actual encoding.
+ */
+fun Bitmap.toBlurhash(): String = this.toPlatformImage().toBlurhash()

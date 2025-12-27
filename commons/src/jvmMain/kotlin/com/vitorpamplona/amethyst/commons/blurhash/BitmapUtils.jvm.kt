@@ -18,28 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
+package com.vitorpamplona.amethyst.commons.blurhash
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.util.Base64
-
-fun Base64Image.toBitmap(content: String): Bitmap {
-    val matcher = pattern.matcher(content)
-
-    if (matcher.find()) {
-        val base64String = matcher.group(2)
-        val byteArray = Base64.getDecoder().decode(base64String)
-        return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-    }
-
-    throw Exception("Unable to convert base64 to image $content")
-}
+import java.awt.image.BufferedImage
 
 /**
- * Converts a base64 image data URI to a PlatformImage.
- * Delegates to toBitmap and wraps the result.
+ * Encodes this BufferedImage to a blurhash string.
+ * Delegates to PlatformImage.toBlurhash() for the actual encoding.
  */
-fun Base64Image.toPlatformImage(content: String): PlatformImage = toBitmap(content).toPlatformImage()
+fun BufferedImage.toBlurhash(): String = this.toPlatformImage().toBlurhash()

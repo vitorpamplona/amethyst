@@ -18,28 +18,47 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
+package com.vitorpamplona.amethyst.commons.blurhash
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.util.Base64
-
-fun Base64Image.toBitmap(content: String): Bitmap {
-    val matcher = pattern.matcher(content)
-
-    if (matcher.find()) {
-        val base64String = matcher.group(2)
-        val byteArray = Base64.getDecoder().decode(base64String)
-        return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-    }
-
-    throw Exception("Unable to convert base64 to image $content")
-}
+import kotlin.math.roundToInt
 
 /**
- * Converts a base64 image data URI to a PlatformImage.
- * Delegates to toBitmap and wraps the result.
+ * Encodes this PlatformImage to a blurhash string.
+ * The image will be scaled down if larger than 100x100 for performance.
  */
-fun Base64Image.toPlatformImage(content: String): PlatformImage = toBitmap(content).toPlatformImage()
+fun PlatformImage.toBlurhash(): String {
+    val aspectRatio = this.width.toFloat() / this.height.toFloat()
+
+    if (this.width > 100 && this.height > 100) {
+        return this.scale(100, (100 / aspectRatio).toInt()).toBlurhash()
+    }
+
+    val intArray = IntArray(width * height)
+    this.getPixels(intArray, 0, width, 0, 0, width, height)
+
+    val numX =
+        if (aspectRatio > 1) {
+            9
+        } else if (aspectRatio < 1) {
+            (9 * aspectRatio).roundToInt()
+        } else {
+            4
+        }
+
+    val numY =
+        if (aspectRatio > 1) {
+            (9 * (1 / aspectRatio)).roundToInt()
+        } else if (aspectRatio < 1) {
+            9
+        } else {
+            4
+        }
+
+    return BlurHashEncoder().encode(
+        intArray,
+        width,
+        height,
+        numX,
+        numY,
+    )
+}

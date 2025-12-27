@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.blurhash
 
-import android.graphics.Bitmap
 import com.vitorpamplona.amethyst.commons.blurhash.SRGB.Companion.linearToSrgb
 import com.vitorpamplona.amethyst.commons.blurhash.SRGB.Companion.srgbToLinear
 import kotlin.math.pow
@@ -66,7 +65,7 @@ object BlurHashDecoder {
     }
 
     /**
-     * Decode a blur hash into a new bitmap.
+     * Decode a blur hash into a new PlatformImage.
      *
      * @param useCache use in memory cache for the calculated math, reused by images with same size.
      *   if the cache does not exist yet it will be created and populated with new calculations. By
@@ -76,7 +75,7 @@ object BlurHashDecoder {
         blurHash: String?,
         width: Int,
         useCache: Boolean = true,
-    ): Bitmap? {
+    ): PlatformImage? {
         if (blurHash == null || blurHash.length < 6) {
             return null
         }
@@ -87,7 +86,7 @@ object BlurHashDecoder {
         val height = (width * (1 / (numCompX.toFloat() / numCompY.toFloat()))).roundToInt()
         val colors = computeColors(numCompX, numCompY, blurHash)
         val imageArray = composeImageArray(width, height, numCompX, numCompY, colors, useCache)
-        return Bitmap.createBitmap(imageArray, width, height, Bitmap.Config.ARGB_8888)
+        return PlatformImage.create(imageArray, width, height)
     }
 
     private fun decodeDc(colorEnc: Int): FloatArray {
