@@ -62,6 +62,8 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.foundation)
                 implementation(compose.runtime)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)

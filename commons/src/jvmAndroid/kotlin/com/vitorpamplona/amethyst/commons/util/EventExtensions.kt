@@ -18,15 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.network
+package com.vitorpamplona.amethyst.commons.util
 
-import com.vitorpamplona.amethyst.commons.network.RelayConnectionManager
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.amethyst.commons.ui.note.NoteDisplayData
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
 /**
- * Desktop-specific relay connection manager that configures OkHttp for websockets.
- * Delegates to the shared RelayConnectionManager from commons.
+ * Extension to convert Event to NoteDisplayData for the shared NoteCard.
  */
-class DesktopRelayConnectionManager : RelayConnectionManager(
-    websocketBuilder = BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient)
-)
+fun Event.toNoteDisplayData(): NoteDisplayData {
+    val npub = try {
+        pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
+    } catch (e: Exception) {
+        pubKey.take(16) + "..."
+    }
+
+    return NoteDisplayData(
+        id = id,
+        pubKeyDisplay = npub,
+        content = content,
+        createdAt = createdAt
+    )
+}

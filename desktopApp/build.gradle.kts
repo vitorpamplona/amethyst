@@ -25,6 +25,9 @@ dependencies {
     // Quartz Nostr library (will use JVM target)
     implementation(project(":quartz"))
 
+    // Commons library
+    implementation(project(":commons"))
+
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)

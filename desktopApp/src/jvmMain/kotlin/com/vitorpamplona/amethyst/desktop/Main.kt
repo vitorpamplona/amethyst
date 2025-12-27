@@ -30,13 +30,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
@@ -47,7 +44,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,21 +74,17 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.desktop.account.AccountManager
-import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.commons.account.AccountManager
+import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.navigation.AppScreen
+import com.vitorpamplona.amethyst.commons.ui.profile.ProfileInfoCard
+import com.vitorpamplona.amethyst.commons.ui.relay.RelayStatusCard
+import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
+import com.vitorpamplona.amethyst.commons.ui.screens.NotificationsPlaceholder
+import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
-import com.vitorpamplona.amethyst.desktop.network.RelayStatus
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
-
-enum class Screen {
-    Feed,
-    Search,
-    Messages,
-    Notifications,
-    Profile,
-    Settings
-}
 
 fun main() = application {
     val windowState = rememberWindowState(
@@ -147,7 +139,7 @@ fun main() = application {
 
 @Composable
 fun App() {
-    var currentScreen by remember { mutableStateOf(Screen.Feed) }
+    var currentScreen by remember { mutableStateOf(AppScreen.Feed) }
     val relayManager = remember { DesktopRelayConnectionManager() }
     val accountManager = remember { AccountManager() }
     val accountState by accountManager.accountState.collectAsState()
@@ -171,7 +163,7 @@ fun App() {
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { currentScreen = Screen.Feed }
+                        onLoginSuccess = { currentScreen = AppScreen.Feed }
                     )
                 }
                 is AccountState.LoggedIn -> {
@@ -190,8 +182,8 @@ fun App() {
 
 @Composable
 fun MainContent(
-    currentScreen: Screen,
-    onScreenChange: (Screen) -> Unit,
+    currentScreen: AppScreen,
+    onScreenChange: (AppScreen) -> Unit,
     relayManager: DesktopRelayConnectionManager,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
@@ -207,36 +199,36 @@ fun MainContent(
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Home, contentDescription = "Feed") },
                 label = { Text("Feed") },
-                selected = currentScreen == Screen.Feed,
-                onClick = { onScreenChange(Screen.Feed) }
+                selected = currentScreen == AppScreen.Feed,
+                onClick = { onScreenChange(AppScreen.Feed) }
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 label = { Text("Search") },
-                selected = currentScreen == Screen.Search,
-                onClick = { onScreenChange(Screen.Search) }
+                selected = currentScreen == AppScreen.Search,
+                onClick = { onScreenChange(AppScreen.Search) }
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
                 label = { Text("DMs") },
-                selected = currentScreen == Screen.Messages,
-                onClick = { onScreenChange(Screen.Messages) }
+                selected = currentScreen == AppScreen.Messages,
+                onClick = { onScreenChange(AppScreen.Messages) }
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
                 label = { Text("Alerts") },
-                selected = currentScreen == Screen.Notifications,
-                onClick = { onScreenChange(Screen.Notifications) }
+                selected = currentScreen == AppScreen.Notifications,
+                onClick = { onScreenChange(AppScreen.Notifications) }
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                 label = { Text("Profile") },
-                selected = currentScreen == Screen.Profile,
-                onClick = { onScreenChange(Screen.Profile) }
+                selected = currentScreen == AppScreen.Profile,
+                onClick = { onScreenChange(AppScreen.Profile) }
             )
 
             Spacer(Modifier.weight(1f))
@@ -246,8 +238,8 @@ fun MainContent(
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                 label = { Text("Settings") },
-                selected = currentScreen == Screen.Settings,
-                onClick = { onScreenChange(Screen.Settings) }
+                selected = currentScreen == AppScreen.Settings,
+                onClick = { onScreenChange(AppScreen.Settings) }
             )
 
             Spacer(Modifier.height(16.dp))
@@ -260,64 +252,17 @@ fun MainContent(
             modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp)
         ) {
             when (currentScreen) {
-                Screen.Feed -> FeedScreen(relayManager)
-                Screen.Search -> SearchPlaceholder()
-                Screen.Messages -> MessagesPlaceholder()
-                Screen.Notifications -> NotificationsPlaceholder()
-                Screen.Profile -> ProfileScreen(account, accountManager)
-                Screen.Settings -> RelaySettingsScreen(relayManager)
+                AppScreen.Feed -> FeedScreen(relayManager)
+                AppScreen.Search -> SearchPlaceholder()
+                AppScreen.Messages -> MessagesPlaceholder()
+                AppScreen.Notifications -> NotificationsPlaceholder()
+                AppScreen.Profile -> ProfileScreen(account, accountManager)
+                AppScreen.Settings -> RelaySettingsScreen(relayManager)
             }
         }
     }
 }
 
-@Composable
-fun SearchPlaceholder() {
-    Column {
-        Text(
-            "Search",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Search for users, notes, and hashtags.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun MessagesPlaceholder() {
-    Column {
-        Text(
-            "Messages",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Your encrypted direct messages will appear here.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun NotificationsPlaceholder() {
-    Column {
-        Text(
-            "Notifications",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Mentions, replies, and reactions will appear here.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
 
 @Composable
 fun ProfileScreen(account: AccountState.LoggedIn, accountManager: AccountManager) {
@@ -329,47 +274,11 @@ fun ProfileScreen(account: AccountState.LoggedIn, accountManager: AccountManager
         )
         Spacer(Modifier.height(16.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (account.isReadOnly) {
-                    Text(
-                        "Read-only mode",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.Yellow
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                Text(
-                    "Public Key",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    account.npub,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    "Hex",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    account.pubKeyHex,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
+        ProfileInfoCard(
+            npub = account.npub,
+            pubKeyHex = account.pubKeyHex,
+            isReadOnly = account.isReadOnly,
+        )
 
         Spacer(Modifier.height(24.dp))
 
@@ -451,9 +360,10 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
             modifier = Modifier.weight(1f)
         ) {
             items(relayStatuses.values.toList()) { status ->
-                RelayStatusCard(status) {
-                    relayManager.removeRelay(status.url)
-                }
+                RelayStatusCard(
+                    status = status,
+                    onRemove = { relayManager.removeRelay(status.url) }
+                )
             }
         }
 
@@ -462,85 +372,6 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
                 Text("Reset to Defaults")
-            }
-        }
-    }
-}
-
-@Composable
-fun RelayStatusCard(status: RelayStatus, onRemove: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                val statusColor = when {
-                    status.connected -> Color.Green
-                    status.error != null -> Color.Red
-                    else -> Color.Gray
-                }
-
-                if (status.connected) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = "Connected",
-                        tint = statusColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else if (status.error != null) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Error",
-                        tint = statusColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                }
-
-                Column {
-                    Text(
-                        status.url.url,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (status.connected && status.pingMs != null) {
-                        Text(
-                            "${status.pingMs}ms${if (status.compressed) " • compressed" else ""}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    status.error?.let { error ->
-                        Text(
-                            error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Red.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-            }
-
-            IconButton(onClick = onRemove) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Remove relay",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }

@@ -18,15 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.network
-
-import com.vitorpamplona.amethyst.commons.network.RelayConnectionManager
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+package com.vitorpamplona.amethyst.commons.navigation
 
 /**
- * Desktop-specific relay connection manager that configures OkHttp for websockets.
- * Delegates to the shared RelayConnectionManager from commons.
+ * Main application screens shared between Desktop and Android.
+ * Each platform implements its own navigation using these identifiers.
  */
-class DesktopRelayConnectionManager : RelayConnectionManager(
-    websocketBuilder = BasicOkHttpWebSocket.Builder(DesktopHttpClient::getHttpClient)
+enum class AppScreen(
+    val label: String,
+    val route: String,
+) {
+    Feed("Feed", "feed"),
+    Search("Search", "search"),
+    Messages("Messages", "messages"),
+    Notifications("Notifications", "notifications"),
+    Profile("Profile", "profile"),
+    Settings("Settings", "settings"),
+}
+
+/**
+ * Primary navigation destinations (shown in bottom bar on mobile, sidebar on desktop).
+ */
+val primaryScreens = listOf(
+    AppScreen.Feed,
+    AppScreen.Search,
+    AppScreen.Messages,
+    AppScreen.Notifications,
+    AppScreen.Profile,
+)
+
+/**
+ * Secondary navigation destinations (settings, etc.)
+ */
+val secondaryScreens = listOf(
+    AppScreen.Settings,
 )

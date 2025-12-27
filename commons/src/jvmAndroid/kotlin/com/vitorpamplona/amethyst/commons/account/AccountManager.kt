@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.account
+package com.vitorpamplona.amethyst.commons.account
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 sealed class AccountState {
     data object LoggedOut : AccountState()
+
     data class LoggedIn(
         val signer: NostrSigner,
         val pubKeyHex: String,
@@ -52,13 +53,14 @@ class AccountManager {
         val keyPair = KeyPair()
         val signer = NostrSignerInternal(keyPair)
 
-        val state = AccountState.LoggedIn(
-            signer = signer,
-            pubKeyHex = keyPair.pubKey.toHexKey(),
-            npub = keyPair.pubKey.toNpub(),
-            nsec = keyPair.privKey?.toNsec(),
-            isReadOnly = false,
-        )
+        val state =
+            AccountState.LoggedIn(
+                signer = signer,
+                pubKeyHex = keyPair.pubKey.toHexKey(),
+                npub = keyPair.pubKey.toNpub(),
+                nsec = keyPair.privKey?.toNsec(),
+                isReadOnly = false,
+            )
         _accountState.value = state
         return state
     }
@@ -73,13 +75,14 @@ class AccountManager {
                 val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
                 val signer = NostrSignerInternal(keyPair)
 
-                val state = AccountState.LoggedIn(
-                    signer = signer,
-                    pubKeyHex = keyPair.pubKey.toHexKey(),
-                    npub = keyPair.pubKey.toNpub(),
-                    nsec = keyPair.privKey?.toNsec(),
-                    isReadOnly = false,
-                )
+                val state =
+                    AccountState.LoggedIn(
+                        signer = signer,
+                        pubKeyHex = keyPair.pubKey.toHexKey(),
+                        npub = keyPair.pubKey.toNpub(),
+                        nsec = keyPair.privKey?.toNsec(),
+                        isReadOnly = false,
+                    )
                 _accountState.value = state
                 Result.success(state)
             } catch (e: Exception) {
@@ -94,13 +97,14 @@ class AccountManager {
                 val keyPair = KeyPair(pubKey = pubKeyHex.hexToByteArray())
                 val signer = NostrSignerInternal(keyPair)
 
-                val state = AccountState.LoggedIn(
-                    signer = signer,
-                    pubKeyHex = keyPair.pubKey.toHexKey(),
-                    npub = keyPair.pubKey.toNpub(),
-                    nsec = null,
-                    isReadOnly = true,
-                )
+                val state =
+                    AccountState.LoggedIn(
+                        signer = signer,
+                        pubKeyHex = keyPair.pubKey.toHexKey(),
+                        npub = keyPair.pubKey.toNpub(),
+                        nsec = null,
+                        isReadOnly = true,
+                    )
                 _accountState.value = state
                 Result.success(state)
             } catch (e: Exception) {
