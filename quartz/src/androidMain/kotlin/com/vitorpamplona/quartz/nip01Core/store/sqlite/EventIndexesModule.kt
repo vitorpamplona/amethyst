@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.utils.EventFactory
 class EventIndexesModule(
     val fts: FullTextSearchModule,
     val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
-    val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
+    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IModule {
     override fun create(db: SQLiteDatabase) {
         db.execSQL(
@@ -180,16 +180,6 @@ class EventIndexesModule(
         }
 
         return headerId
-    }
-
-    /**
-     * By default, we index all tags that have a single letter name and some value
-     */
-    class IndexingStrategy {
-        fun shouldIndex(
-            kind: Int,
-            tag: Tag,
-        ) = tag.size >= 2 && tag[0].length == 1
     }
 
     fun planQuery(

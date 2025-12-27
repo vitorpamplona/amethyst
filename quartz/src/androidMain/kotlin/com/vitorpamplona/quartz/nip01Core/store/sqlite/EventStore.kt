@@ -24,13 +24,12 @@ import android.content.Context
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 
 class EventStore(
     context: Context,
     dbName: String? = "events.db",
     val relayUrl: String? = "wss://quartz.local",
-    val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
+    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
     val store = SQLiteEventStore(context, dbName, relayUrl, tagIndexStrategy)
 

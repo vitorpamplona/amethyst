@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,7 +38,7 @@ class SQLiteEventStore(
     val context: Context,
     val dbName: String? = "events.db",
     val relayUrl: String? = null,
-    val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
+    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : SQLiteOpenHelper(context, dbName, null, DATABASE_VERSION) {
     companion object {
         const val DATABASE_VERSION = 2
