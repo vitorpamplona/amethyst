@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventIndexesModule.IndexingStrategy
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class SQLiteEventStore(
     val context: Context,
@@ -113,16 +115,20 @@ class SQLiteEventStore(
         modules.reversed().forEach { it.deleteAll(db) }
     }
 
-    fun vacuum() {
+    suspend fun vacuum() {
         // 1. ANALYZE: Collects statistics about tables and indices
         // to help the query planner optimize queries.
-        writableDatabase.execSQL("VACUUM")
+        withContext(Dispatchers.IO) {
+            writableDatabase.execSQL("VACUUM")
+        }
     }
 
-    fun analyse() {
+    suspend fun analyse() {
         // 2. VACUUM: Rebuilds the database file, reclaiming unused space
         // and reducing fragmentation.
-        writableDatabase.execSQL("ANALYZE")
+        withContext(Dispatchers.IO) {
+            writableDatabase.execSQL("ANALYZE")
+        }
     }
 
     private fun innerInsertEvent(
