@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -63,11 +63,12 @@ fun KeyInputField(
         placeholder = { Text(placeholder) },
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
-        visualTransformation = if (showKey) {
-            VisualTransformation.None
-        } else {
-            PasswordVisualTransformation()
-        },
+        visualTransformation =
+            if (showKey) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
         trailingIcon = {
             IconButton(onClick = { showKey = !showKey }) {
                 Icon(
@@ -77,9 +78,10 @@ fun KeyInputField(
             }
         },
         isError = errorMessage != null,
-        supportingText = errorMessage?.let {
-            { Text(it, color = MaterialTheme.colorScheme.error) }
-        },
+        supportingText =
+            errorMessage?.let {
+                { Text(it, color = MaterialTheme.colorScheme.error) }
+            },
     )
 }
 
@@ -93,9 +95,10 @@ fun SelectableKeyText(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
     ) {
         Text(
             text = key,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,17 +39,19 @@ enum class AppScreen(
 /**
  * Primary navigation destinations (shown in bottom bar on mobile, sidebar on desktop).
  */
-val primaryScreens = listOf(
-    AppScreen.Feed,
-    AppScreen.Search,
-    AppScreen.Messages,
-    AppScreen.Notifications,
-    AppScreen.Profile,
-)
+val primaryScreens =
+    listOf(
+        AppScreen.Feed,
+        AppScreen.Search,
+        AppScreen.Messages,
+        AppScreen.Notifications,
+        AppScreen.Profile,
+    )
 
 /**
  * Secondary navigation destinations (settings, etc.)
  */
-val secondaryScreens = listOf(
-    AppScreen.Settings,
-)
+val secondaryScreens =
+    listOf(
+        AppScreen.Settings,
+    )

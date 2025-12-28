@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,7 +26,10 @@ import kotlin.math.roundToInt
  * Formats a count to human-readable format with suffix (K, M, G).
  * Example: 1500 -> "1K items", 2500000 -> "2M items"
  */
-fun countToHumanReadable(counter: Int, suffix: String): String =
+fun countToHumanReadable(
+    counter: Int,
+    suffix: String,
+): String =
     when {
         counter >= 1_000_000_000 -> "${(counter / 1_000_000_000f).roundToInt()}G $suffix"
         counter >= 1_000_000 -> "${(counter / 1_000_000f).roundToInt()}M $suffix"
@@ -37,7 +40,10 @@ fun countToHumanReadable(counter: Int, suffix: String): String =
 /**
  * Formats a count to human-readable format with suffix (K, M, G).
  */
-fun countToHumanReadable(counter: Long, suffix: String): String =
+fun countToHumanReadable(
+    counter: Long,
+    suffix: String,
+): String =
     when {
         counter >= 1_000_000_000 -> "${(counter / 1_000_000_000f).roundToInt()}G $suffix"
         counter >= 1_000_000 -> "${(counter / 1_000_000f).roundToInt()}M $suffix"

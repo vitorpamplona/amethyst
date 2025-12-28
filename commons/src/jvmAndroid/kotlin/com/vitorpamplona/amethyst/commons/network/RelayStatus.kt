@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -38,11 +38,12 @@ data class RelayStatus(
  * Default relay URLs for Nostr connectivity.
  */
 object DefaultRelays {
-    val RELAYS = listOf(
-        "wss://relay.damus.io",
-        "wss://relay.nostr.band",
-        "wss://nos.lol",
-        "wss://relay.snort.social",
-        "wss://nostr.wine",
-    )
+    val RELAYS =
+        listOf(
+            "wss://relay.damus.io",
+            "wss://relay.nostr.band",
+            "wss://nos.lol",
+            "wss://relay.snort.social",
+            "wss://nostr.wine",
+        )
 }

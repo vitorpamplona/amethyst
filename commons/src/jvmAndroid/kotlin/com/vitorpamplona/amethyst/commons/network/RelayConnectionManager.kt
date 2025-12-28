@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -92,7 +92,10 @@ open class RelayConnectionManager(
         client.close(subId)
     }
 
-    fun send(event: Event, relays: Set<NormalizedRelayUrl> = connectedRelays.value) {
+    fun send(
+        event: Event,
+        relays: Set<NormalizedRelayUrl> = connectedRelays.value,
+    ) {
         client.send(event, relays)
     }
 
@@ -100,10 +103,11 @@ open class RelayConnectionManager(
         url: NormalizedRelayUrl,
         update: (RelayStatus) -> RelayStatus,
     ) {
-        _relayStatuses.value = _relayStatuses.value.toMutableMap().apply {
-            val current = this[url] ?: RelayStatus(url, connected = false)
-            this[url] = update(current)
-        }
+        _relayStatuses.value =
+            _relayStatuses.value.toMutableMap().apply {
+                val current = this[url] ?: RelayStatus(url, connected = false)
+                this[url] = update(current)
+            }
     }
 
     override fun onConnecting(relay: IRelayClient) {
@@ -112,7 +116,11 @@ open class RelayConnectionManager(
         }
     }
 
-    override fun onConnected(relay: IRelayClient, pingMillis: Int, compressed: Boolean) {
+    override fun onConnected(
+        relay: IRelayClient,
+        pingMillis: Int,
+        compressed: Boolean,
+    ) {
         updateRelayStatus(relay.url) {
             it.copy(connected = true, pingMs = pingMillis, compressed = compressed, error = null)
         }
@@ -124,17 +132,29 @@ open class RelayConnectionManager(
         }
     }
 
-    override fun onCannotConnect(relay: IRelayClient, errorMessage: String) {
+    override fun onCannotConnect(
+        relay: IRelayClient,
+        errorMessage: String,
+    ) {
         updateRelayStatus(relay.url) {
             it.copy(connected = false, error = errorMessage)
         }
     }
 
-    override fun onIncomingMessage(relay: IRelayClient, msgStr: String, msg: Message) {
+    override fun onIncomingMessage(
+        relay: IRelayClient,
+        msgStr: String,
+        msg: Message,
+    ) {
         // Events are handled by subscription listeners
     }
 
-    override fun onSent(relay: IRelayClient, cmdStr: String, cmd: Command, success: Boolean) {
+    override fun onSent(
+        relay: IRelayClient,
+        cmdStr: String,
+        cmd: Command,
+        success: Boolean,
+    ) {
         // Command send tracking
     }
 }

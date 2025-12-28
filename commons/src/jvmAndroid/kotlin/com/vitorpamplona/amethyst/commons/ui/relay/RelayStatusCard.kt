@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -55,44 +55,46 @@ fun RelayStatusCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
-                val statusColor = when {
-                    status.connected -> Color.Green
-                    status.error != null -> Color.Red
-                    else -> Color.Gray
-                }
+                val statusColor =
+                    when {
+                        status.connected -> Color.Green
+                        status.error != null -> Color.Red
+                        else -> Color.Gray
+                    }
 
                 if (status.connected) {
                     Icon(
                         Icons.Default.Check,
                         contentDescription = "Connected",
                         tint = statusColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 } else if (status.error != null) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Error",
                         tint = statusColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 } else {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
                     )
                 }
 
@@ -100,20 +102,20 @@ fun RelayStatusCard(
                     Text(
                         status.url.url,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     if (status.connected && status.pingMs != null) {
                         Text(
                             "${status.pingMs}ms${if (status.compressed) " • compressed" else ""}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     status.error?.let { error ->
                         Text(
                             error,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Red.copy(alpha = 0.8f)
+                            color = Color.Red.copy(alpha = 0.8f),
                         )
                     }
                 }
@@ -123,7 +125,7 @@ fun RelayStatusCard(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Remove relay",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

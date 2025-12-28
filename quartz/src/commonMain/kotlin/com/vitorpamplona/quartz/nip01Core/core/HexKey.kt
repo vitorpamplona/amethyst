@@ -29,8 +29,7 @@ fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
 
 fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
 
-fun HexKey.hexToByteArrayOrNull(): ByteArray? =
-    if (Hex.isHex(this)) Hex.decode(this) else null
+fun HexKey.hexToByteArrayOrNull(): ByteArray? = if (Hex.isHex(this)) Hex.decode(this) else null
 
 const val PUBKEY_LENGTH = 64
 

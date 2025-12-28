@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.theme.RelayStatusColors
 
@@ -57,12 +56,12 @@ fun FeedHeader(
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             title,
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
 
         RelayStatusIndicator(
@@ -84,32 +83,33 @@ fun RelayStatusIndicator(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        val statusColor = when {
-            connectedCount == 0 -> RelayStatusColors.Disconnected
-            connectedCount < 3 -> RelayStatusColors.Connecting
-            else -> RelayStatusColors.Connected
-        }
+        val statusColor =
+            when {
+                connectedCount == 0 -> RelayStatusColors.Disconnected
+                connectedCount < 3 -> RelayStatusColors.Connecting
+                else -> RelayStatusColors.Connected
+            }
 
         Icon(
             imageVector = if (connectedCount > 0) Icons.Default.Check else Icons.Default.Close,
             contentDescription = null,
             tint = statusColor,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(16.dp),
         )
 
         Text(
             "$connectedCount relay${if (connectedCount != 1) "s" else ""}",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
         )
 
         IconButton(onClick = onRefresh) {
             Icon(
                 Icons.Default.Refresh,
                 contentDescription = "Reconnect",
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }

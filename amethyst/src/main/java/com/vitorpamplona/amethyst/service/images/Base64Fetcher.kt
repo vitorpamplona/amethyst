@@ -31,6 +31,7 @@ import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.base64Image.Base64Image
+import com.vitorpamplona.amethyst.commons.base64Image.toBitmap
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
@@ -42,7 +43,7 @@ class Base64Fetcher(
     override suspend fun fetch(): FetchResult? =
         runCatching {
             ImageFetchResult(
-                image = Base64Image.Companion.toBitmap(data.toString()).asImage(true),
+                image = Base64Image.toBitmap(data.toString()).asImage(true),
                 isSampled = false,
                 dataSource = DataSource.MEMORY,
             )
