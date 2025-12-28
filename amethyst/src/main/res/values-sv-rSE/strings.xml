@@ -158,6 +158,7 @@
     <string name="record_a_message">Spela in ett meddelande</string>
     <string name="record_a_message_title">Spela in ett meddelande</string>
     <string name="record_a_message_description">Tryck och håll in för att spela in ett meddelande</string>
+    <string name="re_record">Spela in igen</string>
     <string name="recording_indicator_description">Spelar in</string>
     <string name="recording_indicator_with_time">Spelar in %1$s</string>
     <string name="uploading">Laddar upp…</string>
@@ -1182,5 +1183,4 @@
     <string name="follow_pack_broadcast">Sänd rekommendationspaket</string>
     <string name="follow_set_delete">Ta bort lista</string>
     <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
-    <string name="re_record">Spela in igen</string>
 </resources>
