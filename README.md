@@ -153,9 +153,11 @@ Information shared on Nostr can be re-broadcasted to other servers and should be
 
 # Development Overview
 
-This repository is split between Amethyst and Quartz:
-- Amethyst is a native Android app made with Kotlin and Jetpack Compose.
-- Quartz is our own Nostr-commons library to host classes that are of interest to other Nostr Clients.
+This repository is split between Amethyst, Quartz, Commons, and DesktopApp:
+- **Amethyst** - Native Android app with Kotlin and Jetpack Compose
+- **Quartz** - Nostr-commons KMP library for protocol classes shared across platforms
+- **Commons** - Kotlin Multiplatform module with shared UI components (icons, robohash, blurhash, composables)
+- **DesktopApp** - Compose Multiplatform Desktop application reusing commons and quartz
 
 The app architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.
@@ -187,9 +189,15 @@ git clone https://github.com/vitorpamplona/amethyst.git
 Use an Android Studio build action to install and run the app on your device or a simulator.
 
 ## Building
-Build the app:
+
+Build the Android app:
 ```bash
 ./gradlew assembleDebug
+```
+
+Build and run the Desktop app (requires Java 21+):
+```bash
+./gradlew :desktopApp:run
 ```
 
 ## Testing
