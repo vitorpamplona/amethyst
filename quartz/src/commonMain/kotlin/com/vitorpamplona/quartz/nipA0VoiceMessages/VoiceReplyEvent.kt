@@ -65,12 +65,12 @@ class VoiceReplyEvent(
             hash: String,
             duration: Int,
             waveform: List<Float>,
-            replyingTo: EventHintBundle<VoiceEvent>,
+            replyingTo: EventHintBundle<BaseVoiceEvent>,
         ) = build(AudioMeta(url, mimeType, hash, duration, waveform), replyingTo)
 
         fun build(
             voiceMessage: AudioMeta,
-            replyingTo: EventHintBundle<VoiceEvent>,
+            replyingTo: EventHintBundle<BaseVoiceEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<VoiceReplyEvent>.() -> Unit = {},
         ) = build(voiceMessage, KIND, ALT_DESCRIPTION, createdAt) {

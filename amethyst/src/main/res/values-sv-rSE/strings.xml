@@ -1182,4 +1182,5 @@
     <string name="follow_pack_broadcast">Sänd rekommendationspaket</string>
     <string name="follow_set_delete">Ta bort lista</string>
     <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
+    <string name="re_record">Spela in igen</string>
 </resources>

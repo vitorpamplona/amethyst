@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
@@ -285,6 +286,18 @@ fun AppNavigation(
                     fork = it.fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.VoiceReply> {
+                VoiceReplyScreen(
+                    replyToNoteId = it.replyToNoteId,
+                    recordingFilePath = it.recordingFilePath,
+                    mimeType = it.mimeType,
+                    duration = it.duration,
+                    amplitudesJson = it.amplitudes,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

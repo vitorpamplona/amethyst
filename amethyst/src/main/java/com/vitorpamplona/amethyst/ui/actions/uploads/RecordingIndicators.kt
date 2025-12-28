@@ -175,18 +175,27 @@ fun FloatingRecordingIndicator(
     modifier: Modifier = Modifier,
     isRecording: Boolean,
     elapsedSeconds: Int,
+    isCompact: Boolean = false,
 ) {
     if (!isRecording) return
 
     val recordingLabel = stringRes(id = R.string.recording_indicator_description)
-    val recordingWithTime = stringRes(id = R.string.recording_indicator_with_time, formatSecondsToTime(elapsedSeconds))
+    val recordingWithTime =
+        if (isCompact) {
+            formatSecondsToTime(elapsedSeconds)
+        } else {
+            stringRes(id = R.string.recording_indicator_with_time, formatSecondsToTime(elapsedSeconds))
+        }
+    val horizontalPadding = if (isCompact) 8.dp else 16.dp
+    val innerPadding = if (isCompact) 6.dp else 12.dp
+    val textSize = if (isCompact) 12.sp else 14.sp
 
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = horizontalPadding)
                 .background(
                     color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(12.dp),
@@ -195,7 +204,7 @@ fun FloatingRecordingIndicator(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.padding(horizontal = innerPadding),
         ) {
             // Pulsing red dot
             val infiniteTransition = rememberInfiniteTransition(label = "recording_dot")
@@ -223,8 +232,10 @@ fun FloatingRecordingIndicator(
             Text(
                 text = recordingWithTime,
                 color = Color.White,
-                fontSize = 14.sp,
+                fontSize = textSize,
                 fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                softWrap = false,
             )
         }
     }
