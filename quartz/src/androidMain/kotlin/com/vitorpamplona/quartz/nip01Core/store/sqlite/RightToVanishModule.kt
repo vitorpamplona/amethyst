@@ -24,20 +24,22 @@ import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 
-class RightToVanishModule : IModule {
+class RightToVanishModule(
+    val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
+) : IModule {
     override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE TABLE event_vanish (
-                event_header_row_id INTEGER,
-                pubkey TEXT NOT NULL,
+                event_header_row_id INTEGER PRIMARY KEY NOT NULL,
+                pubkey_hash INTEGER NOT NULL,
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
             )
             """.trimIndent(),
         )
 
-        db.execSQL("CREATE UNIQUE INDEX event_vanish_key ON event_vanish (pubkey)")
+        db.execSQL("CREATE UNIQUE INDEX event_vanish_key ON event_vanish (pubkey_hash)")
 
         db.execSQL(
             """
@@ -48,8 +50,8 @@ class RightToVanishModule : IModule {
                 -- Delete older records if this is the newest
                 DELETE FROM event_vanish
                 WHERE
-                    event_vanish.created_at < NEW.created_at AND
-                    event_vanish.pubkey = NEW.pubkey;
+                    event_vanish.pubkey_hash = NEW.pubkey_hash AND
+                    event_vanish.created_at < NEW.created_at;
             END;
             """.trimIndent(),
         )
@@ -61,8 +63,8 @@ class RightToVanishModule : IModule {
             FOR EACH ROW
             BEGIN
                 DELETE FROM event_headers
-                WHERE created_at < NEW.created_at AND
-                      pubkey = NEW.pubkey;
+                WHERE event_headers.created_at < NEW.created_at AND
+                      event_headers.pubkey_owner_hash = NEW.pubkey_hash;
             END;
             """.trimIndent(),
         )
@@ -78,8 +80,8 @@ class RightToVanishModule : IModule {
                 WHERE EXISTS (
                     SELECT 1 FROM event_vanish
                     WHERE
-                        event_vanish.created_at >= NEW.created_at AND
-                        event_vanish.pubkey = NEW.pubkey
+                        event_vanish.pubkey_hash = NEW.pubkey_owner_hash AND
+                        event_vanish.created_at >= NEW.created_at
                 );
             END;
             """.trimIndent(),
@@ -92,7 +94,7 @@ class RightToVanishModule : IModule {
 
     val insertRTV =
         """
-        INSERT OR ROLLBACK INTO event_vanish (event_header_row_id, pubkey, created_at)
+        INSERT OR ROLLBACK INTO event_vanish (event_header_row_id, pubkey_hash, created_at)
         VALUES (?, ?, ?)
         """.trimIndent()
 
@@ -105,7 +107,7 @@ class RightToVanishModule : IModule {
         if (event is RequestToVanishEvent && event.shouldVanishFrom(relayUrl)) {
             val stmt = db.compileStatement(insertRTV)
             stmt.bindLong(1, headerId)
-            stmt.bindString(2, event.pubKey)
+            stmt.bindLong(2, hasher(db).hash(event.pubKey))
             stmt.bindLong(3, event.createdAt)
             stmt.executeInsert()
         }

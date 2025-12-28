@@ -29,17 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 
 class EventIndexesModule(
     val fts: FullTextSearchModule,
-    val seedModule: SeedModule,
+    val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
     val tagIndexStrategy: IndexingStrategy = IndexingStrategy(),
 ) : IModule {
-    private var hasherCache: TagNameValueHasher? = null
-
-    fun hasher(db: SQLiteDatabase): TagNameValueHasher = hasherCache ?: TagNameValueHasher(seedModule.getSeed(db)).also { hasherCache = it }
-
     override fun create(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -50,11 +47,12 @@ class EventIndexesModule(
                 created_at INTEGER NOT NULL,
                 kind INTEGER NOT NULL,
                 d_tag TEXT,
-                etag_hash INTEGER NOT NULL,
-                atag_hash INTEGER,
                 tags TEXT NOT NULL,
                 content TEXT NOT NULL,
-                sig TEXT NOT NULL
+                sig TEXT NOT NULL,
+                pubkey_owner_hash INTEGER NOT NULL,
+                etag_hash INTEGER,
+                atag_hash INTEGER
             )
             """.trimIndent(),
         )
@@ -69,10 +67,14 @@ class EventIndexesModule(
             """.trimIndent(),
         )
 
-        db.execSQL("CREATE UNIQUE INDEX event_headers_id    ON event_headers (id)")
-        db.execSQL("CREATE INDEX query_by_kind_pubkey_idx   ON event_headers (created_at desc, kind, pubkey, d_tag)")
-        db.execSQL("CREATE INDEX query_by_id_idx            ON event_headers (created_at desc, id)")
-        db.execSQL("CREATE INDEX query_by_tags_idx          ON event_tags (tag_hash)")
+        db.execSQL("CREATE UNIQUE INDEX event_headers_id       ON event_headers (id)")
+        db.execSQL("CREATE INDEX query_by_kind_pubkey_dtag_idx ON event_headers (kind, pubkey, d_tag)")
+        db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at desc, id)")
+        // need to check if this is actually needed.
+        db.execSQL("CREATE INDEX query_by_created_at_kind_key  ON event_headers (created_at desc, kind, pubkey)")
+
+        db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
+        db.execSQL("CREATE INDEX query_by_tags_hash            ON event_tags (tag_hash, event_header_row_id)")
 
         // Prevent updates to maintain immutability
         db.execSQL(
@@ -106,9 +108,9 @@ class EventIndexesModule(
     val sqlInsertHeader =
         """
         INSERT INTO event_headers
-            (id, pubkey, created_at, kind, tags, content, sig, d_tag, etag_hash, atag_hash)
+            (id, pubkey, created_at, kind, tags, content, sig, d_tag, pubkey_owner_hash, etag_hash, atag_hash)
         VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
 
     val sqlInsertTags =
@@ -125,34 +127,56 @@ class EventIndexesModule(
     ): Long {
         val hasher = hasher(db)
         val stmt = db.compileStatement(sqlInsertHeader)
+
+        val kindLong = event.kind.toLong()
+        val pubkeyHash = hasher.hash(event.pubKey)
+
+        val eventOwnerHash =
+            if (event is GiftWrapEvent) {
+                event.recipientPubKey()?.let { hasher.hash(it) } ?: pubkeyHash
+            } else {
+                pubkeyHash
+            }
+
+        val eTagHash = hasher.hashETag(event.id)
+
         stmt.bindString(1, event.id)
         stmt.bindString(2, event.pubKey)
         stmt.bindLong(3, event.createdAt)
-        stmt.bindLong(4, event.kind.toLong())
+        stmt.bindLong(4, kindLong)
         stmt.bindString(5, OptimizedJsonMapper.toJson(event.tags))
         stmt.bindString(6, event.content)
         stmt.bindString(7, event.sig)
         if (event is AddressableEvent) {
             val dTag = event.dTag()
             stmt.bindString(8, dTag)
-            stmt.bindLong(9, hasher.hashETag(event.id))
-            stmt.bindLong(10, hasher.hashATag(AddressSerializer.assemble(event.kind, event.pubKey, dTag)))
+            stmt.bindLong(9, eventOwnerHash)
+            stmt.bindLong(10, eTagHash)
+            stmt.bindLong(11, hasher.hashATag(AddressSerializer.assemble(event.kind, event.pubKey, dTag)))
         } else {
             stmt.bindNull(8)
-            stmt.bindLong(9, hasher.hashETag(event.id))
-            stmt.bindNull(10)
+            stmt.bindLong(9, eventOwnerHash)
+            stmt.bindLong(10, eTagHash)
+            stmt.bindNull(11)
         }
 
         val headerId = stmt.executeInsert()
 
         val stmtTags = db.compileStatement(sqlInsertTags)
 
-        event.tags.forEach { tag ->
-            if (tagIndexStrategy.shouldIndex(event.kind, tag)) {
-                stmtTags.bindLong(1, headerId)
-                stmtTags.bindLong(2, hasher.hash(tag[0], tag[1]))
-                stmtTags.executeInsert()
+        // sorting helps SQLLite by avoiding
+        // rebalancing the tree every new insert
+        val indexableTags = ArrayList<Long>()
+        for (idx in event.tags.indices) {
+            if (tagIndexStrategy.shouldIndex(event.kind, event.tags[idx])) {
+                indexableTags.add(hasher.hash(event.tags[idx][0], event.tags[idx][1]))
             }
+        }
+        indexableTags.sort()
+        indexableTags.forEach {
+            stmtTags.bindLong(1, headerId)
+            stmtTags.bindLong(2, it)
+            stmtTags.executeInsert()
         }
 
         return headerId
@@ -171,10 +195,17 @@ class EventIndexesModule(
     fun planQuery(
         filter: Filter,
         hasher: TagNameValueHasher,
+        db: SQLiteDatabase,
     ): String {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher) ?: return makeEverythingQuery()
+        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher)
 
-        return makeQueryIn(rowIdSubQuery.sql)
+        return if (rowIdSubQuery == null) {
+            val query = makeEverythingQuery()
+            db.explainQuery(query)
+        } else {
+            val query = makeQueryIn(rowIdSubQuery.sql)
+            db.explainQuery(query, rowIdSubQuery.args.toTypedArray())
+        }
     }
 
     fun <T : Event> query(
@@ -196,32 +227,31 @@ class EventIndexesModule(
         onEach: (T) -> Unit,
     ) {
         val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db)) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
-
         db.runQueryEmitting(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args, onEach)
     }
 
     fun planQuery(
         filters: List<Filter>,
         hasher: TagNameValueHasher,
+        db: SQLiteDatabase,
     ): String {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher) }
-        if (rowIdSubQueries.isEmpty()) return makeEverythingQuery()
-        val unions = rowIdSubQueries.joinToString(" UNION ") { it.sql }
-        return makeQueryIn(unions)
+        val rowIdSubQuery = unionSubqueriesIfNeeded(filters, hasher)
+
+        return if (rowIdSubQuery == null) {
+            val query = makeEverythingQuery()
+            db.explainQuery(query)
+        } else {
+            val query = makeQueryIn(rowIdSubQuery.sql)
+            db.explainQuery(query, rowIdSubQuery.args.toTypedArray())
+        }
     }
 
     fun <T : Event> query(
         filters: List<Filter>,
         db: SQLiteDatabase,
     ): List<T> {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
-
-        if (rowIdSubQueries.isEmpty()) return db.runQuery(makeEverythingQuery())
-
-        val unions = rowIdSubQueries.joinToString(" UNION ") { it.sql }
-        val args = rowIdSubQueries.flatMap { it.args }
-
-        return db.runQuery(makeQueryIn(unions), args)
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return db.runQuery(makeEverythingQuery())
+        return db.runQuery(makeQueryIn(rowIdSubqueries.sql), rowIdSubqueries.args)
     }
 
     fun <T : Event> query(
@@ -229,14 +259,9 @@ class EventIndexesModule(
         db: SQLiteDatabase,
         onEach: (T) -> Unit,
     ) {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
 
-        if (rowIdSubQueries.isEmpty()) return db.runQueryEmitting(makeEverythingQuery(), onEach = onEach)
-
-        val unions = rowIdSubQueries.joinToString(" UNION ") { it.sql }
-        val args = rowIdSubQueries.flatMap { it.args }
-
-        db.runQueryEmitting(makeQueryIn(unions), args, onEach)
+        db.runQueryEmitting(makeQueryIn(rowIdSubqueries.sql), rowIdSubqueries.args, onEach)
     }
 
     private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC, id"
@@ -244,7 +269,9 @@ class EventIndexesModule(
     private fun makeQueryIn(rowIdQuery: String) =
         """
         SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
-        INNER JOIN ($rowIdQuery) AS filtered
+        INNER JOIN (
+            $rowIdQuery
+        ) AS filtered
         ON event_headers.row_id = filtered.row_id
         ORDER BY created_at DESC, id
         """.trimIndent()
@@ -320,14 +347,9 @@ class EventIndexesModule(
         filters: List<Filter>,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdSubQueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return db.countEverything()
 
-        if (rowIdSubQueries.isEmpty()) return db.countEverything()
-
-        val unions = rowIdSubQueries.joinToString(" UNION ") { it.sql }
-        val args = rowIdSubQueries.flatMap { it.args }
-
-        return db.countIn(unions, args)
+        return db.countIn(rowIdSubqueries.sql, rowIdSubqueries.args)
     }
 
     private fun SQLiteDatabase.countEverything() = runCount("SELECT count(*) as count FROM event_headers")
@@ -361,20 +383,39 @@ class EventIndexesModule(
         filters: List<Filter>,
         db: SQLiteDatabase,
     ): Int {
-        val rowIdSubqueries = filters.mapNotNull { prepareRowIDSubQueries(it, hasher(db)) }
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return 0
 
-        if (rowIdSubqueries.isEmpty()) return 0
-
-        val unions = rowIdSubqueries.joinToString(" UNION ") { it.sql }
-        val args = rowIdSubqueries.flatMap { it.args }
-
-        return db.runDelete(unions, args)
+        return db.runDelete(rowIdSubqueries.sql, rowIdSubqueries.args)
     }
 
     private fun SQLiteDatabase.runDelete(
         sql: String,
         args: List<String> = emptyList(),
     ): Int = delete("event_headers", "row_id IN ($sql)", args.toTypedArray())
+
+    // ---------------------------------
+    // Prepare unions of all the filters
+    // ---------------------------------
+    fun unionSubqueriesIfNeeded(
+        filters: List<Filter>,
+        hasher: TagNameValueHasher,
+    ): RowIdSubQuery? {
+        val inner =
+            filters.mapNotNull { filter ->
+                prepareRowIDSubQueries(filter, hasher)
+            }
+
+        if (inner.isEmpty()) return null
+
+        return if (inner.size == 1) {
+            inner.first()
+        } else {
+            RowIdSubQuery(
+                sql = inner.joinToString("\n            UNION\n            ") { "SELECT row_id FROM (${it.sql})" },
+                args = inner.flatMap { it.args },
+            )
+        }
+    }
 
     // ----------------------------
     // Inner row id selections
@@ -385,92 +426,105 @@ class EventIndexesModule(
     ): RowIdSubQuery? {
         if (!filter.isFilledFilter()) return null
 
+        val mustJoinSearch = (filter.search != null)
+
+        val nonDTags = filter.tags?.filter { it.key != "d" } ?: emptyMap()
+
         val hasHeaders =
             with(filter) {
-                (ids != null && ids.isNotEmpty()) ||
+                (ids != null) ||
                     (authors != null && authors.isNotEmpty()) ||
                     (kinds != null && kinds.isNotEmpty()) ||
+                    (tags != null && tags.containsKey("d")) ||
                     (since != null) ||
                     (until != null) ||
-                    (tags != null && tags.containsKey("d"))
+                    (limit != null)
             }
 
-        val hasSearch = (filter.search != null && filter.search.isNotBlank())
+        var defaultTagKey: String? = null
 
         val projection =
             buildString {
-                val joins = mutableListOf<String>()
+                // always do tags if there are any
+                if (nonDTags.isNotEmpty()) {
+                    append("SELECT event_tags.event_header_row_id as row_id FROM event_tags ")
 
-                if (hasHeaders) {
-                    append("SELECT event_headers.row_id as row_id FROM event_headers")
-
-                    if (hasSearch) {
-                        joins.add("INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_headers.row_id")
-                    }
-
-                    filter.tags?.forEach { (tagName, _) ->
-                        if (tagName != "d") {
-                            joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = event_headers.row_id")
+                    // it's quite rare to have 2 tags in the filter, but possible
+                    nonDTags.keys.forEachIndexed { index, tagName ->
+                        if (index > 0) {
+                            append("INNER JOIN event_tags as event_tags$tagName ON event_tags$tagName.event_header_row_id = event_tags.event_header_row_id ")
+                        } else {
+                            defaultTagKey = tagName
                         }
                     }
-                } else if (hasSearch) {
-                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName}")
 
-                    filter.tags?.forEach { (tagName, _) ->
-                        if (tagName != "d") {
-                            joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
-                        }
+                    if (hasHeaders) {
+                        append("INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id ")
+                    }
+
+                    if (mustJoinSearch) {
+                        append("INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_tags.event_header_row_id ")
+                    }
+                } else if (mustJoinSearch) {
+                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName} ")
+
+                    if (hasHeaders) {
+                        append("INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
                     }
                 } else {
-                    // has only tags
-                    filter.tags?.forEach { (tagName, _) ->
-                        if (tagName != "d") {
-                            if (isEmpty()) {
-                                append("SELECT tag$tagName.event_header_row_id as row_id FROM event_tags as tag$tagName")
-                            } else {
-                                joins.add("INNER JOIN event_tags as tag$tagName ON tag$tagName.event_header_row_id = tag${tagName.takeLast(1)}.event_header_row_id")
-                            }
-                        }
-                    }
-
-                    if (isEmpty()) {
-                        // only limit is present
-                        append("SELECT event_headers.row_id as row_id FROM event_headers")
-                    }
-                }
-
-                if (joins.isNotEmpty()) {
-                    append(" ${joins.joinToString(" ")}")
+                    // no tags and no search.
+                    append("SELECT event_headers.row_id as row_id FROM event_headers ")
                 }
             }
 
         val clause =
             where {
+                // the order should match indexes
+                // ids reduce the filter the most
                 filter.ids?.let { equalsOrIn("event_headers.id", it) }
-                filter.kinds?.let { equalsOrIn("event_headers.kind", it) }
-                filter.authors?.let { equalsOrIn("event_headers.pubkey", it) }
+
+                // range search is bad but most of the time these are up the top with few elements.
                 filter.since?.let { greaterThanOrEquals("event_headers.created_at", it) }
                 filter.until?.let { lessThanOrEquals("event_headers.created_at", it) }
 
+                // there are indexes for these, starting with tags.
+                nonDTags.forEach { (tagName, tagValues) ->
+                    val column =
+                        if (defaultTagKey == null || defaultTagKey == tagName) {
+                            "event_tags.tag_hash"
+                        } else {
+                            "event_tags$tagName.tag_hash"
+                        }
+
+                    equalsOrIn(
+                        column,
+                        tagValues.map {
+                            hasher.hash(tagName, it)
+                        },
+                    )
+                }
+
+                filter.kinds?.let { equalsOrIn("event_headers.kind", it) }
+                filter.authors?.let { equalsOrIn("event_headers.pubkey", it) }
+
+                // there are indexes for these, starting with tags.
                 filter.tags?.forEach { (tagName, tagValues) ->
                     if (tagName == "d") {
                         equalsOrIn("event_headers.d_tag", tagValues)
-                    } else {
-                        equalsOrIn(
-                            "tag$tagName.tag_hash",
-                            tagValues.map {
-                                hasher.hash(tagName, it)
-                            },
-                        )
                     }
                 }
 
-                filter.search?.let { match(fts.tableName, it) }
+                // if search is included, SQLLite will always start here.
+                filter.search?.let {
+                    if (it.isNotBlank()) {
+                        match(fts.tableName, it)
+                    }
+                }
             }
 
         val whereClause =
             if (filter.limit != null) {
-                "${clause.conditions} ORDER BY created_at DESC, id ASC LIMIT ${filter.limit}"
+                "${clause.conditions} ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT ${filter.limit}"
             } else {
                 clause.conditions
             }
@@ -483,7 +537,7 @@ class EventIndexesModule(
         db.execSQL("DELETE FROM event_headers")
     }
 
-    class RowIdSubQuery(
+    data class RowIdSubQuery(
         val sql: String,
         val args: List<String>,
     )

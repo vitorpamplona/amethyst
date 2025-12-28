@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
@@ -104,13 +104,13 @@ class GiftWrapEvent(
         const val KIND = 1059
         const val ALT = "Encrypted event"
 
-        suspend fun create(
+        fun create(
             event: Event,
             recipientPubKey: HexKey,
             expirationDelta: Long? = null,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
         ): GiftWrapEvent {
-            val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
+            val signer = NostrSignerSync(KeyPair()) // GiftWrap is always a random key
 
             val tags =
                 expirationDelta?.let {

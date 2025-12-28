@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import org.junit.After
 import org.junit.Before
@@ -41,15 +42,12 @@ class AddressableTest {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        context.deleteDatabase("test.db")
-        db = EventStore(context, "test.db", relayUrl = "testUrl")
+        db = EventStore(context, null)
     }
 
     @After
     fun tearDown() {
         db.close()
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        context.deleteDatabase("test.db")
     }
 
     @Test
@@ -59,20 +57,25 @@ class AddressableTest {
         val version2 = signer.sign(LongTextNoteEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
         val version3 = signer.sign(LongTextNoteEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
 
+        val addressableQuery = Filter(kinds = listOf(version1.kind), authors = listOf(version1.pubKey), tags = mapOf("d" to listOf(version1.dTag())))
+
         db.insert(version1)
 
         db.assertQuery(version1, Filter(ids = listOf(version1.id)))
+        db.assertQuery(version1, addressableQuery)
 
         db.insert(version2)
 
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
         db.assertQuery(version2, Filter(ids = listOf(version2.id)))
+        db.assertQuery(version2, addressableQuery)
 
         db.insert(version3)
 
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
         db.assertQuery(null, Filter(ids = listOf(version2.id)))
         db.assertQuery(version3, Filter(ids = listOf(version3.id)))
+        db.assertQuery(version3, addressableQuery)
     }
 
     @Test
@@ -81,6 +84,8 @@ class AddressableTest {
         val version1 = signer.sign(LongTextNoteEvent.build("my cool blog, version 1", "title", dTag = "my-cool-blog", createdAt = time))
         val version2 = signer.sign(LongTextNoteEvent.build("my cool blog, version 2", "title", dTag = "my-cool-blog", createdAt = time + 1))
         val version3 = signer.sign(LongTextNoteEvent.build("my cool blog, version 3", "title", dTag = "my-cool-blog", createdAt = time + 2))
+
+        val addressableQuery = Filter(kinds = listOf(version1.kind), authors = listOf(version1.pubKey), tags = mapOf("d" to listOf(version1.dTag())))
 
         db.insert(version3)
 
@@ -101,7 +106,38 @@ class AddressableTest {
         }
 
         db.assertQuery(version3, Filter(ids = listOf(version3.id)))
+        db.assertQuery(version3, addressableQuery)
         db.assertQuery(null, Filter(ids = listOf(version2.id)))
         db.assertQuery(null, Filter(ids = listOf(version1.id)))
+    }
+
+    @Test
+    fun testTriggersIndexUsage() {
+        val explainer =
+            db.store.explainQuery(
+                """
+                SELECT * FROM event_headers
+                WHERE
+                    event_headers.kind = 30000 AND
+                    event_headers.pubkey = 'aa' AND
+                    event_headers.d_tag = 'test-tag' AND
+                    event_headers.created_at < 1766686500 AND
+                    event_headers.kind >= 30000 AND event_headers.kind < 40000
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            """
+            SELECT * FROM event_headers
+            WHERE
+                event_headers.kind = 30000 AND
+                event_headers.pubkey = 'aa' AND
+                event_headers.d_tag = 'test-tag' AND
+                event_headers.created_at < 1766686500 AND
+                event_headers.kind >= 30000 AND event_headers.kind < 40000
+            └── SEARCH event_headers USING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
+            """.trimIndent(),
+            explainer,
+        )
     }
 }

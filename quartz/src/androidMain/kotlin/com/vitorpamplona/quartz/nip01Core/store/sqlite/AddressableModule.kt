@@ -36,6 +36,8 @@ class AddressableModule : IModule {
         // if a newer addressable is inserted the unique index
         // above will be triggered. Delete cascade will take
         // care of the event_tags table
+        // the duplicate: kind >= 30000 AND kind < 40000
+        // helps SQLlite find the index above
         db.execSQL(
             """
             CREATE TRIGGER delete_older_addressable_event
@@ -48,7 +50,8 @@ class AddressableModule : IModule {
                     event_headers.kind = NEW.kind AND
                     event_headers.pubkey = NEW.pubkey AND
                     event_headers.d_tag = NEW.d_tag AND
-                    event_headers.created_at < NEW.created_at;
+                    event_headers.created_at < NEW.created_at AND
+                    event_headers.kind >= 30000 AND event_headers.kind < 40000;
             END;
             """.trimIndent(),
         )
