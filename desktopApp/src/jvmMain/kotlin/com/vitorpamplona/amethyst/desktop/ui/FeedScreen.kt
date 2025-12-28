@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -60,41 +60,43 @@ fun FeedScreen(relayManager: DesktopRelayConnectionManager) {
     DisposableEffect(configuredRelays) {
         if (configuredRelays.isNotEmpty()) {
             val subId = "global-feed-${System.currentTimeMillis()}"
-            val filters = listOf(
-                Filter(
-                    kinds = listOf(TextNoteEvent.KIND),
-                    limit = 50,
+            val filters =
+                listOf(
+                    Filter(
+                        kinds = listOf(TextNoteEvent.KIND),
+                        limit = 50,
+                    ),
                 )
-            )
 
             relayManager.subscribe(
                 subId = subId,
                 filters = filters,
                 relays = configuredRelays,
-                listener = object : IRequestListener {
-                    override fun onEvent(
-                        event: Event,
-                        isLive: Boolean,
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?
-                    ) {
-                        if (event.id !in seenIds) {
-                            seenIds.add(event.id)
-                            events.add(0, event)
-                            if (events.size > 200) {
-                                val removed = events.removeAt(events.size - 1)
-                                seenIds.remove(removed.id)
+                listener =
+                    object : IRequestListener {
+                        override fun onEvent(
+                            event: Event,
+                            isLive: Boolean,
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                        ) {
+                            if (event.id !in seenIds) {
+                                seenIds.add(event.id)
+                                events.add(0, event)
+                                if (events.size > 200) {
+                                    val removed = events.removeAt(events.size - 1)
+                                    seenIds.remove(removed.id)
+                                }
                             }
                         }
-                    }
 
-                    override fun onEose(
-                        relay: NormalizedRelayUrl,
-                        forFilters: List<Filter>?
-                    ) {
-                        // End of stored events
-                    }
-                }
+                        override fun onEose(
+                            relay: NormalizedRelayUrl,
+                            forFilters: List<Filter>?,
+                        ) {
+                            // End of stored events
+                        }
+                    },
             )
 
             onDispose {
@@ -109,7 +111,7 @@ fun FeedScreen(relayManager: DesktopRelayConnectionManager) {
         FeedHeader(
             title = "Global Feed",
             connectedRelayCount = connectedRelays.size,
-            onRefresh = { relayManager.connect() }
+            onRefresh = { relayManager.connect() },
         )
 
         Spacer(Modifier.height(16.dp))
@@ -120,12 +122,12 @@ fun FeedScreen(relayManager: DesktopRelayConnectionManager) {
             LoadingState("Loading notes...")
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(events, key = { it.id }) { event ->
                     // Use NoteCard from commons
                     NoteCard(
-                        note = event.toNoteDisplayData()
+                        note = event.toNoteDisplayData(),
                     )
                 }
             }

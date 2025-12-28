@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -42,8 +42,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,56 +84,58 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 
-fun main() = application {
-    val windowState = rememberWindowState(
-        width = 1200.dp,
-        height = 800.dp,
-        position = WindowPosition.Aligned(Alignment.Center)
-    )
+fun main() =
+    application {
+        val windowState =
+            rememberWindowState(
+                width = 1200.dp,
+                height = 800.dp,
+                position = WindowPosition.Aligned(Alignment.Center),
+            )
 
-    Window(
-        onCloseRequest = ::exitApplication,
-        state = windowState,
-        title = "Amethyst"
-    ) {
-        MenuBar {
-            Menu("File") {
-                Item(
-                    "New Note",
-                    shortcut = KeyShortcut(Key.N, ctrl = true),
-                    onClick = { /* TODO: Open new note dialog */ }
-                )
-                Separator()
-                Item(
-                    "Settings",
-                    shortcut = KeyShortcut(Key.Comma, ctrl = true),
-                    onClick = { /* TODO: Open settings */ }
-                )
-                Separator()
-                Item(
-                    "Quit",
-                    shortcut = KeyShortcut(Key.Q, ctrl = true),
-                    onClick = ::exitApplication
-                )
+        Window(
+            onCloseRequest = ::exitApplication,
+            state = windowState,
+            title = "Amethyst",
+        ) {
+            MenuBar {
+                Menu("File") {
+                    Item(
+                        "New Note",
+                        shortcut = KeyShortcut(Key.N, ctrl = true),
+                        onClick = { /* TODO: Open new note dialog */ },
+                    )
+                    Separator()
+                    Item(
+                        "Settings",
+                        shortcut = KeyShortcut(Key.Comma, ctrl = true),
+                        onClick = { /* TODO: Open settings */ },
+                    )
+                    Separator()
+                    Item(
+                        "Quit",
+                        shortcut = KeyShortcut(Key.Q, ctrl = true),
+                        onClick = ::exitApplication,
+                    )
+                }
+                Menu("Edit") {
+                    Item("Copy", shortcut = KeyShortcut(Key.C, ctrl = true), onClick = { })
+                    Item("Paste", shortcut = KeyShortcut(Key.V, ctrl = true), onClick = { })
+                }
+                Menu("View") {
+                    Item("Feed", onClick = { })
+                    Item("Messages", onClick = { })
+                    Item("Notifications", onClick = { })
+                }
+                Menu("Help") {
+                    Item("About Amethyst", onClick = { })
+                    Item("Keyboard Shortcuts", onClick = { })
+                }
             }
-            Menu("Edit") {
-                Item("Copy", shortcut = KeyShortcut(Key.C, ctrl = true), onClick = { })
-                Item("Paste", shortcut = KeyShortcut(Key.V, ctrl = true), onClick = { })
-            }
-            Menu("View") {
-                Item("Feed", onClick = { })
-                Item("Messages", onClick = { })
-                Item("Notifications", onClick = { })
-            }
-            Menu("Help") {
-                Item("About Amethyst", onClick = { })
-                Item("Keyboard Shortcuts", onClick = { })
-            }
+
+            App()
         }
-
-        App()
     }
-}
 
 @Composable
 fun App() {
@@ -153,17 +153,17 @@ fun App() {
     }
 
     MaterialTheme(
-        colorScheme = darkColorScheme()
+        colorScheme = darkColorScheme(),
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+            color = MaterialTheme.colorScheme.background,
         ) {
             when (accountState) {
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { currentScreen = AppScreen.Feed }
+                        onLoginSuccess = { currentScreen = AppScreen.Feed },
                     )
                 }
                 is AccountState.LoggedIn -> {
@@ -192,7 +192,7 @@ fun MainContent(
         // Sidebar Navigation
         NavigationRail(
             modifier = Modifier.width(80.dp).fillMaxHeight(),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Spacer(Modifier.height(16.dp))
 
@@ -200,35 +200,35 @@ fun MainContent(
                 icon = { Icon(Icons.Default.Home, contentDescription = "Feed") },
                 label = { Text("Feed") },
                 selected = currentScreen == AppScreen.Feed,
-                onClick = { onScreenChange(AppScreen.Feed) }
+                onClick = { onScreenChange(AppScreen.Feed) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 label = { Text("Search") },
                 selected = currentScreen == AppScreen.Search,
-                onClick = { onScreenChange(AppScreen.Search) }
+                onClick = { onScreenChange(AppScreen.Search) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
                 label = { Text("DMs") },
                 selected = currentScreen == AppScreen.Messages,
-                onClick = { onScreenChange(AppScreen.Messages) }
+                onClick = { onScreenChange(AppScreen.Messages) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
                 label = { Text("Alerts") },
                 selected = currentScreen == AppScreen.Notifications,
-                onClick = { onScreenChange(AppScreen.Notifications) }
+                onClick = { onScreenChange(AppScreen.Notifications) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                 label = { Text("Profile") },
                 selected = currentScreen == AppScreen.Profile,
-                onClick = { onScreenChange(AppScreen.Profile) }
+                onClick = { onScreenChange(AppScreen.Profile) },
             )
 
             Spacer(Modifier.weight(1f))
@@ -239,7 +239,7 @@ fun MainContent(
                 icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                 label = { Text("Settings") },
                 selected = currentScreen == AppScreen.Settings,
-                onClick = { onScreenChange(AppScreen.Settings) }
+                onClick = { onScreenChange(AppScreen.Settings) },
             )
 
             Spacer(Modifier.height(16.dp))
@@ -249,7 +249,7 @@ fun MainContent(
 
         // Main Content
         Box(
-            modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp)
+            modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
         ) {
             when (currentScreen) {
                 AppScreen.Feed -> FeedScreen(relayManager)
@@ -263,14 +263,16 @@ fun MainContent(
     }
 }
 
-
 @Composable
-fun ProfileScreen(account: AccountState.LoggedIn, accountManager: AccountManager) {
+fun ProfileScreen(
+    account: AccountState.LoggedIn,
+    accountManager: AccountManager,
+) {
     Column {
         Text(
             "Profile",
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(16.dp))
 
@@ -284,9 +286,10 @@ fun ProfileScreen(account: AccountState.LoggedIn, accountManager: AccountManager
 
         OutlinedButton(
             onClick = { accountManager.logout() },
-            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                contentColor = Color.Red
-            )
+            colors =
+                androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color.Red,
+                ),
         ) {
             Text("Logout")
         }
@@ -303,24 +306,24 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
         Text(
             "Relay Settings",
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 "${connectedRelays.size} of ${relayStatuses.size} relays connected",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             IconButton(onClick = { relayManager.connect() }) {
                 Icon(
                     Icons.Default.Refresh,
                     contentDescription = "Reconnect",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -330,7 +333,7 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
                 value = newRelayUrl,
@@ -338,7 +341,7 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
                 label = { Text("Add relay") },
                 placeholder = { Text("wss://relay.example.com") },
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
             )
             Button(
                 onClick = {
@@ -347,7 +350,7 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
                         newRelayUrl = ""
                     }
                 },
-                enabled = newRelayUrl.isNotBlank()
+                enabled = newRelayUrl.isNotBlank(),
             ) {
                 Text("Add")
             }
@@ -357,12 +360,12 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         ) {
             items(relayStatuses.values.toList()) { status ->
                 RelayStatusCard(
                     status = status,
-                    onRemove = { relayManager.removeRelay(status.url) }
+                    onRemove = { relayManager.removeRelay(status.url) },
                 )
             }
         }

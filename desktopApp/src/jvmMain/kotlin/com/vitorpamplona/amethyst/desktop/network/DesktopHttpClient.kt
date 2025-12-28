@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,7 +26,8 @@ import java.util.concurrent.TimeUnit
 
 object DesktopHttpClient {
     private val client: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        OkHttpClient
+            .Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
