@@ -160,6 +160,7 @@ erie gespeichert</string>
     <string name="record_a_message">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_title">Eine Nachricht aufnehmen</string>
     <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>
+    <string name="re_record">Neu aufnehmen</string>
     <string name="recording_indicator_description">Aufnahme</string>
     <string name="recording_indicator_with_time">Aufnahme %1$s</string>
     <string name="uploading">Hochladen…</string>

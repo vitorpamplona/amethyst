@@ -170,6 +170,7 @@
     <string name="record_a_message">Record a message</string>
     <string name="record_a_message_title">Record a message</string>
     <string name="record_a_message_description">Click and hold to record a message</string>
+    <string name="re_record">Re-record</string>
     <string name="recording_indicator_description">Recording</string>
     <string name="recording_indicator_with_time">Recording %1$s</string>
     <string name="uploading">Uploading…</string>

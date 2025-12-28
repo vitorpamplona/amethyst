@@ -121,6 +121,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -539,8 +540,8 @@ open class ShortNotePostViewModel :
     private suspend fun createTemplate(): EventTemplate<out Event>? {
         // Check if this is a voice message
         voiceMetadata?.let { audioMeta ->
-            // Only create voice reply if original note is also a VoiceEvent
-            val originalVoiceHint = originalNote?.toEventHint<VoiceEvent>()
+            // Only create voice reply if original note is also a voice message
+            val originalVoiceHint = originalNote?.toEventHint<BaseVoiceEvent>()
             return if (originalVoiceHint != null) {
                 // Create voice reply event
                 VoiceReplyEvent.build(
@@ -1023,9 +1024,6 @@ open class ShortNotePostViewModel :
                 is UploadingState.Error -> {
                     onError(uploadErrorTitle, uploadVoiceFailed)
                     voiceRecording = null
-                }
-                else -> {
-                    onError(uploadErrorTitle, uploadVoiceUnexpected)
                 }
             }
         } catch (e: Exception) {

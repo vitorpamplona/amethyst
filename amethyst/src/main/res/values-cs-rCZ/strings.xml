@@ -158,6 +158,7 @@
     <string name="record_a_message">Nahrajte zprávu</string>
     <string name="record_a_message_title">Nahrajte zprávu</string>
     <string name="record_a_message_description">Stiskněte a podržte pro nahrání zprávy</string>
+    <string name="re_record">Znovu nahrát</string>
     <string name="recording_indicator_description">Nahrávání</string>
     <string name="recording_indicator_with_time">Nahrávání %1$s</string>
     <string name="uploading">Nahrávání…</string>

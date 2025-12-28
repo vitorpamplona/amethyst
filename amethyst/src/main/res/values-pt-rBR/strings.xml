@@ -158,6 +158,7 @@
     <string name="record_a_message">Gravar uma mensagem</string>
     <string name="record_a_message_title">Gravar uma mensagem</string>
     <string name="record_a_message_description">Clique e segure para gravar uma mensagem</string>
+    <string name="re_record">Gravar novamente</string>
     <string name="recording_indicator_description">Gravando</string>
     <string name="recording_indicator_with_time">Gravando %1$s</string>
     <string name="uploading">Enviando…</string>
