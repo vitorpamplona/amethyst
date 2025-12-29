@@ -19,6 +19,9 @@
 /.idea/kotlinNotebook.xml
 /.idea/ChatHistory_schema_v3.xml
 /.idea/markdown.xml
+/.idea/AndroidProjectSystem.xml
+/.idea/deviceManager.xml
+/.idea/inspectionProfiles/
 .DS_Store
 /build
 /captures
