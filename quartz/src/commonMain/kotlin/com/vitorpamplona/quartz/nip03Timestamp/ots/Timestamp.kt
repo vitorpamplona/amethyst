@@ -453,12 +453,12 @@ class Timestamp(
     fun allTips(): MutableSet<ByteArray?> {
         val set: MutableSet<ByteArray?> = HashSet<ByteArray?>()
 
-        if (this.ops.size == 0) {
+        if (this.ops.isEmpty()) {
             set.add(this.digest)
         }
 
         for (entry in this.ops.entries) {
-            val ts: Timestamp = entry.value!!
+            val ts: Timestamp = entry.value
 
             // Op op = entry.getKey();
             val subSet = ts.allTips()

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 
@@ -36,23 +37,24 @@ class UiSettingsFlow(
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
 ) {
+    val listOfFlows: List<Flow<Any?>> =
+        listOf<Flow<Any?>>(
+            theme,
+            preferredLanguage,
+            automaticallyShowImages,
+            automaticallyStartPlayback,
+            automaticallyShowUrlPreview,
+            automaticallyHideNavigationBars,
+            automaticallyShowProfilePictures,
+            dontShowPushNotificationSelector,
+            dontAskForNotificationPermissions,
+            featureSet,
+            gallerySet,
+        )
+
     // emits at every change in any of the propertyes.
-    val propertyWatchFlow =
-        combine(
-            listOf(
-                theme,
-                preferredLanguage,
-                automaticallyShowImages,
-                automaticallyStartPlayback,
-                automaticallyShowUrlPreview,
-                automaticallyHideNavigationBars,
-                automaticallyShowProfilePictures,
-                dontShowPushNotificationSelector,
-                dontAskForNotificationPermissions,
-                featureSet,
-                gallerySet,
-            ),
-        ) { flows ->
+    val propertyWatchFlow: Flow<UiSettings> =
+        combine<Any?, UiSettings>(listOfFlows) { flows: Array<Any?> ->
             UiSettings(
                 flows[0] as ThemeType,
                 flows[1] as String?,

@@ -40,7 +40,7 @@ class TorSettingsFlow(
 ) {
     // emits at every change in any of the properties.
     val propertyWatchFlow =
-        combine(
+        combine<Any, TorSettings>(
             listOf(
                 torType,
                 externalSocksPort,

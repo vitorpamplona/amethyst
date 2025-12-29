@@ -57,7 +57,7 @@ class EventDeserializerTest {
         val templateJson = """{"kind":1,"content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
         val template = EventTemplate.fromJson(templateJson)
 
-        val signedEvent = signer.signerSync.sign(template)!!
+        val signedEvent = signer.signerSync.sign(template)
 
         assertTrue(signedEvent.id.isNotEmpty())
         assertTrue(signedEvent.sig.isNotEmpty())

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BunkerRequestTest {
@@ -31,6 +32,6 @@ class BunkerRequestTest {
         val bunkerRequest = OptimizedJsonMapper.fromJsonTo<BunkerRequest>(requestJson)
 
         assertTrue(bunkerRequest is BunkerRequestSign)
-        assertTrue((bunkerRequest as BunkerRequestSign).event.kind == 1)
+        assertEquals(1, bunkerRequest.event.kind)
     }
 }

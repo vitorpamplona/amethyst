@@ -47,7 +47,7 @@ object Merkle {
         // left.ops[OpAppend(right.msg)] = right_prepend_stamp
         // leftAppendStamp = left.ops.add(OpAppend(right.msg))
         // Timestamp leftPrependStamp = left.add(new OpAppend(right.msg));
-        left.ops.put(OpAppend(right.digest), rightPrependStamp!!)
+        left.ops[OpAppend(right.digest)] = rightPrependStamp
 
         // return rightPrependStamp.ops.add(unaryOpCls())
         val res = rightPrependStamp.add(OpSHA256())

@@ -70,7 +70,7 @@ class ChannelMetadataEvent(
                 if (content.isEmpty() || !content.startsWith("{") || isEncrypted()) {
                     ChannelDataNorm()
                 } else {
-                    ChannelData.parse(content).normalize() ?: ChannelDataNorm()
+                    ChannelData.parse(content).normalize()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

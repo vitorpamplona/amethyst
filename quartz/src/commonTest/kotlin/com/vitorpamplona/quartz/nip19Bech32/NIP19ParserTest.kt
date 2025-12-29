@@ -107,8 +107,8 @@ class NIP19ParserTest {
 
         assertNotNull(actual)
         assertTrue(actual?.entity is NProfile)
-        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", (actual?.entity as? NProfile)?.hex)
-        assertEquals(NormalizedRelayUrl("wss://vitor.nostr1.com/"), (actual?.entity as? NProfile)?.relay?.first())
+        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", actual.entity.hex)
+        assertEquals(NormalizedRelayUrl("wss://vitor.nostr1.com/"), actual.entity.relay?.first())
     }
 
     @Test()
@@ -116,7 +116,7 @@ class NIP19ParserTest {
         val actual = Nip19Parser.uriToRoute("nostr:nprofile1qy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7qgwwaehxw309ahx7uewd3hkctcpr9mhxue69uhhyetvv9ujuumwdae8gtnnda3kjctv9uqzq9thu3vem5gvsc6f3l3uyz7c92h6lq56t9wws0zulzkrgc6nrvym5jfztf")
 
         assertTrue(actual?.entity is NProfile)
-        assertEquals("1577e4599dd10c863498fe3c20bd82aafaf829a595ce83c5cf8ac3463531b09b", (actual?.entity as? NProfile)?.hex)
+        assertEquals("1577e4599dd10c863498fe3c20bd82aafaf829a595ce83c5cf8ac3463531b09b", actual.entity.hex)
     }
 
     @Test()
@@ -124,7 +124,7 @@ class NIP19ParserTest {
         val actual = Nip19Parser.uriToRoute("nostr:nevent1qy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7qgwwaehxw309ahx7uewd3hkctcpr9mhxue69uhhyetvv9ujuumwdae8gtnnda3kjctv9uq36amnwvaz7tmjv4kxz7fwvd5xjcmpvahhqmr9vfejucm0d5hsz9mhwden5te0wfjkccte9ec8y6tdv9kzumn9wshsz8thwden5te0dehhxarj9ekh2arfdeuhwctvd3jhgtnrdakj7qg3waehxw309ucngvpwvcmh5tnfduhszythwden5te0dehhxarj9emkjmn99uq3jamnwvaz7tmhv4kxxmmdv5hxummnw3ezuamfdejj7qpqvsup5xk3e2quedxjvn2gjppc0lqny5dmnr2ypc9tftwmdxta0yjqrd6n50")
 
         assertTrue(actual?.entity is NEvent)
-        assertEquals("64381a1ad1ca81ccb4d264d48904387fc13251bb98d440e0ab4addb6997d7924", (actual?.entity as? NEvent)?.hex)
+        assertEquals("64381a1ad1ca81ccb4d264d48904387fc13251bb98d440e0ab4addb6997d7924", actual.entity.hex)
     }
 
     @Test()
@@ -132,7 +132,7 @@ class NIP19ParserTest {
         val actual = Nip19Parser.uriToRoute("nostr:naddr1qqyxzmt9w358jum5qyt8wumn8ghj7un9d3shjtnwdaehgu3wvfskueqzypd7v3r24z33cydnk3fmlrd0exe5dlej3506zxs05q4puerp765mzqcyqqq8scsq6mk7u")
 
         assertTrue(actual?.entity is NAddress)
-        assertEquals("30818:5be6446aa8a31c11b3b453bf8dafc9b346ff328d1fa11a0fa02a1e6461f6a9b1:amethyst", (actual?.entity as? NAddress)?.aTag())
+        assertEquals("30818:5be6446aa8a31c11b3b453bf8dafc9b346ff328d1fa11a0fa02a1e6461f6a9b1:amethyst", actual.entity.aTag())
     }
 
     @Test
@@ -141,9 +141,10 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute(
                 "nostr:naddr1qqqqygzxpsj7dqha57pjk5k37gkn6g4nzakewtmqmnwryyhd3jfwlpgxtspsgqqqw4rs3xyxus",
             )
+        assertNotNull(result)
         assertEquals(
             "30023:460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c:",
-            (result?.entity as? NAddress)?.aTag(),
+            (result.entity as? NAddress)?.aTag(),
         )
     }
 
@@ -153,9 +154,10 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute(
                 "nostr:naddr1qqqqzxthwden5te0wfjkccte9ejxjanfdejjuanfv3jk7tczyrv4428upmlcujyf2fy4hqrynywj07ukakr99ufvmmw95n5tttj5qqcyqqqgt0qeresua",
             )
+        assertNotNull(result)
         assertEquals(
             "34236:d95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540:",
-            (result?.entity as? NAddress)?.aTag(),
+            (result.entity as? NAddress)?.aTag(),
         )
     }
 
@@ -165,9 +167,10 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute(
                 "nostr:naddr1qq8kwatfv3jj6amfwfjkwatpwfjqygxsm6lelvfda7qlg0tud9pfhduysy4vrexj65azqtdk4tr75j6xdspsgqqqw4rsg32ag8",
             )
+        assertNotNull(result)
         assertEquals(
             "30023:d0debf9fb12def81f43d7c69429bb784812ac1e4d2d53a202db6aac7ea4b466c:guide-wireguard",
-            (result?.entity as? NAddress)?.aTag(),
+            (result.entity as? NAddress)?.aTag(),
         )
     }
 
@@ -177,12 +180,13 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute(
                 "naddr1qqyrswtyv5mnjv3sqy28wumn8ghj7un9d3shjtnyv9kh2uewd9hsygx3uczxts4hwue9ayfn7ggq62anzstde2qs749pm9tx2csuthhpjvpsgqqqw4rs8pmj38",
             )
-        assertTrue(result?.entity is NAddress)
+        assertNotNull(result)
+        assertTrue(result.entity is NAddress)
         assertEquals(
             "30023:d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193:89de7920",
-            (result?.entity as? NAddress)?.aTag(),
+            result.entity.aTag(),
         )
-        assertEquals(NormalizedRelayUrl("wss://relay.damus.io/"), (result?.entity as? NAddress)?.relay?.get(0))
+        assertEquals(NormalizedRelayUrl("wss://relay.damus.io/"), result.entity.relay[0])
     }
 
     @Test
@@ -261,11 +265,11 @@ class NIP19ParserTest {
         assertNotNull(result)
         assertEquals(
             "31337:27241bb702d145a975260cfedee6265936dcd939eaecb88ea0e4071752c30402:xx1xulrf7wdbdlbc31far",
-            result?.aTag(),
+            result.aTag(),
         )
-        assertEquals(true, result?.relay?.isEmpty())
-        assertEquals("27241bb702d145a975260cfedee6265936dcd939eaecb88ea0e4071752c30402", result?.author)
-        assertEquals(31337, result?.kind)
+        assertEquals(true, result.relay?.isEmpty())
+        assertEquals("27241bb702d145a975260cfedee6265936dcd939eaecb88ea0e4071752c30402", result.author)
+        assertEquals(31337, result.kind)
     }
 
     @Test
@@ -279,11 +283,11 @@ class NIP19ParserTest {
         assertNotNull(result)
         assertEquals(
             "30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:613f014d2911fb9df52e048aae70268c0d216790287b5814910e1e781e8e0509",
-            result?.aTag(),
+            result.aTag(),
         )
-        assertEquals(true, result?.relay?.isEmpty())
-        assertEquals("46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d", result?.author)
-        assertEquals(30023, result?.kind)
+        assertEquals(true, result.relay?.isEmpty())
+        assertEquals("46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d", result.author)
+        assertEquals(30023, result.kind)
     }
 
     @Test
@@ -297,11 +301,11 @@ class NIP19ParserTest {
         assertNotNull(result)
         assertEquals(
             "30023:46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d:1679509418",
-            result?.aTag(),
+            result.aTag(),
         )
-        assertEquals(true, result?.relay?.isEmpty())
-        assertEquals("46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d", result?.author)
-        assertEquals(30023, result?.kind)
+        assertEquals(true, result.relay?.isEmpty())
+        assertEquals("46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d", result.author)
+        assertEquals(30023, result.kind)
     }
 
     @Test
@@ -310,10 +314,10 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute("nostr:nevent1qqsdw6xpk28tjnrajz4xhy2jqg0md8ywxj6997rsutjzxs0207tedjspz4mhxue69uhhyetvv9ujumn0wd68ytnzvuhsygx2crjrydvqdksffurc0fdsfc566pxtrg78afw0v8kursecwdqg9vpsgqqqqqqsnknas6")?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("d768c1b28eb94c7d90aa6b9152021fb69c8e34b452f870e2e42341ea7f9796ca", result?.hex)
-        assertEquals("wss://relay.nostr.bg/", result?.relay?.firstOrNull()?.url)
-        assertEquals("cac0e43235806da094f0787a5b04e29ad04cb1a3c7ea5cf61edc1c338734082b", result?.author)
-        assertEquals(1, result?.kind)
+        assertEquals("d768c1b28eb94c7d90aa6b9152021fb69c8e34b452f870e2e42341ea7f9796ca", result.hex)
+        assertEquals("wss://relay.nostr.bg/", result.relay.firstOrNull()?.url)
+        assertEquals("cac0e43235806da094f0787a5b04e29ad04cb1a3c7ea5cf61edc1c338734082b", result.author)
+        assertEquals(1, result.kind)
     }
 
     @Test
@@ -322,10 +326,10 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute("nostr:nevent1qqs0tsw8hjacs4fppgdg7f5yhgwwfkyua4xcs3re9wwkpkk2qeu6mhql22rcy")?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("f5c1c7bcbb8855210a1a8f2684ba1ce4d89ced4d8844792b9d60daca0679addc", result?.hex)
-        assertEquals(true, result?.relay?.isEmpty())
-        assertEquals(null, result?.author)
-        assertEquals(null, result?.kind)
+        assertEquals("f5c1c7bcbb8855210a1a8f2684ba1ce4d89ced4d8844792b9d60daca0679addc", result.hex)
+        assertEquals(true, result.relay.isEmpty())
+        assertEquals(null, result.author)
+        assertEquals(null, result.kind)
     }
 
     @Test
@@ -334,10 +338,10 @@ class NIP19ParserTest {
             Nip19Parser.uriToRoute("nostr:nevent1qqsfvaa2w3nkw472lt2ezr6x5x347k8hht398vp7hrl6wrdjldry86sprfmhxue69uhhyetvv9ujuam9wd6x2unwvf6xxtnrdaks5myyah")?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("9677aa74676757cafad5910f46a1a35f58f7bae253b03eb8ffa70db2fb4643ea", result?.hex)
-        assertEquals("wss://relay.westernbtc.com/", result?.relay?.firstOrNull()?.url)
-        assertEquals(null, result?.author)
-        assertEquals(null, result?.kind)
+        assertEquals("9677aa74676757cafad5910f46a1a35f58f7bae253b03eb8ffa70db2fb4643ea", result.hex)
+        assertEquals("wss://relay.westernbtc.com/", result.relay.firstOrNull()?.url)
+        assertEquals(null, result.author)
+        assertEquals(null, result.kind)
     }
 
     @Test
@@ -349,13 +353,13 @@ class NIP19ParserTest {
                 )?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("b60ffa7256d3dd7543d830eb717ae50d05a6c32c5f791ed15b867c2bb0b954ac", result?.hex)
+        assertEquals("b60ffa7256d3dd7543d830eb717ae50d05a6c32c5f791ed15b867c2bb0b954ac", result.hex)
         assertEquals(
             NormalizedRelayUrl("wss://nostr.mom/"),
-            result?.relay?.get(0),
+            result.relay?.get(0),
         )
-        assertEquals("f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a", result?.author)
-        assertEquals(1, result?.kind)
+        assertEquals("f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a", result.author)
+        assertEquals(1, result.kind)
     }
 
     @Test
@@ -367,10 +371,10 @@ class NIP19ParserTest {
                 )?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("1f878e82063d80f41a781d3a2ef7bc336f1beb7942bf3b49b42aee1251eb5cf0", result?.hex)
-        assertEquals(NormalizedRelayUrl("wss://relay.damus.io/"), result.relay.get(0))
-        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result?.author)
-        assertEquals(1, result?.kind)
+        assertEquals("1f878e82063d80f41a781d3a2ef7bc336f1beb7942bf3b49b42aee1251eb5cf0", result.hex)
+        assertEquals(NormalizedRelayUrl("wss://relay.damus.io/"), result.relay[0])
+        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result.author)
+        assertEquals(1, result.kind)
     }
 
     @Test
@@ -382,10 +386,10 @@ class NIP19ParserTest {
                 )?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("8d2338bb62db88d13cea23f55f27c4886f68cf777dac42f2b65e6f709a5e6926", result?.hex)
+        assertEquals("8d2338bb62db88d13cea23f55f27c4886f68cf777dac42f2b65e6f709a5e6926", result.hex)
         assertEquals(
             "wss://nos.lol/,wss://nostr.oxtr.dev/,wss://relay.nostr.bg/,wss://nostr.einundzwanzig.space/,wss://relay.nostr.band/,wss://relay.damus.io/",
-            result?.relay?.joinToString(",") { it.url },
+            result.relay.joinToString(",") { it.url },
         )
     }
 
@@ -398,10 +402,10 @@ class NIP19ParserTest {
                 )?.entity as? NEvent
 
         assertNotNull(result)
-        assertEquals("4300ec7fa2f98a276f033908349651620aa8e282b76030ab22abca63e85e07e6", result?.hex)
-        assertEquals("wss://relay.damus.io/", result?.relay?.get(0)?.url)
-        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result?.author)
-        assertEquals(1, result?.kind)
+        assertEquals("4300ec7fa2f98a276f033908349651620aa8e282b76030ab22abca63e85e07e6", result.hex)
+        assertEquals("wss://relay.damus.io/", result.relay.get(0)?.url)
+        assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result.author)
+        assertEquals(1, result.kind)
     }
 
     @Test
