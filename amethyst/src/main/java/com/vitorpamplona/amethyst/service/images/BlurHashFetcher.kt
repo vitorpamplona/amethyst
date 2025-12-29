@@ -30,6 +30,7 @@ import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
+import com.vitorpamplona.amethyst.commons.blurhash.toAndroidBitmap
 
 data class BlurhashWrapper(
     val blurhash: String,
@@ -43,10 +44,10 @@ class BlurHashFetcher(
     override suspend fun fetch(): FetchResult? {
         val hash = data.blurhash
 
-        val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
+        val platformImage = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
 
         return ImageFetchResult(
-            image = bitmap.asImage(true),
+            image = platformImage.toAndroidBitmap().asImage(true),
             isSampled = false,
             dataSource = DataSource.MEMORY,
         )

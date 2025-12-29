@@ -138,3 +138,6 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# Local task tracking
+TASKS.md
