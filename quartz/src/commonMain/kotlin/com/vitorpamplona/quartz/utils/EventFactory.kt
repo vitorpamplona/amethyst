@@ -183,6 +183,7 @@ class EventFactory {
                 CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
+                ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelCreateEvent.KIND -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelHideMessageEvent.KIND -> ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelListEvent.KIND -> ChannelListEvent(id, pubKey, createdAt, tags, content, sig)

@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
+import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -209,6 +210,7 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -911,6 +913,14 @@ private fun RenderNoteRow(
             )
         }
 
+        is ChessGameEvent -> {
+            RenderChessGame(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,
