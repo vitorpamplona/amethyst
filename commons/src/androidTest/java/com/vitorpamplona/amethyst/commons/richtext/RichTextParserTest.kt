@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
+import junit.framework.TestCase.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -688,7 +689,7 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText(textToParse, EmptyTagList, null)
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, ⚡\uFE0Fsatscoinsv@getalby.com, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
             state.urlSet.joinToString(", "),
         )

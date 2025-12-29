@@ -21,18 +21,24 @@
 package com.vitorpamplona.amethyst.commons.robohash.parts
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector.Builder
 import androidx.compose.ui.graphics.vector.PathData
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.robohash.Black
 import com.vitorpamplona.amethyst.commons.robohash.roboBuilder
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
+@Preview
 @Composable
 fun Accessory0SevenPreview() {
     Image(
+        modifier = Modifier.size(10000.dp),
         painter =
             rememberVectorPainter(
                 roboBuilder {

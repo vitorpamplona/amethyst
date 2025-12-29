@@ -28,11 +28,11 @@ import java.util.regex.Pattern
  */
 object Patterns {
     /**
-     * Email address pattern from RFC 5322.
+     * Email address pattern from RFC 5322... From android.util.Patterns.
      */
     val EMAIL_ADDRESS: Pattern =
         Pattern.compile(
-            "[a-zA-Z0-9+._%-]+@[a-zA-Z0-9][a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+            "[a-zA-Z0-9+._%-]{1,256}@[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}(\\.[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25})+",
         )
 
     /**

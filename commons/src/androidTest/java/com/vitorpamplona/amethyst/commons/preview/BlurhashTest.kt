@@ -50,7 +50,7 @@ class BlurhashTest {
         val bmp1 = BlurHashDecoderOld.decode(warmHex, 100, (100 * (1 / aspectRatio)).roundToInt())
         val bmp2 = BlurHashDecoder.decodeKeepAspectRatio(warmHex, 100)
 
-        assertTrue(bmp1!!.sameAs(bmp2!!))
+        assertTrue(bmp1!!.sameAs(bmp2!!.bitmap))
     }
 
     @Test
@@ -60,7 +60,7 @@ class BlurhashTest {
         val bmp1 = BlurHashDecoderOld.decode(warmHex, 25, (25 * (1 / aspectRatio)).roundToInt())
         val bmp2 = BlurHashDecoder.decodeKeepAspectRatio(warmHex, 25)
 
-        assertTrue(bmp1!!.sameAs(bmp2!!))
+        assertTrue(bmp1!!.sameAs(bmp2!!.bitmap))
     }
 
     @Test
@@ -75,7 +75,7 @@ class BlurhashTest {
         val bmp1 = BlurHashDecoderOld.decode(testHex, 100, (100 * (1 / aspectRatio)).roundToInt())
         val bmp2 = BlurHashDecoder.decodeKeepAspectRatio(testHex, 100)
 
-        assertTrue(bmp1!!.sameAs(bmp2!!))
+        assertTrue(bmp1!!.sameAs(bmp2!!.bitmap))
     }
 
     @Test

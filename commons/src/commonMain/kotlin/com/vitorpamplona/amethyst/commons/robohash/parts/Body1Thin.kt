@@ -30,7 +30,9 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.vitorpamplona.amethyst.commons.robohash.Black
 import com.vitorpamplona.amethyst.commons.robohash.Gray
 import com.vitorpamplona.amethyst.commons.robohash.roboBuilder
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
+@Preview
 @Composable
 fun Body1ThinPreview() {
     Image(

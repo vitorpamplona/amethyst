@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.robohash.parts.mouth9Closed
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 val Black = SolidColor(Color.Black)
 val Gray = SolidColor(Color(0xFF6d6e70))
@@ -106,6 +107,7 @@ val MediumGray = SolidColor(Color(0xFFd0d2d3))
 val DefaultSize = 55.dp
 const val VIEWPORT_SIZE = 300f
 
+@Preview
 @Composable
 fun RobohashPreview() {
     val assembler = RobohashAssembler()
