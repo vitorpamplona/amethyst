@@ -111,6 +111,9 @@ val KIND3_FOLLOWS = " Main User Follows "
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val AROUND_ME = " Around Me "
 
+// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val CHESS = " Chess "
+
 @Stable
 class AccountSettings(
     val keyPair: KeyPair,

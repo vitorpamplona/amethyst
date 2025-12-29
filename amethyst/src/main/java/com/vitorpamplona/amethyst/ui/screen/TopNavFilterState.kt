@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.CHESS
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -52,6 +53,7 @@ import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -395,6 +397,7 @@ val DEFAULT_FEED_KINDS =
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
+        ChessGameEvent.KIND,
     )
 
 val DEFAULT_COMMUNITY_FEEDS =
