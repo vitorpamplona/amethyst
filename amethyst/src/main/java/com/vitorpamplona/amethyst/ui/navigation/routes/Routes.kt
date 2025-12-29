@@ -137,6 +137,10 @@ sealed class Route {
         val geohash: String,
     ) : Route()
 
+    @Serializable data class ChessGame(
+        val gameId: String,
+    ) : Route()
+
     @Serializable data class Community(
         val kind: Int,
         val pubKeyHex: HexKey,

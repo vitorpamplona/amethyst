@@ -54,6 +54,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -128,7 +130,21 @@ class TopNavFilterState(
             unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
         )
 
-    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
+    val chessFollow =
+        GlobalFeedDefinition(
+            code = CHESS,
+            name = ResourceName(R.string.follow_list_chess),
+            type = CodeNameType.HARDCODED,
+            kinds =
+                listOf(
+                    ChessGameEvent.KIND, // Completed games (Kind 64)
+                    LiveChessGameChallengeEvent.KIND, // Challenges (Kind 30064)
+                    LiveChessGameEndEvent.KIND, // Game endings (Kind 30067)
+                    // Note: LiveChessMoveEvent (Kind 30066) intentionally excluded - too noisy
+                ),
+        )
+
+    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, chessFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -242,7 +258,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, chessFollow),
                     myLivePeopleListsFlow,
                     myLiveKind3FollowsFlow,
                     listOf(muteListFollow),
@@ -258,7 +274,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, chessFollow),
                     myLivePeopleListsFlow,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),

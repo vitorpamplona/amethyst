@@ -122,6 +122,9 @@ kotlin {
                 // Websockets API
                 implementation(libs.okhttp)
                 implementation(libs.okhttpCoroutines)
+
+                // Chess engine for move validation and legal move generation
+                implementation("io.github.cvb941:kchesslib:1.0.4")
             }
         }
 

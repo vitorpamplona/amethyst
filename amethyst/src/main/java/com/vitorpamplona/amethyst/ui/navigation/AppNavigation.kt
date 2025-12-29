@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -174,6 +175,7 @@ fun AppNavigation(
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+            composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
             composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
             composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
             composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
