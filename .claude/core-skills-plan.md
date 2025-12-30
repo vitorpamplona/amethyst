@@ -29,7 +29,7 @@ Create 8 hybrid domain skills combining general expertise with AmethystMultiplat
 
 ---
 
-### 2. gradle-expert
+### 2. gradle-expert ✅ COMPLETED
 **Focus:** Build optimization, dependency resolution, multi-module KMP troubleshooting
 
 **SKILL.md sections:**
@@ -44,10 +44,14 @@ Create 8 hybrid domain skills combining general expertise with AmethystMultiplat
 **Bundled resources:**
 - `references/build-commands.md` - Common gradle tasks
 - `references/dependency-graph.md` - Module visualization
+- `references/version-catalog-guide.md` - Version catalog patterns
+- `references/common-errors.md` - Troubleshooting guide
 - `scripts/analyze-build-time.sh` - Performance report
 - `scripts/fix-dependency-conflicts.sh` - Conflict patterns
 
 **Differentiation:** Focus on 4-module structure, KMP + Android + Desktop combo, specific issues (compose conflicts).
+
+**Status:** ✅ SKILL.md (549 lines) + 4 references + 2 scripts created at `.claude/skills/gradle-expert/`
 
 ---
 
@@ -86,25 +90,28 @@ Create 8 hybrid domain skills combining general expertise with AmethystMultiplat
 
 ---
 
-### 4. compose-expert
+### 4. compose-expert ✅ COMPLETED
 **Focus:** Shared composables, state management, animations, Material3
 
 **SKILL.md sections:**
 - Shared composables philosophy (100+ already shared in commons/commonMain)
-- State management: remember, derivedStateOf, produceState
-- Recomposition optimization: @Stable/@Immutable
+- State management: remember, derivedStateOf, produceState (visual patterns)
+- Recomposition optimization: @Stable/@Immutable (visual usage)
 - Material3 conventions: theming
-- Custom icons: ImageVector builders (38+ icons)
+- Custom icons: ImageVector builders (robohash pattern)
 - Platform differences: Desktop vs Android UI
 - Performance: lazy lists, image loading
+- Decision framework: share by default in commonMain
 
 **Bundled resources:**
-- `references/shared-composables-catalog.md` - 100+ composables
-- `references/state-patterns.md` - State hoisting examples
-- `references/icon-assets.md` - Custom icon catalog
-- `scripts/find-composables.sh` - Grep @Composable
+- `references/shared-composables-catalog.md` - Complete catalog with patterns
+- `references/state-patterns.md` - State hoisting, derivedStateOf examples
+- `references/icon-assets.md` - ImageVector patterns, roboBuilder DSL
+- `scripts/find-composables.sh` - Grep @Composable utility
 
-**Differentiation:** Multiplatform Compose patterns, shared vs platform UI philosophy, Amethyst conventions (robohash, custom icons).
+**Differentiation:** Multiplatform Compose patterns, shared vs platform UI philosophy, Amethyst conventions (robohash, custom icons). Delegates navigation to platform experts, defers Kotlin language details to kotlin-expert.
+
+**Status:** ✅ SKILL.md (578 lines) + 3 references + 1 script created at `.claude/skills/compose-expert/`
 
 ---
 
@@ -206,26 +213,30 @@ Create 8 hybrid domain skills combining general expertise with AmethystMultiplat
 
 ---
 
-### 8. nostr-expert
+### 8. nostr-expert ✅ COMPLETED
 **Focus:** Nostr protocol, NIPs, Quartz architecture, event patterns
 
 **SKILL.md sections:**
 - Quartz architecture: package structure by NIP (57 NIPs implemented)
-- Event anatomy: IEvent, Event, kinds, tags (verified in TextNoteEvent.kt)
-- NIP implementation patterns: Event class, tags, builders
-- Common event types: TextNoteEvent, MetadataEvent, ReactionEvent
-- Tag patterns: aTag, eTag, pTag builders
-- Relay client: WebSocket, subscriptions
-- Cryptography: secp256k1, NIP-44 encryption
-- Event builders: TagArrayBuilder DSL
+- Event anatomy: IEvent, Event, kinds, tags
+- EventTemplate & TagArrayBuilder DSL patterns
+- Common event types: TextNoteEvent, MetadataEvent, ReactionEvent, Addressable events
+- Tag patterns: e-tag, p-tag, a-tag, d-tag with builders
+- Threading (NIP-10): reply/root markers
+- Cryptography: secp256k1 signing, NIP-44 encryption
+- Bech32 encoding: npub, nsec, note, nevent
+- Event validation & verification
+- Common workflows: publishing, querying, zaps, gift-wrapped DMs
 
 **Bundled resources:**
-- `references/nip-catalog.md` - All 57 NIPs with code links
-- `references/event-hierarchy.md` - Event class diagram
-- `references/tag-patterns.md` - Tag builders from nip01Core/tags/
-- `scripts/nip-lookup.sh` - Find NIP implementation files
+- `references/nip-catalog.md` - All 57 NIPs with package locations (179 lines)
+- `references/event-hierarchy.md` - Event class hierarchy, kind classifications (293 lines)
+- `references/tag-patterns.md` - Tag structure, TagArrayBuilder DSL, parsing (251 lines)
+- `scripts/nip-lookup.sh` - Find NIP implementations by number or search term
 
-**Differentiation:** nostr-protocol agent = NIP specs. This skill = Quartz implementation (57 NIPs), code patterns.
+**Differentiation:** nostr-protocol agent = NIP specs. This skill = Quartz implementation patterns (57 NIPs), concrete code examples from codebase.
+
+**Status:** ✅ SKILL.md (552 lines) + 3 references + 1 script created at `.claude/skills/nostr-expert/`
 
 ---
 
@@ -241,10 +252,13 @@ Using skill-creator 10-step methodology per skill:
 
 **Per-Skill Implementation:**
 - kotlin-multiplatform: ✅ COMPLETED
-- android-expert: ✅ DRAFT COMPLETE
-- desktop-expert: ✅ DRAFT COMPLETE
-- kotlin-expert: ✅ DRAFT COMPLETE
-- Remaining 4 skills: Pending (gradle-expert, compose-expert, ios-expert, nostr-expert)
+- gradle-expert: ✅ COMPLETED
+- kotlin-expert: ✅ COMPLETED
+- compose-expert: ✅ COMPLETED
+- desktop-expert: ✅ COMPLETED
+- android-expert: ✅ COMPLETED
+- nostr-expert: ✅ COMPLETED
+- ios-expert: ⏸️ DEFERRED (iOS not yet implemented in AmethystMultiplatform)
 
 ## Critical Files Referenced
 
@@ -267,22 +281,42 @@ Using skill-creator 10-step methodology per skill:
 
 1. ✅ Save this plan as `.claude/core-skills-plan.md` for reference
 2. ✅ Completed kotlin-multiplatform skill
-3. ✅ Completed android-expert skill (DRAFT)
-4. ✅ Completed desktop-expert skill (DRAFT)
-5. ⏳ **Next: Pick one of the remaining 5 skills:**
-   - gradle-expert - Build optimization, dependency resolution
-   - kotlin-expert - Coroutines, Flow, sealed classes
-   - compose-expert - Shared composables, state management
-   - ios-expert - iOS platform patterns, XCFramework
-   - nostr-expert - Nostr protocol, NIPs, Quartz
+3. ✅ Completed gradle-expert skill
+4. ✅ Completed kotlin-expert skill
+5. ✅ Completed compose-expert skill
+6. ✅ Completed desktop-expert skill
+7. ✅ Completed android-expert skill
+8. ✅ Completed nostr-expert skill
+9. ⏸️ Deferred ios-expert (iOS not yet implemented in codebase)
 
-## Current Focus: 3 skills completed
+## Current Status: 7/8 Skills Completed
 
-**Completed:**
-- kotlin-multiplatform ✅
-- android-expert ✅
-- desktop-expert ✅
+**Completed Skills (Auto-loaded from `.claude/skills/`):**
+1. ✅ kotlin-multiplatform (KMP architecture, jvmAndroid pattern, expect/actual)
+2. ✅ gradle-expert (Build system, dependencies, version catalog, troubleshooting)
+3. ✅ kotlin-expert (Flow state, sealed classes, @Immutable, DSL builders)
+4. ✅ compose-expert (Shared composables, state management, Material3, ImageVector)
+5. ✅ desktop-expert (Desktop UX, window management, Compose Desktop APIs)
+6. ✅ android-expert (Android platform APIs, navigation, permissions)
+7. ✅ nostr-expert (Nostr protocol, Quartz implementation, NIPs, events, tags)
 
-**Remaining:** 5 skills
+**Deferred:**
+- ⏸️ ios-expert (iOS not implemented yet in AmethystMultiplatform)
 
-Ready to start next skill when requested.
+## Skill Loading
+
+**All completed skills are automatically loaded** when this project opens. Skills are auto-discovered from `.claude/skills/` directory.
+
+To manually verify skills are loaded:
+```bash
+ls -1 .claude/skills/
+```
+
+Should show:
+- android-expert/
+- compose-expert/
+- desktop-expert/
+- gradle-expert/
+- kotlin-expert/
+- kotlin-multiplatform/
+- nostr-expert/
