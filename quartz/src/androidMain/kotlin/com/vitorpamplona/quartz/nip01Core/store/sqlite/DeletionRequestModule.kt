@@ -43,7 +43,11 @@ class DeletionRequestModule(
             BEFORE INSERT ON event_headers
             FOR EACH ROW
             BEGIN
-                -- Check for ID-based deletion record
+                -- Checks if this event hasn't already been deleted. If so, reject it.
+
+                -- Highly optimized using hash + created_at (duplicated in tags) index:
+                ---- Expects tag_hash to be non-existant for new events (quick exit)
+                ---- Expects created-at >= event's to not exist (quick exit)
                 SELECT RAISE(ABORT, 'blocked: a deletion event exists')
                 WHERE EXISTS (
                     SELECT 1 FROM event_tags
@@ -51,9 +55,9 @@ class DeletionRequestModule(
                     ON event_headers.row_id = event_tags.event_header_row_id
                     WHERE
                         event_tags.tag_hash IN (NEW.etag_hash, NEW.atag_hash) AND
+                        event_tags.created_at >= NEW.created_at AND
                         event_headers.kind = 5 AND
-                        event_headers.pubkey_owner_hash = NEW.pubkey_owner_hash AND
-                        event_headers.created_at >= NEW.created_at
+                        event_headers.pubkey_owner_hash = NEW.pubkey_owner_hash
                 );
             END;
             """.trimIndent(),

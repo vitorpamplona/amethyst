@@ -63,6 +63,7 @@ class EventIndexesModule(
             CREATE TABLE event_tags (
                 event_header_row_id INTEGER NOT NULL,
                 tag_hash INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
                 FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
             )
             """.trimIndent(),
@@ -70,12 +71,15 @@ class EventIndexesModule(
 
         db.execSQL("CREATE UNIQUE INDEX event_headers_id       ON event_headers (id)")
         db.execSQL("CREATE INDEX query_by_kind_pubkey_dtag_idx ON event_headers (kind, pubkey, d_tag)")
-        db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at desc, id)")
+        db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at DESC, id)")
+
         // need to check if this is actually needed.
-        db.execSQL("CREATE INDEX query_by_created_at_kind_key  ON event_headers (created_at desc, kind, pubkey)")
+        db.execSQL("CREATE INDEX query_by_created_at_kind_key  ON event_headers (created_at DESC, kind, pubkey)")
 
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
-        db.execSQL("CREATE INDEX query_by_tags_hash            ON event_tags (tag_hash, event_header_row_id)")
+
+        // This is a very slow index to build (half the insert time goes here) but it is extremely effective.
+        db.execSQL("CREATE INDEX query_by_tags_hash            ON event_tags (tag_hash, created_at DESC)")
 
         // Prevent updates to maintain immutability
         db.execSQL(
@@ -117,9 +121,9 @@ class EventIndexesModule(
     val sqlInsertTags =
         """
         INSERT OR ROLLBACK INTO event_tags
-            (event_header_row_id, tag_hash)
+            (event_header_row_id, tag_hash, created_at)
         VALUES
-            (?,?)
+            (?,?,?)
         """.trimIndent()
 
     fun insert(
@@ -177,6 +181,7 @@ class EventIndexesModule(
         indexableTags.forEach {
             stmtTags.bindLong(1, headerId)
             stmtTags.bindLong(2, it)
+            stmtTags.bindLong(3, event.createdAt)
             stmtTags.executeInsert()
         }
 
@@ -462,6 +467,16 @@ class EventIndexesModule(
 
         val nonDTagsAll = filter.tagsAll?.filter { it.key != "d" } ?: emptyMap()
 
+        val reverseLookup = nonDTagsIn.isNotEmpty() || nonDTagsAll.isNotEmpty()
+
+        val needHeaders =
+            with(filter) {
+                (ids != null) ||
+                    (authors != null && authors.isNotEmpty()) ||
+                    (kinds != null && kinds.isNotEmpty()) ||
+                    (tags != null && tags.containsKey("d"))
+            }
+
         val hasHeaders =
             with(filter) {
                 (ids != null) ||
@@ -478,13 +493,13 @@ class EventIndexesModule(
         val projection =
             buildString {
                 // always do tags if there are any
-                if (nonDTagsIn.isNotEmpty() || nonDTagsAll.isNotEmpty()) {
+                if (reverseLookup) {
                     append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags ")
 
                     // it's quite rare to have 2 tags in the filter, but possible
                     nonDTagsIn.keys.forEachIndexed { index, tagName ->
                         if (defaultTagKey != null) {
-                            append("INNER JOIN event_tags as event_tagsIn$index ON event_tagsIn$index.event_header_row_id = event_tags.event_header_row_id ")
+                            append("INNER JOIN event_tags as event_tagsIn$index ON event_tagsIn$index.event_header_row_id = event_tags.event_header_row_id AND event_tagsIn$index.created_at = event_tags.created_at ")
                         } else {
                             defaultTagKey = TagNameForQuery.InTags(tagName)
                         }
@@ -493,14 +508,14 @@ class EventIndexesModule(
                     nonDTagsAll.keys.forEachIndexed { index, tagName ->
                         nonDTagsAll[tagName]!!.forEachIndexed { valueIndex, tagValue ->
                             if (defaultTagKey != null) {
-                                append("INNER JOIN event_tags as event_tagsAll${index}_$valueIndex ON event_tagsAll${index}_$valueIndex.event_header_row_id = event_tags.event_header_row_id ")
+                                append("INNER JOIN event_tags as event_tagsAll${index}_$valueIndex ON event_tagsAll${index}_$valueIndex.event_header_row_id = event_tags.event_header_row_id AND event_tagsAll${index}_$valueIndex.created_at = event_tags.created_at ")
                             } else {
                                 defaultTagKey = TagNameForQuery.AllTags(tagName, valueIndex)
                             }
                         }
                     }
 
-                    if (hasHeaders) {
+                    if (needHeaders) {
                         append("INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id ")
                     }
 
@@ -524,10 +539,6 @@ class EventIndexesModule(
                 // the order should match indexes
                 // ids reduce the filter the most
                 filter.ids?.let { equalsOrIn("event_headers.id", it) }
-
-                // range search is bad but most of the time these are up the top with few elements.
-                filter.since?.let { greaterThanOrEquals("event_headers.created_at", it) }
-                filter.until?.let { lessThanOrEquals("event_headers.created_at", it) }
 
                 // it's quite rare to have 2 tags in the filter, but possible
                 nonDTagsIn.keys.forEachIndexed { index, tagName ->
@@ -560,6 +571,15 @@ class EventIndexesModule(
                     }
                 }
 
+                // range search is bad but most of the time these are up the top with few elements.
+                if (reverseLookup) {
+                    filter.since?.let { greaterThanOrEquals("event_tags.created_at", it) }
+                    filter.until?.let { lessThanOrEquals("event_tags.created_at", it) }
+                } else {
+                    filter.since?.let { greaterThanOrEquals("event_headers.created_at", it) }
+                    filter.until?.let { lessThanOrEquals("event_headers.created_at", it) }
+                }
+
                 filter.kinds?.let { equalsOrIn("event_headers.kind", it) }
                 filter.authors?.let { equalsOrIn("event_headers.pubkey", it) }
 
@@ -580,7 +600,11 @@ class EventIndexesModule(
 
         val whereClause =
             if (filter.limit != null) {
-                "${clause.conditions} ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT ${filter.limit}"
+                if (reverseLookup) {
+                    "${clause.conditions} ORDER BY event_tags.created_at DESC LIMIT ${filter.limit}"
+                } else {
+                    "${clause.conditions} ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT ${filter.limit}"
+                }
             } else {
                 clause.conditions
             }

@@ -227,8 +227,8 @@ class DeletionTest {
             ON event_headers.row_id = event_tags.event_header_row_id
             WHERE
                 event_tags.tag_hash IN (3221122, 223322) AND
+                event_tags.created_at >= 1766686500 AND
                 event_headers.kind = 5 AND
-                event_headers.created_at >= 1766686500 AND
                 event_headers.pubkey_owner_hash = 22332323
             """.trimIndent()
 
@@ -238,7 +238,7 @@ class DeletionTest {
         TestCase.assertEquals(
             """
             ${sql.replace("\n","\n            ")}
-            ├── SEARCH event_tags USING COVERING INDEX query_by_tags_hash (tag_hash=?)
+            ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=? AND created_at>?)
             └── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
             """.trimIndent(),
             explainer,
