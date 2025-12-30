@@ -89,14 +89,17 @@ class Filter(
             if (it.length != 64) Log.e("FilterError", "Invalid author length $it on ${toJson()}")
         }
         // tests common tags.
-        tags?.get("p")?.forEach {
-            if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+        if (tags != null) {
+            tags["p"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+            }
+            tags["e"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
+            }
+            tags["a"]?.forEach {
+                if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
+            }
         }
-        tags?.get("e")?.forEach {
-            if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
-        }
-        tags?.get("a")?.forEach {
-            if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
         }
     }
 }

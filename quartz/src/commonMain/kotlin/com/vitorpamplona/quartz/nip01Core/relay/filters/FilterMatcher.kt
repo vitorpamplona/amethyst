@@ -36,7 +36,9 @@ object FilterMatcher {
         if (kinds?.contains(event.kind) == false) return false
         if (authors?.contains(event.pubKey) == false) return false
         tags?.forEach { tag ->
-            if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
+            val valueSet = tag.value.toSet()
+            // AND between keys, OR between values
+            if (!event.tags.any { it.size > 1 && it[0] == tag.key && it[1] in valueSet }) return false
         }
         if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
             return false
