@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds
 import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
+import com.vitorpamplona.amethyst.model.CHESS
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlo
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.unknown.UnknownFeedFlow
@@ -84,6 +86,9 @@ class FeedTopNavFilterState(
                 AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
             }
 
+            CHESS -> {
+                ChessFeedFlow(followsRelays, proxyRelays)
+            }
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {

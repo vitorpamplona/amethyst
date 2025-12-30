@@ -95,10 +95,10 @@ class ChessViewModel(
                 // Send to relays
                 account.client.send(challengeEvent, account.outboxRelays.flow.value)
 
-                // Cache locally
+                // Cache locally - this adds event to LocalCache and should trigger feed updates
                 account.cache.justConsumeMyOwnEvent(challengeEvent)
 
-                Log.d("Chess", "Challenge created: $gameId")
+                Log.d("Chess", "Challenge created: gameId=$gameId, eventId=${challengeEvent.id}, kind=${challengeEvent.kind}, pubkey=${challengeEvent.pubKey}")
             } catch (e: Exception) {
                 Log.e("Chess", "Failed to create challenge", e)
             }

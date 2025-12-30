@@ -414,6 +414,8 @@ val DEFAULT_FEED_KINDS =
         NipTextEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
         ChessGameEvent.KIND,
+        LiveChessGameChallengeEvent.KIND,
+        LiveChessGameEndEvent.KIND,
     )
 
 val DEFAULT_COMMUNITY_FEEDS =
