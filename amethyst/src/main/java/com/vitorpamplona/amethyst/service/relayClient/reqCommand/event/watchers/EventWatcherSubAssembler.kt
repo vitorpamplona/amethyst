@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.amethyst.service.relays.MutableTime
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
