@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays
+package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -135,8 +134,6 @@ class BasicBundledInsert<T>(
         newObject: T,
         onUpdate: suspend (Set<T>) -> Unit,
     ) {
-        checkNotInMainThread()
-
         queue.put(newObject)
 
         if (onlyOneInBlock.getAndSet(true)) {

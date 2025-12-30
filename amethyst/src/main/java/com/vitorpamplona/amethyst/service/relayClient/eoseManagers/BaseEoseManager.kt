@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
