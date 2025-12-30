@@ -48,6 +48,7 @@ class Filter(
     val authors: List<String>? = null,
     val kinds: List<Int>? = null,
     val tags: Map<String, List<String>>? = null,
+    val tagsAll: Map<String, List<String>>? = null,
     val since: Long? = null,
     val until: Long? = null,
     val limit: Int? = null,
@@ -55,18 +56,19 @@ class Filter(
 ) : OptimizedSerializable {
     fun toJson() = OptimizedJsonMapper.toJson(this)
 
-    fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, since, until)
+    fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, tagsAll, since, until)
 
     fun copy(
         ids: List<String>? = this.ids,
         authors: List<String>? = this.authors,
         kinds: List<Int>? = this.kinds,
         tags: Map<String, List<String>>? = this.tags,
+        tagsAll: Map<String, List<String>>? = this.tagsAll,
         since: Long? = this.since,
         until: Long? = this.until,
         limit: Int? = this.limit,
         search: String? = this.search,
-    ) = Filter(ids, authors, kinds, tags, since, until, limit, search)
+    ) = Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search)
 
     /**
      * Returns true if this filter contains any non-null and non-empty criteria.
@@ -76,6 +78,7 @@ class Filter(
             (authors != null && authors.isNotEmpty()) ||
             (kinds != null && kinds.isNotEmpty()) ||
             (tags != null && tags.isNotEmpty() && tags.values.all { it.isNotEmpty() }) ||
+            (tagsAll != null && tagsAll.isNotEmpty() && tagsAll.values.all { it.isNotEmpty() }) ||
             (since != null) ||
             (until != null) ||
             (limit != null) ||
@@ -100,6 +103,16 @@ class Filter(
                 if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
             }
         }
+        if (tagsAll != null) {
+            tagsAll["p"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+            }
+            tagsAll["e"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
+            }
+            tagsAll["a"]?.forEach {
+                if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
+            }
         }
     }
 }

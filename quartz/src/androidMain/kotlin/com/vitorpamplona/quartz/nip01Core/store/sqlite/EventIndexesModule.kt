@@ -436,6 +436,17 @@ class EventIndexesModule(
         }
     }
 
+    sealed class TagNameForQuery {
+        class InTags(
+            val tagName: String,
+        ) : TagNameForQuery()
+
+        class AllTags(
+            val tagName: String,
+            val tagValueIndex: Int,
+        ) : TagNameForQuery()
+    }
+
     // ----------------------------
     // Inner row id selections
     // ----------------------------
@@ -447,7 +458,9 @@ class EventIndexesModule(
 
         val mustJoinSearch = (filter.search != null)
 
-        val nonDTags = filter.tags?.filter { it.key != "d" } ?: emptyMap()
+        val nonDTagsIn = filter.tags?.filter { it.key != "d" } ?: emptyMap()
+
+        val nonDTagsAll = filter.tagsAll?.filter { it.key != "d" } ?: emptyMap()
 
         val hasHeaders =
             with(filter) {
@@ -460,20 +473,30 @@ class EventIndexesModule(
                     (limit != null)
             }
 
-        var defaultTagKey: String? = null
+        var defaultTagKey: TagNameForQuery? = null
 
         val projection =
             buildString {
                 // always do tags if there are any
-                if (nonDTags.isNotEmpty()) {
+                if (nonDTagsIn.isNotEmpty() || nonDTagsAll.isNotEmpty()) {
                     append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags ")
 
                     // it's quite rare to have 2 tags in the filter, but possible
-                    nonDTags.keys.forEachIndexed { index, tagName ->
-                        if (index > 0) {
+                    nonDTagsIn.keys.forEachIndexed { index, tagName ->
+                        if (defaultTagKey != null) {
                             append("INNER JOIN event_tags as event_tagsIn$index ON event_tagsIn$index.event_header_row_id = event_tags.event_header_row_id ")
                         } else {
-                            defaultTagKey = tagName
+                            defaultTagKey = TagNameForQuery.InTags(tagName)
+                        }
+                    }
+
+                    nonDTagsAll.keys.forEachIndexed { index, tagName ->
+                        nonDTagsAll[tagName]!!.forEachIndexed { valueIndex, tagValue ->
+                            if (defaultTagKey != null) {
+                                append("INNER JOIN event_tags as event_tagsAll${index}_$valueIndex ON event_tagsAll${index}_$valueIndex.event_header_row_id = event_tags.event_header_row_id ")
+                            } else {
+                                defaultTagKey = TagNameForQuery.AllTags(tagName, valueIndex)
+                            }
                         }
                     }
 
@@ -506,10 +529,10 @@ class EventIndexesModule(
                 filter.since?.let { greaterThanOrEquals("event_headers.created_at", it) }
                 filter.until?.let { lessThanOrEquals("event_headers.created_at", it) }
 
-                // there are indexes for these, starting with tags.
-                nonDTags.forEach { (tagName, tagValues) ->
+                // it's quite rare to have 2 tags in the filter, but possible
+                nonDTagsIn.keys.forEachIndexed { index, tagName ->
                     val column =
-                        if (defaultTagKey == null || defaultTagKey == tagName) {
+                        if (defaultTagKey == null || (defaultTagKey is TagNameForQuery.InTags && defaultTagKey.tagName == tagName)) {
                             "event_tags.tag_hash"
                         } else {
                             "event_tagsIn$index.tag_hash"
@@ -517,10 +540,24 @@ class EventIndexesModule(
 
                     equalsOrIn(
                         column,
-                        tagValues.map {
+                        nonDTagsIn[tagName]!!.map {
                             hasher.hash(tagName, it)
                         },
                     )
+                }
+
+                // there are indexes for these, starting with tags.
+                nonDTagsAll.keys.forEachIndexed { index, tagName ->
+                    nonDTagsAll[tagName]!!.forEachIndexed { valueIndex, tagValue ->
+                        val column =
+                            if (defaultTagKey == null || (defaultTagKey is TagNameForQuery.AllTags && defaultTagKey.tagName == tagName && defaultTagKey.tagValueIndex == valueIndex)) {
+                                "event_tags.tag_hash"
+                            } else {
+                                "event_tagsAll${index}_$valueIndex.tag_hash"
+                            }
+
+                        equals(column, hasher.hash(tagName, tagValue))
+                    }
                 }
 
                 filter.kinds?.let { equalsOrIn("event_headers.kind", it) }

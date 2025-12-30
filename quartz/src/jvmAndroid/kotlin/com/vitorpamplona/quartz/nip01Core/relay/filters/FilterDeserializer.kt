@@ -38,10 +38,16 @@ class FilterDeserializer : StdDeserializer<Filter>(Filter::class.java) {
 class ManualFilterDeserializer {
     companion object {
         fun fromJson(jsonObject: ObjectNode): Filter {
-            val tags = mutableListOf<String>()
+            val tagsIn = mutableListOf<String>()
             jsonObject.fieldNames().forEach {
                 if (it.startsWith("#")) {
-                    tags.add(it.substring(1))
+                    tagsIn.add(it.substring(1))
+                }
+            }
+            val tagsAll = mutableListOf<String>()
+            jsonObject.fieldNames().forEach {
+                if (it.startsWith("&")) {
+                    tagsAll.add(it.substring(1))
                 }
             }
 
@@ -49,7 +55,8 @@ class ManualFilterDeserializer {
                 ids = jsonObject.get("ids").mapNotNull { it.asTextOrNull() },
                 authors = jsonObject.get("authors").mapNotNull { it.asTextOrNull() },
                 kinds = jsonObject.get("kinds").mapNotNull { it.asIntOrNull() },
-                tags = tags.associateWith { jsonObject.get(it).mapNotNull { it.asTextOrNull() } },
+                tags = tagsIn.associateWith { jsonObject.get(it).mapNotNull { it.asTextOrNull() } },
+                tagsAll = tagsAll.associateWith { jsonObject.get(it).mapNotNull { it.asTextOrNull() } },
                 since = jsonObject.get("since").asLongOrNull(),
                 until = jsonObject.get("until").asLongOrNull(),
                 limit = jsonObject.get("limit").asIntOrNull(),

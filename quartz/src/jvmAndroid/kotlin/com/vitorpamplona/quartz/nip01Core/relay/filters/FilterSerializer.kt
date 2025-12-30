@@ -66,6 +66,16 @@ class FilterSerializer : StdSerializer<Filter>(Filter::class.java) {
             }
         }
 
+        filter.tagsAll?.run {
+            entries.forEach { kv ->
+                gen.writeArrayFieldStart("&${kv.key}")
+                for (i in kv.value.indices) {
+                    gen.writeString(kv.value[i])
+                }
+                gen.writeEndArray()
+            }
+        }
+
         filter.since?.run { gen.writeNumberField("since", this) }
         filter.until?.run { gen.writeNumberField("until", this) }
         filter.limit?.run { gen.writeNumberField("limit", this) }
