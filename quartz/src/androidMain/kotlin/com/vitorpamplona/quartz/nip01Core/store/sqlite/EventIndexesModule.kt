@@ -466,7 +466,7 @@ class EventIndexesModule(
             buildString {
                 // always do tags if there are any
                 if (nonDTags.isNotEmpty()) {
-                    append("SELECT event_tags.event_header_row_id as row_id FROM event_tags ")
+                    append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags ")
 
                     // it's quite rare to have 2 tags in the filter, but possible
                     nonDTags.keys.forEachIndexed { index, tagName ->
