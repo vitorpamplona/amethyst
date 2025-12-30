@@ -77,9 +77,6 @@ class QueryAssemblerTest {
                     since = 1750889190,
                 ),
             )
-
-        println(query)
-
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -267,6 +264,38 @@ class QueryAssemblerTest {
 
     @Test
     fun testFollowersOf() {
+        val sql =
+            explain(
+                listOf(
+                    Filter(
+                        kinds = listOf(ContactListEvent.KIND),
+                        tags = mapOf("p" to listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")),
+                        limit = 30,
+                    ),
+                ),
+            )
+        TestCase.assertEquals(
+            """
+            SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
+            INNER JOIN (
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_headers.kind = "3") ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT 30
+            ) AS filtered
+            ON event_headers.row_id = filtered.row_id
+            ORDER BY created_at DESC, id
+            ├── CO-ROUTINE filtered
+            │   ├── SEARCH event_tags USING COVERING INDEX query_by_tags_hash (tag_hash=?)
+            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            │   └── USE TEMP B-TREE FOR ORDER BY
+            ├── SCAN filtered
+            ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            └── USE TEMP B-TREE FOR ORDER BY
+            """.trimIndent(),
+            sql,
+        )
+    }
+
+    @Test
+    fun testNotificationsOf() {
         val sql =
             explain(
                 listOf(
