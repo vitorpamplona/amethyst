@@ -471,7 +471,7 @@ class EventIndexesModule(
                     // it's quite rare to have 2 tags in the filter, but possible
                     nonDTags.keys.forEachIndexed { index, tagName ->
                         if (index > 0) {
-                            append("INNER JOIN event_tags as event_tags$tagName ON event_tags$tagName.event_header_row_id = event_tags.event_header_row_id ")
+                            append("INNER JOIN event_tags as event_tagsIn$index ON event_tagsIn$index.event_header_row_id = event_tags.event_header_row_id ")
                         } else {
                             defaultTagKey = tagName
                         }
@@ -512,7 +512,7 @@ class EventIndexesModule(
                         if (defaultTagKey == null || defaultTagKey == tagName) {
                             "event_tags.tag_hash"
                         } else {
-                            "event_tags$tagName.tag_hash"
+                            "event_tagsIn$index.tag_hash"
                         }
 
                     equalsOrIn(

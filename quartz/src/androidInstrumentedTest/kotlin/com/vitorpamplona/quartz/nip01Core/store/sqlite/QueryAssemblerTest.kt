@@ -383,14 +383,14 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_tags as event_tagst ON event_tagst.event_header_row_id = event_tags.event_header_row_id INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tagst.tag_hash = "-6379614208644810021") AND (event_headers.kind = "1") ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT 30
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_tags as event_tagsIn1 ON event_tagsIn1.event_header_row_id = event_tags.event_header_row_id INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tagsIn1.tag_hash = "-6379614208644810021") AND (event_headers.kind = "1") ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT 30
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
             │   ├── SEARCH event_tags USING COVERING INDEX query_by_tags_hash (tag_hash=?)
             │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
-            │   ├── SEARCH event_tagst USING COVERING INDEX query_by_tags_hash (tag_hash=? AND event_header_row_id=?)
+            │   ├── SEARCH event_tagsIn1 USING COVERING INDEX query_by_tags_hash (tag_hash=? AND event_header_row_id=?)
             │   └── USE TEMP B-TREE FOR ORDER BY
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
