@@ -23,8 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
@@ -36,47 +34,66 @@ class QueryBuilder(
     val fts: FullTextSearchModule,
     val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
 ) {
-    fun planQuery(
-        filter: Filter,
-        hasher: TagNameValueHasher,
-        db: SQLiteDatabase,
-    ): String {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher)
-
-        return if (rowIdSubQuery == null) {
-            val query = makeEverythingQuery()
-            db.explainQuery(query)
-        } else {
-            val query = makeQueryIn(rowIdSubQuery.sql)
-            db.explainQuery(query, rowIdSubQuery.args.toTypedArray())
-        }
-    }
-
+    // ------------
+    // Main methods
+    // ------------
     fun <T : Event> query(
         filter: Filter,
         db: SQLiteDatabase,
-    ): List<T> {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
-
-        return if (rowIdSubQuery == null) {
-            db.runQuery(makeEverythingQuery())
-        } else {
-            db.runQuery(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args)
-        }
-    }
+    ): List<T> = db.runQuery(toSql(filter, hasher(db)))
 
     fun <T : Event> query(
         filter: Filter,
         db: SQLiteDatabase,
         onEach: (T) -> Unit,
-    ) {
-        val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
+    ) = db.runQuery(toSql(filter, hasher(db)), onEach)
 
-        return if (rowIdSubQuery == null) {
-            db.runQuery(makeEverythingQuery(), onEach = onEach)
-        } else {
-            db.runQuery(makeQueryIn(rowIdSubQuery.sql), rowIdSubQuery.args, onEach)
-        }
+    fun <T : Event> query(
+        filters: List<Filter>,
+        db: SQLiteDatabase,
+    ): List<T> = db.runQuery(toSql(filters, hasher(db)))
+
+    fun <T : Event> query(
+        filters: List<Filter>,
+        db: SQLiteDatabase,
+        onEach: (T) -> Unit,
+    ) = db.runQuery(toSql(filters, hasher(db)), onEach)
+
+    // ---------------------------
+    // Raw methods for performance
+    // ---------------------------
+    fun rawQuery(
+        filter: Filter,
+        db: SQLiteDatabase,
+    ): List<RawEvent> = db.runRawQuery(toSql(filter, hasher(db)))
+
+    fun rawQuery(
+        filter: Filter,
+        db: SQLiteDatabase,
+        onEach: (RawEvent) -> Unit,
+    ) = db.runRawQuery(toSql(filter, hasher(db)), onEach)
+
+    fun rawQuery(
+        filters: List<Filter>,
+        db: SQLiteDatabase,
+    ): List<RawEvent> = db.runRawQuery(toSql(filters, hasher(db)))
+
+    fun rawQuery(
+        filters: List<Filter>,
+        db: SQLiteDatabase,
+        onEach: (RawEvent) -> Unit,
+    ) = db.runRawQuery(toSql(filters, hasher(db)), onEach)
+
+    // -----------
+    // Debug Tools
+    // -----------
+    fun planQuery(
+        filter: Filter,
+        hasher: TagNameValueHasher,
+        db: SQLiteDatabase,
+    ): String {
+        val query = toSql(filter, hasher)
+        return db.explainQuery(query.sql, query.args.toTypedArray())
     }
 
     fun planQuery(
@@ -84,36 +101,45 @@ class QueryBuilder(
         hasher: TagNameValueHasher,
         db: SQLiteDatabase,
     ): String {
-        val rowIdSubQuery = unionSubqueriesIfNeeded(filters, hasher)
+        val query = toSql(filters, hasher)
+        return db.explainQuery(query.sql, query.args.toTypedArray())
+    }
 
-        return if (rowIdSubQuery == null) {
-            val query = makeEverythingQuery()
-            db.explainQuery(query)
+    fun toSql(
+        filter: Filter,
+        hasher: TagNameValueHasher,
+    ): QuerySpec {
+        val rowIdSubqueries = prepareRowIDSubQueries(filter, hasher)
+
+        return if (rowIdSubqueries == null) {
+            QuerySpec(
+                makeEverythingQuery(),
+                emptyList(),
+            )
         } else {
-            val query = makeQueryIn(rowIdSubQuery.sql)
-            db.explainQuery(query, rowIdSubQuery.args.toTypedArray())
+            QuerySpec(
+                makeQueryIn(rowIdSubqueries.sql),
+                rowIdSubqueries.args,
+            )
         }
     }
 
-    fun <T : Event> query(
+    fun toSql(
         filters: List<Filter>,
-        db: SQLiteDatabase,
-    ): List<T> {
-        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db)) ?: return db.runQuery(makeEverythingQuery())
-        return db.runQuery(makeQueryIn(rowIdSubqueries.sql), rowIdSubqueries.args)
-    }
+        hasher: TagNameValueHasher,
+    ): QuerySpec {
+        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher)
 
-    fun <T : Event> query(
-        filters: List<Filter>,
-        db: SQLiteDatabase,
-        onEach: (T) -> Unit,
-    ) {
-        val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher(db))
-
-        if (rowIdSubqueries == null) {
-            db.runQuery(makeEverythingQuery(), onEach = onEach)
+        return if (rowIdSubqueries == null) {
+            QuerySpec(
+                makeEverythingQuery(),
+                emptyList(),
+            )
         } else {
-            db.runQuery(makeQueryIn(rowIdSubqueries.sql), rowIdSubqueries.args, onEach)
+            QuerySpec(
+                makeQueryIn(rowIdSubqueries.sql),
+                rowIdSubqueries.args,
+            )
         }
     }
 
@@ -129,11 +155,8 @@ class QueryBuilder(
         ORDER BY created_at DESC, id
         """.trimIndent()
 
-    private fun <T : Event> SQLiteDatabase.runQuery(
-        sql: String,
-        args: List<String> = emptyList(),
-    ): List<T> =
-        rawQuery(sql, args.toTypedArray()).use { cursor ->
+    private fun <T : Event> SQLiteDatabase.runQuery(query: QuerySpec): List<T> =
+        rawQuery(query.sql, query.args.toTypedArray()).use { cursor ->
             ArrayList<T>(cursor.count).apply {
                 while (cursor.moveToNext()) {
                     add(cursor.toEvent())
@@ -141,13 +164,30 @@ class QueryBuilder(
             }
         }
 
+    private fun SQLiteDatabase.runRawQuery(query: QuerySpec): List<RawEvent> =
+        rawQuery(query.sql, query.args.toTypedArray()).use { cursor ->
+            ArrayList<RawEvent>(cursor.count).apply {
+                while (cursor.moveToNext()) {
+                    add(cursor.toRawEvent())
+                }
+            }
+        }
+
     private inline fun <T : Event> SQLiteDatabase.runQuery(
-        sql: String,
-        args: List<String> = emptyList(),
+        query: QuerySpec,
         onEach: (T) -> Unit,
-    ) = rawQuery(sql, args.toTypedArray()).use { cursor ->
+    ) = rawQuery(query.sql, query.args.toTypedArray()).use { cursor ->
         while (cursor.moveToNext()) {
             onEach(cursor.toEvent())
+        }
+    }
+
+    private inline fun SQLiteDatabase.runRawQuery(
+        query: QuerySpec,
+        onEach: (RawEvent) -> Unit,
+    ) = rawQuery(query.sql, query.args.toTypedArray()).use { cursor ->
+        while (cursor.moveToNext()) {
+            onEach(cursor.toRawEvent())
         }
     }
 
@@ -161,27 +201,6 @@ class QueryBuilder(
             getString(5),
             getString(6),
         )
-
-    class RawEvent(
-        val id: HexKey,
-        val pubKey: HexKey,
-        val createdAt: Long,
-        val kind: Kind,
-        val jsonTags: String,
-        val content: String,
-        val sig: HexKey,
-    ) {
-        fun <T : Event> toEvent() =
-            EventFactory.create<T>(
-                id.intern(),
-                pubKey.intern(),
-                createdAt,
-                kind,
-                OptimizedJsonMapper.fromJsonToTagArray(jsonTags),
-                content,
-                sig,
-            )
-    }
 
     private fun Cursor.toRawEvent() =
         RawEvent(
@@ -271,7 +290,7 @@ class QueryBuilder(
     fun unionSubqueriesIfNeeded(
         filters: List<Filter>,
         hasher: TagNameValueHasher,
-    ): RowIdSubQuery? {
+    ): QuerySpec? {
         val inner =
             filters.mapNotNull { filter ->
                 prepareRowIDSubQueries(filter, hasher)
@@ -282,7 +301,7 @@ class QueryBuilder(
         return if (inner.size == 1) {
             inner.first()
         } else {
-            RowIdSubQuery(
+            QuerySpec(
                 sql = inner.joinToString("\n            UNION\n            ") { "SELECT row_id FROM (${it.sql})" },
                 args = inner.flatMap { it.args },
             )
@@ -306,7 +325,7 @@ class QueryBuilder(
     fun prepareRowIDSubQueries(
         filter: Filter,
         hasher: TagNameValueHasher,
-    ): RowIdSubQuery? {
+    ): QuerySpec? {
         if (!filter.isFilledFilter()) return null
 
         val mustJoinSearch = (filter.search != null)
@@ -457,10 +476,10 @@ class QueryBuilder(
                 clause.conditions
             }
 
-        return RowIdSubQuery("$projection WHERE $whereClause", clause.args)
+        return QuerySpec("$projection WHERE $whereClause", clause.args)
     }
 
-    data class RowIdSubQuery(
+    data class QuerySpec(
         val sql: String,
         val args: List<String>,
     )

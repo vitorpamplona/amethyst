@@ -27,10 +27,13 @@ import android.database.sqlite.SQLiteOpenHelper
 import androidx.core.database.sqlite.transaction
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -187,6 +190,20 @@ class SQLiteEventStore(
         onEach: (T) -> Unit,
     ) = queryBuilder.query(filters, readableDatabase, onEach)
 
+    fun rawQuery(filter: Filter): List<RawEvent> = queryBuilder.rawQuery(filter, readableDatabase)
+
+    fun rawQuery(filters: List<Filter>): List<RawEvent> = queryBuilder.rawQuery(filters, readableDatabase)
+
+    fun rawQuery(
+        filter: Filter,
+        onEach: (RawEvent) -> Unit,
+    ) = queryBuilder.rawQuery(filter, readableDatabase, onEach)
+
+    fun rawQuery(
+        filters: List<Filter>,
+        onEach: (RawEvent) -> Unit,
+    ) = queryBuilder.rawQuery(filters, readableDatabase, onEach)
+
     fun count(filter: Filter): Int = queryBuilder.count(filter, readableDatabase)
 
     fun count(filters: List<Filter>): Int = queryBuilder.count(filters, readableDatabase)
@@ -202,4 +219,25 @@ class SQLiteEventStore(
     fun delete(id: HexKey): Int = writableDatabase.delete("event_headers", "id = ?", arrayOf(id))
 
     fun deleteExpiredEvents() = expirationModule.deleteExpiredEvents(writableDatabase)
+}
+
+class RawEvent(
+    val id: HexKey,
+    val pubKey: HexKey,
+    val createdAt: Long,
+    val kind: Kind,
+    val jsonTags: String,
+    val content: String,
+    val sig: HexKey,
+) {
+    fun <T : Event> toEvent() =
+        EventFactory.create<T>(
+            id.intern(),
+            pubKey.intern(),
+            createdAt,
+            kind,
+            OptimizedJsonMapper.fromJsonToTagArray(jsonTags),
+            content,
+            sig,
+        )
 }
