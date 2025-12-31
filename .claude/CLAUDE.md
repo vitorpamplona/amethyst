@@ -25,7 +25,7 @@ amethyst/
 
 **Sharing Philosophy:**
 - `quartz/` = Business logic, protocol, data (no UI)
-- `commons/` = Shared UI components, icons, composables
+- `commons/` = Shared UI components, icons, composables, **ViewModels**
 - `amethyst/` & `desktopApp/` = Platform-native layouts and navigation
 
 ## Tech Stack
@@ -123,8 +123,8 @@ When picking up a new task or feature, follow this process:
 
 3. **Key principle:** Most logic already exists! Your job is to:
    - **Reuse** existing protocol/business logic from quartz
-   - **Extract** shareable UI components from amethyst to commons
-   - Create **platform-specific** ViewModels/navigation for Desktop
+   - **Extract** shareable UI components AND ViewModels from amethyst to commons
+   - Create **platform-specific** layouts/navigation for Desktop
    - **NOT** duplicate existing managers, caches, or state systems
 
 4. **Document findings in implementation plan as a matrix:**
@@ -133,7 +133,7 @@ When picking up a new task or feature, follow this process:
    |----------------|--------|----------|--------|
    | FilterBuilders | ✅ Exists | quartz/relay/filters/ | Reuse as-is |
    | NoteCard | 📦 Extract | amethyst/ui/note/ → commons/ | Extract to commons |
-   | HomeFeedViewModel | 🆕 New | Create in desktopApp/ | Create for Desktop |
+   | HomeFeedViewModel | 📦 Extract | amethyst/ → commons/commonMain/viewmodels/ | Extract to commons |
    | ProfileCache | ⚠️ Avoid | N/A | Already in User/Account pattern |
 
    **Legend:**
@@ -156,23 +156,25 @@ Before coding, create a plan that categorizes work into three buckets:
 
 | Category | Description | Location |
 |----------|-------------|----------|
-| **Android-Specific** | Platform APIs, navigation, layouts | `amethyst/`, `androidMain/` |
-| **Reusable (Shared)** | Business logic, UI components, state | `quartz/commonMain/`, `commons/` (convert to KMP) |
-| **Desktop-Specific** | Desktop navigation, layouts, platform APIs | `desktopApp/`, `jvmMain/` |
+| **Android-Specific** | Platform-native layouts, navigation patterns | `amethyst/`, `androidMain/` |
+| **Reusable (Shared)** | Business logic, UI components, **ViewModels**, state management | `quartz/commonMain/`, `commons/commonMain/` |
+| **Desktop-Specific** | Desktop-native layouts, navigation patterns, platform APIs | `desktopApp/`, `jvmMain/` |
 
 ### Step 3: Code Sharing Strategy
 
 **Share:**
 - Business logic and data models → `quartz/commonMain/`
-- Major UI components (cards, lists, dialogs) → `commons/` (convert to KMP as needed)
-- State management and ViewModels → shared
+- Major UI components (cards, lists, dialogs) → `commons/commonMain/`
+- **ViewModels** (state, business logic) → `commons/commonMain/viewmodels/`
 - Icons and visual assets → `commons/commonMain/`
 
 **Keep Platform-Native:**
+- **Screen composables** (layout, scaffolding) - Desktop uses `Window`, Android uses `Activity`
 - Navigation patterns (sidebar vs bottom nav)
-- Screen layouts and scaffolding
 - Platform-specific interactions (gestures, keyboard shortcuts)
 - System integrations (notifications, file pickers)
+
+**Rationale:** ViewModels contain platform-agnostic state management (StateFlow/SharedFlow) and business logic. Screens consume ViewModels but render differently (Desktop sidebar + content area vs Android bottom nav).
 
 ### Step 4: Extract Shared Components
 

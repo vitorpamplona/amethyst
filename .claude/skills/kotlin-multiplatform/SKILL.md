@@ -182,12 +182,13 @@ Quick decision guidelines based on codebase patterns:
 
 ### Sometimes Abstract
 - **Business logic:** YES - state machines, data processing
-- **UI state:** NO - ViewModels platform-specific
-- **Why:** Separate concerns, business logic reusable
+- **ViewModels:** YES - state + business logic shareable (StateFlow/SharedFlow)
+- **Screen layouts:** NO - platform-native (Window vs Activity)
+- **Why:** ViewModels contain platform-agnostic state; Screens render differently per platform
 
 ### Rarely Abstract
-- **UI components** (composables with platform dependencies)
-- **Why:** Platform paradigms differ (bottom nav vs sidebar)
+- **Complex UI components** (composables with heavy platform dependencies)
+- **Why:** Platform paradigms can differ significantly
 
 ### Never Abstract
 - **Navigation** (Activity vs Window fundamentally different)
@@ -201,8 +202,8 @@ Quick decision guidelines based on codebase patterns:
 |-----------|---------|-----------|
 | PubKeyFormatter, ZapFormatter | ✅ YES | Pure Kotlin, no platform APIs |
 | TimeAgoFormatter | ⚠️ ABSTRACTED | Needs StringProvider for localized strings |
-| Navigation (INav) | ❌ NO | Activity vs Window too different |
-| AccountViewModel | ⚠️ PARTIAL | Business logic → IAccountState (shared), UI state → platform ViewModels |
+| ViewModels (state + logic) | ✅ YES | StateFlow/SharedFlow platform-agnostic, Compose Multiplatform lifecycle compatible |
+| Screen layouts (Scaffold, nav) | ❌ NO | Window vs Activity, sidebar vs bottom nav fundamentally different |
 | Image loading (Coil) | ⚠️ ABSTRACTED | Coil 3.x supports KMP, needs expect/actual wrapper |
 
 ## expect/actual Mechanics
@@ -380,9 +381,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 | Crypto (varies by platform) | expect in commonMain, actual in platforms | Different security APIs per platform |
 | I/O, logging | expect in commonMain, actual in platforms | Platform implementations differ |
 | State (business logic) | commonMain or commons/jvmAndroid | Reusable StateFlow patterns |
-| State (UI) | Platform ViewModels | Platform-specific lifecycle |
+| **ViewModels** | **commons/commonMain/viewmodels/** | **StateFlow/SharedFlow + logic shareable, Compose MP lifecycle compatible** |
 | UI formatters (pure) | commons/commonMain | Reusable, no dependencies |
-| UI components (complex) | Platform-specific | Paradigms differ |
+| UI components (simple) | commons/commonMain | Cards, buttons, dialogs |
+| **Screen layouts** | **Platform-specific** | **Window vs Activity, sidebar vs bottom nav** |
 | Navigation | Platform-specific only | Activity vs Window too different |
 | Permissions | Platform-specific only | APIs incompatible |
 | Platform UX (menus, etc.) | Platform-specific only | Native feel required |
