@@ -40,21 +40,53 @@ amethyst/
 | **DI** | Manual / Koin |
 | **Build** | Gradle 8.x, Kotlin 2.1.0 |
 
-## Agents
+## Skills
 
-Use these specialized agents for domain expertise:
+Specialized skills provide domain expertise with bundled resources and patterns:
 
-| Agent | Expertise | When to Use |
+| Skill | Expertise | When to Use |
 |-------|-----------|-------------|
-| `nostr-protocol` | NIPs, events, relays, crypto | Protocol questions, NIP implementation |
-| `kotlin-multiplatform` | KMP, source sets, expect/actual | Project structure, code sharing |
-| `compose-ui` | Composables, Desktop features | UI components, navigation |
-| `kotlin-coroutines` | Flows, async, concurrency | Data streams, async operations |
+| `nostr-expert` | Nostr protocol (Quartz library) | Event types, NIPs, tags, signing, Bech32 |
+| `kotlin-expert` | Advanced Kotlin patterns | StateFlow, sealed classes, @Immutable, DSLs |
+| `kotlin-coroutines` | Advanced async patterns | supervisorScope, callbackFlow, relay pools, testing |
+| `kotlin-multiplatform` | Platform abstraction | expect/actual, source sets, sharing decisions |
+| `compose-expert` | Shared UI components | Material3, state hoisting, recomposition |
+| `android-expert` | Android platform | Navigation, permissions, lifecycle, Material3 |
+| `desktop-expert` | Desktop platform | Window, MenuBar, Tray, keyboard shortcuts |
+| `gradle-expert` | Build system | Dependencies, versioning, packaging, optimization |
+
+## Workflow
+
+**When you ask for a feature:**
+
+1. **Quick skill assessment** - I identify which skills are relevant
+2. **Propose which skills** - I present which skills I'll use for the task
+3. **Get approval** - You review and approve (or adjust) the skill selection
+4. **Review plan using approved skills** - I invoke the approved skills to create detailed implementation plan
+5. **Execute with skills** - Skills collaborate to implement the feature
+
+**Example:**
+```
+You: "Add video support to notes"
+Me: "I'll use:
+     - /nostr-expert (NIP-71 video events)
+     - /compose-expert (video player UI)
+     - /android-expert (platform video APIs)
+     Proceed?"
+You: "yes"
+Me: [invokes skills to create plan]
+     "Plan from skills:
+      1. nostr-expert: Use NIP-71 kind 34235 for video events...
+      2. compose-expert: Create VideoPlayer composable in commons...
+      3. android-expert: Use ExoPlayer for Android...
+      Proceed with implementation?"
+You: "yes"
+Me: [implements using skill guidance]
+```
 
 ## Commands
 
 - `/desktop-run` - Build and run desktop app
-- `/extract <component>` - Move composable to shared code
 - `/nip <number>` - Get NIP implementation guidance
 
 ## Feature Workflow
@@ -96,8 +128,8 @@ Before coding, create a plan that categorizes work into three buckets:
 
 When extracting UI components:
 1. Identify reusable composables in Android code
-2. Use `/extract <component>` to move to `commons/commonMain/`
-3. Create expect/actual declarations for platform-specific behavior
+2. Move to `commons/commonMain/` (consult `/compose-expert` for patterns)
+3. Create expect/actual declarations for platform-specific behavior (consult `/kotlin-multiplatform`)
 4. Update both Android and Desktop to use shared component
 
 **Note:** `quartz/` is protocol-only (no composables). Shared UI goes in `commons/` after converting it to KMP.
