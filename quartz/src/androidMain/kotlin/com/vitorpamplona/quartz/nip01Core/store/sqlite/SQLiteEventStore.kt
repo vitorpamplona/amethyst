@@ -93,6 +93,13 @@ class SQLiteEventStore(
         db.execSQL("PRAGMA synchronous = OFF;")
     }
 
+    fun dbSizeMB(): Int {
+        val f1 = context.getDatabasePath(dbName)
+        val f2 = context.getDatabasePath("$dbName-wal")
+        val total = f1.length() + f2.length()
+        return (total / (1024 * 1024)).toInt()
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         modules.forEach {
             it.create(db)
