@@ -91,14 +91,64 @@ Me: [implements using skill guidance]
 
 ## Feature Workflow
 
+**CRITICAL: Always check existing implementations first before creating new code!**
+
 When picking up a new task or feature, follow this process:
+
+### Step 0: Survey Existing Implementation (MANDATORY)
+
+**Before writing ANY code, thoroughly audit ALL modules:**
+
+1. **Search for existing implementations across all modules:**
+   ```bash
+   # Search in quartz for protocol/business logic
+   grep -r "class.*Manager\|object.*Cache\|class.*Filter" quartz/src/commonMain/
+
+   # Search in commons for UI components
+   grep -r "@Composable.*Card\|@Composable.*View\|@Composable.*Dialog" commons/src/
+
+   # Search in amethyst for Android patterns
+   grep -r "class.*ViewModel\|class.*Account\|class.*State" amethyst/src/main/java/
+
+   # Search for specific functionality
+   grep -r "fun isFollowing\|fun subscribe\|fun getMetadata" {quartz,commons,amethyst}/src/
+   ```
+
+2. **Understand existing architecture patterns:**
+   - Event stores and caching systems
+   - State management patterns (StateFlow, mutable states)
+   - ViewModel patterns and lifecycle handling
+   - Filter builders and relay subscription patterns
+   - UI component hierarchies
+
+3. **Key principle:** Most logic already exists! Your job is to:
+   - **Reuse** existing protocol/business logic from quartz
+   - **Extract** shareable UI components from amethyst to commons
+   - Create **platform-specific** ViewModels/navigation for Desktop
+   - **NOT** duplicate existing managers, caches, or state systems
+
+4. **Document findings in implementation plan as a matrix:**
+
+   | File/Component | Status | Location | Action |
+   |----------------|--------|----------|--------|
+   | FilterBuilders | ✅ Exists | quartz/relay/filters/ | Reuse as-is |
+   | NoteCard | 📦 Extract | amethyst/ui/note/ → commons/ | Extract to commons |
+   | HomeFeedViewModel | 🆕 New | Create in desktopApp/ | Create for Desktop |
+   | ProfileCache | ⚠️ Avoid | N/A | Already in User/Account pattern |
+
+   **Legend:**
+   - ✅ **Reuse** - Exists and can be used directly
+   - 📦 **Extract** - Exists in Android, needs extraction to commons
+   - 🆕 **New** - Doesn't exist, needs creation (platform-specific only)
+   - ⚠️ **Avoid** - Duplicate functionality, use existing pattern instead
 
 ### Step 1: Analyze Android Implementation
 
-Start by examining the existing Android Amethyst codebase:
+After surveying (Step 0), deeply examine the Android implementation:
 1. Find the relevant feature/component in `amethyst/` module
 2. Understand the current implementation patterns
 3. Identify dependencies and integrations
+4. Map out what code can be shared vs platform-specific
 
 ### Step 2: Create Implementation Plan
 
