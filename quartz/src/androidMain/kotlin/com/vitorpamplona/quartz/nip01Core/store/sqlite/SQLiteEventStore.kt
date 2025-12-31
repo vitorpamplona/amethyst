@@ -78,6 +78,9 @@ class SQLiteEventStore(
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
 
+        // 32MB memory cache
+        db.execSQL("PRAGMA cache_size=-32000;")
+
         // makes sure the FKs are sane
         db.setForeignKeyConstraintsEnabled(true)
 
@@ -87,7 +90,7 @@ class SQLiteEventStore(
 
         // The DB can be corrupted if the OS is shutdown before sync, which generally
         // doesn't happen on Android
-        db.execSQL("PRAGMA synchronous = OFF")
+        db.execSQL("PRAGMA synchronous = OFF;")
     }
 
     override fun onCreate(db: SQLiteDatabase) {
