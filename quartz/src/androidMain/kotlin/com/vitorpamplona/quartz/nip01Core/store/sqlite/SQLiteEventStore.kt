@@ -57,6 +57,8 @@ class SQLiteEventStore(
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
 
+    val queryBuilder = QueryBuilder(fullTextSearchModule, seedModule::hasher)
+
     val modules =
         listOf(
             seedModule,
@@ -171,30 +173,30 @@ class SQLiteEventStore(
         }
     }
 
-    fun <T : Event> query(filter: Filter): List<T> = eventIndexModule.query(filter, readableDatabase)
+    fun <T : Event> query(filter: Filter): List<T> = queryBuilder.query(filter, readableDatabase)
 
-    fun <T : Event> query(filters: List<Filter>): List<T> = eventIndexModule.query(filters, readableDatabase)
+    fun <T : Event> query(filters: List<Filter>): List<T> = queryBuilder.query(filters, readableDatabase)
 
     fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
-    ) = eventIndexModule.query(filter, readableDatabase, onEach)
+    ) = queryBuilder.query(filter, readableDatabase, onEach)
 
     fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
-    ) = eventIndexModule.query(filters, readableDatabase, onEach)
+    ) = queryBuilder.query(filters, readableDatabase, onEach)
 
-    fun count(filter: Filter): Int = eventIndexModule.count(filter, readableDatabase)
+    fun count(filter: Filter): Int = queryBuilder.count(filter, readableDatabase)
 
-    fun count(filters: List<Filter>): Int = eventIndexModule.count(filters, readableDatabase)
+    fun count(filters: List<Filter>): Int = queryBuilder.count(filters, readableDatabase)
 
     fun delete(filter: Filter) {
-        eventIndexModule.delete(filter, writableDatabase)
+        queryBuilder.delete(filter, writableDatabase)
     }
 
     fun delete(filters: List<Filter>) {
-        eventIndexModule.delete(filters, writableDatabase)
+        queryBuilder.delete(filters, writableDatabase)
     }
 
     fun delete(id: HexKey): Int = writableDatabase.delete("event_headers", "id = ?", arrayOf(id))
