@@ -25,6 +25,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import junit.framework.TestCase
+import junit.framework.TestCase.assertEquals
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -337,9 +338,6 @@ class QueryAssemblerTest {
                     ),
                 ),
             )
-
-        println(sql)
-
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -512,7 +510,6 @@ class QueryAssemblerTest {
     @Test
     fun testAllTag() {
         val sql = explain(Filter(tagsAll = mapOf("p" to listOf(key1, key2))))
-        println(sql)
         TestCase.assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
@@ -547,10 +544,7 @@ class QueryAssemblerTest {
                     limit = 500,
                 ),
             )
-
-        println(sql)
-
-        TestCase.assertEquals(
+        assertEquals(
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
