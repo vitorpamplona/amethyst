@@ -108,6 +108,7 @@ import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.image
@@ -237,14 +238,21 @@ class Account(
     val cache: LocalCache,
     val client: INostrClient,
     val scope: CoroutineScope,
-) {
+) : IAccount {
     private var userProfileCache: User? = null
 
-    fun userProfile(): User = userProfileCache ?: cache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
+    override fun userProfile(): User = userProfileCache ?: cache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
+
+    // IAccount interface properties
+    override val pubKey: String get() = signer.pubKey
+    override val showSensitiveContent: Boolean? get() = hiddenUsers.flow.value.showSensitiveContent
+    override val hiddenWordsCase: List<DualCase> get() = hiddenUsers.flow.value.hiddenWordsCase
+    override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsers.flow.value.hiddenUsersHashCodes
+    override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
+    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
@@ -340,7 +348,7 @@ class Account(
     val allFollows = MergedFollowListsState(kind3FollowList, peopleLists, followLists, hashtagList, geohashList, communityList, scope)
 
     val privateDMDecryptionCache = PrivateDMCache(signer)
-    val privateZapsDecryptionCache = PrivateZapCache(signer)
+    override val privateZapsDecryptionCache = PrivateZapCache(signer)
     val draftsDecryptionCache = DraftEventCache(signer)
 
     val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
@@ -423,7 +431,7 @@ class Account(
 
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
-    fun isWriteable(): Boolean = settings.isWriteable()
+    override fun isWriteable(): Boolean = settings.isWriteable()
 
     suspend fun updateWarnReports(warnReports: Boolean): Boolean {
         if (settings.updateWarnReports(warnReports)) {

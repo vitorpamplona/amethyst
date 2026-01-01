@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.trustedAssertions
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState as ITrustProviderListState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
@@ -49,7 +50,7 @@ class TrustProviderListState(
     val decryptionCache: TrustProviderListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : ITrustProviderListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val trustProviderListNote = cache.getOrCreateAddressableNote(getTrustProviderListAddress())
 
@@ -79,7 +80,7 @@ class TrustProviderListState(
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveUserRankProvider: StateFlow<ServiceProviderTag?> =
+    override val liveUserRankProvider: StateFlow<ServiceProviderTag?> =
         liveTrustProviderList
             .map {
                 it.firstOrNull { it.service == ProviderTypes.rank }
@@ -97,7 +98,7 @@ class TrustProviderListState(
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveUserFollowerCount: StateFlow<ServiceProviderTag?> =
+    override val liveUserFollowerCount: StateFlow<ServiceProviderTag?> =
         liveTrustProviderList
             .map { tagList ->
                 tagList.firstOrNull { it.service == ProviderTypes.followerCount }

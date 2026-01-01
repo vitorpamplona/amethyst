@@ -136,15 +136,3 @@ class UserCardsCache : UserDependencies {
             }
         }.flowOn(Dispatchers.IO)
 }
-
-// Placeholder for TrustProviderListState - will be properly extracted later
-// For now, this allows UserCardsCache to compile
-interface TrustProviderListState {
-    val liveUserRankProvider: kotlinx.coroutines.flow.StateFlow<ServiceProviderTag?>
-    val liveUserFollowerCount: kotlinx.coroutines.flow.StateFlow<ServiceProviderTag?>
-}
-
-// Placeholder for ServiceProviderTag
-interface ServiceProviderTag {
-    val pubkey: String
-}

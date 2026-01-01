@@ -18,25 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
+package com.vitorpamplona.quartz.nip57Zaps
 
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+/**
+ * Interface for private zap decryption cache.
+ * Used by Note.kt for checking private zap status.
+ */
+interface IPrivateZapsDecryptionCache {
+    fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
 
-import androidx.compose.runtime.Stable
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toPersistentList
-
-@Stable
-data class PeopleList(
-    val identifierTag: String,
-    val title: String,
-    val description: String?,
-    val image: String?,
-    val privateMembers: Set<User> = emptySet(),
-    val publicMembers: Set<User> = emptySet(),
-) {
-    val privateMembersList: ImmutableList<User> = privateMembers.toPersistentList()
-    val publicMembersList: ImmutableList<User> = publicMembers.toPersistentList()
+    suspend fun decryptPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
 }

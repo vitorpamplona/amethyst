@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class FilterByListParams(
     val isHiddenList: Boolean,
     val followLists: IFeedTopNavFilter?,
-    val hiddenLists: HiddenUsersState.LiveHiddenUsers,
+    val hiddenLists: LiveHiddenUsers,
     val now: Long = TimeUtils.oneMinuteFromNow(),
 ) {
     fun isNotHidden(userHex: String) = !(hiddenLists.hiddenUsers.contains(userHex) || hiddenLists.spammers.contains(userHex))
@@ -87,7 +87,7 @@ class FilterByListParams(
 
         fun create(
             followLists: IFeedTopNavFilter?,
-            hiddenUsers: HiddenUsersState.LiveHiddenUsers,
+            hiddenUsers: LiveHiddenUsers,
         ): FilterByListParams =
             FilterByListParams(
                 isHiddenList = followLists is MutedAuthorsByOutboxTopNavFilter || followLists is MutedAuthorsByProxyTopNavFilter,

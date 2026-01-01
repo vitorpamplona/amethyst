@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
@@ -341,7 +342,7 @@ class AccountViewModel(
 
     fun isNoteAcceptable(
         note: Note,
-        accountChoices: HiddenUsersState.LiveHiddenUsers,
+        accountChoices: LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
         checkNotInMainThread()

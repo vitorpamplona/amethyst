@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.nip51Lists
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 
@@ -52,33 +53,25 @@ class HiddenUsersState(
 ) {
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
 
-    @Immutable
-    class LiveHiddenUsers(
-        val hiddenUsers: Set<String>,
-        val spammers: Set<String>,
-        val hiddenWords: Set<String>,
-        val showSensitiveContent: Boolean?,
-    ) {
-        // speeds up isHidden calculations
-        val hiddenUsersHashCodes = hiddenUsers.mapTo(HashSet()) { it.hashCode() }
-        val spammersHashCodes = spammers.mapTo(HashSet()) { it.hashCode() }
-        val hiddenWordsCase = hiddenWords.map { DualCase(it.lowercase(), it.uppercase()) }
-
-        fun isUserHidden(userHex: HexKey) = hiddenUsers.contains(userHex) || spammers.contains(userHex)
-    }
-
     suspend fun assembleLiveHiddenUsers(
         blockList: List<MuteTag>,
         muteList: List<MuteTag>,
         transientHiddenUsers: Set<String>,
         showSensitiveContent: Boolean?,
-    ): LiveHiddenUsers =
-        LiveHiddenUsers(
-            hiddenUsers = blockList.mapNotNullTo(mutableSetOf()) { if (it is UserTag) it.pubKey else null } + muteList.mapNotNull { if (it is UserTag) it.pubKey else null },
-            hiddenWords = blockList.mapNotNullTo(mutableSetOf()) { if (it is WordTag) it.word else null } + muteList.mapNotNull { if (it is WordTag) it.word else null },
-            spammers = transientHiddenUsers,
+    ): LiveHiddenUsers {
+        val hiddenUsers = blockList.mapNotNullTo(mutableSetOf()) { if (it is UserTag) it.pubKey else null } + muteList.mapNotNull { if (it is UserTag) it.pubKey else null }
+        val hiddenWords = blockList.mapNotNullTo(mutableSetOf()) { if (it is WordTag) it.word else null } + muteList.mapNotNull { if (it is WordTag) it.word else null }
+
+        return LiveHiddenUsers(
             showSensitiveContent = showSensitiveContent,
+            hiddenWordsCase = hiddenWords.map { DualCase(it.lowercase(), it.uppercase()) },
+            hiddenUsersHashCodes = hiddenUsers.mapTo(HashSet()) { it.hashCode() },
+            spammersHashCodes = transientHiddenUsers.mapTo(HashSet()) { it.hashCode() },
+            hiddenUsers = hiddenUsers,
+            spammers = transientHiddenUsers,
+            hiddenWords = hiddenWords,
         )
+    }
 
     val flow: StateFlow<LiveHiddenUsers> =
         combineTransform(
@@ -102,7 +95,15 @@ class HiddenUsersState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                LiveHiddenUsers(emptySet(), emptySet(), emptySet(), null),
+                LiveHiddenUsers(
+                    showSensitiveContent = null,
+                    hiddenWordsCase = emptyList(),
+                    hiddenUsersHashCodes = emptySet(),
+                    spammersHashCodes = emptySet(),
+                    hiddenUsers = emptySet(),
+                    spammers = emptySet(),
+                    hiddenWords = emptySet(),
+                ),
             )
 
     fun resetTransientUsers() {

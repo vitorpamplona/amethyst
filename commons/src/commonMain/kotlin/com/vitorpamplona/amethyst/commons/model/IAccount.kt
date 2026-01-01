@@ -24,8 +24,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.utils.DualCase
 
 /**
@@ -41,16 +40,6 @@ interface INwcSignerState {
 }
 
 /**
- * Interface for private zap decryption cache.
- * Used by Note.kt for checking private zap status.
- */
-interface IPrivateZapsDecryptionCache {
-    fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
-
-    suspend fun decryptPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
-}
-
-/**
  * Hidden content settings for filtering notes.
  * Used by Note.isHiddenFor() to check if content should be hidden.
  */
@@ -59,7 +48,13 @@ data class LiveHiddenUsers(
     val hiddenWordsCase: List<DualCase>,
     val hiddenUsersHashCodes: Set<Int>,
     val spammersHashCodes: Set<Int>,
-)
+    // Raw sets for amethyst-specific usage
+    val hiddenUsers: Set<String> = emptySet(),
+    val spammers: Set<String> = emptySet(),
+    val hiddenWords: Set<String> = emptySet(),
+) {
+    fun isUserHidden(userHex: String) = hiddenUsers.contains(userHex) || spammers.contains(userHex)
+}
 
 /**
  * Interface for account operations needed by Note.kt.

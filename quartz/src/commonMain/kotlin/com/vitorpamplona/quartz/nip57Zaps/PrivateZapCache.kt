@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.caches.DecryptCache
 
 class PrivateZapCache(
     signer: NostrSigner,
-) {
+) : IPrivateZapsDecryptionCache {
     private val decryptionCache =
         object : LruCache<LnZapRequestEvent, PrivateZapDecryptCache>(1000) {
             override fun create(key: LnZapRequestEvent): PrivateZapDecryptCache? {
@@ -43,9 +43,9 @@ class PrivateZapCache(
         decryptionCache.remove(event)
     }
 
-    fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent? = decryptionCache[event]?.cached()
+    override fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent? = decryptionCache[event]?.cached()
 
-    suspend fun decryptPrivateZap(event: LnZapRequestEvent) = decryptionCache[event]?.decrypt(event)
+    override suspend fun decryptPrivateZap(event: LnZapRequestEvent) = decryptionCache[event]?.decrypt(event)
 }
 
 class PrivateZapDecryptCache(

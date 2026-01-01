@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.model.User
-
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
