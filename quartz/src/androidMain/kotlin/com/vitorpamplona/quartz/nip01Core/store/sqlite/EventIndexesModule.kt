@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 class EventIndexesModule(
-    val fts: FullTextSearchModule,
     val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
     val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IModule {
