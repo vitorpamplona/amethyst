@@ -38,6 +38,9 @@ class SqlSelectionBuilder(
      */
     private fun buildCondition(cond: Condition): String =
         when (cond) {
+            is Condition.Raw -> {
+                cond.condition
+            }
             is Condition.Equals -> {
                 if (cond.value == null) {
                     "${cond.column} IS NULL"

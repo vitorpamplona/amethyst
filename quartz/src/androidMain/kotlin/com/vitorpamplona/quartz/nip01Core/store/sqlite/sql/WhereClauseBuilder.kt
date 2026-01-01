@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite.sql
 class WhereClauseBuilder {
     private val conditions = mutableListOf<Condition>()
 
+    fun raw(condition: String) = apply { conditions.add(Condition.Raw(condition)) }
+
     fun equals(
         column: String,
         value: Any?,
