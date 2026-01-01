@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.utils.Log
@@ -44,9 +46,9 @@ import com.vitorpamplona.quartz.utils.Log
  * follow Nostr requirements (64-char hex, onion addresses) and logs errors for invalid inputs.
  */
 class Filter(
-    val ids: List<String>? = null,
-    val authors: List<String>? = null,
-    val kinds: List<Int>? = null,
+    val ids: List<HexKey>? = null,
+    val authors: List<HexKey>? = null,
+    val kinds: List<Kind>? = null,
     val tags: Map<String, List<String>>? = null,
     val tagsAll: Map<String, List<String>>? = null,
     val since: Long? = null,
