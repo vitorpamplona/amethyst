@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip78AppSpecific
 
-import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache

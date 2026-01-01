@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent

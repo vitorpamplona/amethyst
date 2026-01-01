@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip56Reports
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
+import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -32,6 +33,9 @@ import kotlinx.coroutines.flow.update
 
 class UserReportCache : UserDependencies {
     val receivedReportsByAuthor = MutableStateFlow(mapOf<User, Set<Note>>())
+
+    /** Tracks EOSE (End Of Stored Events) for relay subscriptions */
+    val latestEOSEs = EOSERelayList()
 
     fun addReport(note: Note) {
         val author = note.author ?: return

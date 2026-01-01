@@ -40,9 +40,9 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings

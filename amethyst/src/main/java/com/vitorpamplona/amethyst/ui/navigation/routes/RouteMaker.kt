@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.routes
 
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel

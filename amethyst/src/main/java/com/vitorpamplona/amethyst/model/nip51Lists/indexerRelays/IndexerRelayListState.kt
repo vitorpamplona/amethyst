@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays
 
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.LocalCache

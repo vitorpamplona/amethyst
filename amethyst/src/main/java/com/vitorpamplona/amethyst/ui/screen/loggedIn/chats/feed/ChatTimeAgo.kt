@@ -25,7 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP

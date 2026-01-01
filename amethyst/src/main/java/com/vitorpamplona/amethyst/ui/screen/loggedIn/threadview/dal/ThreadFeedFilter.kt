@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LevelSignature
 import com.vitorpamplona.amethyst.model.ThreadAssembler

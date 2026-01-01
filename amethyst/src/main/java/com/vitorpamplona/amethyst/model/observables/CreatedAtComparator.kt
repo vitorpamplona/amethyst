@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.observables
 
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Note
 
 object CreatedAtComparator : Comparator<Note> {
     override fun compare(

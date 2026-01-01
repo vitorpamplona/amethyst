@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.LocalCache.getOrCreateAddressableNoteInternal
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger

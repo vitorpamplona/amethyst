@@ -73,7 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus

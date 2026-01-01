@@ -74,7 +74,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull

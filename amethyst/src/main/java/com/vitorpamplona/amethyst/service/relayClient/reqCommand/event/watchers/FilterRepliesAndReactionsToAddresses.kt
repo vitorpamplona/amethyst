@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

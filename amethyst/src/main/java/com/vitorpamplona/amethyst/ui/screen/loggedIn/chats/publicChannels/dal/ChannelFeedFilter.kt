@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
 
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter

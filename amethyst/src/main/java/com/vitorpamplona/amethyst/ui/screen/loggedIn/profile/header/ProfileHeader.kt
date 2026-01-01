@@ -49,7 +49,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

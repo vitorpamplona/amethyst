@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.makePublicChatsFilter

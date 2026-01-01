@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal
 
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent

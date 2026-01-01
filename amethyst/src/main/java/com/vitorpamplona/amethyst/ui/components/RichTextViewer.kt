@@ -62,8 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment

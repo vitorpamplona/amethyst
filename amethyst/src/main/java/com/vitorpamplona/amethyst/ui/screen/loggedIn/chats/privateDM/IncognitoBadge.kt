@@ -25,7 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.theme.IncognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer

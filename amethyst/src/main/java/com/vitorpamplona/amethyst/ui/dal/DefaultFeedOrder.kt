@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Card
 
 val DefaultFeedOrder: Comparator<Note> =

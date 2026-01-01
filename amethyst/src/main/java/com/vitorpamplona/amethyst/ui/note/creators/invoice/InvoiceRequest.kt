@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness

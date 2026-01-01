@@ -56,7 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery

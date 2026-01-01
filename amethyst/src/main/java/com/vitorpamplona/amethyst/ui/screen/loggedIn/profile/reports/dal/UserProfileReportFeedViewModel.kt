@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 
 class UserProfileReportFeedViewModel(

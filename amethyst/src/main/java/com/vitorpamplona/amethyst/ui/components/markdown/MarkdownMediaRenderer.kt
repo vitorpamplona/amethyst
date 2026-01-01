@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.ui.MediaRenderer
 import com.halilibo.richtext.ui.string.InlineContent
 import com.halilibo.richtext.ui.string.RichTextString
-import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.HashtagIcon

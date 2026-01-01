@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components.toasts
 
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow

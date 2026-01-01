@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReports
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel

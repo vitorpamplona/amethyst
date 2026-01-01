@@ -24,7 +24,7 @@ import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME

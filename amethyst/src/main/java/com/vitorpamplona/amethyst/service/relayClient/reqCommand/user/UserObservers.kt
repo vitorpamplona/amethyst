@@ -25,10 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.NoteState
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.UserState
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel

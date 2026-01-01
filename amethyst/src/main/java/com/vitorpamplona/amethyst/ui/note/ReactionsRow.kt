@@ -99,8 +99,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions

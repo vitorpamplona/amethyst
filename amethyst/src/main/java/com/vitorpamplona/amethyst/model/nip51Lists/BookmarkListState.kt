@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists
 
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent

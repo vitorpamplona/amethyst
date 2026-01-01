@@ -26,8 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent

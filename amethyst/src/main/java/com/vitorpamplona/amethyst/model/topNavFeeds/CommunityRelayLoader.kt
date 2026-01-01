@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

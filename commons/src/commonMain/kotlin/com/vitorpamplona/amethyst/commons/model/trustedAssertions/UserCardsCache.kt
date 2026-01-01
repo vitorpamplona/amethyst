@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.trustedAssertions
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
+import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,9 @@ import kotlinx.coroutines.flow.update
 
 class UserCardsCache : UserDependencies {
     val receivedCards = MutableStateFlow(mapOf<User, AddressableNote>())
+
+    /** Tracks EOSE (End Of Stored Events) for relay subscriptions */
+    val latestEOSEs = EOSERelayList()
 
     fun addCard(note: AddressableNote) {
         val author = note.author ?: return

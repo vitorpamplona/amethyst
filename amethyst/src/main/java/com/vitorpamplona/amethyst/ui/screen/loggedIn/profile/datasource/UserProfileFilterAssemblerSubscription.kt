@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 
 @Composable
