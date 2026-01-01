@@ -223,7 +223,7 @@ class QueryAssemblerTest {
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_dtag_idx (kind=?)
+            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_created (kind=?)
             │   └── USE TEMP B-TREE FOR ORDER BY
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -254,7 +254,7 @@ class QueryAssemblerTest {
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_dtag_idx (kind=?)
+            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_created (kind=?)
             │   └── USE TEMP B-TREE FOR ORDER BY
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -457,7 +457,7 @@ class QueryAssemblerTest {
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_dtag_idx (kind=? AND pubkey=?)
+            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_created (kind=? AND pubkey=?)
             │   └── USE TEMP B-TREE FOR ORDER BY
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
