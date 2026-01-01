@@ -69,8 +69,8 @@ class EventIndexesModule(
         // queries by limit (latest records), since, until (sync all) alone
         db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at DESC, id)")
 
-        // need to check if this is actually needed.
-        db.execSQL("CREATE INDEX query_by_created_at_kind_key  ON event_headers (created_at DESC, kind, pubkey)")
+        // queries by kind + pubkey, but not d-tag, even if they are replaceables and addressables, by date.
+        db.execSQL("CREATE INDEX query_by_kind_pubkey_created  ON event_headers (kind, pubkey, created_at DESC)")
 
         // makes deletions on the event_header fast
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
