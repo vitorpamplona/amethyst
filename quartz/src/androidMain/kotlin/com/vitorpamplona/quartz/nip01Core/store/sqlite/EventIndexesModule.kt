@@ -65,7 +65,6 @@ class EventIndexesModule(
 
         // queries by ID (load events)
         db.execSQL("CREATE UNIQUE INDEX event_headers_id       ON event_headers (id)")
-        db.execSQL("CREATE INDEX query_by_kind_pubkey_dtag_idx ON event_headers (kind, pubkey, d_tag)")
         db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at DESC, id)")
 
         // need to check if this is actually needed.
