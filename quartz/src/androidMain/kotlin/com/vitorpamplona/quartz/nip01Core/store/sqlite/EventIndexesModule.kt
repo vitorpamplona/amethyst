@@ -72,6 +72,7 @@ class EventIndexesModule(
         // need to check if this is actually needed.
         db.execSQL("CREATE INDEX query_by_created_at_kind_key  ON event_headers (created_at DESC, kind, pubkey)")
 
+        // makes deletions on the event_header fast
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
 
         // This is a very slow index to build (half the insert time goes here) but it is extremely effective.
