@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -45,6 +46,7 @@ sealed class AccountState {
     ) : AccountState()
 }
 
+@Stable
 class AccountManager {
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
