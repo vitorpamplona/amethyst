@@ -158,6 +158,7 @@
     <string name="record_a_message">Nagraj wiadomość</string>
     <string name="record_a_message_title">Nagrywanie wiadomości</string>
     <string name="record_a_message_description">Kliknij i przytrzymaj aby nagrać wiadomość</string>
+    <string name="re_record">Nagraj ponownie</string>
     <string name="recording_indicator_description">Nagrywanie</string>
     <string name="recording_indicator_with_time">Nagrywanie %1$s</string>
     <string name="uploading">Wgrywanie…</string>
