@@ -86,7 +86,7 @@ class WhereClauseBuilder {
     fun and(block: WhereClauseBuilder.() -> Unit) =
         apply {
             val builder = WhereClauseBuilder().apply(block)
-            val builtCondition = builder.build()
+            val builtCondition = builder.buildAnd()
             if (builtCondition != null) {
                 conditions.add(builtCondition)
             }
@@ -95,22 +95,29 @@ class WhereClauseBuilder {
     fun or(block: WhereClauseBuilder.() -> Unit) =
         apply {
             val builder = WhereClauseBuilder().apply(block)
-            val builtCondition = builder.build()
+            val builtCondition = builder.buildOr()
             if (builtCondition != null) {
                 conditions.add(builtCondition)
             }
         }
 
-    fun build(): Condition? =
+    fun buildAnd(): Condition? =
         when (conditions.size) {
             0 -> null
             1 -> conditions.first()
             else -> Condition.And(conditions.toList())
         }
+
+    fun buildOr(): Condition? =
+        when (conditions.size) {
+            0 -> null
+            1 -> conditions.first()
+            else -> Condition.Or(conditions.toList())
+        }
 }
 
 fun where(block: WhereClauseBuilder.() -> Unit): WhereClause {
-    val condition = WhereClauseBuilder().apply(block).build() ?: Condition.And(emptyList())
+    val condition = WhereClauseBuilder().apply(block).buildAnd() ?: Condition.And(emptyList())
     return SqlSelectionBuilder(condition).build()
 }
 
