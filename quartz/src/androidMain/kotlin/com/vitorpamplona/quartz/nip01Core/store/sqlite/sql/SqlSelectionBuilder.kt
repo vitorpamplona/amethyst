@@ -39,12 +39,20 @@ class SqlSelectionBuilder(
     private fun buildCondition(cond: Condition): String =
         when (cond) {
             is Condition.Equals -> {
-                selectionArgs.add(cond.value.toString())
-                "${cond.column} = ?"
+                if (cond.value == null) {
+                    "${cond.column} IS NULL"
+                } else {
+                    selectionArgs.add(cond.value.toString())
+                    "${cond.column} = ?"
+                }
             }
             is Condition.NotEquals -> {
-                selectionArgs.add(cond.value.toString())
-                "${cond.column} != ?"
+                if (cond.value == null) {
+                    "${cond.column} IS NULL"
+                } else {
+                    selectionArgs.add(cond.value.toString())
+                    "${cond.column} != ?"
+                }
             }
             is Condition.GreaterThan -> {
                 selectionArgs.add(cond.value.toString())
