@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.collection.LruCache
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.service.relays.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 

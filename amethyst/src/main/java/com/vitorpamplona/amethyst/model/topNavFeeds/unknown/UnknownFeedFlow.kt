@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import kotlinx.coroutines.flow.FlowCollector

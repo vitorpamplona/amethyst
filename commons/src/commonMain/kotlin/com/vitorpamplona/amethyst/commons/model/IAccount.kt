@@ -1,0 +1,89 @@
+/**
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.model
+
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.utils.DualCase
+
+/**
+ * Interface for NIP-47 wallet connect signer state.
+ * Used by Note.kt for checking NWC payment status.
+ */
+interface INwcSignerState {
+    suspend fun decryptResponse(event: LnZapPaymentResponseEvent): Response?
+
+    suspend fun decryptRequest(event: LnZapPaymentRequestEvent): Request?
+
+    fun isNIP47Author(pubKey: String?): Boolean
+}
+
+/**
+ * Interface for private zap decryption cache.
+ * Used by Note.kt for checking private zap status.
+ */
+interface IPrivateZapsDecryptionCache {
+    fun cachedPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
+
+    suspend fun decryptPrivateZap(event: LnZapRequestEvent): LnZapPrivateEvent?
+}
+
+/**
+ * Hidden content settings for filtering notes.
+ * Used by Note.isHiddenFor() to check if content should be hidden.
+ */
+data class LiveHiddenUsers(
+    val showSensitiveContent: Boolean?,
+    val hiddenWordsCase: List<DualCase>,
+    val hiddenUsersHashCodes: Set<Int>,
+    val spammersHashCodes: Set<Int>,
+)
+
+/**
+ * Interface for account operations needed by Note.kt.
+ * Abstracts Android-specific Account class for use in commons.
+ */
+interface IAccount {
+    /** NIP-47 wallet connect state for payment verification */
+    val nip47SignerState: INwcSignerState
+
+    /** Private zaps decryption cache */
+    val privateZapsDecryptionCache: IPrivateZapsDecryptionCache
+
+    /** Current user's profile */
+    fun userProfile(): User
+
+    /** Whether account has write permissions */
+    fun isWriteable(): Boolean
+
+    /** Current user's public key */
+    val pubKey: String
+
+    /** Content filter settings */
+    val showSensitiveContent: Boolean?
+    val hiddenWordsCase: List<DualCase>
+    val hiddenUsersHashCodes: Set<Int>
+    val spammersHashCodes: Set<Int>
+}

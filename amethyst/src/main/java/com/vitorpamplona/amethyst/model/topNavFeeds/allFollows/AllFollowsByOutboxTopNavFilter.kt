@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader

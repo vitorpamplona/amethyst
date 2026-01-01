@@ -20,4 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 interface IFeedTopNavPerRelayFilterSet

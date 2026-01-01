@@ -18,16 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
-import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.service.replace
-import com.vitorpamplona.amethyst.ui.note.toShortDisplay
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
+import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
+import com.vitorpamplona.amethyst.commons.util.replace
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
@@ -110,6 +109,7 @@ class AddressableNote(
 @Stable
 open class Note(
     val idHex: String,
+    private val cacheProvider: ICacheProvider? = null,
 ) : NotesGatherer {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
@@ -200,11 +200,11 @@ open class Note(
         val communityPostRelays =
             when (noteEvent) {
                 is CommunityDefinitionEvent -> noteEvent.relayUrls().ifEmpty { null }?.toSet()
-                is IsInPublicChatChannel -> LocalCache.getAnyChannel(this)?.relays()
+                is IsInPublicChatChannel -> cacheProvider?.getAnyChannel(this)?.relays()
                 else -> null
             }
 
-        if (!communityPostRelays.isNullOrEmpty()) return communityPostRelays.firstOrNull()
+        if (!communityPostRelays.isNullOrEmpty()) return (communityPostRelays as? Collection<NormalizedRelayUrl?>)?.firstOrNull()
 
         val currentOutbox = author?.outboxRelays()?.toSet()
 
@@ -469,7 +469,7 @@ open class Note(
     private suspend fun isPaidByCalculation(
         zapPayments: List<Pair<Note, Note?>>,
         afterTimeInSeconds: Long,
-        account: Account,
+        account: IAccount,
     ): Boolean {
         if (zapPayments.isEmpty()) {
             return false
@@ -497,7 +497,7 @@ open class Note(
         option: Int?,
         user: User,
         afterTimeInSeconds: Long,
-        account: Account,
+        account: IAccount,
         zapEvents: Map<Note, Note?>,
     ): Boolean {
         if (zapEvents.isEmpty()) {
@@ -555,7 +555,7 @@ open class Note(
     suspend fun isZappedBy(
         user: User,
         afterTimeInSeconds: Long,
-        account: Account,
+        account: IAccount,
     ): Boolean {
         val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
         if (first) return true
@@ -569,7 +569,7 @@ open class Note(
         option: Int?,
         user: User,
         afterTimeInSeconds: Long,
-        account: Account,
+        account: IAccount,
     ): Boolean = isZappedByCalculation(option, user, afterTimeInSeconds, account, zaps)
 
     fun getReactionBy(user: User): String? =
@@ -615,7 +615,7 @@ open class Note(
         startAmount: BigDecimal,
         paidInvoiceSet: LinkedHashSet<String>,
         zapPayments: List<Pair<Note, Note?>>,
-        signerState: NwcSignerState,
+        signerState: INwcSignerState,
     ): BigDecimal {
         if (zapPayments.isEmpty()) {
             return startAmount
@@ -643,7 +643,7 @@ open class Note(
     private suspend fun processZapAmountFromResponse(
         paymentRequest: Note,
         paymentResponse: Note?,
-        signerState: NwcSignerState,
+        signerState: INwcSignerState,
     ): InvoiceAmount? {
         val nwcRequest = paymentRequest.event as? LnZapPaymentRequestEvent
         val nwcResponse = paymentResponse?.event as? LnZapPaymentResponseEvent
@@ -667,7 +667,7 @@ open class Note(
     private suspend fun processZapAmountFromResponse(
         nwcRequest: LnZapPaymentRequestEvent,
         nwcResponse: LnZapPaymentResponseEvent,
-        signerState: NwcSignerState,
+        signerState: INwcSignerState,
     ): InvoiceAmount? {
         // if we can decrypt the reply
         return signerState.decryptResponse(nwcResponse)?.let { noteEvent ->
@@ -701,7 +701,7 @@ open class Note(
         }
     }
 
-    suspend fun zappedAmountWithNWCPayments(signerState: NwcSignerState): BigDecimal {
+    suspend fun zappedAmountWithNWCPayments(signerState: INwcSignerState): BigDecimal {
         if (zapPayments.isEmpty()) {
             return zapsAmount
         }
@@ -829,7 +829,7 @@ open class Note(
         zapsAmount = BigDecimal.ZERO
     }
 
-    fun isHiddenFor(accountChoices: HiddenUsersState.LiveHiddenUsers): Boolean {
+    fun isHiddenFor(accountChoices: LiveHiddenUsers): Boolean {
         val thisEvent = event ?: return false
         val hash = thisEvent.pubKey.hashCode()
 

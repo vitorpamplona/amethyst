@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.trustedAssertions
 
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag

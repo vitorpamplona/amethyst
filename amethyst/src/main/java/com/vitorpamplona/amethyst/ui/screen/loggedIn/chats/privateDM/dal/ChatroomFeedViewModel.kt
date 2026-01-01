@@ -24,8 +24,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
 import com.vitorpamplona.amethyst.ui.dal.ListChange
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState

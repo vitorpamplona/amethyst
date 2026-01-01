@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import android.util.LruCache
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ui.note.njumpLink

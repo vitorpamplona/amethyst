@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import com.vitorpamplona.quartz.utils.cache.CacheOperations
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentSkipListMap

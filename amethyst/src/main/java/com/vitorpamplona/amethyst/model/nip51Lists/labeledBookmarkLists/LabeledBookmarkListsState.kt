@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.model.eventIdSet
 import com.vitorpamplona.amethyst.model.events

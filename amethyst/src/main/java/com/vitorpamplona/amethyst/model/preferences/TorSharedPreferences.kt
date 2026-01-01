@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.booleanPreferencesKey

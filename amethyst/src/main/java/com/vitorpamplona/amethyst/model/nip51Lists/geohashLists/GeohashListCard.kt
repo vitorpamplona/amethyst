@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.geohashLists
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 data class GeohashListCard(
     val relays: List<String>,
 )

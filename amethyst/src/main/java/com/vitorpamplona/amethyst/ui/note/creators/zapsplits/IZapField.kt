@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.text.input.TextFieldValue
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 
 interface IZapField {
     val forwardZapTo: MutableState<SplitBuilder<User>>

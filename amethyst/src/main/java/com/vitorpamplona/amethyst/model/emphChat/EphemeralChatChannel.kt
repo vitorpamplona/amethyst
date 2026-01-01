@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.emphChat
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId

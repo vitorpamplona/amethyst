@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.relayLists
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 

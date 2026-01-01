@@ -40,8 +40,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarks
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollows
 import com.vitorpamplona.amethyst.ui.actions.EditPostView

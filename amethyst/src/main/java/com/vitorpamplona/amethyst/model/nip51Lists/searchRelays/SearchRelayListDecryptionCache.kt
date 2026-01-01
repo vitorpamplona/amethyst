@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.searchRelays
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+
+
 import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.GenericRelayListCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent

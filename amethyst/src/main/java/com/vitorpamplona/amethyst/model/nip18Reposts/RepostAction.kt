@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip18Reposts
 
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent

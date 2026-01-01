@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.trustedAssertions
+package com.vitorpamplona.amethyst.commons.model.trustedAssertions
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserDependencies
-import com.vitorpamplona.amethyst.service.relays.EOSERelayList
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.UserDependencies
+import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
 import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,16 +32,9 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import java.text.NumberFormat
 
 class UserCardsCache : UserDependencies {
     val receivedCards = MutableStateFlow(mapOf<User, AddressableNote>())
-
-    /**
-     * This assembler saves the EOSE per user key. That EOSE includes their metadata, etc
-     * and reports, but only from trusted accounts (follows of all logged in users).
-     */
-    var latestEOSEs: EOSERelayList = EOSERelayList()
 
     fun addCard(note: AddressableNote) {
         val author = note.author ?: return
@@ -109,7 +102,7 @@ class UserCardsCache : UserDependencies {
             (it?.note?.event as? ContactCardEvent)?.rank()
         }.flowOn(Dispatchers.IO)
 
-    val formatter = NumberFormat.getInstance()
+    private val formatter = PlatformNumberFormatter()
 
     fun followerCountStrFlow(trustProviderList: TrustProviderListState) =
         combineTransform(receivedCards, trustProviderList.liveUserFollowerCount) { cards, provider ->
@@ -137,9 +130,21 @@ class UserCardsCache : UserDependencies {
             val value = (it?.note?.event as? ContactCardEvent)?.followerCount()
 
             if (value != null && value > 0) {
-                formatter.format(value)
+                formatter.format(value.toLong())
             } else {
                 "--"
             }
         }.flowOn(Dispatchers.IO)
+}
+
+// Placeholder for TrustProviderListState - will be properly extracted later
+// For now, this allows UserCardsCache to compile
+interface TrustProviderListState {
+    val liveUserRankProvider: kotlinx.coroutines.flow.StateFlow<ServiceProviderTag?>
+    val liveUserFollowerCount: kotlinx.coroutines.flow.StateFlow<ServiceProviderTag?>
+}
+
+// Placeholder for ServiceProviderTag
+interface ServiceProviderTag {
+    val pubkey: String
 }
