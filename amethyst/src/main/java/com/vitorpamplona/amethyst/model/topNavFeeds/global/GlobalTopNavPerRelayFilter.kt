@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.global
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
 

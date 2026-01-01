@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip72Communities
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent

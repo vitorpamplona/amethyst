@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.serverList
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS

@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.fonfon.kgeohash.GeoHash
 
 fun compute50kmLine(geoHash: GeoHash): List<String> {

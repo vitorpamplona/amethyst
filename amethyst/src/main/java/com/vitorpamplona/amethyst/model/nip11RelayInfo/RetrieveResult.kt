@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.utils.TimeUtils
 

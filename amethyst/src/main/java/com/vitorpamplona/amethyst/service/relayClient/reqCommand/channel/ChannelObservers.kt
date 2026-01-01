@@ -24,9 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ChannelState
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

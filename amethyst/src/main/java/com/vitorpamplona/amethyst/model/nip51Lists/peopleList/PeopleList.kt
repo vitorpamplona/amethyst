@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.model.User
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toPersistentList
 

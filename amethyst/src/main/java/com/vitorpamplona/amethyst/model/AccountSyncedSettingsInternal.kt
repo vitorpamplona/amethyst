@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent

@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.trustedAssertions
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.serviceProviderSet
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.serviceProviders

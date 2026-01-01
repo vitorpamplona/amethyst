@@ -20,14 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent

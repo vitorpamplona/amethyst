@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 
 class UserProfileFollowsUserFeedViewModel(

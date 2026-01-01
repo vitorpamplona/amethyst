@@ -20,11 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.trustedAssertions
 
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState as ITrustProviderListState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.tags.ServiceProviderTag
@@ -43,6 +42,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState as ITrustProviderListState
 
 class TrustProviderListState(
     val signer: NostrSigner,

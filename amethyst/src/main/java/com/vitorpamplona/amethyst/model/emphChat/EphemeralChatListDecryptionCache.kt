@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.emphChat
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.roomSet
 import com.vitorpamplona.quartz.experimental.ephemChat.list.rooms

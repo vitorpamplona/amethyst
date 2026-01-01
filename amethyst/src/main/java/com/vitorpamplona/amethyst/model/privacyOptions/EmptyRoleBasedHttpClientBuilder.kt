@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.privacyOptions
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 

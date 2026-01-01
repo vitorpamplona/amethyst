@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag

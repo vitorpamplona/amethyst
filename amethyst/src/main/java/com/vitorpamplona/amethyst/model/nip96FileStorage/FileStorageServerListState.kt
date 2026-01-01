@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.nip96FileStorage
 
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import kotlinx.coroutines.CoroutineScope

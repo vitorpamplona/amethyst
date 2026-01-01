@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal
 
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder

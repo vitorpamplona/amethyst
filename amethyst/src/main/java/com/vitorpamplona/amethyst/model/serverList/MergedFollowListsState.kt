@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.serverList
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState

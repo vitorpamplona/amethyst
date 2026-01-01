@@ -20,13 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists
 
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

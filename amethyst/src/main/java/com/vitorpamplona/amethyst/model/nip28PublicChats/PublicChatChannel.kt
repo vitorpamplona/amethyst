@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.model.nip28PublicChats
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists

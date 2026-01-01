@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-
-
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 
 object UnknownTopNavPerRelayFilterSet : IFeedTopNavPerRelayFilterSet

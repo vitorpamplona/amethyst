@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
