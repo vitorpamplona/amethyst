@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.utils.Log
  * - authors: Optional list of author public keys (must be 64 characters).
  * - kinds: Optional list of event kinds to include.
  * - tags: Optional map of tag names to values arrays (common tags like 'p', 'e', 'a' are validated).
+ * - tagsAll: Optional map of tag names to values arrays that must all match (common tags like 'p', 'e', 'a' are validated).
  * - since: Optional timestamp for filtering events with publication time ≥ this value.
  * - until: Optional timestamp for filtering events with publication time ≤ this value.
  * - limit: Optional maximum number of events to request.
