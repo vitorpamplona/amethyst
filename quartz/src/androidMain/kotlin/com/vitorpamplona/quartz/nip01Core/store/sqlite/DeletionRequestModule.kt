@@ -51,13 +51,11 @@ class DeletionRequestModule(
                 SELECT RAISE(ABORT, 'blocked: a deletion event exists')
                 WHERE EXISTS (
                     SELECT 1 FROM event_tags
-                    INNER JOIN event_headers
-                    ON event_headers.row_id = event_tags.event_header_row_id
                     WHERE
                         event_tags.tag_hash IN (NEW.etag_hash, NEW.atag_hash) AND
-                        event_tags.created_at >= NEW.created_at AND
-                        event_headers.kind = 5 AND
-                        event_headers.pubkey_owner_hash = NEW.pubkey_owner_hash
+                        event_tags.kind = 5 AND
+                        event_tags.pubkey_hash = NEW.pubkey_owner_hash AND
+                        event_tags.created_at >= NEW.created_at
                 );
             END;
             """.trimIndent(),

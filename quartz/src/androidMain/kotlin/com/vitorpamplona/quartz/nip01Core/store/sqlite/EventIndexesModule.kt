@@ -57,6 +57,8 @@ class EventIndexesModule(
                 event_header_row_id INTEGER NOT NULL,
                 tag_hash INTEGER NOT NULL,
                 created_at INTEGER NOT NULL,
+                kind INTEGER NOT NULL,
+                pubkey_hash INTEGER NOT NULL,
                 FOREIGN KEY (event_header_row_id) REFERENCES event_headers(row_id) ON DELETE CASCADE
             )
             """.trimIndent(),
@@ -74,8 +76,10 @@ class EventIndexesModule(
         // makes deletions on the event_header fast
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
 
-        // This is a very slow index to build (half the insert time goes here) but it is extremely effective.
-        db.execSQL("CREATE INDEX query_by_tags_hash            ON event_tags (tag_hash, created_at DESC)")
+        // This is a very slow index to build (80% of the insert time goes here) but it is extremely effective.
+        db.execSQL("CREATE INDEX query_by_tags_hash              ON event_tags (tag_hash, created_at DESC)")
+        db.execSQL("CREATE INDEX query_by_tags_hash_kind         ON event_tags (tag_hash, kind, created_at DESC)")
+        db.execSQL("CREATE INDEX query_by_tags_hash_kind_pubkey  ON event_tags (tag_hash, kind, pubkey_hash, created_at DESC)")
 
         // Prevent updates to maintain immutability
         db.execSQL(
@@ -117,9 +121,9 @@ class EventIndexesModule(
     val sqlInsertTags =
         """
         INSERT OR ROLLBACK INTO event_tags
-            (event_header_row_id, tag_hash, created_at)
+            (event_header_row_id, tag_hash, created_at, kind, pubkey_hash)
         VALUES
-            (?,?,?)
+            (?,?,?,?,?)
         """.trimIndent()
 
     fun insert(
@@ -178,6 +182,8 @@ class EventIndexesModule(
             stmtTags.bindLong(1, headerId)
             stmtTags.bindLong(2, it)
             stmtTags.bindLong(3, event.createdAt)
+            stmtTags.bindLong(4, kindLong)
+            stmtTags.bindLong(5, pubkeyHash)
             stmtTags.executeInsert()
         }
 

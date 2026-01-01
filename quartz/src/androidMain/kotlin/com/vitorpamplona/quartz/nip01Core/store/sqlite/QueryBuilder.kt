@@ -24,6 +24,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -338,10 +339,7 @@ class QueryBuilder(
 
         val needHeaders =
             with(filter) {
-                (ids != null) ||
-                    (authors != null && authors.isNotEmpty()) ||
-                    (kinds != null && kinds.isNotEmpty()) ||
-                    (tags != null && tags.containsKey("d"))
+                (ids != null) || (tags != null && tags.containsKey("d"))
             }
 
         val hasHeaders =
@@ -440,20 +438,37 @@ class QueryBuilder(
 
                 // range search is bad but most of the time these are up the top with few elements.
                 if (reverseLookup) {
+                    filter.kinds?.let { equalsOrIn("event_tags.kind", it) }
+                    filter.authors?.let { equalsOrIn("event_tags.pubkey_hash", it.map { hasher.hash(it) }) }
+
                     filter.since?.let { greaterThanOrEquals("event_tags.created_at", it) }
                     filter.until?.let { lessThanOrEquals("event_tags.created_at", it) }
+
+                    // there are indexes for these, starting with tags.
+                    filter.tags?.forEach { (tagName, tagValues) ->
+                        if (tagName == "d") {
+                            equalsOrIn("event_headers.d_tag", tagValues)
+                        }
+                    }
                 } else {
+                    filter.kinds?.let { equalsOrIn("event_headers.kind", it) }
+                    filter.authors?.let { equalsOrIn("event_headers.pubkey", it) }
+
+                    // there are indexes for these, starting with tags.
+                    filter.tags?.forEach { (tagName, tagValues) ->
+                        if (tagName == "d") {
+                            equalsOrIn("event_headers.d_tag", tagValues)
+                        }
+                    }
+
                     filter.since?.let { greaterThanOrEquals("event_headers.created_at", it) }
                     filter.until?.let { lessThanOrEquals("event_headers.created_at", it) }
-                }
 
-                filter.kinds?.let { equalsOrIn("event_headers.kind", it) }
-                filter.authors?.let { equalsOrIn("event_headers.pubkey", it) }
-
-                // there are indexes for these, starting with tags.
-                filter.tags?.forEach { (tagName, tagValues) ->
-                    if (tagName == "d") {
-                        equalsOrIn("event_headers.d_tag", tagValues)
+                    // no need to add the replaceable because query_by_kind_pubkey_created already covers it
+                    val isAllAddressable = filter.kinds?.all { it.isAddressable() } ?: false
+                    if (isAllAddressable) {
+                        // matches unique index kind >= 30000 AND kind < 40000
+                        raw("(event_headers.kind >= 30000 AND event_headers.kind < 40000)")
                     }
                 }
 

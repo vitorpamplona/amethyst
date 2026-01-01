@@ -22,8 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
 import org.junit.After
@@ -82,13 +87,12 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "2657743813502222172") AND (event_tags.created_at >= "1750889190") AND (event_headers.kind = "5") AND (event_headers.pubkey = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d")
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags  WHERE (event_tags.tag_hash = "2657743813502222172") AND (event_tags.kind = "5") AND (event_tags.pubkey_hash = "1730514094536529999") AND (event_tags.created_at >= "1750889190")
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=? AND created_at>?)
-            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind_pubkey (tag_hash=? AND kind=? AND pubkey_hash=? AND created_at>?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -280,13 +284,12 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_headers.kind = "3") ORDER BY event_tags.created_at DESC LIMIT 30
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tags.kind = "3") ORDER BY event_tags.created_at DESC LIMIT 30
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=?)
-            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind (tag_hash=? AND kind=?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -342,13 +345,12 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_headers.kind = "3") ORDER BY event_tags.created_at DESC LIMIT 30
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tags.kind = "3") ORDER BY event_tags.created_at DESC LIMIT 30
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=?)
-            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind (tag_hash=? AND kind=?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -374,13 +376,12 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_headers.pubkey = "7c5eb72a4584fdaaeaa145b25c92ea9917704224951219dbd43acef9e91fb88d") ORDER BY event_tags.created_at DESC LIMIT 30
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tags.pubkey_hash = "1730514094536529999") ORDER BY event_tags.created_at DESC LIMIT 30
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
             │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=?)
-            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -410,14 +411,13 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_tags as event_tagsIn1 ON event_tagsIn1.event_header_row_id = event_tags.event_header_row_id AND event_tagsIn1.created_at = event_tags.created_at INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tagsIn1.tag_hash = "-6379614208644810021") AND (event_headers.kind = "1") ORDER BY event_tags.created_at DESC LIMIT 30
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_tags as event_tagsIn1 ON event_tagsIn1.event_header_row_id = event_tags.event_header_row_id AND event_tagsIn1.created_at = event_tags.created_at  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tagsIn1.tag_hash = "-6379614208644810021") AND (event_tags.kind = "1") ORDER BY event_tags.created_at DESC LIMIT 30
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=?)
-            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
-            │   ├── SEARCH event_tagsIn1 USING INDEX query_by_tags_hash (tag_hash=? AND event_header_row_id=?)
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind (tag_hash=? AND kind=?)
+            │   ├── SEARCH event_tagsIn1 USING INDEX query_by_tags_hash (tag_hash=? AND created_at=?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
@@ -519,7 +519,7 @@ class QueryAssemblerTest {
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=?)
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind (tag_hash=?)
             │   ├── SEARCH event_tagsAll0_1 USING INDEX query_by_tags_hash (tag_hash=? AND created_at=?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
@@ -548,15 +548,159 @@ class QueryAssemblerTest {
             """
             SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
             INNER JOIN (
-                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_headers.kind = "3") AND (event_headers.pubkey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c") ORDER BY event_tags.created_at DESC LIMIT 500
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tags.kind = "3") AND (event_tags.pubkey_hash = "5446767199141196776") ORDER BY event_tags.created_at DESC LIMIT 500
             ) AS filtered
             ON event_headers.row_id = filtered.row_id
             ORDER BY created_at DESC, id
             ├── CO-ROUTINE filtered
-            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash (tag_hash=?)
-            │   ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind_pubkey (tag_hash=? AND kind=? AND pubkey_hash=?)
             │   └── USE TEMP B-TREE FOR DISTINCT
             ├── SCAN filtered
+            ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            └── USE TEMP B-TREE FOR ORDER BY
+            """.trimIndent(),
+            sql,
+        )
+    }
+
+    @Test
+    fun testFollowersSinceNov2025() {
+        val sql =
+            explain(
+                Filter(
+                    kinds = listOf(ContactListEvent.KIND),
+                    tags =
+                        mapOf(
+                            "p" to listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                        ),
+                    since = 1764553447, // Nov 2025
+                ),
+            )
+        println(sql)
+        assertEquals(
+            """
+            SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
+            INNER JOIN (
+                SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags  WHERE (event_tags.tag_hash = "-4551135004136952885") AND (event_tags.kind = "3") AND (event_tags.created_at >= "1764553447")
+            ) AS filtered
+            ON event_headers.row_id = filtered.row_id
+            ORDER BY created_at DESC, id
+            ├── CO-ROUTINE filtered
+            │   ├── SEARCH event_tags USING INDEX query_by_tags_hash_kind (tag_hash=? AND kind=? AND created_at>?)
+            │   └── USE TEMP B-TREE FOR DISTINCT
+            ├── SCAN filtered
+            ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            └── USE TEMP B-TREE FOR ORDER BY
+            """.trimIndent(),
+            sql,
+        )
+    }
+
+    @Test
+    fun testAllAddressablesOfAKindDownload() {
+        val sql =
+            explain(
+                Filter(
+                    kinds = listOf(DraftWrapEvent.KIND),
+                    authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                    since = 1764553447, // Nov 2025
+                ),
+            )
+        println(sql)
+        assertEquals(
+            """
+            SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
+            INNER JOIN (
+                SELECT event_headers.row_id as row_id FROM event_headers  WHERE (event_headers.kind = "31234") AND (event_headers.pubkey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c") AND (event_headers.created_at >= "1764553447") AND ((event_headers.kind >= 30000 AND event_headers.kind < 40000))
+            ) AS filtered
+            ON event_headers.row_id = filtered.row_id
+            ORDER BY created_at DESC, id
+            ├── SEARCH event_headers USING COVERING INDEX query_by_kind_pubkey_created (kind=? AND pubkey=? AND created_at>?)
+            ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            └── USE TEMP B-TREE FOR ORDER BY
+            """.trimIndent(),
+            sql,
+        )
+    }
+
+    @Test
+    fun testReplaceablesOfMultipleKindsDownloadByDateLimit() {
+        val sql =
+            explain(
+                Filter(
+                    kinds = listOf(MetadataEvent.KIND, SearchRelayListEvent.KIND, AdvertisedRelayListEvent.KIND),
+                    authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                    limit = 20,
+                    since = 1764553447, // Nov 2025
+                ),
+            )
+        assertEquals(
+            """
+            SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
+            INNER JOIN (
+                SELECT event_headers.row_id as row_id FROM event_headers  WHERE (event_headers.kind IN ("0", "10007", "10002")) AND (event_headers.pubkey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c") AND (event_headers.created_at >= "1764553447") ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT 20
+            ) AS filtered
+            ON event_headers.row_id = filtered.row_id
+            ORDER BY created_at DESC, id
+            ├── CO-ROUTINE filtered
+            │   ├── SEARCH event_headers USING INDEX query_by_kind_pubkey_created (kind=? AND pubkey=? AND created_at>?)
+            │   └── USE TEMP B-TREE FOR ORDER BY
+            ├── SCAN filtered
+            ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            └── USE TEMP B-TREE FOR ORDER BY
+            """.trimIndent(),
+            sql,
+        )
+    }
+
+    @Test
+    fun testReplaceablesOfMultipleKindsDownload() {
+        val sql =
+            explain(
+                Filter(
+                    kinds = listOf(MetadataEvent.KIND, SearchRelayListEvent.KIND, AdvertisedRelayListEvent.KIND),
+                    authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                ),
+            )
+        assertEquals(
+            """
+            SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
+            INNER JOIN (
+                SELECT event_headers.row_id as row_id FROM event_headers  WHERE (event_headers.kind IN ("0", "10007", "10002")) AND (event_headers.pubkey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c")
+            ) AS filtered
+            ON event_headers.row_id = filtered.row_id
+            ORDER BY created_at DESC, id
+            ├── SEARCH event_headers USING COVERING INDEX query_by_kind_pubkey_created (kind=? AND pubkey=?)
+            ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
+            └── USE TEMP B-TREE FOR ORDER BY
+            """.trimIndent(),
+            sql,
+        )
+    }
+
+    @Test
+    fun testContactCardDownloadFromTrustedKeys() {
+        val sql =
+            explain(
+                Filter(
+                    kinds = listOf(ContactCardEvent.KIND),
+                    authors = listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                    tags =
+                        mapOf(
+                            "d" to listOf("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
+                        ),
+                    since = 1764553447, // Nov 2025
+                ),
+            )
+        assertEquals(
+            """
+            SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
+            INNER JOIN (
+                SELECT event_headers.row_id as row_id FROM event_headers  WHERE (event_headers.kind = "30382") AND (event_headers.pubkey = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c") AND (event_headers.d_tag = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c") AND (event_headers.created_at >= "1764553447") AND ((event_headers.kind >= 30000 AND event_headers.kind < 40000))
+            ) AS filtered
+            ON event_headers.row_id = filtered.row_id
+            ORDER BY created_at DESC, id
+            ├── SEARCH event_headers USING INDEX addressable_idx (kind=? AND pubkey=? AND d_tag=?)
             ├── SEARCH event_headers USING INTEGER PRIMARY KEY (rowid=?)
             └── USE TEMP B-TREE FOR ORDER BY
             """.trimIndent(),
