@@ -265,7 +265,7 @@ class QueryBuilder(
                     until = newFilter.until,
                     limit = newFilter.limit,
                 )
-            return db.runCount(sql.sql, sql.args)
+            return db.countIn(sql.sql, sql.args)
         }
 
         val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
@@ -646,7 +646,7 @@ class QueryBuilder(
                 if (project) {
                     append("SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers")
                 } else {
-                    append("SELECT count(*) FROM event_headers")
+                    append("SELECT row_id FROM event_headers")
                 }
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ")
