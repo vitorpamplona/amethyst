@@ -214,6 +214,10 @@ class SQLiteEventStore(
         onEach: (RawEvent) -> Unit,
     ) = queryBuilder.rawQuery(filters, readableDatabase, onEach)
 
+    fun planQuery(filter: Filter) = queryBuilder.planQuery(filter, seedModule.hasher(readableDatabase), readableDatabase)
+
+    fun planQuery(filters: List<Filter>) = queryBuilder.planQuery(filters, seedModule.hasher(readableDatabase), readableDatabase)
+
     fun count(filter: Filter): Int = queryBuilder.count(filter, readableDatabase)
 
     fun count(filters: List<Filter>): Int = queryBuilder.count(filters, readableDatabase)
