@@ -42,7 +42,6 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
-import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 
 interface UserDependencies
@@ -326,23 +325,9 @@ data class RelayInfo(
     var counter: Long,
 )
 
-@Stable
-class UserBundledRefresherFlow(
-    val user: User,
-) {
-    val stateFlow = MutableStateFlow(UserState(user))
-
-    fun invalidateData() {
-        stateFlow.tryEmit(UserState(user))
-    }
-
-    fun hasObservers() = stateFlow.subscriptionCount.value > 0
-}
-
-@Immutable
-class UserState(
-    val user: User,
-)
+// Re-export from commons.state for backwards compatibility
+typealias UserBundledRefresherFlow = com.vitorpamplona.amethyst.commons.state.UserMetadataState
+typealias UserState = com.vitorpamplona.amethyst.commons.state.UserState
 
 fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
 

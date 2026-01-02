@@ -51,7 +51,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.actions.FollowAction
+import com.vitorpamplona.amethyst.commons.state.EventCollectionState
+import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -70,7 +71,6 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -100,19 +100,28 @@ fun UserProfileScreen(
     var followersCount by remember { mutableStateOf(0) }
     var followingCount by remember { mutableStateOf(0) }
 
+    val scope = rememberCoroutineScope()
+
     // User's posts
-    val events = remember { mutableStateListOf<Event>() }
-    val seenIds = remember { mutableSetOf<String>() }
+    val eventState =
+        remember {
+            EventCollectionState<Event>(
+                getId = { it.id },
+                sortComparator = compareByDescending { it.createdAt },
+                maxSize = 200,
+                scope = scope,
+            )
+        }
+    val events by eventState.items.collectAsState()
     var postsLoading by remember { mutableStateOf(true) }
     var postsError by remember { mutableStateOf<String?>(null) }
     var retryTrigger by remember { mutableStateOf(0) }
 
     // Follow state
-    var isFollowing by remember { mutableStateOf(false) }
-    var currentContactList by remember { mutableStateOf<ContactListEvent?>(null) }
-    var isFollowLoading by remember { mutableStateOf(false) }
-    var followError by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
+    val followState =
+        remember(account) {
+            FollowState(myPubKeyHex = account?.pubKeyHex ?: "")
+        }
 
     // Load current user's contact list (for follow state)
     DisposableEffect(relayStatuses, account) {
@@ -139,8 +148,7 @@ fun UserProfileScreen(
                             forFilters: List<Filter>?,
                         ) {
                             if (event is ContactListEvent) {
-                                currentContactList = event
-                                isFollowing = event.isTaggedUser(pubKeyHex)
+                                followState.updateContactList(event, pubKeyHex)
                             }
                         }
 
@@ -165,8 +173,7 @@ fun UserProfileScreen(
         if (configuredRelays.isNotEmpty()) {
             postsLoading = true
             postsError = null
-            events.clear()
-            seenIds.clear()
+            eventState.clear()
             // Metadata subscription (kind 0)
             val metadataSubId = "profile-metadata-$pubKeyHex-${System.currentTimeMillis()}"
             relayManager.subscribe(
@@ -227,14 +234,7 @@ fun UserProfileScreen(
                             relay: NormalizedRelayUrl,
                             forFilters: List<Filter>?,
                         ) {
-                            if (event.id !in seenIds) {
-                                seenIds.add(event.id)
-                                events.add(0, event)
-                                if (events.size > 100) {
-                                    val removed = events.removeAt(events.size - 1)
-                                    seenIds.remove(removed.id)
-                                }
-                            }
+                            eventState.addItem(event)
                         }
 
                         override fun onEose(
@@ -292,26 +292,28 @@ fun UserProfileScreen(
                     Button(
                         onClick = {
                             scope.launch {
-                                isFollowLoading = true
-                                followError = null
+                                followState.setFollowLoading()
                                 try {
-                                    if (isFollowing) {
-                                        unfollowUser(pubKeyHex, account, relayManager, currentContactList)
-                                        isFollowing = false
-                                    } else {
-                                        followUser(pubKeyHex, account, relayManager, currentContactList)
-                                        isFollowing = true
-                                    }
+                                    val currentStatus = followState.currentStatusOrNull()
+                                    val updatedEvent =
+                                        if (currentStatus?.isFollowing == true) {
+                                            unfollowUser(pubKeyHex, account, relayManager, currentStatus.contactList)
+                                        } else {
+                                            followUser(pubKeyHex, account, relayManager, currentStatus?.contactList)
+                                        }
+                                    followState.setFollowSuccess(updatedEvent, pubKeyHex)
                                 } catch (e: Exception) {
-                                    followError = e.message ?: "Failed to update follow status"
-                                } finally {
-                                    isFollowLoading = false
+                                    followState.setFollowError(e.message ?: "Failed to update follow status", e)
                                 }
                             }
                         },
-                        enabled = !isFollowLoading,
+                        enabled = followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
                     ) {
-                        if (isFollowLoading) {
+                        val state = followState.state.collectAsState().value
+                        val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
+                        val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
+
+                        if (isLoading) {
                             androidx.compose.material3.CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
@@ -330,7 +332,12 @@ fun UserProfileScreen(
                         }
                     }
 
-                    followError?.let { error ->
+                    val errorMessage =
+                        followState.state
+                            .collectAsState()
+                            .value
+                            .errorOrNull()
+                    errorMessage?.let { error ->
                         Spacer(Modifier.height(4.dp))
                         Text(
                             error,
@@ -526,7 +533,7 @@ private suspend fun followUser(
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
     currentContactList: ContactListEvent?,
-) {
+): ContactListEvent =
     withContext(Dispatchers.IO) {
         println("[UserProfile] Starting followUser: target=${pubKeyHex.take(8)}...")
 
@@ -536,8 +543,9 @@ private suspend fun followUser(
         println("[UserProfile] ContactListEvent created, broadcasting...")
         relayManager.broadcastToAll(updatedEvent)
         println("[UserProfile] Follow broadcast complete")
+
+        updatedEvent
     }
-}
 
 /**
  * Unfollows a user by publishing an updated contact list event without them.
@@ -547,7 +555,7 @@ private suspend fun unfollowUser(
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
     currentContactList: ContactListEvent?,
-) {
+): ContactListEvent =
     withContext(Dispatchers.IO) {
         println("[UserProfile] Starting unfollowUser: target=${pubKeyHex.take(8)}...")
 
@@ -560,8 +568,10 @@ private suspend fun unfollowUser(
             println("[UserProfile] ContactListEvent updated, broadcasting...")
             relayManager.broadcastToAll(updatedEvent)
             println("[UserProfile] Unfollow broadcast complete")
+
+            updatedEvent
         } else {
             println("[UserProfile] Error: No contact list to unfollow from")
+            throw IllegalStateException("Cannot unfollow: No contact list available")
         }
     }
-}

@@ -45,14 +45,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
@@ -108,8 +109,17 @@ fun FeedScreen(
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val events = remember { mutableStateListOf<Event>() }
-    val seenIds = remember { mutableSetOf<String>() }
+    val scope = rememberCoroutineScope()
+    val eventState =
+        remember {
+            EventCollectionState<Event>(
+                getId = { it.id },
+                sortComparator = compareByDescending { it.createdAt },
+                maxSize = 200,
+                scope = scope,
+            )
+        }
+    val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var feedMode by remember { mutableStateOf(FeedMode.GLOBAL) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -162,8 +172,7 @@ fun FeedScreen(
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty()) {
             // Clear previous events when switching modes
-            events.clear()
-            seenIds.clear()
+            eventState.clear()
 
             val subId = "${feedMode.name.lowercase()}-feed-${System.currentTimeMillis()}"
             val filters =
@@ -203,14 +212,7 @@ fun FeedScreen(
                                 relay: NormalizedRelayUrl,
                                 forFilters: List<Filter>?,
                             ) {
-                                if (event.id !in seenIds) {
-                                    seenIds.add(event.id)
-                                    events.add(0, event)
-                                    if (events.size > 200) {
-                                        val removed = events.removeAt(events.size - 1)
-                                        seenIds.remove(removed.id)
-                                    }
-                                }
+                                eventState.addItem(event)
                             }
 
                             override fun onEose(

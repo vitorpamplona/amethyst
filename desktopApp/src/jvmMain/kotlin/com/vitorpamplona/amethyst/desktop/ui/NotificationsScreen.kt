@@ -42,8 +42,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
@@ -109,8 +110,17 @@ fun NotificationsScreen(
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val notifications = remember { mutableStateListOf<NotificationItem>() }
-    val seenIds = remember { mutableSetOf<String>() }
+    val scope = rememberCoroutineScope()
+    val notificationState =
+        remember {
+            EventCollectionState<NotificationItem>(
+                getId = { it.event.id },
+                sortComparator = null, // Prepend new items (no sorting)
+                maxSize = 200,
+                scope = scope,
+            )
+        }
+    val notifications by notificationState.items.collectAsState()
 
     DisposableEffect(relayStatuses, account.pubKeyHex) {
         val configuredRelays = relayStatuses.keys
@@ -150,50 +160,42 @@ fun NotificationsScreen(
                                 return
                             }
 
-                            if (event.id !in seenIds) {
-                                seenIds.add(event.id)
-
-                                val notification =
-                                    when (event) {
-                                        is ReactionEvent ->
-                                            NotificationItem.Reaction(
-                                                event = event,
-                                                timestamp = event.createdAt,
-                                                content = event.content,
-                                            )
-                                        is RepostEvent, is GenericRepostEvent ->
-                                            NotificationItem.Repost(
-                                                event = event,
-                                                timestamp = event.createdAt,
-                                            )
-                                        is LnZapEvent -> {
-                                            // Extract amount from zap (simplified - full parsing in production)
-                                            val amount = event.amount?.toLong()
-                                            NotificationItem.Zap(
-                                                event = event,
-                                                timestamp = event.createdAt,
-                                                amount = amount,
-                                            )
-                                        }
-                                        is TextNoteEvent -> {
-                                            // Check if it's a reply (has e-tag) or mention
-                                            val eTags = event.tags.filter { it.size > 1 && it[0] == "e" }
-                                            val isReply = eTags.isNotEmpty()
-                                            if (isReply) {
-                                                NotificationItem.Reply(event, event.createdAt)
-                                            } else {
-                                                NotificationItem.Mention(event, event.createdAt)
-                                            }
-                                        }
-                                        else -> NotificationItem.Mention(event, event.createdAt)
+                            val notification =
+                                when (event) {
+                                    is ReactionEvent ->
+                                        NotificationItem.Reaction(
+                                            event = event,
+                                            timestamp = event.createdAt,
+                                            content = event.content,
+                                        )
+                                    is RepostEvent, is GenericRepostEvent ->
+                                        NotificationItem.Repost(
+                                            event = event,
+                                            timestamp = event.createdAt,
+                                        )
+                                    is LnZapEvent -> {
+                                        // Extract amount from zap (simplified - full parsing in production)
+                                        val amount = event.amount?.toLong()
+                                        NotificationItem.Zap(
+                                            event = event,
+                                            timestamp = event.createdAt,
+                                            amount = amount,
+                                        )
                                     }
-
-                                notifications.add(0, notification)
-                                if (notifications.size > 200) {
-                                    val removed = notifications.removeAt(notifications.size - 1)
-                                    seenIds.remove(removed.event.id)
+                                    is TextNoteEvent -> {
+                                        // Check if it's a reply (has e-tag) or mention
+                                        val eTags = event.tags.filter { it.size > 1 && it[0] == "e" }
+                                        val isReply = eTags.isNotEmpty()
+                                        if (isReply) {
+                                            NotificationItem.Reply(event, event.createdAt)
+                                        } else {
+                                            NotificationItem.Mention(event, event.createdAt)
+                                        }
+                                    }
+                                    else -> NotificationItem.Mention(event, event.createdAt)
                                 }
-                            }
+
+                            notificationState.addItem(notification)
                         }
 
                         override fun onEose(
