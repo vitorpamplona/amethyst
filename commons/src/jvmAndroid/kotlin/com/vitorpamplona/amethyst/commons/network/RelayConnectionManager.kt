@@ -99,6 +99,25 @@ open class RelayConnectionManager(
         client.send(event, relays)
     }
 
+    /**
+     * Broadcasts an event to all configured relays.
+     * Events will be sent to relays as they become connected.
+     */
+    fun broadcastToAll(event: Event) {
+        // Use all configured relays, not just currently connected ones
+        // The NostrClient will queue/send events as relays connect
+        val configuredRelays = relayStatuses.value.keys
+        val connectedCount = connectedRelays.value.size
+        println("[RelayManager] broadcastToAll: event kind=${event.kind}, ID=${event.id.take(8)}...")
+        println("[RelayManager] Configured relays: ${configuredRelays.size}, Connected: $connectedCount")
+        configuredRelays.forEach { relay ->
+            val isConnected = connectedRelays.value.contains(relay)
+            println("[RelayManager]   - $relay: ${if (isConnected) "CONNECTED" else "pending"}")
+        }
+        send(event, configuredRelays)
+        println("[RelayManager] broadcastToAll complete")
+    }
+
     private fun updateRelayStatus(
         url: NormalizedRelayUrl,
         update: (RelayStatus) -> RelayStatus,

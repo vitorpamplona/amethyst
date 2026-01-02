@@ -81,8 +81,32 @@ import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.NotificationsPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
+import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
+import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
+
+private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+
+/**
+ * Desktop navigation state - extends AppScreen with dynamic destinations.
+ */
+sealed class DesktopScreen {
+    data object Feed : DesktopScreen()
+
+    data object Search : DesktopScreen()
+
+    data object Messages : DesktopScreen()
+
+    data object Notifications : DesktopScreen()
+
+    data object MyProfile : DesktopScreen()
+
+    data class UserProfile(val pubKeyHex: String) : DesktopScreen()
+
+    data object Settings : DesktopScreen()
+}
 
 fun main() =
     application {
@@ -92,6 +116,7 @@ fun main() =
                 height = 800.dp,
                 position = WindowPosition.Aligned(Alignment.Center),
             )
+        var showComposeDialog by remember { mutableStateOf(false) }
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -102,25 +127,58 @@ fun main() =
                 Menu("File") {
                     Item(
                         "New Note",
-                        shortcut = KeyShortcut(Key.N, ctrl = true),
-                        onClick = { /* TODO: Open new note dialog */ },
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.N, meta = true)
+                            } else {
+                                KeyShortcut(Key.N, ctrl = true)
+                            },
+                        onClick = { showComposeDialog = true },
                     )
                     Separator()
                     Item(
                         "Settings",
-                        shortcut = KeyShortcut(Key.Comma, ctrl = true),
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.Comma, meta = true)
+                            } else {
+                                KeyShortcut(Key.Comma, ctrl = true)
+                            },
                         onClick = { /* TODO: Open settings */ },
                     )
                     Separator()
                     Item(
                         "Quit",
-                        shortcut = KeyShortcut(Key.Q, ctrl = true),
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.Q, meta = true)
+                            } else {
+                                KeyShortcut(Key.Q, ctrl = true)
+                            },
                         onClick = ::exitApplication,
                     )
                 }
                 Menu("Edit") {
-                    Item("Copy", shortcut = KeyShortcut(Key.C, ctrl = true), onClick = { })
-                    Item("Paste", shortcut = KeyShortcut(Key.V, ctrl = true), onClick = { })
+                    Item(
+                        "Copy",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.C, meta = true)
+                            } else {
+                                KeyShortcut(Key.C, ctrl = true)
+                            },
+                        onClick = { },
+                    )
+                    Item(
+                        "Paste",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.V, meta = true)
+                            } else {
+                                KeyShortcut(Key.V, ctrl = true)
+                            },
+                        onClick = { },
+                    )
                 }
                 Menu("View") {
                     Item("Feed", onClick = { })
@@ -133,13 +191,21 @@ fun main() =
                 }
             }
 
-            App()
+            App(
+                showComposeDialog = showComposeDialog,
+                onShowComposeDialog = { showComposeDialog = true },
+                onDismissComposeDialog = { showComposeDialog = false },
+            )
         }
     }
 
 @Composable
-fun App() {
-    var currentScreen by remember { mutableStateOf(AppScreen.Feed) }
+fun App(
+    showComposeDialog: Boolean,
+    onShowComposeDialog: () -> Unit,
+    onDismissComposeDialog: () -> Unit,
+) {
+    var currentScreen by remember { mutableStateOf<DesktopScreen>(DesktopScreen.Feed) }
     val relayManager = remember { DesktopRelayConnectionManager() }
     val accountManager = remember { AccountManager() }
     val accountState by accountManager.accountState.collectAsState()
@@ -163,17 +229,29 @@ fun App() {
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { currentScreen = AppScreen.Feed },
+                        onLoginSuccess = { currentScreen = DesktopScreen.Feed },
                     )
                 }
                 is AccountState.LoggedIn -> {
+                    val account = accountState as AccountState.LoggedIn
+
                     MainContent(
                         currentScreen = currentScreen,
                         onScreenChange = { currentScreen = it },
                         relayManager = relayManager,
                         accountManager = accountManager,
-                        account = accountState as AccountState.LoggedIn,
+                        account = account,
+                        onShowComposeDialog = onShowComposeDialog,
                     )
+
+                    // Compose dialog
+                    if (showComposeDialog) {
+                        ComposeNoteDialog(
+                            onDismiss = onDismissComposeDialog,
+                            relayManager = relayManager,
+                            account = account,
+                        )
+                    }
                 }
             }
         }
@@ -182,11 +260,12 @@ fun App() {
 
 @Composable
 fun MainContent(
-    currentScreen: AppScreen,
-    onScreenChange: (AppScreen) -> Unit,
+    currentScreen: DesktopScreen,
+    onScreenChange: (DesktopScreen) -> Unit,
     relayManager: DesktopRelayConnectionManager,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    onShowComposeDialog: () -> Unit,
 ) {
     Row(Modifier.fillMaxSize()) {
         // Sidebar Navigation
@@ -199,36 +278,36 @@ fun MainContent(
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Home, contentDescription = "Feed") },
                 label = { Text("Feed") },
-                selected = currentScreen == AppScreen.Feed,
-                onClick = { onScreenChange(AppScreen.Feed) },
+                selected = currentScreen == DesktopScreen.Feed,
+                onClick = { onScreenChange(DesktopScreen.Feed) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 label = { Text("Search") },
-                selected = currentScreen == AppScreen.Search,
-                onClick = { onScreenChange(AppScreen.Search) },
+                selected = currentScreen == DesktopScreen.Search,
+                onClick = { onScreenChange(DesktopScreen.Search) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
                 label = { Text("DMs") },
-                selected = currentScreen == AppScreen.Messages,
-                onClick = { onScreenChange(AppScreen.Messages) },
+                selected = currentScreen == DesktopScreen.Messages,
+                onClick = { onScreenChange(DesktopScreen.Messages) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
                 label = { Text("Alerts") },
-                selected = currentScreen == AppScreen.Notifications,
-                onClick = { onScreenChange(AppScreen.Notifications) },
+                selected = currentScreen == DesktopScreen.Notifications,
+                onClick = { onScreenChange(DesktopScreen.Notifications) },
             )
 
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                 label = { Text("Profile") },
-                selected = currentScreen == AppScreen.Profile,
-                onClick = { onScreenChange(AppScreen.Profile) },
+                selected = currentScreen == DesktopScreen.MyProfile || currentScreen is DesktopScreen.UserProfile,
+                onClick = { onScreenChange(DesktopScreen.MyProfile) },
             )
 
             Spacer(Modifier.weight(1f))
@@ -238,8 +317,8 @@ fun MainContent(
             NavigationRailItem(
                 icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                 label = { Text("Settings") },
-                selected = currentScreen == AppScreen.Settings,
-                onClick = { onScreenChange(AppScreen.Settings) },
+                selected = currentScreen == DesktopScreen.Settings,
+                onClick = { onScreenChange(DesktopScreen.Settings) },
             )
 
             Spacer(Modifier.height(16.dp))
@@ -252,12 +331,41 @@ fun MainContent(
             modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
         ) {
             when (currentScreen) {
-                AppScreen.Feed -> FeedScreen(relayManager)
-                AppScreen.Search -> SearchPlaceholder()
-                AppScreen.Messages -> MessagesPlaceholder()
-                AppScreen.Notifications -> NotificationsPlaceholder()
-                AppScreen.Profile -> ProfileScreen(account, accountManager)
-                AppScreen.Settings -> RelaySettingsScreen(relayManager)
+                DesktopScreen.Feed ->
+                    FeedScreen(
+                        relayManager = relayManager,
+                        account = account,
+                        onCompose = onShowComposeDialog,
+                        onNavigateToProfile = { pubKeyHex ->
+                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                        },
+                    )
+                DesktopScreen.Search -> SearchPlaceholder()
+                DesktopScreen.Messages -> MessagesPlaceholder()
+                DesktopScreen.Notifications -> NotificationsScreen(relayManager, account)
+                DesktopScreen.MyProfile ->
+                    UserProfileScreen(
+                        pubKeyHex = account.pubKeyHex,
+                        relayManager = relayManager,
+                        account = account,
+                        onBack = { onScreenChange(DesktopScreen.Feed) },
+                        onCompose = onShowComposeDialog,
+                        onNavigateToProfile = { pubKeyHex ->
+                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                        },
+                    )
+                is DesktopScreen.UserProfile ->
+                    UserProfileScreen(
+                        pubKeyHex = currentScreen.pubKeyHex,
+                        relayManager = relayManager,
+                        account = account,
+                        onBack = { onScreenChange(DesktopScreen.Feed) },
+                        onCompose = onShowComposeDialog,
+                        onNavigateToProfile = { pubKeyHex ->
+                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                        },
+                    )
+                DesktopScreen.Settings -> RelaySettingsScreen(relayManager)
             }
         }
     }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.util.toTimeAgo
  */
 data class NoteDisplayData(
     val id: String,
+    val pubKeyHex: String,
     val pubKeyDisplay: String,
     val content: String,
     val createdAt: Long,
@@ -64,6 +66,7 @@ fun NoteCard(
     note: NoteDisplayData,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onAuthorClick: ((String) -> Unit)? = null,
 ) {
     val richTextParser = remember { RichTextParser() }
     val urls = remember(note.content) { richTextParser.parseValidUrls(note.content) }
@@ -82,12 +85,18 @@ fun NoteCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Author (truncated)
+                // Author (truncated, clickable)
                 Text(
                     text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
+                    modifier =
+                        if (onAuthorClick != null) {
+                            Modifier.clickable { onAuthorClick(note.pubKeyHex) }
+                        } else {
+                            Modifier
+                        },
                 )
 
                 // Timestamp

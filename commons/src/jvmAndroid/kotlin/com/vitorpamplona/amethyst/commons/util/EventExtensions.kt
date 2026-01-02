@@ -38,6 +38,7 @@ fun Event.toNoteDisplayData(): NoteDisplayData {
 
     return NoteDisplayData(
         id = id,
+        pubKeyHex = pubKey,
         pubKeyDisplay = npub,
         content = content,
         createdAt = createdAt,
