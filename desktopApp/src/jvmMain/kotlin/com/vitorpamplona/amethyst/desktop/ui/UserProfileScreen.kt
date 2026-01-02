@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.actions.FollowAction
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -71,8 +72,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
-import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
@@ -531,24 +530,8 @@ private suspend fun followUser(
     withContext(Dispatchers.IO) {
         println("[UserProfile] Starting followUser: target=${pubKeyHex.take(8)}...")
 
-        val updatedEvent =
-            if (currentContactList != null) {
-                println("[UserProfile] Adding to existing contact list")
-                // Add to existing contact list
-                ContactListEvent.followUser(
-                    earlierVersion = currentContactList,
-                    pubKeyHex = pubKeyHex,
-                    signer = account.signer,
-                )
-            } else {
-                println("[UserProfile] Creating new contact list")
-                // Create new contact list with this user
-                ContactListEvent.createFromScratch(
-                    followUsers = listOf(ContactTag(pubKeyHex)),
-                    relayUse = emptyMap<String, ReadWrite>(),
-                    signer = account.signer,
-                )
-            }
+        // Use shared FollowAction from commons
+        val updatedEvent = FollowAction.follow(pubKeyHex, account.signer, currentContactList)
 
         println("[UserProfile] ContactListEvent created, broadcasting...")
         relayManager.broadcastToAll(updatedEvent)
@@ -570,12 +553,9 @@ private suspend fun unfollowUser(
 
         if (currentContactList != null) {
             println("[UserProfile] Removing from existing contact list")
-            val updatedEvent =
-                ContactListEvent.unfollowUser(
-                    earlierVersion = currentContactList,
-                    pubKeyHex = pubKeyHex,
-                    signer = account.signer,
-                )
+
+            // Use shared FollowAction from commons
+            val updatedEvent = FollowAction.unfollow(pubKeyHex, account.signer, currentContactList)
 
             println("[UserProfile] ContactListEvent updated, broadcasting...")
             relayManager.broadcastToAll(updatedEvent)

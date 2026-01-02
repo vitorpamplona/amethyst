@@ -40,14 +40,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.actions.ReactionAction
+import com.vitorpamplona.amethyst.commons.actions.RepostAction
 import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -163,12 +161,8 @@ private suspend fun reactToNote(
     relayManager: DesktopRelayConnectionManager,
 ) {
     withContext(Dispatchers.IO) {
-        // Build reaction event
-        val reactedTo = EventHintBundle(event, null)
-        val template = ReactionEvent.like(reactedTo)
-
-        // Sign with user's key
-        val signedEvent = account.signer.sign(template)
+        // Use shared ReactionAction from commons
+        val signedEvent = ReactionAction.reactTo(event, reaction, account.signer)
 
         // Broadcast to all relays
         relayManager.broadcastToAll(signedEvent)
@@ -184,26 +178,8 @@ private suspend fun repostNote(
     relayManager: DesktopRelayConnectionManager,
 ) {
     withContext(Dispatchers.IO) {
-        // Build repost event
-        val template =
-            if (event.kind == 1) {
-                // Text note - use RepostEvent (kind 6)
-                RepostEvent.build(
-                    boostedPost = event,
-                    eventSourceRelay = null,
-                    authorHomeRelay = null,
-                )
-            } else {
-                // Other kinds - use GenericRepostEvent (kind 16)
-                GenericRepostEvent.build(
-                    boostedPost = event,
-                    eventSourceRelay = null,
-                    authorHomeRelay = null,
-                )
-            }
-
-        // Sign with user's key
-        val signedEvent = account.signer.sign(template)
+        // Use shared RepostAction from commons
+        val signedEvent = RepostAction.repost(event, account.signer)
 
         // Broadcast to all relays
         relayManager.broadcastToAll(signedEvent)

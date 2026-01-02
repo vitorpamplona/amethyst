@@ -44,16 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.actions.PublishAction
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -187,35 +179,16 @@ private suspend fun publishNote(
     withContext(Dispatchers.IO) {
         println("[ComposeNoteDialog] Starting publishNote: content length=${content.length}")
 
-        // Build TextNoteEvent using Quartz
-        val template =
-            TextNoteEvent.build(content) {
-                // If replying, add e-tag and p-tag
-                if (replyTo != null) {
-                    val etag = ETag(replyTo.id)
-                    etag.relay = null
-                    etag.author = replyTo.pubKey
-                    eTag(etag)
-                    pTag(PTag(replyTo.pubKey, relayHint = null))
-                }
+        // Check read-only mode
+        if (account.isReadOnly) {
+            println("[ComposeNoteDialog] Error: Cannot post in read-only mode")
+            throw IllegalStateException("Cannot post in read-only mode")
+        }
 
-                // Extract hashtags and URLs from content
-                hashtags(findHashtags(content))
-                references(findURLs(content))
-            }
+        println("[ComposeNoteDialog] Signing event with pubkey: ${account.pubKeyHex.take(8)}...")
 
-        // Sign the event
-        val signedEvent =
-            if (account.isReadOnly) {
-                // Read-only mode - can't sign events
-                println("[ComposeNoteDialog] Error: Cannot post in read-only mode")
-                throw IllegalStateException("Cannot post in read-only mode")
-            } else {
-                // Sign with nsec (full key)
-                val signer = account.signer
-                println("[ComposeNoteDialog] Signing event with pubkey: ${account.pubKeyHex.take(8)}...")
-                signer.sign(template)
-            }
+        // Use shared PublishAction from commons
+        val signedEvent = PublishAction.publishTextNote(content, account.signer, replyTo)
 
         println("[ComposeNoteDialog] Event signed successfully, ID: ${signedEvent.id.take(8)}...")
 
