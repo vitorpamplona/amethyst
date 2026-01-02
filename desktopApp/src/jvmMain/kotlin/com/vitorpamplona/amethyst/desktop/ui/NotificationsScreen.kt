@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
-import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -75,17 +74,32 @@ sealed class NotificationItem(
     open val event: Event,
     open val timestamp: Long,
 ) {
-    data class Mention(override val event: Event, override val timestamp: Long) : NotificationItem(event, timestamp)
+    data class Mention(
+        override val event: Event,
+        override val timestamp: Long,
+    ) : NotificationItem(event, timestamp)
 
-    data class Reply(override val event: Event, override val timestamp: Long) : NotificationItem(event, timestamp)
+    data class Reply(
+        override val event: Event,
+        override val timestamp: Long,
+    ) : NotificationItem(event, timestamp)
 
-    data class Reaction(override val event: Event, override val timestamp: Long, val content: String) :
-        NotificationItem(event, timestamp)
+    data class Reaction(
+        override val event: Event,
+        override val timestamp: Long,
+        val content: String,
+    ) : NotificationItem(event, timestamp)
 
-    data class Repost(override val event: Event, override val timestamp: Long) : NotificationItem(event, timestamp)
+    data class Repost(
+        override val event: Event,
+        override val timestamp: Long,
+    ) : NotificationItem(event, timestamp)
 
-    data class Zap(override val event: Event, override val timestamp: Long, val amount: Long?) :
-        NotificationItem(event, timestamp)
+    data class Zap(
+        override val event: Event,
+        override val timestamp: Long,
+        val amount: Long?,
+    ) : NotificationItem(event, timestamp)
 }
 
 @Composable
@@ -245,7 +259,10 @@ fun NotificationCard(notification: NotificationItem) {
 
     val authorDisplay =
         try {
-            notification.event.pubKey.hexToByteArrayOrNull()?.toNpub()?.take(20) ?: notification.event.pubKey.take(20)
+            notification.event.pubKey
+                .hexToByteArrayOrNull()
+                ?.toNpub()
+                ?.take(20) ?: notification.event.pubKey.take(20)
         } catch (e: Exception) {
             notification.event.pubKey.take(20)
         }

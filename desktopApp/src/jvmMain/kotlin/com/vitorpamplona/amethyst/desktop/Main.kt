@@ -74,11 +74,9 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.account.AccountManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
-import com.vitorpamplona.amethyst.commons.navigation.AppScreen
 import com.vitorpamplona.amethyst.commons.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.commons.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
-import com.vitorpamplona.amethyst.commons.ui.screens.NotificationsPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
@@ -103,7 +101,9 @@ sealed class DesktopScreen {
 
     data object MyProfile : DesktopScreen()
 
-    data class UserProfile(val pubKeyHex: String) : DesktopScreen()
+    data class UserProfile(
+        val pubKeyHex: String,
+    ) : DesktopScreen()
 
     data object Settings : DesktopScreen()
 }

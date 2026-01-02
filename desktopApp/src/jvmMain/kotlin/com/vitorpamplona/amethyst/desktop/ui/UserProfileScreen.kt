@@ -65,12 +65,11 @@ import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
@@ -250,13 +249,14 @@ fun UserProfileScreen(
             )
 
             // Set timeout for loading state
-            val timeoutJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
-                kotlinx.coroutines.delay(10000) // 10 second timeout
-                if (postsLoading) {
-                    postsError = "Request timed out. Check relay connections."
-                    postsLoading = false
+            val timeoutJob =
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                    kotlinx.coroutines.delay(10000) // 10 second timeout
+                    if (postsLoading) {
+                        postsError = "Request timed out. Check relay connections."
+                        postsLoading = false
+                    }
                 }
-            }
 
             onDispose {
                 timeoutJob.cancel()

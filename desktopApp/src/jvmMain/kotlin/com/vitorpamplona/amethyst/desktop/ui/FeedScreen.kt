@@ -54,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -197,30 +196,30 @@ fun FeedScreen(
                     filters = filters,
                     relays = configuredRelays,
                     listener =
-                    object : IRequestListener {
-                        override fun onEvent(
-                            event: Event,
-                            isLive: Boolean,
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            if (event.id !in seenIds) {
-                                seenIds.add(event.id)
-                                events.add(0, event)
-                                if (events.size > 200) {
-                                    val removed = events.removeAt(events.size - 1)
-                                    seenIds.remove(removed.id)
+                        object : IRequestListener {
+                            override fun onEvent(
+                                event: Event,
+                                isLive: Boolean,
+                                relay: NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                if (event.id !in seenIds) {
+                                    seenIds.add(event.id)
+                                    events.add(0, event)
+                                    if (events.size > 200) {
+                                        val removed = events.removeAt(events.size - 1)
+                                        seenIds.remove(removed.id)
+                                    }
                                 }
                             }
-                        }
 
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            // End of stored events
-                        }
-                    },
+                            override fun onEose(
+                                relay: NormalizedRelayUrl,
+                                forFilters: List<Filter>?,
+                            ) {
+                                // End of stored events
+                            }
+                        },
                 )
 
                 onDispose {
