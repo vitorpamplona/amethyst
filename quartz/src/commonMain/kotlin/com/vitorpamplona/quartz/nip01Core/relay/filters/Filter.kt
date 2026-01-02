@@ -74,18 +74,18 @@ class Filter(
     ) = Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search)
 
     /**
-     * Returns true if this filter contains any non-null and non-empty criteria.
+     * Returns true if this filter doesn't filter for anything.
      */
-    fun isFilledFilter() =
-        (ids != null && ids.isNotEmpty()) ||
-            (authors != null && authors.isNotEmpty()) ||
-            (kinds != null && kinds.isNotEmpty()) ||
-            (tags != null && tags.isNotEmpty() && tags.values.all { it.isNotEmpty() }) ||
-            (tagsAll != null && tagsAll.isNotEmpty() && tagsAll.values.all { it.isNotEmpty() }) ||
-            (since != null) ||
-            (until != null) ||
-            (limit != null) ||
-            (search != null && search.isNotEmpty())
+    fun isEmpty() =
+        (ids == null || ids.isEmpty()) &&
+            (authors == null || authors.isEmpty()) &&
+            (kinds == null || kinds.isEmpty()) &&
+            (tags == null || tags.isEmpty() && tags.values.all { it.isNotEmpty() }) &&
+            (tagsAll == null || tagsAll.isEmpty() && tagsAll.values.all { it.isNotEmpty() }) &&
+            (since == null) &&
+            (until == null) &&
+            (limit == null) &&
+            (search == null || search.isEmpty())
 
     init {
         ids?.forEach {

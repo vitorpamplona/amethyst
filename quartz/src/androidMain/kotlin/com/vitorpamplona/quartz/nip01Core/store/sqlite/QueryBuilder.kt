@@ -327,7 +327,7 @@ class QueryBuilder(
         filter: Filter,
         hasher: TagNameValueHasher,
     ): QuerySpec? {
-        if (!filter.isFilledFilter()) return null
+        if (filter.isEmpty()) return null
 
         val mustJoinSearch = (filter.search != null)
 
