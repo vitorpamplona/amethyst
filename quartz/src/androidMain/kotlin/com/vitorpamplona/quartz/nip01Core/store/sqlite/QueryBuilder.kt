@@ -585,8 +585,6 @@ class QueryBuilder(
                 }
             }
 
-        println(sql)
-
         return QuerySpec(sql, clause.args)
     }
 
@@ -640,8 +638,6 @@ class QueryBuilder(
                     append(limit)
                 }
             }
-
-        println(sql)
 
         return QuerySpec(sql, clause.args)
     }
