@@ -38,6 +38,9 @@ class SqlSelectionBuilder(
      */
     private fun buildCondition(cond: Condition): String =
         when (cond) {
+            is Condition.Empty -> {
+                ""
+            }
             is Condition.Raw -> {
                 cond.condition
             }

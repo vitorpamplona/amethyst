@@ -20,27 +20,38 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import com.vitorpamplona.quartz.nip01Core.core.Tag
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.After
+import org.junit.Before
 
-interface IndexingStrategy {
-    val indexTagQueriesWithoutKinds: Boolean
-    val useAndIndexIdOnOrderBy: Boolean
+open class BaseDBTest {
+    private lateinit var dbs: Map<String, EventStore>
 
-    fun shouldIndex(
-        kind: Int,
-        tag: Tag,
-    ): Boolean
-}
+    @Before
+    fun setup() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
 
-/**
- * By default, we index all tags that have a single letter name and some value
- */
-class DefaultIndexingStrategy(
-    override val indexTagQueriesWithoutKinds: Boolean = false,
-    override val useAndIndexIdOnOrderBy: Boolean = false,
-) : IndexingStrategy {
-    override fun shouldIndex(
-        kind: Int,
-        tag: Tag,
-    ) = tag.size >= 2 && tag[0].length == 1
+        dbs =
+            mapOf(
+                "Default" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(false, false)),
+                "IndexAll" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(true, false)),
+                "Order by ID" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(false, true)),
+                "IndexAll, Order by ID" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(true, true)),
+            )
+    }
+
+    @After
+    fun tearDown() {
+        dbs.forEach { it.value.close() }
+    }
+
+    fun forEachDB(action: (EventStore) -> Unit) {
+        dbs.forEach {
+            println("--------------------")
+            println(it.key)
+            println("--------------------")
+            action(it.value)
+        }
+    }
 }

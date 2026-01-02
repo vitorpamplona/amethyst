@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -34,6 +36,7 @@ import kotlin.collections.component2
 class QueryBuilder(
     val fts: FullTextSearchModule,
     val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
+    val indexStrategy: IndexingStrategy,
 ) {
     // ------------
     // Main methods
@@ -110,13 +113,37 @@ class QueryBuilder(
         filter: Filter,
         hasher: TagNameValueHasher,
     ): QuerySpec {
+        val newFilter = filter.toFilterWithDTags()
+
+        if (newFilter.isSimpleQuery()) {
+            return makeSimpleQuery(
+                ids = newFilter.ids,
+                authors = newFilter.authors,
+                kinds = newFilter.kinds,
+                dTags = newFilter.dTags,
+                since = newFilter.since,
+                until = newFilter.until,
+                limit = newFilter.limit,
+            )
+        }
+
+        if (newFilter.isSimpleSearch()) {
+            return makeSimpleSearch(
+                search = newFilter.search!!,
+                ids = newFilter.ids,
+                authors = newFilter.authors,
+                kinds = newFilter.kinds,
+                dTags = newFilter.dTags,
+                since = newFilter.since,
+                until = newFilter.until,
+                limit = newFilter.limit,
+            )
+        }
+
         val rowIdSubqueries = prepareRowIDSubQueries(filter, hasher)
 
         return if (rowIdSubqueries == null) {
-            QuerySpec(
-                makeEverythingQuery(),
-                emptyList(),
-            )
+            QuerySpec(makeEverythingQuery())
         } else {
             QuerySpec(
                 makeQueryIn(rowIdSubqueries.sql),
@@ -129,6 +156,8 @@ class QueryBuilder(
         filters: List<Filter>,
         hasher: TagNameValueHasher,
     ): QuerySpec {
+        if (filters.size == 1) return toSql(filters.first(), hasher)
+
         val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher)
 
         return if (rowIdSubqueries == null) {
@@ -144,7 +173,7 @@ class QueryBuilder(
         }
     }
 
-    private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC, id"
+    private fun makeEverythingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers ORDER BY created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}"
 
     private fun makeQueryIn(rowIdQuery: String) =
         """
@@ -153,7 +182,7 @@ class QueryBuilder(
             $rowIdQuery
         ) AS filtered
         ON event_headers.row_id = filtered.row_id
-        ORDER BY created_at DESC, id
+        ORDER BY created_at DESC${if (indexStrategy.useAndIndexIdOnOrderBy) ", id ASC" else ""}
         """.trimIndent()
 
     private fun <T : Event> SQLiteDatabase.runQuery(query: QuerySpec): List<T> =
@@ -359,12 +388,12 @@ class QueryBuilder(
             buildString {
                 // always do tags if there are any
                 if (reverseLookup) {
-                    append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags ")
+                    append("SELECT DISTINCT(event_tags.event_header_row_id) as row_id FROM event_tags")
 
                     // it's quite rare to have 2 tags in the filter, but possible
                     nonDTagsIn.keys.forEachIndexed { index, tagName ->
                         if (defaultTagKey != null) {
-                            append("INNER JOIN event_tags as event_tagsIn$index ON event_tagsIn$index.event_header_row_id = event_tags.event_header_row_id AND event_tagsIn$index.created_at = event_tags.created_at ")
+                            append(" INNER JOIN event_tags as event_tagsIn$index ON event_tagsIn$index.event_header_row_id = event_tags.event_header_row_id AND event_tagsIn$index.created_at = event_tags.created_at")
                         } else {
                             defaultTagKey = TagNameForQuery.InTags(tagName)
                         }
@@ -373,7 +402,7 @@ class QueryBuilder(
                     nonDTagsAll.keys.forEachIndexed { index, tagName ->
                         nonDTagsAll[tagName]!!.forEachIndexed { valueIndex, tagValue ->
                             if (defaultTagKey != null) {
-                                append("INNER JOIN event_tags as event_tagsAll${index}_$valueIndex ON event_tagsAll${index}_$valueIndex.event_header_row_id = event_tags.event_header_row_id AND event_tagsAll${index}_$valueIndex.created_at = event_tags.created_at ")
+                                append(" INNER JOIN event_tags as event_tagsAll${index}_$valueIndex ON event_tagsAll${index}_$valueIndex.event_header_row_id = event_tags.event_header_row_id AND event_tagsAll${index}_$valueIndex.created_at = event_tags.created_at")
                             } else {
                                 defaultTagKey = TagNameForQuery.AllTags(tagName, valueIndex)
                             }
@@ -381,21 +410,21 @@ class QueryBuilder(
                     }
 
                     if (needHeaders) {
-                        append("INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id ")
+                        append(" INNER JOIN event_headers ON event_headers.row_id = event_tags.event_header_row_id")
                     }
 
                     if (mustJoinSearch) {
-                        append("INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_tags.event_header_row_id ")
+                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_tags.event_header_row_id")
                     }
                 } else if (mustJoinSearch) {
-                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName} ")
+                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName}")
 
                     if (hasHeaders) {
-                        append("INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
                     }
                 } else {
                     // no tags and no search.
-                    append("SELECT event_headers.row_id as row_id FROM event_headers ")
+                    append("SELECT event_headers.row_id as row_id FROM event_headers")
                 }
             }
 
@@ -480,22 +509,183 @@ class QueryBuilder(
                 }
             }
 
-        val whereClause =
-            if (filter.limit != null) {
-                if (reverseLookup) {
-                    "${clause.conditions} ORDER BY event_tags.created_at DESC LIMIT ${filter.limit}"
-                } else {
-                    "${clause.conditions} ORDER BY event_headers.created_at DESC, event_headers.id ASC LIMIT ${filter.limit}"
+        val sql =
+            buildString {
+                append(projection)
+                if (clause.conditions.isNotEmpty()) {
+                    append(" WHERE ${clause.conditions}")
                 }
-            } else {
-                clause.conditions
+                if (filter.limit != null) {
+                    if (reverseLookup) {
+                        append(" ORDER BY event_tags.created_at DESC")
+                        append(" LIMIT ")
+                        append(filter.limit)
+                    } else {
+                        append(" ORDER BY event_headers.created_at DESC")
+                        append(" LIMIT ")
+                        append(filter.limit)
+                    }
+                }
             }
 
-        return QuerySpec("$projection WHERE $whereClause", clause.args)
+        return QuerySpec(sql, clause.args)
     }
+
+    private fun makeSimpleSearch(
+        search: String,
+        ids: List<HexKey>? = null,
+        authors: List<HexKey>? = null,
+        kinds: List<Kind>? = null,
+        dTags: List<String>? = null,
+        since: Long? = null,
+        until: Long? = null,
+        limit: Int? = null,
+    ): QuerySpec {
+        val clause =
+            where {
+                // the order should match indexes
+                // ids reduce the filter the most
+                ids?.let { equalsOrIn("event_headers.id", it) }
+
+                match(fts.tableName, search)
+
+                kinds?.let { equalsOrIn("event_headers.kind", it) }
+                authors?.let { equalsOrIn("event_headers.pubkey", it) }
+
+                // there are indexes for these, starting with tags.
+                dTags?.let { equalsOrIn("event_headers.d_tag", it) }
+
+                since?.let { greaterThanOrEquals("event_headers.created_at", it) }
+                until?.let { lessThanOrEquals("event_headers.created_at", it) }
+
+                // if this is a dTag filter, it is likely that all kinds are addressables
+                // and so force the use of the addressable index
+                if (dTags != null && kinds != null) {
+                    if (kinds.all { it.isAddressable() }) {
+                        // matches unique index kind >= 30000 AND kind < 40000
+                        raw("(event_headers.kind >= 30000 AND kind < 40000)")
+                    }
+                }
+            }
+
+        val sql =
+            buildString {
+                append("SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
+                if (clause.conditions.isNotEmpty()) {
+                    append("\nWHERE ${clause.conditions}")
+                }
+                append("\nORDER BY event_headers.created_at DESC")
+                if (indexStrategy.useAndIndexIdOnOrderBy) {
+                    append(", event_headers.id ASC")
+                }
+                if (limit != null) {
+                    append("\nLIMIT ")
+                    append(limit)
+                }
+            }
+
+        println(sql)
+
+        return QuerySpec(sql, clause.args)
+    }
+
+    private fun makeSimpleQuery(
+        ids: List<HexKey>? = null,
+        authors: List<HexKey>? = null,
+        kinds: List<Kind>? = null,
+        dTags: List<String>? = null,
+        since: Long? = null,
+        until: Long? = null,
+        limit: Int? = null,
+    ): QuerySpec {
+        val clause =
+            where {
+                // the order should match indexes
+                // ids reduce the filter the most
+                ids?.let { equalsOrIn("id", it) }
+
+                kinds?.let { equalsOrIn("kind", it) }
+                authors?.let { equalsOrIn("pubkey", it) }
+
+                // there are indexes for these, starting with tags.
+                dTags?.let { equalsOrIn("d_tag", it) }
+
+                since?.let { greaterThanOrEquals("created_at", it) }
+                until?.let { lessThanOrEquals("created_at", it) }
+
+                // if this is a dTag filter, it is likely that all kinds are addressables
+                // and so force the use of the addressable index
+                if (dTags != null && kinds != null) {
+                    if (kinds.all { it.isAddressable() }) {
+                        // matches unique index kind >= 30000 AND kind < 40000
+                        raw("(kind >= 30000 AND kind < 40000)")
+                    }
+                }
+            }
+
+        val sql =
+            buildString {
+                append("SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers")
+                if (clause.conditions.isNotEmpty()) {
+                    append("\nWHERE ")
+                    append(clause.conditions)
+                }
+                append("\nORDER BY created_at DESC")
+                if (indexStrategy.useAndIndexIdOnOrderBy) {
+                    append(", event_headers.id ASC")
+                }
+                if (limit != null) {
+                    append("\nLIMIT ")
+                    append(limit)
+                }
+            }
+
+        println(sql)
+
+        return QuerySpec(sql, clause.args)
+    }
+
+    class FilterWithDTags(
+        val ids: List<HexKey>? = null,
+        val authors: List<HexKey>? = null,
+        val kinds: List<Kind>? = null,
+        val dTags: List<String>? = null,
+        val nonDTagsIn: Map<String, List<String>>? = null,
+        val nonDTagsAll: Map<String, List<String>>? = null,
+        val since: Long? = null,
+        val until: Long? = null,
+        val limit: Int? = null,
+        val search: String? = null,
+    ) {
+        fun isSimpleSearch() =
+            search != null && search.isNotEmpty() &&
+                (nonDTagsIn == null || nonDTagsIn.isEmpty()) &&
+                (nonDTagsAll == null || nonDTagsAll.isEmpty())
+
+        // can be resolved with just event_headers
+        fun isSimpleQuery() =
+            (nonDTagsIn == null || nonDTagsIn.isEmpty()) &&
+                (nonDTagsAll == null || nonDTagsAll.isEmpty()) &&
+                (search == null || search.isEmpty())
+    }
+
+    fun Filter.toFilterWithDTags(): FilterWithDTags =
+        FilterWithDTags(
+            ids = ids,
+            authors = authors,
+            kinds = kinds,
+            dTags = tags?.get("d") ?: tagsAll?.get("d"),
+            nonDTagsIn = tags?.filter { it.key != "d" }?.ifEmpty { null },
+            nonDTagsAll = tagsAll?.filter { it.key != "d" }?.ifEmpty { null },
+            since = since,
+            until = until,
+            limit = limit,
+            search = search,
+        )
 
     data class QuerySpec(
         val sql: String,
-        val args: List<String>,
+        val args: List<String> = emptyList(),
     )
 }

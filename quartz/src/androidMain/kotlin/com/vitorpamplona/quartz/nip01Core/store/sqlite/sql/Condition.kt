@@ -85,4 +85,6 @@ sealed class Condition {
     data class Or(
         val conditions: List<Condition>,
     ) : Condition()
+
+    class Empty : Condition()
 }

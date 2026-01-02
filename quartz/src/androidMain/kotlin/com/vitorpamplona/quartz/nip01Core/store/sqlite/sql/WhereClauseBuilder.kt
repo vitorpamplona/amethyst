@@ -119,7 +119,7 @@ class WhereClauseBuilder {
 }
 
 fun where(block: WhereClauseBuilder.() -> Unit): WhereClause {
-    val condition = WhereClauseBuilder().apply(block).buildAnd() ?: Condition.And(emptyList())
+    val condition = WhereClauseBuilder().apply(block).buildAnd() ?: Condition.Empty()
     return SqlSelectionBuilder(condition).build()
 }
 

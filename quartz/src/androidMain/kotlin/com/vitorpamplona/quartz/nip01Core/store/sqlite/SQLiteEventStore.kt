@@ -41,7 +41,7 @@ class SQLiteEventStore(
     val context: Context,
     val dbName: String? = "events.db",
     val relayUrl: String? = null,
-    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : SQLiteOpenHelper(context, dbName, null, DATABASE_VERSION) {
     companion object {
         const val DATABASE_VERSION = 2
@@ -50,7 +50,7 @@ class SQLiteEventStore(
     val seedModule = SeedModule()
 
     val fullTextSearchModule = FullTextSearchModule()
-    val eventIndexModule = EventIndexesModule(seedModule::hasher, tagIndexStrategy)
+    val eventIndexModule = EventIndexesModule(seedModule::hasher, indexStrategy)
 
     val replaceableModule = ReplaceableModule()
     val addressableModule = AddressableModule()
@@ -60,7 +60,7 @@ class SQLiteEventStore(
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
 
-    val queryBuilder = QueryBuilder(fullTextSearchModule, seedModule::hasher)
+    val queryBuilder = QueryBuilder(fullTextSearchModule, seedModule::hasher, indexStrategy)
 
     val modules =
         listOf(

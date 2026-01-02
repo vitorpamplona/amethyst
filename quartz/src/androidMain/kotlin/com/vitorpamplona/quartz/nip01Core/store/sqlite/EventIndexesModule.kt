@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 class EventIndexesModule(
     val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
-    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IModule {
     override fun create(db: SQLiteDatabase) {
         db.execSQL(
@@ -67,18 +67,38 @@ class EventIndexesModule(
         // queries by ID (load events)
         db.execSQL("CREATE UNIQUE INDEX event_headers_id       ON event_headers (id)")
 
-        // queries by limit (latest records), since, until (sync all) alone
-        db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers (created_at DESC, id)")
+        val orderBy =
+            if (indexStrategy.useAndIndexIdOnOrderBy) {
+                "created_at DESC, id ASC"
+            } else {
+                "created_at DESC"
+            }
+
+        // queries by limit (latest records), since, until (sync all) alone without any filter by kind.. rare
+        // serves as fall back for the lack of query_by_tags_hash index by default
+        db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers ($orderBy)")
+
+        // queries by kind only, mostly used in Global Feeds when author is not important.
+        db.execSQL("CREATE INDEX query_by_kind_created         ON event_headers (kind, $orderBy)")
 
         // queries by kind + pubkey, but not d-tag, even if they are replaceables and addressables, by date.
-        db.execSQL("CREATE INDEX query_by_kind_pubkey_created  ON event_headers (kind, pubkey, created_at DESC)")
+        db.execSQL("CREATE INDEX query_by_kind_pubkey_created  ON event_headers (kind, pubkey, $orderBy)")
 
         // makes deletions on the event_header fast
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
 
-        // This is a very slow index to build (80% of the insert time goes here) but it is extremely effective.
-        db.execSQL("CREATE INDEX query_by_tags_hash              ON event_tags (tag_hash, created_at DESC)")
+        // ---------------------------------------------------------------
+        // This are a very slow indexes (80% of the insert time goes here)
+        // ---------------------------------------------------------------
+        if (indexStrategy.indexTagQueriesWithoutKinds) {
+            // First one is only needed if the user is searching by tags without a kind.
+            db.execSQL("CREATE INDEX query_by_tags_hash          ON event_tags (tag_hash, created_at DESC)")
+        }
+
+        // This is the default index for most clients: tags by specific kinds that are supported by the client.
         db.execSQL("CREATE INDEX query_by_tags_hash_kind         ON event_tags (tag_hash, kind, created_at DESC)")
+
+        // this one is to allow search of tags by kind and author at the same time: DMs, reports,
         db.execSQL("CREATE INDEX query_by_tags_hash_kind_pubkey  ON event_tags (tag_hash, kind, pubkey_hash, created_at DESC)")
 
         // Prevent updates to maintain immutability
@@ -173,7 +193,7 @@ class EventIndexesModule(
         // rebalancing the tree every new insert
         val indexableTags = ArrayList<Long>()
         for (idx in event.tags.indices) {
-            if (tagIndexStrategy.shouldIndex(event.kind, event.tags[idx])) {
+            if (indexStrategy.shouldIndex(event.kind, event.tags[idx])) {
                 indexableTags.add(hasher.hash(event.tags[idx][0], event.tags[idx][1]))
             }
         }

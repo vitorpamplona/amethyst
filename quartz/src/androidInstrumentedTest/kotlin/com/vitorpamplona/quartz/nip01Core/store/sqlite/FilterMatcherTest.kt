@@ -20,28 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 
-class FilterMatcherTest {
-    private lateinit var db: EventStore
-
-    @Before
-    fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        db = EventStore(context, null)
-    }
-
-    @After
-    fun tearDown() {
-        db.close()
-    }
-
+class FilterMatcherTest : BaseDBTest() {
     val id = "98b574c3527f0ffb30b7271084e3f07480733c7289f8de424d29eae82e36c758"
     val pubkey = "46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d"
     val createdAt: Long = 1683596206
@@ -83,91 +66,100 @@ class FilterMatcherTest {
         )
 
     @Test
-    fun matchIds() {
-        db.insert(note)
+    fun matchIds() =
+        forEachDB { db ->
+            db.insert(note)
 
-        db.assertQuery(note, Filter(ids = listOf(id)))
-        db.assertQuery(note, Filter(ids = listOf(id, rootETag)))
-        db.assertQuery(null, Filter(ids = listOf(rootETag)))
-    }
-
-    @Test
-    fun matchPubkeys() {
-        db.insert(note)
-
-        db.assertQuery(note, Filter(authors = listOf(pubkey)))
-        db.assertQuery(note, Filter(authors = listOf(pubkey, rootETag)))
-        db.assertQuery(null, Filter(authors = listOf(rootETag)))
-    }
+            db.assertQuery(note, Filter(ids = listOf(id)))
+            db.assertQuery(note, Filter(ids = listOf(id, rootETag)))
+            db.assertQuery(null, Filter(ids = listOf(rootETag)))
+        }
 
     @Test
-    fun matchTags() {
-        db.insert(note)
+    fun matchPubkeys() =
+        forEachDB { db ->
+            db.insert(note)
 
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1))))
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, pTag2, pTag3))))
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, id))))
-        db.assertQuery(null, Filter(tags = mapOf("p" to listOf(id))))
-    }
-
-    @Test
-    fun matchDualTags() {
-        db.insert(note)
-
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1), "e" to listOf(rootETag))))
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, pTag2, pTag3), "e" to listOf(rootETag, replyETag))))
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, replyETag))))
-        db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, pubkey))))
-        db.assertQuery(null, Filter(tags = mapOf("p" to listOf(pTag1, id), "e" to listOf(id, pubkey))))
-        db.assertQuery(null, Filter(tags = mapOf("p" to listOf(id), "e" to listOf(rootETag))))
-    }
+            db.assertQuery(note, Filter(authors = listOf(pubkey)))
+            db.assertQuery(note, Filter(authors = listOf(pubkey, rootETag)))
+            db.assertQuery(null, Filter(authors = listOf(rootETag)))
+        }
 
     @Test
-    fun matchAllTags() {
-        db.insert(note)
+    fun matchTags() =
+        forEachDB { db ->
+            db.insert(note)
 
-        db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1))))
-        db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1, pTag2, pTag3))))
-        db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id))))
-        db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(id))))
-    }
-
-    @Test
-    fun matchDualAllTags() {
-        db.insert(note)
-
-        db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1), "e" to listOf(rootETag))))
-        db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1, pTag2, pTag3), "e" to listOf(rootETag, replyETag))))
-        db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, replyETag))))
-        db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, pubkey))))
-        db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id), "e" to listOf(id, pubkey))))
-        db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(id), "e" to listOf(rootETag))))
-    }
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1))))
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, pTag2, pTag3))))
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, id))))
+            db.assertQuery(null, Filter(tags = mapOf("p" to listOf(id))))
+        }
 
     @Test
-    fun matchKinds() {
-        db.insert(note)
+    fun matchDualTags() =
+        forEachDB { db ->
+            db.insert(note)
 
-        db.assertQuery(note, Filter(kinds = listOf(kind)))
-        db.assertQuery(note, Filter(kinds = listOf(kind, 1221)))
-        db.assertQuery(null, Filter(kinds = listOf(1221)))
-    }
-
-    @Test
-    fun matchSince() {
-        db.insert(note)
-
-        db.assertQuery(note, Filter(since = createdAt))
-        db.assertQuery(note, Filter(since = createdAt - 1))
-        db.assertQuery(null, Filter(since = createdAt + 1))
-    }
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1), "e" to listOf(rootETag))))
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, pTag2, pTag3), "e" to listOf(rootETag, replyETag))))
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, replyETag))))
+            db.assertQuery(note, Filter(tags = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, pubkey))))
+            db.assertQuery(null, Filter(tags = mapOf("p" to listOf(pTag1, id), "e" to listOf(id, pubkey))))
+            db.assertQuery(null, Filter(tags = mapOf("p" to listOf(id), "e" to listOf(rootETag))))
+        }
 
     @Test
-    fun matchUntil() {
-        db.insert(note)
+    fun matchAllTags() =
+        forEachDB { db ->
+            db.insert(note)
 
-        db.assertQuery(note, Filter(until = createdAt))
-        db.assertQuery(note, Filter(until = createdAt + 1))
-        db.assertQuery(null, Filter(until = createdAt - 1))
-    }
+            db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1))))
+            db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1, pTag2, pTag3))))
+            db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id))))
+            db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(id))))
+        }
+
+    @Test
+    fun matchDualAllTags() =
+        forEachDB { db ->
+            db.insert(note)
+
+            db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1), "e" to listOf(rootETag))))
+            db.assertQuery(note, Filter(tagsAll = mapOf("p" to listOf(pTag1, pTag2, pTag3), "e" to listOf(rootETag, replyETag))))
+            db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, replyETag))))
+            db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id), "e" to listOf(rootETag, pubkey))))
+            db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(pTag1, id), "e" to listOf(id, pubkey))))
+            db.assertQuery(null, Filter(tagsAll = mapOf("p" to listOf(id), "e" to listOf(rootETag))))
+        }
+
+    @Test
+    fun matchKinds() =
+        forEachDB { db ->
+            db.insert(note)
+
+            db.assertQuery(note, Filter(kinds = listOf(kind)))
+            db.assertQuery(note, Filter(kinds = listOf(kind, 1221)))
+            db.assertQuery(null, Filter(kinds = listOf(1221)))
+        }
+
+    @Test
+    fun matchSince() =
+        forEachDB { db ->
+            db.insert(note)
+
+            db.assertQuery(note, Filter(since = createdAt))
+            db.assertQuery(note, Filter(since = createdAt - 1))
+            db.assertQuery(null, Filter(since = createdAt + 1))
+        }
+
+    @Test
+    fun matchUntil() =
+        forEachDB { db ->
+            db.insert(note)
+
+            db.assertQuery(note, Filter(until = createdAt))
+            db.assertQuery(note, Filter(until = createdAt + 1))
+            db.assertQuery(null, Filter(until = createdAt - 1))
+        }
 }
