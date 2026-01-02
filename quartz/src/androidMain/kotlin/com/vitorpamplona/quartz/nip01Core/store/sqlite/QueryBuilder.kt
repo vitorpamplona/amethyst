@@ -117,6 +117,7 @@ class QueryBuilder(
 
         if (newFilter.isSimpleQuery()) {
             return makeSimpleQuery(
+                project = true,
                 ids = newFilter.ids,
                 authors = newFilter.authors,
                 kinds = newFilter.kinds,
@@ -250,6 +251,23 @@ class QueryBuilder(
         filter: Filter,
         db: SQLiteDatabase,
     ): Int {
+        val newFilter = filter.toFilterWithDTags()
+
+        if (newFilter.isSimpleQuery()) {
+            val sql =
+                makeSimpleQuery(
+                    project = false,
+                    ids = newFilter.ids,
+                    authors = newFilter.authors,
+                    kinds = newFilter.kinds,
+                    dTags = newFilter.dTags,
+                    since = newFilter.since,
+                    until = newFilter.until,
+                    limit = newFilter.limit,
+                )
+            return db.runCount(sql.sql, sql.args)
+        }
+
         val rowIdSubQuery = prepareRowIDSubQueries(filter, hasher(db))
 
         return if (rowIdSubQuery == null) {
@@ -589,6 +607,7 @@ class QueryBuilder(
     }
 
     private fun makeSimpleQuery(
+        project: Boolean,
         ids: List<HexKey>? = null,
         authors: List<HexKey>? = null,
         kinds: List<Kind>? = null,
@@ -624,14 +643,20 @@ class QueryBuilder(
 
         val sql =
             buildString {
-                append("SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers")
+                if (project) {
+                    append("SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers")
+                } else {
+                    append("SELECT count(*) FROM event_headers")
+                }
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ")
                     append(clause.conditions)
                 }
-                append("\nORDER BY created_at DESC")
-                if (indexStrategy.useAndIndexIdOnOrderBy) {
-                    append(", event_headers.id ASC")
+                if (project) {
+                    append("\nORDER BY created_at DESC")
+                    if (indexStrategy.useAndIndexIdOnOrderBy) {
+                        append(", event_headers.id ASC")
+                    }
                 }
                 if (limit != null) {
                     append("\nLIMIT ")
