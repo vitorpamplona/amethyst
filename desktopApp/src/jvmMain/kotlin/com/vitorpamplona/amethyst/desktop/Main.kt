@@ -91,21 +91,21 @@ private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
  * Desktop navigation state - extends AppScreen with dynamic destinations.
  */
 sealed class DesktopScreen {
-    data object Feed : DesktopScreen()
+    object Feed : DesktopScreen()
 
-    data object Search : DesktopScreen()
+    object Search : DesktopScreen()
 
-    data object Messages : DesktopScreen()
+    object Messages : DesktopScreen()
 
-    data object Notifications : DesktopScreen()
+    object Notifications : DesktopScreen()
 
-    data object MyProfile : DesktopScreen()
+    object MyProfile : DesktopScreen()
 
     data class UserProfile(
         val pubKeyHex: String,
     ) : DesktopScreen()
 
-    data object Settings : DesktopScreen()
+    object Settings : DesktopScreen()
 }
 
 fun main() =
@@ -365,7 +365,7 @@ fun MainContent(
                             onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
                         },
                     )
-                DesktopScreen.Settings -> RelaySettingsScreen(relayManager)
+                DesktopScreen.Settings -> RelaySettingsScreen(relayManager, account)
             }
         }
     }
@@ -405,15 +405,35 @@ fun ProfileScreen(
 }
 
 @Composable
-fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
+fun RelaySettingsScreen(
+    relayManager: DesktopRelayConnectionManager,
+    account: AccountState.LoggedIn,
+) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     var newRelayUrl by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
-            "Relay Settings",
+            "Settings",
             style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        // Developer Settings Section (only in debug mode)
+        if (DebugConfig.isDebugMode) {
+            com.vitorpamplona.amethyst.desktop.ui
+                .DevSettingsSection(account = account)
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+        }
+
+        Text(
+            "Relay Settings",
+            style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
@@ -470,7 +490,7 @@ fun RelaySettingsScreen(relayManager: DesktopRelayConnectionManager) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f),
         ) {
-            items(relayStatuses.values.toList()) { status ->
+            items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
                 RelayStatusCard(
                     status = status,
                     onRemove = { relayManager.removeRelay(status.url) },

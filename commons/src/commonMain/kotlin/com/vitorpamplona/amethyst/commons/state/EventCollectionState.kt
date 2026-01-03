@@ -200,7 +200,7 @@ class EventCollectionState<T : Any>(
             // Sort if comparator provided, otherwise keep newest first (pending items already at end)
             val sorted =
                 if (sortComparator != null) {
-                    merged.sortedWith(sortComparator)
+                    merged.sortedWith(sortComparator).distinctBy { getId(it) }
                 } else {
                     // Reverse so newest (pending) items come first
                     (pendingItems.reversed() + _items.value).distinctBy { getId(it) }
