@@ -158,6 +158,7 @@
     <string name="record_a_message">录制消息</string>
     <string name="record_a_message_title">录制消息</string>
     <string name="record_a_message_description">点按以录制消息</string>
+    <string name="re_record">重新录制</string>
     <string name="recording_indicator_description">正在录制</string>
     <string name="recording_indicator_with_time">正在录制 %1$s</string>
     <string name="uploading">上传中…</string>
