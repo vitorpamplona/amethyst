@@ -655,7 +655,7 @@ class QueryBuilder(
                 if (project) {
                     append("\nORDER BY created_at DESC")
                     if (indexStrategy.useAndIndexIdOnOrderBy) {
-                        append(", event_headers.id ASC")
+                        append(", id ASC")
                     }
                 }
                 if (limit != null) {

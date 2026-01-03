@@ -75,8 +75,9 @@ class EventIndexesModule(
             }
 
         // queries by limit (latest records), since, until (sync all) alone without any filter by kind.. rare
-        // serves as fall back for the lack of query_by_tags_hash index by default
-        db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers ($orderBy)")
+        if (indexStrategy.indexEventsByCreatedAtAlone) {
+            db.execSQL("CREATE INDEX query_by_created_at_id        ON event_headers ($orderBy)")
+        }
 
         // queries by kind only, mostly used in Global Feeds when author is not important.
         db.execSQL("CREATE INDEX query_by_kind_created         ON event_headers (kind, $orderBy)")
@@ -87,10 +88,10 @@ class EventIndexesModule(
         // makes deletions on the event_header fast
         db.execSQL("CREATE INDEX fk_event_tags_header_id       ON event_tags (event_header_row_id)")
 
-        // ---------------------------------------------------------------
-        // This are a very slow indexes (80% of the insert time goes here)
-        // ---------------------------------------------------------------
-        if (indexStrategy.indexTagQueriesWithoutKinds) {
+        // ---------------------------------------------------------------------------
+        // These next 3 are a very slow indexes (80% of the insert time goes here)
+        // ---------------------------------------------------------------------------
+        if (indexStrategy.indexTagsByCreatedAtAlone) {
             // First one is only needed if the user is searching by tags without a kind.
             db.execSQL("CREATE INDEX query_by_tags_hash          ON event_tags (tag_hash, created_at DESC)")
         }
@@ -98,8 +99,10 @@ class EventIndexesModule(
         // This is the default index for most clients: tags by specific kinds that are supported by the client.
         db.execSQL("CREATE INDEX query_by_tags_hash_kind         ON event_tags (tag_hash, kind, created_at DESC)")
 
-        // this one is to allow search of tags by kind and author at the same time: DMs, reports,
-        db.execSQL("CREATE INDEX query_by_tags_hash_kind_pubkey  ON event_tags (tag_hash, kind, pubkey_hash, created_at DESC)")
+        // this one is to allow search of tags by kind and author at the same time: NIP-04 DMs, reports,
+        if (indexStrategy.indexTagsWithKindAndPubkey) {
+            db.execSQL("CREATE INDEX query_by_tags_hash_kind_pubkey  ON event_tags (tag_hash, kind, pubkey_hash, created_at DESC)")
+        }
 
         // Prevent updates to maintain immutability
         db.execSQL(

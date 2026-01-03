@@ -26,19 +26,46 @@ import org.junit.After
 import org.junit.Before
 
 open class BaseDBTest {
-    private lateinit var dbs: Map<String, EventStore>
+    private lateinit var dbs: MutableMap<String, EventStore>
+
+    fun DefaultIndexingStrategy.name(): String =
+        """
+        indexEventsByCreatedAtAlone=$indexEventsByCreatedAtAlone
+        indexTagsByCreatedAtAlone=$indexTagsByCreatedAtAlone
+        indexTagsWithKindAndPubkey=$indexTagsWithKindAndPubkey
+        useAndIndexIdOnOrderBy=$useAndIndexIdOnOrderBy
+        """.trimIndent()
 
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
-        dbs =
-            mapOf(
-                "Default" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(false, false)),
-                "IndexAll" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(true, false)),
-                "Order by ID" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(false, true)),
-                "IndexAll, Order by ID" to EventStore(context, null, indexStrategy = DefaultIndexingStrategy(true, true)),
-            )
+        val booleans = listOf(true, false)
+
+        dbs = mutableMapOf<String, EventStore>()
+
+        // tests all possible DBs
+        for (indexEventsByCreatedAtAlone in booleans) {
+            for (indexTagsByCreatedAtAlone in booleans) {
+                for (indexTagsWithKindAndPubkey in booleans) {
+                    for (useAndIndexIdOnOrderBy in booleans) {
+                        val indexStrategy =
+                            DefaultIndexingStrategy(
+                                indexEventsByCreatedAtAlone,
+                                indexTagsByCreatedAtAlone,
+                                indexTagsWithKindAndPubkey,
+                                useAndIndexIdOnOrderBy,
+                            )
+                        dbs[indexStrategy.name()] =
+                            EventStore(
+                                context = context,
+                                dbName = null,
+                                indexStrategy = indexStrategy,
+                            )
+                    }
+                }
+            }
+        }
     }
 
     @After

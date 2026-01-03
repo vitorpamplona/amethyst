@@ -208,26 +208,32 @@ class DeletionTest : BaseDBTest() {
     @Test
     fun testTriggersIndexUsage() =
         forEachDB { db ->
-            val sql =
-                """
-                SELECT 1 FROM event_tags
-                WHERE
-                    event_tags.tag_hash IN (3221122, 223322) AND
-                    event_tags.kind = 5 AND
-                    event_tags.pubkey_hash = 22332323 AND
-                    event_tags.created_at >= 1766686500
-                """.trimIndent()
+            var sql = db.store.deletionModule.rejectDeletedEventsSQLTemplate()
 
-            val explainer =
-                db.store.explainQuery(sql)
+            sql = sql.replace("NEW.etag_hash", "3221122")
+            sql = sql.replace("NEW.atag_hash", "223322")
+            sql = sql.replace("NEW.pubkey_owner_hash", "22332323")
+            sql = sql.replace("NEW.created_at", "1766686500")
 
-            TestCase.assertEquals(
-                """
-                ${sql.replace("\n","\n                ")}
-                └── SEARCH event_tags USING COVERING INDEX query_by_tags_hash_kind_pubkey (tag_hash=? AND kind=? AND pubkey_hash=? AND created_at>?)
-                """.trimIndent(),
-                explainer,
-            )
+            val explainer = db.store.explainQuery(sql)
+
+            if (db.indexStrategy.indexTagsWithKindAndPubkey) {
+                TestCase.assertEquals(
+                    """
+                    |$sql
+                    |└── SEARCH event_tags USING COVERING INDEX query_by_tags_hash_kind_pubkey (tag_hash=? AND kind=? AND pubkey_hash=? AND created_at>?)
+                    """.trimMargin(),
+                    explainer,
+                )
+            } else {
+                TestCase.assertEquals(
+                    """
+                    |$sql
+                    |└── SEARCH event_tags USING INDEX query_by_tags_hash_kind (tag_hash=? AND kind=? AND created_at>?)
+                    """.trimMargin(),
+                    explainer,
+                )
+            }
         }
 
     @Test
