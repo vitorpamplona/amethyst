@@ -11,6 +11,10 @@ sourceSets {
         kotlin.srcDir("src/jvmMain/kotlin")
         resources.srcDir("src/jvmMain/resources")
     }
+    test {
+        kotlin.srcDir("src/jvmTest/kotlin")
+        resources.srcDir("src/jvmTest/resources")
+    }
 }
 
 kotlin {
@@ -40,6 +44,11 @@ dependencies {
 
     // Collections
     implementation(libs.kotlinx.collections.immutable)
+
+    // Testing
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp)
 }
 
 compose.desktop {

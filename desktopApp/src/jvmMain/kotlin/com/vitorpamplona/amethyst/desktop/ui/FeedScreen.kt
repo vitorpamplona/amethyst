@@ -42,7 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,16 +53,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
+import com.vitorpamplona.amethyst.commons.subscriptions.FeedMode
+import com.vitorpamplona.amethyst.commons.subscriptions.createContactListSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createFollowingFeedSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createGlobalFeedSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
 /**
  * Note card with action buttons.
@@ -95,11 +95,6 @@ fun FeedNoteCard(
     }
 }
 
-enum class FeedMode {
-    GLOBAL,
-    FOLLOWING,
-}
-
 @Composable
 fun FeedScreen(
     relayManager: DesktopRelayConnectionManager,
@@ -125,113 +120,47 @@ fun FeedScreen(
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Load followed users for Following feed mode
-    DisposableEffect(relayStatuses, account, feedMode) {
+    rememberSubscription(relayStatuses, account, feedMode, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty() && account != null && feedMode == FeedMode.FOLLOWING) {
-            val contactListSubId = "feed-contacts-${account.pubKeyHex}-${System.currentTimeMillis()}"
-            relayManager.subscribe(
-                subId = contactListSubId,
-                filters =
-                    listOf(
-                        Filter(
-                            kinds = listOf(ContactListEvent.KIND),
-                            authors = listOf(account.pubKeyHex),
-                            limit = 1,
-                        ),
-                    ),
+            createContactListSubscription(
                 relays = configuredRelays,
-                listener =
-                    object : IRequestListener {
-                        override fun onEvent(
-                            event: Event,
-                            isLive: Boolean,
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            if (event is ContactListEvent) {
-                                followedUsers = event.verifiedFollowKeySet()
-                            }
-                        }
-
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {}
-                    },
+                pubKeyHex = account.pubKeyHex,
+                onEvent = { event, _, _, _ ->
+                    if (event is ContactListEvent) {
+                        followedUsers = event.verifiedFollowKeySet()
+                    }
+                },
             )
-
-            onDispose {
-                relayManager.unsubscribe(contactListSubId)
-            }
         } else {
-            onDispose {}
+            null
         }
     }
 
-    DisposableEffect(relayStatuses, feedMode, followedUsers) {
+    // Clear events when feed mode changes
+    remember(feedMode) { eventState.clear() }
+
+    // Subscribe to feed based on mode
+    rememberSubscription(relayStatuses, feedMode, followedUsers, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
-            // Clear previous events when switching modes
-            eventState.clear()
+        if (configuredRelays.isEmpty()) return@rememberSubscription null
 
-            val subId = "${feedMode.name.lowercase()}-feed-${System.currentTimeMillis()}"
-            val filters =
-                when (feedMode) {
-                    FeedMode.GLOBAL ->
-                        listOf(
-                            Filter(
-                                kinds = listOf(TextNoteEvent.KIND),
-                                limit = 50,
-                            ),
-                        )
-                    FeedMode.FOLLOWING ->
-                        if (followedUsers.isNotEmpty()) {
-                            listOf(
-                                Filter(
-                                    kinds = listOf(TextNoteEvent.KIND),
-                                    authors = followedUsers.toList(),
-                                    limit = 50,
-                                ),
-                            )
-                        } else {
-                            // No followed users yet, return empty filter
-                            emptyList()
-                        }
-                }
-
-            if (filters.isNotEmpty()) {
-                relayManager.subscribe(
-                    subId = subId,
-                    filters = filters,
+        when (feedMode) {
+            FeedMode.GLOBAL ->
+                createGlobalFeedSubscription(
                     relays = configuredRelays,
-                    listener =
-                        object : IRequestListener {
-                            override fun onEvent(
-                                event: Event,
-                                isLive: Boolean,
-                                relay: NormalizedRelayUrl,
-                                forFilters: List<Filter>?,
-                            ) {
-                                eventState.addItem(event)
-                            }
-
-                            override fun onEose(
-                                relay: NormalizedRelayUrl,
-                                forFilters: List<Filter>?,
-                            ) {
-                                // End of stored events
-                            }
-                        },
+                    onEvent = { event, _, _, _ -> eventState.addItem(event) },
                 )
-
-                onDispose {
-                    relayManager.unsubscribe(subId)
+            FeedMode.FOLLOWING ->
+                if (followedUsers.isNotEmpty()) {
+                    createFollowingFeedSubscription(
+                        relays = configuredRelays,
+                        followedUsers = followedUsers.toList(),
+                        onEvent = { event, _, _, _ -> eventState.addItem(event) },
+                    )
+                } else {
+                    null
                 }
-            } else {
-                onDispose {}
-            }
-        } else {
-            onDispose {}
         }
     }
 

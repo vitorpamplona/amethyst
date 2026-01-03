@@ -48,7 +48,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,15 +63,15 @@ import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.actions.FollowAction
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.state.FollowState
+import com.vitorpamplona.amethyst.commons.subscriptions.createContactListSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createMetadataSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createUserPostsSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -124,148 +123,71 @@ fun UserProfileScreen(
         }
 
     // Load current user's contact list (for follow state)
-    DisposableEffect(relayStatuses, account) {
+    rememberSubscription(relayStatuses, account, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty() && account != null) {
-            val contactListSubId = "my-contacts-${account.pubKeyHex}-${System.currentTimeMillis()}"
-            relayManager.subscribe(
-                subId = contactListSubId,
-                filters =
-                    listOf(
-                        Filter(
-                            kinds = listOf(ContactListEvent.KIND), // Kind 3
-                            authors = listOf(account.pubKeyHex),
-                            limit = 1,
-                        ),
-                    ),
+            createContactListSubscription(
                 relays = configuredRelays,
-                listener =
-                    object : IRequestListener {
-                        override fun onEvent(
-                            event: Event,
-                            isLive: Boolean,
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            if (event is ContactListEvent) {
-                                followState.updateContactList(event, pubKeyHex)
-                            }
-                        }
-
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {}
-                    },
+                pubKeyHex = account.pubKeyHex,
+                onEvent = { event, _, _, _ ->
+                    if (event is ContactListEvent) {
+                        followState.updateContactList(event, pubKeyHex)
+                    }
+                },
             )
-
-            onDispose {
-                relayManager.unsubscribe(contactListSubId)
-            }
         } else {
-            onDispose {}
+            null
         }
     }
 
-    // Subscribe to user metadata and posts
-    DisposableEffect(relayStatuses, pubKeyHex, retryTrigger) {
+    // Clear posts when profile changes
+    remember(pubKeyHex, retryTrigger) {
+        eventState.clear()
+        postsLoading = true
+        postsError = null
+    }
+
+    // Subscribe to user metadata
+    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty()) {
-            postsLoading = true
-            postsError = null
-            eventState.clear()
-            // Metadata subscription (kind 0)
-            val metadataSubId = "profile-metadata-$pubKeyHex-${System.currentTimeMillis()}"
-            relayManager.subscribe(
-                subId = metadataSubId,
-                filters =
-                    listOf(
-                        Filter(
-                            kinds = listOf(0), // Metadata
-                            authors = listOf(pubKeyHex),
-                            limit = 1,
-                        ),
-                    ),
+            createMetadataSubscription(
                 relays = configuredRelays,
-                listener =
-                    object : IRequestListener {
-                        override fun onEvent(
-                            event: Event,
-                            isLive: Boolean,
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            // Parse metadata JSON (simplified - full parsing in production)
-                            try {
-                                val content = event.content
-                                displayName = extractJsonField(content, "display_name") ?: extractJsonField(content, "name")
-                                about = extractJsonField(content, "about")
-                                picture = extractJsonField(content, "picture")
-                            } catch (e: Exception) {
-                                // Ignore parse errors
-                            }
-                        }
-
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {}
-                    },
-            )
-
-            // Posts subscription (kind 1)
-            val postsSubId = "profile-posts-$pubKeyHex-${System.currentTimeMillis()}"
-            relayManager.subscribe(
-                subId = postsSubId,
-                filters =
-                    listOf(
-                        Filter(
-                            kinds = listOf(TextNoteEvent.KIND),
-                            authors = listOf(pubKeyHex),
-                            limit = 50,
-                        ),
-                    ),
-                relays = configuredRelays,
-                listener =
-                    object : IRequestListener {
-                        override fun onEvent(
-                            event: Event,
-                            isLive: Boolean,
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            eventState.addItem(event)
-                        }
-
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            // At least one relay finished sending events
-                            postsLoading = false
-                        }
-                    },
-            )
-
-            // Set timeout for loading state
-            val timeoutJob =
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
-                    kotlinx.coroutines.delay(10000) // 10 second timeout
-                    if (postsLoading) {
-                        postsError = "Request timed out. Check relay connections."
-                        postsLoading = false
+                pubKeyHex = pubKeyHex,
+                onEvent = { event, _, _, _ ->
+                    try {
+                        val content = event.content
+                        displayName = extractJsonField(content, "display_name") ?: extractJsonField(content, "name")
+                        about = extractJsonField(content, "about")
+                        picture = extractJsonField(content, "picture")
+                    } catch (e: Exception) {
+                        // Ignore parse errors
                     }
-                }
+                },
+            )
+        } else {
+            null
+        }
+    }
 
-            onDispose {
-                timeoutJob.cancel()
-                relayManager.unsubscribe(metadataSubId)
-                relayManager.unsubscribe(postsSubId)
-            }
+    // Subscribe to user posts
+    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isNotEmpty()) {
+            createUserPostsSubscription(
+                relays = configuredRelays,
+                pubKeyHex = pubKeyHex,
+                onEvent = { event, _, _, _ ->
+                    eventState.addItem(event)
+                },
+                onEose = { _, _ ->
+                    postsLoading = false
+                },
+            )
         } else {
             postsLoading = false
             postsError = "No relays configured"
-            onDispose {}
+            null
         }
     }
 

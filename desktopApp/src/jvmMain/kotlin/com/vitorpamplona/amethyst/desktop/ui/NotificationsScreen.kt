@@ -39,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -52,15 +51,14 @@ import com.vitorpamplona.amethyst.commons.icons.Reply
 import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
+import com.vitorpamplona.amethyst.commons.subscriptions.createNotificationsSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -122,96 +120,57 @@ fun NotificationsScreen(
         }
     val notifications by notificationState.items.collectAsState()
 
-    DisposableEffect(relayStatuses, account.pubKeyHex) {
+    // Subscribe to notifications
+    rememberSubscription(relayStatuses, account.pubKeyHex, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty()) {
-            val subId = "notifications-${account.pubKeyHex}-${System.currentTimeMillis()}"
-            val filters =
-                listOf(
-                    // Mentions, replies, reactions, reposts, zaps
-                    Filter(
-                        kinds =
-                            listOf(
-                                TextNoteEvent.KIND, // 1 - mentions/replies
-                                ReactionEvent.KIND, // 7 - reactions
-                                RepostEvent.KIND, // 6 - reposts
-                                GenericRepostEvent.KIND, // 16 - generic reposts
-                                LnZapEvent.KIND, // 9735 - zaps
-                            ),
-                        tags = mapOf("p" to listOf(account.pubKeyHex)), // Events mentioning user
-                        limit = 100,
-                    ),
-                )
-
-            relayManager.subscribe(
-                subId = subId,
-                filters = filters,
+            createNotificationsSubscription(
                 relays = configuredRelays,
-                listener =
-                    object : IRequestListener {
-                        override fun onEvent(
-                            event: Event,
-                            isLive: Boolean,
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            // Skip events from the user themselves (except zaps)
-                            if (event.pubKey == account.pubKeyHex && event !is LnZapEvent) {
-                                return
+                pubKeyHex = account.pubKeyHex,
+                onEvent = { event, _, _, _ ->
+                    // Skip events from the user themselves (except zaps)
+                    if (event.pubKey == account.pubKeyHex && event !is LnZapEvent) {
+                        return@createNotificationsSubscription
+                    }
+
+                    val notification =
+                        when (event) {
+                            is ReactionEvent ->
+                                NotificationItem.Reaction(
+                                    event = event,
+                                    timestamp = event.createdAt,
+                                    content = event.content,
+                                )
+                            is RepostEvent, is GenericRepostEvent ->
+                                NotificationItem.Repost(
+                                    event = event,
+                                    timestamp = event.createdAt,
+                                )
+                            is LnZapEvent -> {
+                                val amount = event.amount?.toLong()
+                                NotificationItem.Zap(
+                                    event = event,
+                                    timestamp = event.createdAt,
+                                    amount = amount,
+                                )
                             }
-
-                            val notification =
-                                when (event) {
-                                    is ReactionEvent ->
-                                        NotificationItem.Reaction(
-                                            event = event,
-                                            timestamp = event.createdAt,
-                                            content = event.content,
-                                        )
-                                    is RepostEvent, is GenericRepostEvent ->
-                                        NotificationItem.Repost(
-                                            event = event,
-                                            timestamp = event.createdAt,
-                                        )
-                                    is LnZapEvent -> {
-                                        // Extract amount from zap (simplified - full parsing in production)
-                                        val amount = event.amount?.toLong()
-                                        NotificationItem.Zap(
-                                            event = event,
-                                            timestamp = event.createdAt,
-                                            amount = amount,
-                                        )
-                                    }
-                                    is TextNoteEvent -> {
-                                        // Check if it's a reply (has e-tag) or mention
-                                        val eTags = event.tags.filter { it.size > 1 && it[0] == "e" }
-                                        val isReply = eTags.isNotEmpty()
-                                        if (isReply) {
-                                            NotificationItem.Reply(event, event.createdAt)
-                                        } else {
-                                            NotificationItem.Mention(event, event.createdAt)
-                                        }
-                                    }
-                                    else -> NotificationItem.Mention(event, event.createdAt)
+                            is TextNoteEvent -> {
+                                val eTags = event.tags.filter { it.size > 1 && it[0] == "e" }
+                                val isReply = eTags.isNotEmpty()
+                                if (isReply) {
+                                    NotificationItem.Reply(event, event.createdAt)
+                                } else {
+                                    NotificationItem.Mention(event, event.createdAt)
                                 }
-
-                            notificationState.addItem(notification)
+                            }
+                            else -> NotificationItem.Mention(event, event.createdAt)
                         }
 
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            // End of stored events
-                        }
-                    },
+                    notificationState.addItem(notification)
+                },
             )
-
-            onDispose {
-                relayManager.unsubscribe(subId)
-            }
         } else {
-            onDispose { }
+            null
         }
     }
 
