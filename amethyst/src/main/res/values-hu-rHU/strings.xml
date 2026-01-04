@@ -481,8 +481,8 @@
     <string name="privacy_options">Adatvédelmi beállítások</string>
     <string name="connect_via_tor_short">Tor és Orbot beállítása</string>
     <string name="connect_via_tor">Kapcsolódás az Orbot beállításain keresztül</string>
-    <string name="connect_via_tor1">Beállítás</string>
-    <string name="connect_via_tor2">Tor beállítások</string>
+    <string name="connect_via_tor1">Módosítás</string>
+    <string name="connect_via_tor2">Tor Beállítások</string>
     <string name="do_you_really_want_to_disable_tor_title">Kapcsolat bontása az Orbottal / Torral?</string>
     <string name="do_you_really_want_to_disable_tor_text">Az Ön adatai azonnal átkerülnek a normál hálózatra</string>
     <string name="yes">Igen</string>
