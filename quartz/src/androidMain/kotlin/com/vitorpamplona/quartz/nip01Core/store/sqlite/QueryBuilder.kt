@@ -30,8 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
 import com.vitorpamplona.quartz.utils.EventFactory
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 class QueryBuilder(
     val fts: FullTextSearchModule,

@@ -74,64 +74,23 @@ fun VoiceMessagePreview(
     var progress by remember { mutableFloatStateOf(0f) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
-    // Initialize MediaPlayer
-    DisposableEffect(voiceMetadata.url, localFile) {
-        val player = createMediaPlayer(voiceMetadata.url, localFile)
-        player?.setOnCompletionListener {
+    ManageMediaPlayer(
+        voiceMetadata = voiceMetadata,
+        localFile = localFile,
+        onCompletion = {
             isPlaying = false
             progress = 0f
-        }
-        mediaPlayer = player
+        },
+        onPlayerChanged = { mediaPlayer = it },
+        onRelease = { isPlaying = false },
+    )
 
-        onDispose {
-            // Stop playback and clean up
-            try {
-                player?.stop()
-            } catch (e: IllegalStateException) {
-                // Player might already be stopped
-                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped)", e)
-            }
-            player?.release()
-            mediaPlayer = null
-            isPlaying = false
-        }
-    }
-
-    // Update progress while playing
-    LaunchedEffect(mediaPlayer, isPlaying) {
-        // Capture player reference to avoid reading volatile state repeatedly
-        val player = mediaPlayer
-        if (player != null && isPlaying) {
-            while (isActive) {
-                try {
-                    if (player.isPlaying) {
-                        val current = player.currentPosition.toFloat()
-                        val duration = player.duration.toFloat()
-                        // Validate values before calculating progress
-                        val newProgress =
-                            if (duration > 0 && current >= 0) {
-                                (current / duration).coerceIn(0f, 1f)
-                            } else {
-                                0f
-                            }
-                        // Only update if value is valid (not NaN or Infinity)
-                        if (newProgress.isFinite()) {
-                            progress = newProgress
-                        }
-                    } else {
-                        // Player stopped, exit loop and let LaunchedEffect restart
-                        break
-                    }
-                } catch (e: IllegalStateException) {
-                    // Player in invalid state, stop tracking
-                    Log.w("VoiceMessagePreview", "MediaPlayer in invalid state during progress tracking", e)
-                    isPlaying = false
-                    break
-                }
-                delay(100)
-            }
-        }
-    }
+    TrackPlaybackProgress(
+        mediaPlayer = mediaPlayer,
+        isPlaying = isPlaying,
+        onProgressUpdate = { progress = it },
+        onInvalidState = { isPlaying = false },
+    )
 
     Box(
         modifier =
@@ -150,27 +109,13 @@ fun VoiceMessagePreview(
             // Play/Pause Button
             IconButton(
                 onClick = {
-                    val player = mediaPlayer
-                    if (player != null) {
-                        try {
-                            if (isPlaying) {
-                                player.pause()
-                                isPlaying = false
-                            } else {
-                                // Validate progress before comparison
-                                if (progress.isFinite() && progress >= 1f) {
-                                    player.seekTo(0)
-                                    progress = 0f
-                                }
-                                player.start()
-                                isPlaying = true
-                            }
-                        } catch (e: IllegalStateException) {
-                            // MediaPlayer in invalid state, ignore
-                            Log.w("VoiceMessagePreview", "MediaPlayer operation failed in onClick handler", e)
-                            isPlaying = false
-                        }
-                    }
+                    handlePlayPauseClick(
+                        mediaPlayer = mediaPlayer,
+                        isPlaying = isPlaying,
+                        progress = progress,
+                        onProgressReset = { progress = 0f },
+                        onPlayingChanged = { isPlaying = it },
+                    )
                 },
                 modifier = Modifier.size(48.dp),
             ) {
@@ -194,24 +139,11 @@ fun VoiceMessagePreview(
                     waveformBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)),
                     progressBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary)),
                     onProgressChange = { newProgress ->
-                        // Validate incoming progress value
-                        if (newProgress.isFinite() && newProgress >= 0f && newProgress <= 1f) {
-                            val player = mediaPlayer
-                            if (player != null) {
-                                try {
-                                    val duration = player.duration
-                                    // Only seek if duration is valid
-                                    if (duration > 0) {
-                                        val newPosition = (newProgress * duration).toInt()
-                                        player.seekTo(newPosition)
-                                        progress = newProgress
-                                    }
-                                } catch (e: IllegalStateException) {
-                                    // MediaPlayer in invalid state, ignore
-                                    Log.w("VoiceMessagePreview", "MediaPlayer seek failed in onProgressChange", e)
-                                }
-                            }
-                        }
+                        handleWaveformScrub(
+                            newProgress = newProgress,
+                            mediaPlayer = mediaPlayer,
+                            onProgressChanged = { progress = it },
+                        )
                     },
                 )
 
@@ -237,6 +169,115 @@ fun VoiceMessagePreview(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ManageMediaPlayer(
+    voiceMetadata: AudioMeta,
+    localFile: File?,
+    onCompletion: () -> Unit,
+    onPlayerChanged: (MediaPlayer?) -> Unit,
+    onRelease: () -> Unit,
+) {
+    DisposableEffect(voiceMetadata.url, localFile) {
+        val player = createMediaPlayer(voiceMetadata.url, localFile)
+        player?.setOnCompletionListener { onCompletion() }
+        onPlayerChanged(player)
+
+        onDispose {
+            try {
+                player?.stop()
+            } catch (e: IllegalStateException) {
+                Log.d("VoiceMessagePreview", "MediaPlayer stop failed (already stopped)", e)
+            }
+            player?.release()
+            onPlayerChanged(null)
+            onRelease()
+        }
+    }
+}
+
+@Composable
+private fun TrackPlaybackProgress(
+    mediaPlayer: MediaPlayer?,
+    isPlaying: Boolean,
+    onProgressUpdate: (Float) -> Unit,
+    onInvalidState: () -> Unit,
+) {
+    LaunchedEffect(mediaPlayer, isPlaying) {
+        val player = mediaPlayer ?: return@LaunchedEffect
+        if (!isPlaying) return@LaunchedEffect
+
+        while (isActive) {
+            try {
+                if (!player.isPlaying) break
+                calculateProgress(player.currentPosition.toFloat(), player.duration.toFloat())?.let { onProgressUpdate(it) }
+            } catch (e: IllegalStateException) {
+                Log.w("VoiceMessagePreview", "MediaPlayer in invalid state during progress tracking", e)
+                onInvalidState()
+                break
+            }
+            delay(100)
+        }
+    }
+}
+
+private fun calculateProgress(
+    current: Float,
+    duration: Float,
+): Float? {
+    val progress =
+        if (duration > 0 && current >= 0) {
+            (current / duration).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+    return progress.takeIf { it.isFinite() }
+}
+
+private fun handlePlayPauseClick(
+    mediaPlayer: MediaPlayer?,
+    isPlaying: Boolean,
+    progress: Float,
+    onProgressReset: () -> Unit,
+    onPlayingChanged: (Boolean) -> Unit,
+) {
+    val player = mediaPlayer ?: return
+    try {
+        if (isPlaying) {
+            player.pause()
+            onPlayingChanged(false)
+            return
+        }
+        if (progress.isFinite() && progress >= 1f) {
+            player.seekTo(0)
+            onProgressReset()
+        }
+        player.start()
+        onPlayingChanged(true)
+    } catch (e: IllegalStateException) {
+        Log.w("VoiceMessagePreview", "MediaPlayer operation failed in onClick handler", e)
+        onPlayingChanged(false)
+    }
+}
+
+private fun handleWaveformScrub(
+    newProgress: Float,
+    mediaPlayer: MediaPlayer?,
+    onProgressChanged: (Float) -> Unit,
+) {
+    if (!newProgress.isFinite() || newProgress < 0f || newProgress > 1f) return
+    val player = mediaPlayer ?: return
+    try {
+        val duration = player.duration
+        if (duration > 0) {
+            val newPosition = (newProgress * duration).toInt()
+            player.seekTo(newPosition)
+            onProgressChanged(newProgress)
+        }
+    } catch (e: IllegalStateException) {
+        Log.w("VoiceMessagePreview", "MediaPlayer seek failed in onProgressChange", e)
     }
 }
 

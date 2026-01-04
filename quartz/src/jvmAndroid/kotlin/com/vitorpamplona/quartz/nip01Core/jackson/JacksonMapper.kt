@@ -59,7 +59,6 @@ import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorSerializer
-import kotlinx.serialization.json.JsonNull.content
 import java.io.InputStream
 
 class JacksonMapper {

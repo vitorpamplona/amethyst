@@ -248,10 +248,8 @@ object LocalPreferences {
         withContext(Dispatchers.IO) {
             val prefsDir = File(prefsDirPath)
             prefsDir.list()?.forEach {
-                if (it.contains(npub)) {
-                    if (!File(prefsDir, it).delete()) {
-                        Log.w("LocalPreferences", "Failed to delete preference file: $it")
-                    }
+                if (it.contains(npub) && !File(prefsDir, it).delete()) {
+                    Log.w("LocalPreferences", "Failed to delete preference file: $it")
                 }
             }
         }
