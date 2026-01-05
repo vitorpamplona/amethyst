@@ -1106,7 +1106,6 @@ object LocalCache : ILocalCache {
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
         if (new) {
-            println("AABBCC New ContactCard about ${event.aboutUser()}")
             val about = checkGetOrCreateUser(event.aboutUser()) ?: return new
             about.cards().addCard(note)
         }
