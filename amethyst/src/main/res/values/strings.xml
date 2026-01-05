@@ -391,6 +391,8 @@
 
     <string name="manual_zaps">Manual Zap Splits</string>
     <string name="bookmarks">Bookmarks</string>
+    <string name="bookmarks_title">Default Bookmarks</string>
+    <string name="bookmarks_explainer">Your default Bookmarks that many clients support</string>
     <string name="drafts">Drafts</string>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
@@ -44,8 +44,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal.BookmarkPrivateFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal.BookmarkPublicFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPrivateFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal.BookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
@@ -93,7 +93,7 @@ private fun RenderBookmarkScreen(
         isInvertedLayout = false,
         topBar = {
             Column {
-                TopBarWithBackButton(stringRes(id = R.string.bookmarks), nav::popBack)
+                TopBarWithBackButton(stringRes(id = R.string.bookmarks_title), nav::popBack)
                 TabRow(
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,

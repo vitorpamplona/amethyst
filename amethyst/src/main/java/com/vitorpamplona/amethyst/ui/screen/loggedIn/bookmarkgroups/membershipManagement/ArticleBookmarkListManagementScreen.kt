@@ -44,7 +44,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.BookmarkGroupsFeedEmpty
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -75,8 +74,6 @@ private fun ListManagementView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val bookmarkGroups by accountViewModel.account.labeledBookmarkLists.listFeedFlow
-        .collectAsStateWithLifecycle()
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -95,48 +92,86 @@ private fun ListManagementView(
                     ).consumeWindowInsets(contentPadding)
                     .imePadding(),
         ) {
-            if (bookmarkGroups.isEmpty()) {
-                BookmarkGroupsFeedEmpty(message = stringRes(R.string.bookmark_list_feed_empty_msg))
-            } else {
-                LazyColumn(
-                    state = rememberLazyListState(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    itemsIndexed(items = bookmarkGroups, key = { _: Int, item: LabeledBookmarkList -> item.identifier }) { _, bookmarkList ->
-                        val maybePublicBookmark = bookmarkList.publicArticleBookmarks.firstOrNull { it.address == note.address }
-                        val maybePrivateBookmark = bookmarkList.privateArticleBookmarks.firstOrNull { it.address == note.address }
-                        BookmarkGroupManagementItem(
-                            modifier = Modifier.fillMaxWidth().animateItem(),
-                            listTitle = bookmarkList.title,
-                            isPublicMemberBookmark = maybePublicBookmark != null,
-                            isPrivateMemberBookmark = maybePrivateBookmark != null,
-                            totalPostBookmarkSize = bookmarkList.publicPostBookmarks.size + bookmarkList.privatePostBookmarks.size,
-                            totalArticleBookmarkSize = bookmarkList.publicArticleBookmarks.size + bookmarkList.privateArticleBookmarks.size,
-                            onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.ArticleBookmark)) },
-                            onAddBookmarkToGroup = { shouldBePrivate ->
-                                accountViewModel.launchSigner {
-                                    accountViewModel.account.labeledBookmarkLists.addBookmarkToList(
-                                        bookmark = AddressBookmark(address = note.address, relayHint = note.relayHintUrl()),
-                                        bookmarkListIdentifier = bookmarkList.identifier,
-                                        isBookmarkPrivate = shouldBePrivate,
-                                        account = accountViewModel.account,
-                                    )
-                                }
-                            },
-                            onRemoveBookmarkFromGroup = {
-                                accountViewModel.launchSigner {
-                                    accountViewModel.account.labeledBookmarkLists.removeBookmarkFromList(
-                                        bookmark = AddressBookmark(address = note.address),
-                                        bookmarkListIdentifier = bookmarkList.identifier,
-                                        isBookmarkPrivate = maybePrivateBookmark != null,
-                                        account = accountViewModel.account,
-                                    )
-                                }
-                            },
+            ListManagementViewBody(note, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun ListManagementViewBody(
+    note: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val bookmarkGroups by accountViewModel.account.labeledBookmarkLists.listFeedFlow
+        .collectAsStateWithLifecycle()
+
+    val defaultBookmarks by accountViewModel.account.bookmarkState.bookmarks
+        .collectAsStateWithLifecycle()
+
+    LazyColumn(
+        state = rememberLazyListState(),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        item {
+            val maybePublicBookmark = defaultBookmarks.public.contains(note)
+            val maybePrivateBookmark = defaultBookmarks.private.contains(note)
+
+            BookmarkGroupManagementItem(
+                modifier = Modifier.fillMaxWidth().animateItem(),
+                listTitle = stringRes(R.string.bookmarks_title),
+                isPublicMemberBookmark = maybePublicBookmark,
+                isPrivateMemberBookmark = maybePrivateBookmark,
+                totalPostBookmarkSize = defaultBookmarks.public.size + defaultBookmarks.private.size,
+                totalArticleBookmarkSize = 0,
+                onClick = {
+                    nav.nav(Route.Bookmarks)
+                },
+                onAddBookmarkToGroup = { shouldBePrivate ->
+                    accountViewModel.launchSigner {
+                        accountViewModel.account.addBookmark(note, shouldBePrivate)
+                    }
+                },
+                onRemoveBookmarkFromGroup = {
+                    accountViewModel.launchSigner {
+                        accountViewModel.account.removeBookmark(note)
+                    }
+                },
+            )
+        }
+
+        itemsIndexed(items = bookmarkGroups, key = { _: Int, item: LabeledBookmarkList -> item.identifier }) { _, bookmarkList ->
+            val maybePublicBookmark = bookmarkList.publicArticleBookmarks.firstOrNull { it.address == note.address }
+            val maybePrivateBookmark = bookmarkList.privateArticleBookmarks.firstOrNull { it.address == note.address }
+            BookmarkGroupManagementItem(
+                modifier = Modifier.fillMaxWidth().animateItem(),
+                listTitle = bookmarkList.title,
+                isPublicMemberBookmark = maybePublicBookmark != null,
+                isPrivateMemberBookmark = maybePrivateBookmark != null,
+                totalPostBookmarkSize = bookmarkList.publicPostBookmarks.size + bookmarkList.privatePostBookmarks.size,
+                totalArticleBookmarkSize = bookmarkList.publicArticleBookmarks.size + bookmarkList.privateArticleBookmarks.size,
+                onClick = { nav.nav(Route.BookmarkGroupView(bookmarkList.identifier, BookmarkType.ArticleBookmark)) },
+                onAddBookmarkToGroup = { shouldBePrivate ->
+                    accountViewModel.launchSigner {
+                        accountViewModel.account.labeledBookmarkLists.addBookmarkToList(
+                            bookmark = AddressBookmark(address = note.address, relayHint = note.relayHintUrl()),
+                            bookmarkListIdentifier = bookmarkList.identifier,
+                            isBookmarkPrivate = shouldBePrivate,
+                            account = accountViewModel.account,
                         )
                     }
-                }
-            }
+                },
+                onRemoveBookmarkFromGroup = {
+                    accountViewModel.launchSigner {
+                        accountViewModel.account.labeledBookmarkLists.removeBookmarkFromList(
+                            bookmark = AddressBookmark(address = note.address),
+                            bookmarkListIdentifier = bookmarkList.identifier,
+                            isBookmarkPrivate = maybePrivateBookmark != null,
+                            account = accountViewModel.account,
+                        )
+                    }
+                },
+            )
         }
     }
 }
