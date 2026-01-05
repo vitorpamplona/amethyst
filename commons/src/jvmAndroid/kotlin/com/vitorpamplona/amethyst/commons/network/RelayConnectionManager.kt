@@ -100,12 +100,11 @@ open class RelayConnectionManager(
     }
 
     /**
-     * Broadcasts an event to all configured relays.
-     * Events will be sent to relays as they become connected.
+     * Broadcasts an event to all connected relays.
      */
     fun broadcastToAll(event: Event) {
-        val configuredRelays = relayStatuses.value.keys
-        send(event, configuredRelays)
+        val connected = connectedRelays.value
+        send(event, connected)
     }
 
     private fun updateRelayStatus(

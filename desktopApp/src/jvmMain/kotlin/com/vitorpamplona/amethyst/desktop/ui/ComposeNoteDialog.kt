@@ -177,24 +177,15 @@ private suspend fun publishNote(
     replyTo: com.vitorpamplona.quartz.nip01Core.core.Event?,
 ) {
     withContext(Dispatchers.IO) {
-        println("[ComposeNoteDialog] Starting publishNote: content length=${content.length}")
-
         // Check read-only mode
         if (account.isReadOnly) {
-            println("[ComposeNoteDialog] Error: Cannot post in read-only mode")
             throw IllegalStateException("Cannot post in read-only mode")
         }
-
-        println("[ComposeNoteDialog] Signing event with pubkey: ${account.pubKeyHex.take(8)}...")
 
         // Use shared PublishAction from commons
         val signedEvent = PublishAction.publishTextNote(content, account.signer, replyTo)
 
-        println("[ComposeNoteDialog] Event signed successfully, ID: ${signedEvent.id.take(8)}...")
-
         // Broadcast to all configured relays
-        println("[ComposeNoteDialog] Broadcasting to relays...")
         relayManager.broadcastToAll(signedEvent)
-        println("[ComposeNoteDialog] Broadcast complete")
     }
 }

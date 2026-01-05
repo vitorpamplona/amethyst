@@ -122,6 +122,11 @@ fun UserProfileScreen(
             FollowState(myPubKeyHex = account?.pubKeyHex ?: "")
         }
 
+    // Store the user's contact list separately for reliable access
+    var myContactList by remember(account) { mutableStateOf<ContactListEvent?>(null) }
+    var contactListLoaded by remember(account) { mutableStateOf(false) }
+    var eoseReceivedCount by remember(account) { mutableStateOf(0) }
+
     // Load current user's contact list (for follow state)
     rememberSubscription(relayStatuses, account, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
@@ -131,7 +136,22 @@ fun UserProfileScreen(
                 pubKeyHex = account.pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
+                        // Store the most recent contact list (by createdAt timestamp)
+                        if (myContactList == null || event.createdAt > myContactList!!.createdAt) {
+                            myContactList = event
+                        }
+
                         followState.updateContactList(event, pubKeyHex)
+                        contactListLoaded = true
+                    }
+                },
+                onEose = { _, _ ->
+                    eoseReceivedCount++
+
+                    // Wait for EOSE from at least 2 relays or all relays before enabling button
+                    val minEoseCount = minOf(2, configuredRelays.size)
+                    if (eoseReceivedCount >= minEoseCount && !contactListLoaded) {
+                        contactListLoaded = true
                     }
                 },
             )
@@ -216,15 +236,19 @@ fun UserProfileScreen(
                     Button(
                         onClick = {
                             scope.launch {
+                                val currentStatus = followState.currentStatusOrNull()
+
                                 followState.setFollowLoading()
                                 try {
-                                    val currentStatus = followState.currentStatusOrNull()
                                     val updatedEvent =
                                         if (currentStatus?.isFollowing == true) {
-                                            unfollowUser(pubKeyHex, account, relayManager, currentStatus.contactList)
+                                            unfollowUser(pubKeyHex, account, relayManager, myContactList)
                                         } else {
-                                            followUser(pubKeyHex, account, relayManager, currentStatus?.contactList)
+                                            followUser(pubKeyHex, account, relayManager, myContactList)
                                         }
+
+                                    // Update both stored contact list and followState
+                                    myContactList = updatedEvent
                                     followState.setFollowSuccess(updatedEvent, pubKeyHex)
                                 } catch (e: Exception) {
                                     e.printStackTrace()
@@ -232,28 +256,40 @@ fun UserProfileScreen(
                                 }
                             }
                         },
-                        enabled = followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
+                        enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
                     ) {
                         val state = followState.state.collectAsState().value
                         val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
                         val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
 
-                        if (isLoading) {
-                            androidx.compose.material3.CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (isFollowing) "Unfollowing..." else "Following...")
-                        } else {
-                            Icon(
-                                if (isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
-                                contentDescription = if (isFollowing) "Unfollow" else "Follow",
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (isFollowing) "Unfollow" else "Follow")
+                        when {
+                            !contactListLoaded -> {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Loading...")
+                            }
+                            isLoading -> {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (isFollowing) "Unfollowing..." else "Following...")
+                            }
+                            else -> {
+                                Icon(
+                                    if (isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
+                                    contentDescription = if (isFollowing) "Unfollow" else "Follow",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (isFollowing) "Unfollow" else "Follow")
+                            }
                         }
                     }
 
@@ -460,14 +496,15 @@ private suspend fun followUser(
     currentContactList: ContactListEvent?,
 ): ContactListEvent =
     withContext(Dispatchers.IO) {
-        println("[UserProfile] Starting followUser: target=${pubKeyHex.take(8)}...")
-
         // Use shared FollowAction from commons
         val updatedEvent = FollowAction.follow(pubKeyHex, account.signer, currentContactList)
 
-        println("[UserProfile] ContactListEvent created, broadcasting...")
+        val connectedRelays = relayManager.connectedRelays.value
+        if (connectedRelays.isEmpty()) {
+            throw IllegalStateException("Cannot follow: No connected relays")
+        }
+
         relayManager.broadcastToAll(updatedEvent)
-        println("[UserProfile] Follow broadcast complete")
 
         updatedEvent
     }
@@ -482,21 +519,19 @@ private suspend fun unfollowUser(
     currentContactList: ContactListEvent?,
 ): ContactListEvent =
     withContext(Dispatchers.IO) {
-        println("[UserProfile] Starting unfollowUser: target=${pubKeyHex.take(8)}...")
-
         if (currentContactList != null) {
-            println("[UserProfile] Removing from existing contact list")
-
             // Use shared FollowAction from commons
             val updatedEvent = FollowAction.unfollow(pubKeyHex, account.signer, currentContactList)
 
-            println("[UserProfile] ContactListEvent updated, broadcasting...")
+            val connectedRelays = relayManager.connectedRelays.value
+            if (connectedRelays.isEmpty()) {
+                throw IllegalStateException("Cannot unfollow: No connected relays")
+            }
+
             relayManager.broadcastToAll(updatedEvent)
-            println("[UserProfile] Unfollow broadcast complete")
 
             updatedEvent
         } else {
-            println("[UserProfile] Error: No contact list to unfollow from")
             throw IllegalStateException("Cannot unfollow: No contact list available")
         }
     }
