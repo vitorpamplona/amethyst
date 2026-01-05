@@ -138,29 +138,39 @@ fun FeedScreen(
     }
 
     // Clear events when feed mode changes
-    remember(feedMode) { eventState.clear() }
+    remember(feedMode) {
+        eventState.clear()
+    }
 
     // Subscribe to feed based on mode
     rememberSubscription(relayStatuses, feedMode, followedUsers, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isEmpty()) return@rememberSubscription null
+        if (configuredRelays.isEmpty()) {
+            return@rememberSubscription null
+        }
 
         when (feedMode) {
-            FeedMode.GLOBAL ->
+            FeedMode.GLOBAL -> {
                 createGlobalFeedSubscription(
                     relays = configuredRelays,
-                    onEvent = { event, _, _, _ -> eventState.addItem(event) },
+                    onEvent = { event, _, _, _ ->
+                        eventState.addItem(event)
+                    },
                 )
-            FeedMode.FOLLOWING ->
+            }
+            FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingFeedSubscription(
                         relays = configuredRelays,
                         followedUsers = followedUsers.toList(),
-                        onEvent = { event, _, _, _ -> eventState.addItem(event) },
+                        onEvent = { event, _, _, _ ->
+                            eventState.addItem(event)
+                        },
                     )
                 } else {
                     null
                 }
+            }
         }
     }
 

@@ -81,7 +81,7 @@ fun createContactListSubscription(
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
-        subId = generateSubId("contact-list-$pubKeyHex"),
+        subId = generateSubId("contacts-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.contactList(pubKeyHex)),
         relays = relays,
         onEvent = onEvent,

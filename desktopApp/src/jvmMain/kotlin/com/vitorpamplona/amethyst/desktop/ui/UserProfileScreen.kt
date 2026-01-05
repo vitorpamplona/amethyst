@@ -174,6 +174,8 @@ fun UserProfileScreen(
     rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty()) {
+            postsLoading = true
+            postsError = null
             createUserPostsSubscription(
                 relays = configuredRelays,
                 pubKeyHex = pubKeyHex,
@@ -225,6 +227,7 @@ fun UserProfileScreen(
                                         }
                                     followState.setFollowSuccess(updatedEvent, pubKeyHex)
                                 } catch (e: Exception) {
+                                    e.printStackTrace()
                                     followState.setFollowError(e.message ?: "Failed to update follow status", e)
                                 }
                             }

@@ -35,7 +35,7 @@ fun createMetadataSubscription(
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
-        subId = generateSubId("profile-metadata-$pubKeyHex"),
+        subId = generateSubId("meta-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.userMetadata(pubKeyHex)),
         relays = relays,
         onEvent = onEvent,
@@ -53,7 +53,7 @@ fun createUserPostsSubscription(
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
-        subId = generateSubId("profile-posts-$pubKeyHex"),
+        subId = generateSubId("posts-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.textNotesFromAuthors(listOf(pubKeyHex), limit = limit)),
         relays = relays,
         onEvent = onEvent,
@@ -71,7 +71,7 @@ fun createNotificationsSubscription(
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
 ): SubscriptionConfig =
     SubscriptionConfig(
-        subId = generateSubId("notifications-$pubKeyHex"),
+        subId = generateSubId("notif-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.notificationsForUser(pubKeyHex, limit = limit)),
         relays = relays,
         onEvent = onEvent,
