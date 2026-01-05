@@ -169,5 +169,5 @@ serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref 
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
-stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.6.1" }
+stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.6.6" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
