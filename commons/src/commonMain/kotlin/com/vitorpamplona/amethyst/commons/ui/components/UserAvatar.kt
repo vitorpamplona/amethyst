@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.DefaultAlpha
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -40,7 +39,6 @@ import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
-import com.vitorpamplona.amethyst.commons.ui.theme.onBackgroundColorFilter
 
 /**
  * Shared avatar component that displays a user's profile picture with Robohash fallback.
@@ -63,9 +61,10 @@ fun UserAvatar(
     loadProfilePicture: Boolean = true,
     loadRobohash: Boolean = true,
 ) {
-    val avatarModifier = remember(size) {
-        modifier.clip(shape = CircleShape)
-    }
+    val avatarModifier =
+        remember(size) {
+            modifier.clip(shape = CircleShape)
+        }
 
     if (pictureUrl != null && loadProfilePicture) {
         // Show profile picture with robohash/icon as fallback
