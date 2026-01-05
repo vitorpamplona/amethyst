@@ -66,6 +66,10 @@ kotlin {
                 implementation(compose.materialIconsExtended)
                 implementation(compose.components.uiToolingPreview)
 
+                // Image loading (Coil 3 - KMP)
+                implementation(libs.coil.compose)
+                implementation(libs.coil.okhttp)
+
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 

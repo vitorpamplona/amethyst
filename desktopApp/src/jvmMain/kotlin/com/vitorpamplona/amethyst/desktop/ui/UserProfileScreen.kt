@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PersonAdd
@@ -45,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,7 +54,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
@@ -68,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.subscriptions.createMetadataSubscripti
 import com.vitorpamplona.amethyst.commons.subscriptions.createUserPostsSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
@@ -321,23 +319,23 @@ fun UserProfileScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
-                        // Profile picture placeholder
-                        Surface(
-                            modifier = Modifier.size(80.dp).clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary,
-                        ) {
-                            // TODO: Load actual image from picture URL
-                        }
+                        // Profile picture with robohash fallback
+                        UserAvatar(
+                            userHex = pubKeyHex,
+                            pictureUrl = picture,
+                            size = 56.dp,
+                            contentDescription = "Profile picture",
+                        )
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 displayName ?: (pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.take(20) ?: pubKeyHex.take(20)),
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )
                             Spacer(Modifier.height(4.dp))
@@ -350,7 +348,7 @@ fun UserProfileScreen(
                     }
 
                     if (about != null) {
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
                             about!!,
                             style = MaterialTheme.typography.bodyMedium,
@@ -358,13 +356,13 @@ fun UserProfileScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Column {
                             Text(
                                 "$followersCount",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
@@ -376,7 +374,7 @@ fun UserProfileScreen(
                         Column {
                             Text(
                                 "$followingCount",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
@@ -389,12 +387,12 @@ fun UserProfileScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
             // User's posts
             Text(
                 "Posts",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
