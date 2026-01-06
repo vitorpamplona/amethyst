@@ -44,7 +44,13 @@ class AddressSerializer {
             return try {
                 val parts = addressId.split(":", limit = 3)
                 if (parts.size > 2 && parts[1].length == 64 && Hex.isHex(parts[1])) {
-                    Address(parts[0].toInt(), parts[1], parts.getOrNull(2) ?: "")
+                    if (parts[0].length > 5) {
+                        // invalid kind
+                        Log.w("AddressableId", "Error parsing. invalid kind $addressId")
+                        null
+                    } else {
+                        Address(parts[0].toInt(), parts[1], parts.getOrNull(2) ?: "")
+                    }
                 } else {
                     if (addressId.startsWith("naddr1")) {
                         val addr = Nip19Parser.uriToRoute(addressId)?.entity
@@ -60,7 +66,7 @@ class AddressSerializer {
                     }
                 }
             } catch (t: Throwable) {
-                Log.e("AddressableId", "Error parsing: $addressId: ${t.message}", t)
+                Log.w("AddressableId", "Error parsing: $addressId: ${t.message}", t)
                 null
             }
         }
