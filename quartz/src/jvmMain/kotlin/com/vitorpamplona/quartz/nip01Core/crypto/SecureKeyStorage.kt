@@ -58,7 +58,10 @@ actual class SecureKeyStorage {
     private var keyringAvailable: Boolean = true
     private var fallbackPassword: String? = null
 
-    actual suspend fun savePrivateKey(npub: String, privKeyHex: String) {
+    actual suspend fun savePrivateKey(
+        npub: String,
+        privKeyHex: String,
+    ) {
         withContext(Dispatchers.IO) {
             try {
                 if (keyringAvailable) {
@@ -111,11 +114,13 @@ actual class SecureKeyStorage {
             }
         }
 
-    actual suspend fun hasPrivateKey(npub: String): Boolean =
-        getPrivateKey(npub) != null
+    actual suspend fun hasPrivateKey(npub: String): Boolean = getPrivateKey(npub) != null
 
     // Keyring-based storage
-    private fun saveToKeyring(npub: String, privKeyHex: String) {
+    private fun saveToKeyring(
+        npub: String,
+        privKeyHex: String,
+    ) {
         val keyring = Keyring.create()
         keyring.setPassword(SERVICE_NAME, npub, privKeyHex)
     }
@@ -138,7 +143,10 @@ actual class SecureKeyStorage {
         }
 
     // Fallback encrypted file storage
-    private fun saveToFallback(npub: String, privKeyHex: String) {
+    private fun saveToFallback(
+        npub: String,
+        privKeyHex: String,
+    ) {
         val password = getFallbackPassword()
         val encrypted = encryptData(privKeyHex, password)
 
@@ -184,12 +192,12 @@ actual class SecureKeyStorage {
         val fallbackFile = getFallbackFile()
         if (!fallbackFile.exists()) return emptyMap()
 
-        return fallbackFile.readLines()
+        return fallbackFile
+            .readLines()
             .mapNotNull { line ->
                 val parts = line.split(":", limit = 2)
                 if (parts.size == 2) parts[0] to parts[1] else null
-            }
-            .toMap()
+            }.toMap()
     }
 
     private fun getFallbackFile(): File {
@@ -206,7 +214,10 @@ actual class SecureKeyStorage {
         return fallbackPassword!!
     }
 
-    private fun encryptData(plaintext: String, password: String): String {
+    private fun encryptData(
+        plaintext: String,
+        password: String,
+    ): String {
         val salt = ByteArray(16).apply { SecureRandom().nextBytes(this) }
         val iv = ByteArray(IV_LENGTH).apply { SecureRandom().nextBytes(this) }
 
@@ -222,7 +233,10 @@ actual class SecureKeyStorage {
         return Base64.getEncoder().encodeToString(combined)
     }
 
-    private fun decryptData(ciphertext: String, password: String): String {
+    private fun decryptData(
+        ciphertext: String,
+        password: String,
+    ): String {
         val combined = Base64.getDecoder().decode(ciphertext)
 
         val salt = combined.copyOfRange(0, 16)

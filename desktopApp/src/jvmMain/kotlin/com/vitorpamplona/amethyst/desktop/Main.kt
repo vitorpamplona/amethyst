@@ -390,7 +390,7 @@ fun ProfileScreen(
     accountManager: AccountManager,
 ) {
     val scope = rememberCoroutineScope()
-    
+
     Column {
         Text(
             "Profile",

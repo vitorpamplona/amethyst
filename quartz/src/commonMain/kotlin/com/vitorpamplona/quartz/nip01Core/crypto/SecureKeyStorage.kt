@@ -34,7 +34,10 @@ expect class SecureKeyStorage {
      * @param privKeyHex The private key in hexadecimal format
      * @throws SecureStorageException if storage operation fails
      */
-    suspend fun savePrivateKey(npub: String, privKeyHex: String)
+    suspend fun savePrivateKey(
+        npub: String,
+        privKeyHex: String,
+    )
 
     /**
      * Retrieves a private key for the given npub.
@@ -66,4 +69,7 @@ expect class SecureKeyStorage {
 /**
  * Exception thrown when secure storage operations fail.
  */
-class SecureStorageException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class SecureStorageException(
+    message: String,
+    cause: Throwable? = null,
+) : Exception(message, cause)

@@ -63,8 +63,9 @@ class AccountManager(
             // and use SecureKeyStorage to retrieve the private key
             val lastNpub = getLastNpub() ?: return Result.failure(Exception("No saved account"))
 
-            val privKeyHex = secureStorage.getPrivateKey(lastNpub)
-                ?: return Result.failure(Exception("Private key not found for $lastNpub"))
+            val privKeyHex =
+                secureStorage.getPrivateKey(lastNpub)
+                    ?: return Result.failure(Exception("Private key not found for $lastNpub"))
 
             val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
             val signer = NostrSignerInternal(keyPair)
@@ -94,8 +95,9 @@ class AccountManager(
         }
 
         return try {
-            val privKeyHex = decodePrivateKeyAsHexOrNull(current.nsec)
-                ?: return Result.failure(Exception("Invalid nsec format"))
+            val privKeyHex =
+                decodePrivateKeyAsHexOrNull(current.nsec)
+                    ?: return Result.failure(Exception("Invalid nsec format"))
 
             secureStorage.savePrivateKey(current.npub, privKeyHex)
             saveLastNpub(current.npub)

@@ -30,14 +30,17 @@ import kotlinx.coroutines.withContext
  * Android implementation of SecureKeyStorage using EncryptedSharedPreferences
  * backed by Android Keystore (AES-256-GCM, hardware-backed when available).
  */
-actual class SecureKeyStorage(private val context: Context) {
+actual class SecureKeyStorage(
+    private val context: Context,
+) {
     companion object {
         private const val PREFS_NAME = "amethyst_secure_keys"
         private const val KEY_PREFIX = "privkey_"
     }
 
     private val masterKey: MasterKey by lazy {
-        MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
+        MasterKey
+            .Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }
@@ -52,7 +55,10 @@ actual class SecureKeyStorage(private val context: Context) {
         )
     }
 
-    actual suspend fun savePrivateKey(npub: String, privKeyHex: String) {
+    actual suspend fun savePrivateKey(
+        npub: String,
+        privKeyHex: String,
+    ) {
         withContext(Dispatchers.IO) {
             try {
                 encryptedPrefs.edit().putString(KEY_PREFIX + npub, privKeyHex).apply()
