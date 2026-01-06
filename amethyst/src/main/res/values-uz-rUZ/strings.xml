@@ -21,6 +21,7 @@
     <string name="illegal_behavior">Noqonuniy xatti-harakat</string>
     <string name="other">Boshqa sabab</string>
     <string name="harassment">Ta’qib</string>
+    <string name="violence">Zo\'ravon</string>
     <string name="unknown">Noma\'lum</string>
     <string name="relay_icon">Relay belgisi</string>
     <string name="unknown_author">Nomaʼlum muallif</string>
@@ -45,4 +46,26 @@
     <string name="login_with_a_private_key_to_be_able_to_reply">Sizda ommaviy kalit faol. Ommaviy kalitlar orqali faqat o‘qish mumkin. Xabar yozish uchun, maxfiy kalit bilan avtorizatsiyadan o‘ting</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Sizda ommaviy kalit faol. Ommaviy kalitlar orqali faqat o‘qish mumkin. Postni targ‘ib qilish uchun, maxfiy kalit bilan avtorizatsiyadan o‘ting</string>
     <string name="login_with_a_private_key_to_like_posts">Sizda ommaviy kalit faol. Ommaviy kalitlar orqali faqat o‘qish mumkin. Postga reaksiya qilish uchun, maxfiy kalit bilan avtorizatsiyadan o‘ting</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">Siz ommaviy kalitdan foydalanmoqdasiz va ommaviy kalitlar faqat o‘qish huquqiga ega. Obuna bo‘lish uchun shaxsiy kalit bilan tizimga kiring</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Siz ommaviy kalitdan foydalanmoqdasiz va ommaviy kalitlar faqat o‘qish huquqiga ega. Yuklash uchun shaxsiy kalit bilan tizimga kiring</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Siz ommaviy kalitdan foydalanmoqdasiz va ommaviy kalitlar faqat o‘qish huquqiga ega. Xabarlarni imzolash uchun shaxsiy kalit bilan tizimga kiring</string>
+    <string name="unauthorized_exception">Ruxsatsiz deshifrlash</string>
+    <string name="unauthorized_exception_description">Imzolovchi ushbu operatsiyani amalga oshirish uchun zarur boʻlgan shifrlashni ochishga ruxsat bermadi. Imzolovchi ilovangizda NIP-44 shifrlashni ochish funksiyasini yoqing va qaytadan urinib koʻring</string>
+    <string name="signer_not_found_exception">Imzolovchi ilova topilmadi</string>
+    <string name="signer_not_found_exception_description">Imzolovchi ilova oʻchirib tashlandimi? Imzolovchi oʻrnatilganligini va ushbu hisobga ega ekanligini tekshiring. Agar imzolovchi ilova oʻzgargan boʻlsa, tizimdan chiqing va qayta kiring.</string>
+    <string name="zaps">Zeplar</string>
+    <string name="view_count">Koʻrishlar soni</string>
+    <string name="boost">Targʻib qilish</string>
+    <string name="boosted">Targ\'ib qilidi</string>
+    <string name="edited">Tahrirlangan</string>
+    <string name="edited_number">Tahrir № %1$s</string>
+    <string name="original">Asl</string>
+    <string name="quote">Iqtibos qilish</string>
+    <string name="fork">Nusxa olish</string>
+    <string name="propose_an_edit">Tahrir taklif qilish</string>
+    <string name="add">Qo\'shish</string>
+    <string name="replying_to">"Kimga javob yozilmoqda: "</string>
+    <string name="and">" va "</string>
+    <string name="in_channel">"bu kanalda: "</string>
+    <string name="profile_banner">Profil banneri</string>
 </resources>
