@@ -116,6 +116,14 @@ val njumpLink = { nip19BechAddress: String ->
     "https://njump.to/$nip19BechAddress"
 }
 
+val nipLink = { nipNumber: String ->
+    "https://nostrhub.io/$nipNumber"
+}
+
+val graspLink = { graspNumber: String ->
+    "https://gitworkshop.dev/danconwaydev.com/grasp/tree/master/$graspNumber.md"
+}
+
 val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
         if (note.event?.bountyBaseReward() != null) {
