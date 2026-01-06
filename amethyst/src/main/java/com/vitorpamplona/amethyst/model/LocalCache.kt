@@ -2889,7 +2889,7 @@ object LocalCache : ILocalCache {
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("LocalCache", "Cannot consume ${event.kind}", e)
+            Log.w("LocalCache", "Cannot consume ${event.toJson()} from ${relay?.url}", e)
             false
         }
 

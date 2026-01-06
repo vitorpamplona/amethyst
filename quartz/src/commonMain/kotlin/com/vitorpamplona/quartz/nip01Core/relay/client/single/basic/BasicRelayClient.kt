@@ -128,7 +128,7 @@ open class BasicRelayClient(
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 // doesn't expose parsing errors to lib users as errors
-                Log.e("BasicRelayClient", "Failure to parse message from Relay", e)
+                Log.e("BasicRelayClient", "Failure to parse message from Relay: $text", e)
             }
         }
 
