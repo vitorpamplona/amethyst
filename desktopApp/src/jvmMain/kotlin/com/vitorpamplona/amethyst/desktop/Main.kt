@@ -85,7 +85,6 @@ import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
-import com.vitorpamplona.quartz.nip01Core.crypto.SecureKeyStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -213,14 +212,14 @@ fun App(
 ) {
     var currentScreen by remember { mutableStateOf<DesktopScreen>(DesktopScreen.Feed) }
     val relayManager = remember { DesktopRelayConnectionManager() }
-    val secureStorage = remember { SecureKeyStorage() }
-    val accountManager = remember { AccountManager(secureStorage) }
+    val accountManager = remember { AccountManager.create() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
+            // Load account on IO dispatcher to avoid blocking UI with password prompt (readLine)
             accountManager.loadSavedAccount()
         }
 

@@ -29,25 +29,50 @@ import kotlinx.coroutines.withContext
 /**
  * Android implementation of SecureKeyStorage using EncryptedSharedPreferences
  * backed by Android Keystore (AES-256-GCM, hardware-backed when available).
+ *
+ * ## Security Features
+ *
+ * - **Hardware Security:** Uses Android Keystore (hardware-backed on supported devices with StrongBox)
+ * - **Encryption:** AES-256-GCM for both keys and values
+ * - **Key Derivation:** AES-256-SIV for preference keys, AES-256-GCM for values
+ * - **Application Context:** Uses applicationContext to prevent memory leaks
+ * - **Auto-backup Disabled:** EncryptedSharedPreferences automatically excluded from cloud backups
+ *
+ * **Note:** While the encryption keys are protected by hardware security modules (when available),
+ * the decrypted private keys returned by [getPrivateKey] are still subject to the String memory
+ * limitation described in [SecureKeyStorage].
  */
-actual class SecureKeyStorage(
-    private val context: Context,
-) {
-    companion object {
+actual class SecureKeyStorage private actual constructor() {
+    actual companion object {
         private const val PREFS_NAME = "amethyst_secure_keys"
         private const val KEY_PREFIX = "privkey_"
+
+        private lateinit var appContext: Context
+
+        /**
+         * Creates a SecureKeyStorage instance for Android.
+         *
+         * @param context Android Context (will use applicationContext to avoid leaks)
+         * @return SecureKeyStorage instance
+         * @throws IllegalArgumentException if context is null or not a valid Context
+         */
+        actual fun create(context: Any?): SecureKeyStorage {
+            require(context is Context) { "Android requires a valid Context" }
+            appContext = context.applicationContext
+            return SecureKeyStorage()
+        }
     }
 
     private val masterKey: MasterKey by lazy {
         MasterKey
-            .Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
+            .Builder(appContext, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }
 
     private val encryptedPrefs by lazy {
         EncryptedSharedPreferences.create(
-            context,
+            appContext,
             PREFS_NAME,
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,

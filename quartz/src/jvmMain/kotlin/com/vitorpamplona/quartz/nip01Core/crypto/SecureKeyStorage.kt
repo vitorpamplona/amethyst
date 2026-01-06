@@ -24,8 +24,14 @@ import com.github.javakeyring.BackendNotSupportedException
 import com.github.javakeyring.Keyring
 import com.github.javakeyring.PasswordAccessException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.RandomAccessFile
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermission
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
@@ -40,9 +46,30 @@ import javax.crypto.spec.SecretKeySpec
  *
  * Falls back to encrypted file storage with user-provided password if OS keyring
  * is unavailable.
+ *
+ * ## Fallback Storage Security
+ *
+ * When OS keyring is unavailable, the implementation uses:
+ * - **Encryption:** AES-256-GCM with PBKDF2 (100k iterations)
+ * - **File Permissions:** Owner-only read/write (600 for files, 700 for directories) on Unix systems
+ * - **Atomic Writes:** Temp file + atomic move to prevent corruption
+ * - **File Locking:** Prevents concurrent access race conditions
+ *
+ * **Password Memory Limitation:** The fallback password is stored as a String and cannot be
+ * securely zeroed from memory. It remains cached for the application lifetime to avoid repeated
+ * password prompts. This is acceptable for desktop applications where the user's session is
+ * already trusted, but may not be suitable for shared/multi-user systems.
  */
-actual class SecureKeyStorage {
-    companion object {
+actual class SecureKeyStorage private actual constructor() {
+    actual companion object {
+        /**
+         * Creates a SecureKeyStorage instance for Desktop.
+         *
+         * @param context Ignored on Desktop (no context needed)
+         * @return SecureKeyStorage instance
+         */
+        actual fun create(context: Any?): SecureKeyStorage = SecureKeyStorage()
+
         private const val SERVICE_NAME = "amethyst-desktop"
         private const val FALLBACK_DIR = ".amethyst"
         private const val FALLBACK_FILE = "keys.enc"
@@ -57,6 +84,7 @@ actual class SecureKeyStorage {
 
     private var keyringAvailable: Boolean = true
     private var fallbackPassword: String? = null
+    private val fallbackMutex = Mutex() // Protects concurrent access to fallback file
 
     actual suspend fun savePrivateKey(
         npub: String,
@@ -143,52 +171,78 @@ actual class SecureKeyStorage {
         }
 
     // Fallback encrypted file storage
-    private fun saveToFallback(
+    private suspend fun saveToFallback(
         npub: String,
         privKeyHex: String,
     ) {
-        val password = getFallbackPassword()
-        val encrypted = encryptData(privKeyHex, password)
+        fallbackMutex.withLock {
+            val password = getFallbackPassword()
+            val encrypted = encryptData(privKeyHex, password)
 
-        val fallbackFile = getFallbackFile()
-        val data = loadFallbackData().toMutableMap()
-        data[npub] = encrypted
+            val fallbackFile = getFallbackFile()
 
-        fallbackFile.parentFile?.mkdirs()
-        fallbackFile.writeText(data.entries.joinToString("\n") { "${it.key}:${it.value}" })
-    }
+            // Create directory with restrictive permissions
+            fallbackFile.parentFile?.let { dir ->
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                    setRestrictivePermissions(dir)
+                }
+            }
 
-    private fun getFromFallback(npub: String): String? {
-        val password = fallbackPassword ?: return null // No password set yet
-        val data = loadFallbackData()
-        val encrypted = data[npub] ?: return null
-
-        return try {
-            decryptData(encrypted, password)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun deleteFromFallback(npub: String): Boolean {
-        val fallbackFile = getFallbackFile()
-        if (!fallbackFile.exists()) return false
-
-        val data = loadFallbackData().toMutableMap()
-        val existed = data.remove(npub) != null
-
-        if (existed) {
-            if (data.isEmpty()) {
-                fallbackFile.delete()
-            } else {
-                fallbackFile.writeText(data.entries.joinToString("\n") { "${it.key}:${it.value}" })
+            withFileLock(fallbackFile) {
+                val data = loadFallbackDataUnsafe().toMutableMap()
+                data[npub] = encrypted
+                atomicWriteFallbackData(fallbackFile, data)
             }
         }
-
-        return existed
     }
 
-    private fun loadFallbackData(): Map<String, String> {
+    private suspend fun getFromFallback(npub: String): String? {
+        val password = fallbackPassword ?: return null // No password set yet
+
+        return fallbackMutex.withLock {
+            val fallbackFile = getFallbackFile()
+            if (!fallbackFile.exists()) return@withLock null
+
+            withFileLock(fallbackFile) {
+                val data = loadFallbackDataUnsafe()
+                val encrypted = data[npub] ?: return@withFileLock null
+
+                try {
+                    decryptData(encrypted, password)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        }
+    }
+
+    private suspend fun deleteFromFallback(npub: String): Boolean {
+        return fallbackMutex.withLock {
+            val fallbackFile = getFallbackFile()
+            if (!fallbackFile.exists()) return@withLock false
+
+            withFileLock(fallbackFile) {
+                val data = loadFallbackDataUnsafe().toMutableMap()
+                val existed = data.remove(npub) != null
+
+                if (existed) {
+                    if (data.isEmpty()) {
+                        fallbackFile.delete()
+                    } else {
+                        atomicWriteFallbackData(fallbackFile, data)
+                    }
+                }
+
+                existed
+            }
+        }
+    }
+
+    /**
+     * Loads fallback data without locking. Caller must hold mutex and file lock.
+     */
+    private fun loadFallbackDataUnsafe(): Map<String, String> {
         val fallbackFile = getFallbackFile()
         if (!fallbackFile.exists()) return emptyMap()
 
@@ -200,6 +254,56 @@ actual class SecureKeyStorage {
             }.toMap()
     }
 
+    /**
+     * Atomically writes fallback data using temp file + rename.
+     */
+    private fun atomicWriteFallbackData(
+        fallbackFile: File,
+        data: Map<String, String>,
+    ) {
+        val tempFile = File(fallbackFile.parentFile, "${fallbackFile.name}.tmp")
+        try {
+            // Write to temp file
+            tempFile.writeText(data.entries.joinToString("\n") { "${it.key}:${it.value}" })
+            setRestrictivePermissions(tempFile)
+
+            // Atomic rename
+            Files.move(
+                tempFile.toPath(),
+                fallbackFile.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        } finally {
+            // Clean up temp file if it still exists
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
+        }
+    }
+
+    /**
+     * Executes block with file lock held.
+     */
+    private fun <T> withFileLock(
+        file: File,
+        block: () -> T,
+    ): T {
+        // Ensure lock file exists
+        val lockFile = File(file.parentFile, "${file.name}.lock")
+        lockFile.parentFile?.mkdirs()
+        if (!lockFile.exists()) {
+            lockFile.createNewFile()
+            setRestrictivePermissions(lockFile)
+        }
+
+        return RandomAccessFile(lockFile, "rw").use { raf ->
+            raf.channel.lock().use { lock ->
+                block()
+            }
+        }
+    }
+
     private fun getFallbackFile(): File {
         val homeDir = System.getProperty("user.home")
         return File(homeDir, "$FALLBACK_DIR/$FALLBACK_FILE")
@@ -208,10 +312,50 @@ actual class SecureKeyStorage {
     private fun getFallbackPassword(): String {
         if (fallbackPassword == null) {
             println("OS keyring not available. Fallback encrypted storage requires a password.")
-            print("Enter master password: ")
-            fallbackPassword = readLine() ?: throw SecureStorageException("Password required for fallback storage")
+            val console = System.console()
+            fallbackPassword =
+                if (console != null) {
+                    // Use Console.readPassword() for masked input
+                    val password = console.readPassword("Enter master password: ")
+                    password?.let {
+                        val str = String(it)
+                        it.fill('\u0000') // Clear the char array from memory
+                        str
+                    } ?: throw SecureStorageException("Password required for fallback storage")
+                } else {
+                    // Fallback for non-interactive environments (testing, etc.)
+                    print("Enter master password: ")
+                    readLine() ?: throw SecureStorageException("Password required for fallback storage")
+                }
         }
         return fallbackPassword!!
+    }
+
+    private fun setRestrictivePermissions(file: File) {
+        try {
+            val path = file.toPath()
+            // Set owner-only read/write permissions (600 for files, 700 for directories)
+            val permissions =
+                if (file.isDirectory) {
+                    setOf(
+                        PosixFilePermission.OWNER_READ,
+                        PosixFilePermission.OWNER_WRITE,
+                        PosixFilePermission.OWNER_EXECUTE,
+                    )
+                } else {
+                    setOf(
+                        PosixFilePermission.OWNER_READ,
+                        PosixFilePermission.OWNER_WRITE,
+                    )
+                }
+            Files.setPosixFilePermissions(path, permissions)
+        } catch (e: UnsupportedOperationException) {
+            // Windows doesn't support POSIX permissions - file system security handles this
+            // No action needed
+        } catch (e: Exception) {
+            // Log but don't fail - permissions are a security enhancement, not critical
+            System.err.println("Warning: Could not set restrictive file permissions: ${e.message}")
+        }
     }
 
     private fun encryptData(

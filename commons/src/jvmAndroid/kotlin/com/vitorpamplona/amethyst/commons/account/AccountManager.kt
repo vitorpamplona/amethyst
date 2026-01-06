@@ -47,9 +47,22 @@ sealed class AccountState {
     ) : AccountState()
 }
 
-class AccountManager(
+class AccountManager private constructor(
     private val secureStorage: SecureKeyStorage,
 ) {
+    companion object {
+        /**
+         * Creates an AccountManager instance.
+         *
+         * @param context Platform-specific context (required on Android, ignored on Desktop)
+         * @return AccountManager instance
+         */
+        fun create(context: Any? = null): AccountManager {
+            val storage = SecureKeyStorage.create(context)
+            return AccountManager(storage)
+        }
+    }
+
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
 

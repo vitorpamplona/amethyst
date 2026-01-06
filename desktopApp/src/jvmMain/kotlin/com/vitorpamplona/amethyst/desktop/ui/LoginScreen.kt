@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.ui.auth.LoginCard
 import com.vitorpamplona.amethyst.commons.ui.auth.NewKeyWarningCard
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -76,8 +77,8 @@ fun LoginScreen(
         LoginCard(
             onLogin = { keyInput ->
                 accountManager.loginWithKey(keyInput).map {
-                    // Save account to secure storage
-                    scope.launch {
+                    // Save account to secure storage (use IO dispatcher to avoid blocking UI)
+                    scope.launch(Dispatchers.IO) {
                         accountManager.saveCurrentAccount()
                         onLoginSuccess()
                     }
@@ -96,8 +97,8 @@ fun LoginScreen(
                 nsec = generatedAccount!!.nsec,
                 onContinue = {
                     showNewKeyDialog = false
-                    // Save generated account
-                    scope.launch {
+                    // Save generated account (use IO dispatcher to avoid blocking UI)
+                    scope.launch(Dispatchers.IO) {
                         accountManager.saveCurrentAccount()
                         onLoginSuccess()
                     }

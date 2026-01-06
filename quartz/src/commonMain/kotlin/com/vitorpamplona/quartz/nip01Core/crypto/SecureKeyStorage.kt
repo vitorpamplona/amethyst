@@ -23,10 +23,41 @@ package com.vitorpamplona.quartz.nip01Core.crypto
 /**
  * Secure storage for private keys using platform-specific secure storage mechanisms.
  *
- * Android: Android Keystore + EncryptedDataStore (AES-256-GCM, StrongBox when available)
- * Desktop: OS native credential managers (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+ * ## Platform Implementations
+ *
+ * **Android:** Android Keystore + EncryptedSharedPreferences (AES-256-GCM, StrongBox when available)
+ *
+ * **Desktop:** OS native credential managers (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+ * with encrypted file fallback.
+ *
+ * ## Security Considerations
+ *
+ * **String Memory Limitation:** Private keys are returned as String (hexadecimal format). Unlike char arrays,
+ * Kotlin/JVM Strings are immutable and cannot be securely zeroed from memory after use. The private key
+ * will remain in memory until garbage collected, which may be delayed. This is an inherent limitation of
+ * the JVM platform.
+ *
+ * **Mitigation:** Private keys are only exposed through this API when needed for signing operations.
+ * They are encrypted at rest on all platforms. For maximum security, minimize the time private keys
+ * are held in memory and ensure they are dereferenced promptly after use.
+ *
+ * **Production Recommendation:** For high-security applications, consider using hardware security modules
+ * (HSM) or secure enclaves (Android StrongBox, iOS Secure Enclave) that never expose private keys to
+ * application memory.
+ *
+ * Use [SecureKeyStorage.create] factory method to create instances.
  */
-expect class SecureKeyStorage {
+expect class SecureKeyStorage private constructor() {
+    companion object {
+        /**
+         * Creates a SecureKeyStorage instance.
+         *
+         * @param context Platform-specific context (required on Android, ignored on Desktop)
+         * @return SecureKeyStorage instance
+         */
+        fun create(context: Any? = null): SecureKeyStorage
+    }
+
     /**
      * Saves a private key securely for the given npub.
      *
@@ -41,6 +72,9 @@ expect class SecureKeyStorage {
 
     /**
      * Retrieves a private key for the given npub.
+     *
+     * **Security Warning:** The returned String cannot be securely zeroed from memory (JVM limitation).
+     * Dereference the returned value immediately after use to minimize exposure time.
      *
      * @param npub The public key in npub (Bech32) format
      * @return The private key in hexadecimal format, or null if not found
