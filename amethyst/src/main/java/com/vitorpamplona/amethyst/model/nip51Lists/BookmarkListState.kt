@@ -41,7 +41,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import java.lang.reflect.Modifier.isPrivate
 
 @Stable
 class BookmarkListState(
