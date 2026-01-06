@@ -60,6 +60,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +85,11 @@ import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
+import com.vitorpamplona.quartz.nip01Core.crypto.SecureKeyStorage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -207,10 +213,17 @@ fun App(
 ) {
     var currentScreen by remember { mutableStateOf<DesktopScreen>(DesktopScreen.Feed) }
     val relayManager = remember { DesktopRelayConnectionManager() }
-    val accountManager = remember { AccountManager() }
+    val secureStorage = remember { SecureKeyStorage() }
+    val accountManager = remember { AccountManager(secureStorage) }
     val accountState by accountManager.accountState.collectAsState()
+    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
+    // Try to load saved account on startup
     DisposableEffect(Unit) {
+        scope.launch {
+            accountManager.loadSavedAccount()
+        }
+
         relayManager.addDefaultRelays()
         relayManager.connect()
         onDispose {
@@ -376,6 +389,8 @@ fun ProfileScreen(
     account: AccountState.LoggedIn,
     accountManager: AccountManager,
 ) {
+    val scope = rememberCoroutineScope()
+    
     Column {
         Text(
             "Profile",
@@ -393,7 +408,7 @@ fun ProfileScreen(
         Spacer(Modifier.height(24.dp))
 
         OutlinedButton(
-            onClick = { accountManager.logout() },
+            onClick = { scope.launch { accountManager.logout() } },
             colors =
                 androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                     contentColor = Color.Red,

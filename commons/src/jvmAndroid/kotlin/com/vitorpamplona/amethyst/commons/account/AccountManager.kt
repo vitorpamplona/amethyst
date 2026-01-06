@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.account
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.SecureKeyStorage
+import com.vitorpamplona.quartz.nip01Core.crypto.SecureStorageException
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
@@ -45,9 +47,63 @@ sealed class AccountState {
     ) : AccountState()
 }
 
-class AccountManager {
+class AccountManager(
+    private val secureStorage: SecureKeyStorage,
+) {
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
+
+    /**
+     * Loads the last saved account from secure storage.
+     * Call on app startup.
+     */
+    suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> {
+        return try {
+            // For simplicity, we'll store the last logged-in npub in a simple file
+            // and use SecureKeyStorage to retrieve the private key
+            val lastNpub = getLastNpub() ?: return Result.failure(Exception("No saved account"))
+
+            val privKeyHex = secureStorage.getPrivateKey(lastNpub)
+                ?: return Result.failure(Exception("Private key not found for $lastNpub"))
+
+            val keyPair = KeyPair(privKey = privKeyHex.hexToByteArray())
+            val signer = NostrSignerInternal(keyPair)
+
+            val state =
+                AccountState.LoggedIn(
+                    signer = signer,
+                    pubKeyHex = keyPair.pubKey.toHexKey(),
+                    npub = keyPair.pubKey.toNpub(),
+                    nsec = keyPair.privKey?.toNsec(),
+                    isReadOnly = false,
+                )
+            _accountState.value = state
+            Result.success(state)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Saves the current account to secure storage.
+     */
+    suspend fun saveCurrentAccount(): Result<Unit> {
+        val current = currentAccount() ?: return Result.failure(Exception("No account logged in"))
+        if (current.isReadOnly || current.nsec == null) {
+            return Result.failure(Exception("Cannot save read-only account"))
+        }
+
+        return try {
+            val privKeyHex = decodePrivateKeyAsHexOrNull(current.nsec)
+                ?: return Result.failure(Exception("Invalid nsec format"))
+
+            secureStorage.savePrivateKey(current.npub, privKeyHex)
+            saveLastNpub(current.npub)
+            Result.success(Unit)
+        } catch (e: SecureStorageException) {
+            Result.failure(e)
+        }
+    }
 
     fun generateNewAccount(): AccountState.LoggedIn {
         val keyPair = KeyPair()
@@ -115,11 +171,41 @@ class AccountManager {
         return Result.failure(IllegalArgumentException("Invalid key format. Use nsec1, npub1, or hex format."))
     }
 
-    fun logout() {
+    suspend fun logout(deleteKey: Boolean = false) {
+        val current = currentAccount()
+        if (deleteKey && current != null) {
+            try {
+                secureStorage.deletePrivateKey(current.npub)
+                clearLastNpub()
+            } catch (e: SecureStorageException) {
+                // Log error but still logout
+            }
+        }
         _accountState.value = AccountState.LoggedOut
     }
 
     fun isLoggedIn(): Boolean = _accountState.value is AccountState.LoggedIn
 
     fun currentAccount(): AccountState.LoggedIn? = _accountState.value as? AccountState.LoggedIn
+
+    // Simple file-based storage for last npub (non-sensitive data)
+    private fun getLastNpub(): String? {
+        val file = getPrefsFile()
+        return if (file.exists()) file.readText().trim().takeIf { it.isNotEmpty() } else null
+    }
+
+    private fun saveLastNpub(npub: String) {
+        val file = getPrefsFile()
+        file.parentFile?.mkdirs()
+        file.writeText(npub)
+    }
+
+    private fun clearLastNpub() {
+        getPrefsFile().delete()
+    }
+
+    private fun getPrefsFile(): java.io.File {
+        val homeDir = System.getProperty("user.home")
+        return java.io.File(homeDir, ".amethyst/last_account.txt")
+    }
 }

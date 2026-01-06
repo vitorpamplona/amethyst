@@ -23,6 +23,7 @@ firebaseBom = "34.7.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.20.1"
+javaKeyring = "1.0.1"
 jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
@@ -118,6 +119,7 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
+java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.ui.auth.LoginCard
 import com.vitorpamplona.amethyst.commons.ui.auth.NewKeyWarningCard
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -48,6 +50,7 @@ fun LoginScreen(
 ) {
     var showNewKeyDialog by remember { mutableStateOf(false) }
     var generatedAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -73,7 +76,11 @@ fun LoginScreen(
         LoginCard(
             onLogin = { keyInput ->
                 accountManager.loginWithKey(keyInput).map {
-                    onLoginSuccess()
+                    // Save account to secure storage
+                    scope.launch {
+                        accountManager.saveCurrentAccount()
+                        onLoginSuccess()
+                    }
                 }
             },
             onGenerateNew = {
@@ -89,7 +96,11 @@ fun LoginScreen(
                 nsec = generatedAccount!!.nsec,
                 onContinue = {
                     showNewKeyDialog = false
-                    onLoginSuccess()
+                    // Save generated account
+                    scope.launch {
+                        accountManager.saveCurrentAccount()
+                        onLoginSuccess()
+                    }
                 },
             )
         }
