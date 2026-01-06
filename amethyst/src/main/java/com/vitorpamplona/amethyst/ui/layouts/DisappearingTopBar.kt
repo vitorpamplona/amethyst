@@ -58,7 +58,7 @@ fun DisappearingTopBar(
     scrollBehavior: CustomEnterAlwaysScrollBehavior,
     content: @Composable (ColumnScope.() -> Unit),
 ) {
-    ResetDisappearingOnResume(scrollBehavior)
+    // ResetDisappearingOnResume(scrollBehavior)
 
     // Set up support for resizing the top app bar when vertically dragging the bar itself.
     val appBarDragModifier =
