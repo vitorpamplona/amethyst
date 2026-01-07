@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.preview.MetaTag
 import com.vitorpamplona.amethyst.commons.preview.MetaTagsParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType
 import okio.BufferedSource
 import okio.ByteString.Companion.decodeHex
 import okio.Options
@@ -56,11 +55,11 @@ class HtmlParser {
 
     suspend fun parseHtml(
         source: BufferedSource,
-        type: MediaType,
+        type: Charset?,
     ): Sequence<MetaTag> =
         withContext(Dispatchers.IO) {
             // sniff charset from Content-Type header or BOM
-            val sniffedCharset = type.charset() ?: source.readBomAsCharset()
+            val sniffedCharset = type ?: source.readBomAsCharset()
             if (sniffedCharset != null) {
                 val content = source.readByteArray().toString(sniffedCharset)
                 return@withContext MetaTagsParser.parse(content)

@@ -62,7 +62,7 @@ class UrlPreview {
                             response.headers["Content-Type"]?.toMediaType()
                                 ?: throw IllegalArgumentException("Website returned unknown mimetype: ${response.headers["Content-Type"]}")
                         if (mimeType.type == "text" && mimeType.subtype == "html") {
-                            val metaTags = HtmlParser().parseHtml(response.body.source(), mimeType)
+                            val metaTags = HtmlParser().parseHtml(response.body.source(), mimeType.charset())
                             val data = OpenGraphParser().extractUrlInfo(metaTags)
                             UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
                         } else if (mimeType.type == "image") {
