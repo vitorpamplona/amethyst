@@ -661,9 +661,17 @@
     <string name="minimum_prefix">Minimalny prefiks</string>
     <string name="maximum_event_tags">Maksymalna ilość tagów wydarzeń</string>
     <string name="content_length">Długość zawartości</string>
+    <string name="amount_in_bits">%1$s bitów</string>
+    <string name="content_size">Rozmiar treści</string>
+    <string name="connectivity">Podłączenie</string>
+    <string name="access_control">Kontrola dostępu</string>
     <string name="minimum_pow">Minimalny poW</string>
     <string name="auth">Autoryzacja</string>
     <string name="payment">Płatność</string>
+    <string name="payment_required">Wymagana płatność</string>
+    <string name="max_message_length">Maksymalna długość wiadomości</string>
+    <string name="max_subs">Maks. subskrypcji</string>
+    <string name="max_filters_per_sub">Maks. liczba filtrów na Suba</string>
     <string name="cashu">Cashu Token</string>
     <string name="cashu_redeem">Wykup</string>
     <string name="cashu_redeem_to_zap">Wyślij do Zap Wallet</string>
