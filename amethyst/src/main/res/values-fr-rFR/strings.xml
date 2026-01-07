@@ -15,6 +15,7 @@
     <string name="could_not_decrypt_the_message">Impossible de déchiffrer le message</string>
     <string name="group_picture">Image de groupe</string>
     <string name="explicit_content">Contenu choquant</string>
+    <string name="relay_notice">Annonce du serveur</string>
     <string name="spam">Spam</string>
     <string name="spam_description">Le nombre d\'événements spam provenant de ce relais</string>
     <string name="impersonation">Falsification d\'identité</string>
