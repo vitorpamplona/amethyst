@@ -148,6 +148,21 @@ class BookmarkListEvent(
                 )
             }
 
+        suspend fun remove(
+            earlierVersion: BookmarkListEvent,
+            bookmarkIdTag: BookmarkIdTag,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): BookmarkListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            return resign(
+                privateTags = privateTags.remove(bookmarkIdTag.toTagIdOnly()),
+                tags = earlierVersion.tags.remove(bookmarkIdTag.toTagIdOnly()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
         suspend fun resign(
             tags: TagArray,
             privateTags: TagArray,

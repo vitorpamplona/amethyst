@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
+@Stable
 class BookmarkListState(
     val signer: NostrSigner,
     val cache: LocalCache,
@@ -267,6 +269,28 @@ class BookmarkListState(
                     earlierVersion = bookmarkList,
                     bookmarkIdTag = EventBookmark(note.idHex, note.relayHintUrl()),
                     isPrivate = isPrivate,
+                    signer = signer,
+                )
+            }
+        } else {
+            null
+        }
+    }
+
+    suspend fun removeBookmark(note: Note): BookmarkListEvent? {
+        val bookmarkList = getBookmarkList()
+
+        return if (bookmarkList != null) {
+            if (note is AddressableNote) {
+                BookmarkListEvent.remove(
+                    earlierVersion = bookmarkList,
+                    bookmarkIdTag = AddressBookmark(note.address, note.relayHintUrl()),
+                    signer = signer,
+                )
+            } else {
+                BookmarkListEvent.remove(
+                    earlierVersion = bookmarkList,
+                    bookmarkIdTag = EventBookmark(note.idHex, note.relayHintUrl()),
                     signer = signer,
                 )
             }

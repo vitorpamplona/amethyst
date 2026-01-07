@@ -20,84 +20,69 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
-import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.fail
-import org.junit.After
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
-class ExpirationTest {
-    private lateinit var db: EventStore
-
+class ExpirationTest : BaseDBTest() {
     val signer = NostrSignerSync()
 
-    @Before
-    fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        db = EventStore(context, null)
-    }
-
-    @After
-    fun tearDown() {
-        db.close()
-    }
-
     @Test
-    fun testDeletingExpiredEvents() {
-        val time = TimeUtils.now()
+    fun testDeletingExpiredEvents() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
 
-        val noteSafe =
-            signer.sign(
-                TextNoteEvent.build("test1", createdAt = time + 1) {
-                    expiration(time + 100)
-                },
-            )
+            val noteSafe =
+                signer.sign(
+                    TextNoteEvent.build("test1", createdAt = time + 1) {
+                        expiration(time + 100)
+                    },
+                )
 
-        db.insert(noteSafe)
+            db.insert(noteSafe)
 
-        val noteToExpire =
-            signer.sign(
-                TextNoteEvent.build("test1", createdAt = time + 1) {
-                    expiration(time + 1)
-                },
-            )
+            val noteToExpire =
+                signer.sign(
+                    TextNoteEvent.build("test1", createdAt = time + 1) {
+                        expiration(time + 1)
+                    },
+                )
 
-        db.insert(noteToExpire)
+            db.insert(noteToExpire)
 
-        db.assertQuery(noteToExpire, Filter(ids = listOf(noteToExpire.id)))
+            db.assertQuery(noteToExpire, Filter(ids = listOf(noteToExpire.id)))
 
-        Thread.sleep(2000)
+            Thread.sleep(2000)
 
-        db.deleteExpiredEvents()
+            db.deleteExpiredEvents()
 
-        db.assertQuery(null, Filter(ids = listOf(noteToExpire.id)))
-        db.assertQuery(noteSafe, Filter(ids = listOf(noteSafe.id)))
-    }
-
-    @Test
-    fun testInsertingExpiredEvents() {
-        val time = TimeUtils.now()
-
-        val note1 =
-            signer.sign(
-                TextNoteEvent.build("test1", createdAt = time - 12) {
-                    expiration(time - 10)
-                },
-            )
-
-        try {
-            db.insert(note1)
-            fail("Should not be able to insert expired events")
-        } catch (e: Exception) {
-            assertTrue(e is SQLiteConstraintException)
+            db.assertQuery(null, Filter(ids = listOf(noteToExpire.id)))
+            db.assertQuery(noteSafe, Filter(ids = listOf(noteSafe.id)))
         }
-    }
+
+    @Test
+    fun testInsertingExpiredEvents() =
+        forEachDB { db ->
+            val time = TimeUtils.now()
+
+            val note1 =
+                signer.sign(
+                    TextNoteEvent.build("test1", createdAt = time - 12) {
+                        expiration(time - 10)
+                    },
+                )
+
+            try {
+                db.insert(note1)
+                fail("Should not be able to insert expired events")
+            } catch (e: Exception) {
+                assertTrue(e is SQLiteConstraintException)
+            }
+        }
 }

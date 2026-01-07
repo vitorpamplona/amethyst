@@ -36,5 +36,5 @@ fun BookmarkTabHeader(
 ) {
     val userBookmarks by observeUserBookmarkCount(baseUser, accountViewModel)
 
-    Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
+    Text(text = "$userBookmarks ${stringRes(R.string.bookmarks_title)}")
 }

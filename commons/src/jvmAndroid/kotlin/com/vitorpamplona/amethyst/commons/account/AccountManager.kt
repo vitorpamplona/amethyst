@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair

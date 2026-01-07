@@ -20,20 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 
-class SearchTest {
-    private lateinit var db: SQLiteEventStore
-
-    companion object Companion {
+class SearchTest : BaseDBTest() {
+    companion object {
         val profile =
             MetadataEvent(
                 id = "490d7439e530423f2540d4f2bdb73a0a2935f3df9e1f2a6f699a140c7db311fe",
@@ -74,35 +68,25 @@ class SearchTest {
             )
     }
 
-    @Before
-    fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        db = SQLiteEventStore(context, null)
-    }
-
-    @After
-    fun tearDown() {
-        db.close()
-    }
-
     @Test
-    fun testTagWithSearch() {
-        db.insertEvent(comment)
-        db.insertEvent(profile)
+    fun testTagWithSearch() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+            db.store.insertEvent(profile)
 
-        db.assertQuery(null, Filter(search = "testing1"))
-        db.assertQuery(comment, Filter(search = "testing"))
-        db.assertQuery(comment, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
-        db.assertQuery(null, Filter(kinds = listOf(TextNoteEvent.KIND), search = "testing"))
+            db.assertQuery(null, Filter(search = "testing1"))
+            db.assertQuery(comment, Filter(search = "testing"))
+            db.assertQuery(comment, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
+            db.assertQuery(null, Filter(kinds = listOf(TextNoteEvent.KIND), search = "testing"))
 
-        db.delete(comment.id)
+            db.store.delete(comment.id)
 
-        db.assertQuery(null, Filter(search = "testing"))
-        db.assertQuery(null, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
+            db.assertQuery(null, Filter(search = "testing"))
+            db.assertQuery(null, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
 
-        db.insertEvent(comment)
+            db.store.insertEvent(comment)
 
-        db.assertQuery(comment, Filter(search = "testing"))
-        db.assertQuery(comment, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
-    }
+            db.assertQuery(comment, Filter(search = "testing"))
+            db.assertQuery(comment, Filter(kinds = listOf(CommentEvent.KIND), search = "testing"))
+        }
 }

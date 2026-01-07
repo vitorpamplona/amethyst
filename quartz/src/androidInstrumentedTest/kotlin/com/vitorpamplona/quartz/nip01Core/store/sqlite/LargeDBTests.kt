@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.Log
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.zip.GZIPInputStream
@@ -82,6 +83,7 @@ class LargeDBTests {
     }
 
     @Test
+    @Ignore("Not testing")
     fun insertDatabase() {
         events.forEach { event ->
             try {

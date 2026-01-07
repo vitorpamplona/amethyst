@@ -215,13 +215,13 @@ val LightSelectedReactionBoxModifier =
 
 val DarkChannelNotePictureModifier =
     Modifier
-        .size(30.dp)
+        .size(20.dp)
         .clip(shape = CircleShape)
         .border(2.dp, DarkColorPalette.background, CircleShape)
 
 val LightChannelNotePictureModifier =
     Modifier
-        .size(30.dp)
+        .size(20.dp)
         .clip(shape = CircleShape)
         .border(2.dp, LightColorPalette.background, CircleShape)
 

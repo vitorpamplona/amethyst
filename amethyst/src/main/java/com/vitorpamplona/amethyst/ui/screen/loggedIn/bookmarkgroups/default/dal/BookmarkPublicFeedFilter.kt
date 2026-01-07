@@ -18,22 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.dal
 
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
-@Stable
-class BookmarkPublicFeedViewModel(
+class BookmarkPublicFeedFilter(
     val account: Account,
-) : FeedViewModel(BookmarkPublicFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = BookmarkPublicFeedViewModel(account) as T
-    }
+) : FeedFilter<Note>() {
+    override fun feedKey(): String =
+        account.bookmarkState.bookmarks.value
+            .hashCode()
+            .toString()
+
+    override fun feed(): List<Note> = account.bookmarkState.bookmarks.value.public
 }

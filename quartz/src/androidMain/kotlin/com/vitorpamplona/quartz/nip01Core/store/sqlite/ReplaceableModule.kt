@@ -48,8 +48,7 @@ class ReplaceableModule : IModule {
                 WHERE
                     event_headers.kind = NEW.kind AND
                     event_headers.pubkey = NEW.pubkey AND
-                    event_headers.created_at < NEW.created_at AND
-                    ((event_headers.kind IN (0, 3)) OR (event_headers.kind >= 10000 AND event_headers.kind < 20000));
+                    event_headers.created_at < NEW.created_at;
             END;
             """.trimIndent(),
         )

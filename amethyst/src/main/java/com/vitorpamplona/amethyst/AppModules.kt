@@ -200,7 +200,7 @@ class AppModules(
     val relayStats = RelayStats(client)
 
     // Logs debug messages when needed
-    val detailedLogger = if (isDebug) RelayLogger(client, true, false) else null
+    val detailedLogger = if (isDebug) RelayLogger(client, false, false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 

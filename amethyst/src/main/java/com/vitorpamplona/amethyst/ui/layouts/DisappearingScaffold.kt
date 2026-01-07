@@ -34,8 +34,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.myapplication.DisappearingBottomBar
 import com.vitorpamplona.myapplication.DisappearingFloatingButton
-import com.vitorpamplona.myapplication.DisappearingTopBar
-import com.vitorpamplona.myapplication.enterAlwaysScrollBehavior
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

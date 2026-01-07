@@ -30,30 +30,45 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 
 class DeletionRequestModule(
     val hasher: (db: SQLiteDatabase) -> TagNameValueHasher,
+    val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IModule {
+    fun rejectDeletedEventsSQLTemplate(): String =
+        if (indexStrategy.indexTagsWithKindAndPubkey) {
+            """
+            |SELECT 1 FROM event_tags
+            |WHERE
+            |    event_tags.tag_hash IN (NEW.etag_hash, NEW.atag_hash) AND
+            |    event_tags.kind = 5 AND
+            |    event_tags.pubkey_hash = NEW.pubkey_owner_hash AND
+            |    event_tags.created_at >= NEW.created_at
+            """.trimMargin()
+        } else {
+            """
+            |SELECT 1 FROM event_tags
+            |WHERE
+            |    event_tags.tag_hash IN (NEW.etag_hash, NEW.atag_hash) AND
+            |    event_tags.kind = 5 AND
+            |    event_tags.created_at >= NEW.created_at AND
+            |    event_tags.pubkey_hash = NEW.pubkey_owner_hash
+            """.trimMargin()
+        }
+
     /**
      * Creates a trigger to reject events that have been
      * deleted by ID or ATag including GiftWraps that
      * must be checked against the p-tag (pubkey_owner_hash)
      */
     override fun create(db: SQLiteDatabase) {
+        val sql = rejectDeletedEventsSQLTemplate().replace("\n", "\n                    ")
         db.execSQL(
             """
             CREATE TRIGGER reject_deleted_events
             BEFORE INSERT ON event_headers
             FOR EACH ROW
             BEGIN
-                -- Check for ID-based deletion record
                 SELECT RAISE(ABORT, 'blocked: a deletion event exists')
                 WHERE EXISTS (
-                    SELECT 1 FROM event_tags
-                    INNER JOIN event_headers
-                    ON event_headers.row_id = event_tags.event_header_row_id
-                    WHERE
-                        event_tags.tag_hash IN (NEW.etag_hash, NEW.atag_hash) AND
-                        event_headers.kind = 5 AND
-                        event_headers.pubkey_owner_hash = NEW.pubkey_owner_hash AND
-                        event_headers.created_at >= NEW.created_at
+                    $sql
                 );
             END;
             """.trimIndent(),

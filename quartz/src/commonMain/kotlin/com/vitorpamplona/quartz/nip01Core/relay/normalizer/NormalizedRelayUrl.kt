@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.normalizer
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class NormalizedRelayUrl(
     val url: String,
 ) : Comparable<NormalizedRelayUrl> {

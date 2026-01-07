@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -49,7 +50,9 @@ fun ListOfBookmarkGroupsScreen(
     nav: INav,
 ) {
     ListOfBookmarkGroupsFeed(
+        defaultBookmarks = accountViewModel.account.bookmarkState,
         listSource = accountViewModel.account.labeledBookmarkLists.listFeedFlow,
+        openDefaultBookmarks = { nav.nav(Route.Bookmarks) },
         addBookmarkGroup = { nav.nav(Route.BookmarkGroupMetadataEdit()) },
         openBookmarkGroup = { identifier, bookmarkType ->
             nav.nav(Route.BookmarkGroupView(identifier, bookmarkType))
@@ -84,7 +87,9 @@ fun ListOfBookmarkGroupsScreen(
 
 @Composable
 fun ListOfBookmarkGroupsFeed(
+    defaultBookmarks: BookmarkListState,
     listSource: StateFlow<List<LabeledBookmarkList>>,
+    openDefaultBookmarks: () -> Unit,
     addBookmarkGroup: () -> Unit,
     openBookmarkGroup: (identifier: String, bookmarkType: BookmarkType) -> Unit,
     renameBookmarkGroup: (bookmarkGroup: LabeledBookmarkList) -> Unit,
@@ -109,7 +114,9 @@ fun ListOfBookmarkGroupsFeed(
                 ).fillMaxHeight(),
         ) {
             ListOfBookmarkGroupsFeedView(
+                defaultBookmarks = defaultBookmarks,
                 groupListFeedSource = listSource,
+                openDefaultBookmarks = openDefaultBookmarks,
                 onOpenItem = openBookmarkGroup,
                 onRenameItem = renameBookmarkGroup,
                 onItemDescriptionChange = changeBookmarkGroupDescription,

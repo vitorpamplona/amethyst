@@ -42,7 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -118,7 +118,7 @@ fun BookmarkGroupScreenView(
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(
+                ShorterTopAppBar(
                     title = {
                         TitleAndDescription(bookmarkGroupViewModel)
                     },

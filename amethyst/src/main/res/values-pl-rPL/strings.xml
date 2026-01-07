@@ -158,6 +158,7 @@
     <string name="record_a_message">Nagraj wiadomość</string>
     <string name="record_a_message_title">Nagrywanie wiadomości</string>
     <string name="record_a_message_description">Kliknij i przytrzymaj aby nagrać wiadomość</string>
+    <string name="re_record">Nagraj ponownie</string>
     <string name="recording_indicator_description">Nagrywanie</string>
     <string name="recording_indicator_with_time">Nagrywanie %1$s</string>
     <string name="uploading">Wgrywanie…</string>
@@ -356,6 +357,8 @@
     <string name="block_only">Zablokuj</string>
     <string name="manual_zaps">Ręczny podział zapów</string>
     <string name="bookmarks">Zakładki</string>
+    <string name="bookmarks_title">Domyślne zakładki</string>
+    <string name="bookmarks_explainer">Twoje domyślne zakładki obsługiwane przez wielu klientów</string>
     <string name="drafts">Projekty</string>
     <string name="private_bookmarks">Prywatne Zakładki</string>
     <string name="public_bookmarks">Publiczne zakładki</string>

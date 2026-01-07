@@ -56,6 +56,12 @@ fun showAmountInteger(amount: BigDecimal?): String {
     }
 }
 
+fun showAmountInteger(amount: Int?): String {
+    if (amount == null) return "0"
+
+    return showAmountIntegerWithZero(BigDecimal.valueOf(amount.toLong()))
+}
+
 fun showAmountIntegerWithZero(amount: BigDecimal?): String {
     if (amount == null) return "0"
     if (amount.abs() < BigDecimal(0.01)) return "0"

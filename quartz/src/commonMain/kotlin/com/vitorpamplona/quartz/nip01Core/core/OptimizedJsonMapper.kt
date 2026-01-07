@@ -54,6 +54,7 @@ object JsonMapper {
     val jsonInstance =
         Json {
             ignoreUnknownKeys = true
+            isLenient = true
         }
 
     inline fun <reified T> fromJson(json: String): T = jsonInstance.decodeFromString<T>(json)

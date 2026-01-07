@@ -158,6 +158,7 @@
     <string name="record_a_message">Hangüzenet rögzítése</string>
     <string name="record_a_message_title">Hangüzenet rögzítése</string>
     <string name="record_a_message_description">Hangüzenet rögzítéséhez kattintson és tartsa lenyomva a gombot</string>
+    <string name="re_record">Újrarögzítés</string>
     <string name="recording_indicator_description">Rögzítés</string>
     <string name="recording_indicator_with_time">%1$s rögzítése</string>
     <string name="uploading">Feltöltés…</string>
@@ -480,8 +481,8 @@
     <string name="privacy_options">Adatvédelmi beállítások</string>
     <string name="connect_via_tor_short">Tor és Orbot beállítása</string>
     <string name="connect_via_tor">Kapcsolódás az Orbot beállításain keresztül</string>
-    <string name="connect_via_tor1">Beállítás</string>
-    <string name="connect_via_tor2">Tor beállítások</string>
+    <string name="connect_via_tor1">Módosítás</string>
+    <string name="connect_via_tor2">Tor Beállítások</string>
     <string name="do_you_really_want_to_disable_tor_title">Kapcsolat bontása az Orbottal / Torral?</string>
     <string name="do_you_really_want_to_disable_tor_text">Az Ön adatai azonnal átkerülnek a normál hálózatra</string>
     <string name="yes">Igen</string>

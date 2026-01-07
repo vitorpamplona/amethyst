@@ -29,9 +29,9 @@ class EventStore(
     context: Context,
     dbName: String? = "events.db",
     val relayUrl: String? = "wss://quartz.local",
-    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : IEventStore {
-    val store = SQLiteEventStore(context, dbName, relayUrl, tagIndexStrategy)
+    val store = SQLiteEventStore(context, dbName, relayUrl, indexStrategy)
 
     override fun insert(event: Event) = store.insertEvent(event)
 

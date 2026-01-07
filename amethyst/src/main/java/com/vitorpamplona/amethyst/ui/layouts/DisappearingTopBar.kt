@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.myapplication
+package com.vitorpamplona.amethyst.ui.layouts
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationState
@@ -58,7 +58,7 @@ fun DisappearingTopBar(
     scrollBehavior: CustomEnterAlwaysScrollBehavior,
     content: @Composable (ColumnScope.() -> Unit),
 ) {
-    ResetDisappearingOnResume(scrollBehavior)
+    // ResetDisappearingOnResume(scrollBehavior)
 
     // Set up support for resizing the top app bar when vertically dragging the bar itself.
     val appBarDragModifier =

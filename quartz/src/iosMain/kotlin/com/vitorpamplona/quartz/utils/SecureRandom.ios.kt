@@ -24,7 +24,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.refTo
 import platform.Security.SecRandomCopyBytes
 import platform.Security.kSecRandomDefault
-import kotlin.random.Random.Default.nextBytes
 
 actual class SecureRandom {
     actual fun nextInt(): Int {

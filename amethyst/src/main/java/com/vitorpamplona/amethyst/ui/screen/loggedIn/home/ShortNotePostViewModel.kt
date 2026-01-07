@@ -972,7 +972,6 @@ open class ShortNotePostViewModel :
         val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
         val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = stringRes(appContext, R.string.upload_error_voice_message_failed)
-        val uploadVoiceUnexpected = stringRes(appContext, R.string.upload_error_voice_message_unexpected_state)
         val uploadVoiceExceptionMessage: (String) -> String = { detail ->
             stringRes(appContext, R.string.upload_error_voice_message_exception, detail)
         }

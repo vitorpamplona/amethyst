@@ -74,7 +74,7 @@ class Nip11RelayInformationTest {
         assertEquals("purplepag.es", info.name)
         assertEquals("Nostr's Purple Pages", info.description)
         assertEquals("fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52", info.pubkey)
-        assertEquals(listOf(1, 2, 9, 11), info.supported_nips)
+        assertEquals(listOf("1", "2", "9", "11"), info.supported_nips)
         assertEquals("1.0.4", info.version)
         assertEquals("git+https://github.com/hoytech/strfry.git", info.software)
     }
@@ -88,7 +88,7 @@ class Nip11RelayInformationTest {
         assertEquals("Nostr's Purple Pages", info.description)
         assertEquals("fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52", info.pubkey)
         // Single integer should be converted to a list with one element
-        assertEquals(listOf(1), info.supported_nips)
+        assertEquals(listOf("1"), info.supported_nips)
         assertEquals("1.0.4", info.version)
         assertEquals("git+https://github.com/hoytech/strfry.git", info.software)
     }
@@ -132,7 +132,7 @@ class Nip11RelayInformationTest {
         assertNotNull(info)
         assertEquals("test relay", info.name)
         // Should skip invalid elements and keep only valid integers
-        assertEquals(listOf(1, 3, 11), info.supported_nips)
+        assertEquals(listOf("1", "invalid", "3", "4.5", "true", "11"), info.supported_nips)
     }
 
     @Test
@@ -144,7 +144,7 @@ class Nip11RelayInformationTest {
         assertNotNull(info)
         assertEquals("test relay", info.name)
         // All elements invalid, should result in empty list
-        assertEquals(emptyList(), info.supported_nips)
+        assertEquals(listOf("one", "two", "three"), info.supported_nips)
     }
 
     @Test
@@ -156,7 +156,7 @@ class Nip11RelayInformationTest {
         assertNotNull(info)
         assertEquals("test relay", info.name)
         // Cannot parse float as integer, should be null
-        assertNull(info.supported_nips)
+        assertEquals(listOf("1.5"), info.supported_nips)
     }
 
     @Test
@@ -168,7 +168,7 @@ class Nip11RelayInformationTest {
         assertNotNull(info)
         assertEquals("test relay", info.name)
         // Cannot parse boolean as integer, should be null
-        assertNull(info.supported_nips)
+        assertEquals(listOf("true"), info.supported_nips)
     }
 
     @Test
@@ -204,6 +204,6 @@ class Nip11RelayInformationTest {
 
         assertNotNull(info)
         assertEquals("test relay", info.name)
-        assertEquals((1..100).toList(), info.supported_nips)
+        assertEquals((1..100).map { it.toString() }, info.supported_nips)
     }
 }

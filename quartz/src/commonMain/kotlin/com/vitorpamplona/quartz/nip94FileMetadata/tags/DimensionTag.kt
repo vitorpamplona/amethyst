@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip94FileMetadata.tags
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 import kotlinx.serialization.Serializable
 
 @Serializable
+@Stable
 class DimensionTag(
     val width: Int,
     val height: Int,

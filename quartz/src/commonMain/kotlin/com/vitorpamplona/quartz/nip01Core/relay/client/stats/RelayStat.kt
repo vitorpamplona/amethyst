@@ -21,8 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 
 import androidx.collection.LruCache
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+@Stable
 class RelayStat(
     var receivedBytes: Int = 0,
     var sentBytes: Int = 0,
@@ -31,12 +33,11 @@ class RelayStat(
     var pingInMs: Int = 0,
     var compression: Boolean = false,
 ) {
-    val messages = LruCache<RelayDebugMessage, RelayDebugMessage>(100)
+    val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
 
     fun newNotice(notice: String?) {
         val debugMessage =
-            RelayDebugMessage(
-                type = RelayDebugMessageType.NOTICE,
+            NoticeDebugMessage(
                 message = notice ?: "No error message provided",
             )
 
@@ -47,8 +48,7 @@ class RelayStat(
         errorCounter++
 
         val debugMessage =
-            RelayDebugMessage(
-                type = RelayDebugMessageType.ERROR,
+            ErrorDebugMessage(
                 message = error ?: "No error message provided",
             )
 
@@ -63,27 +63,35 @@ class RelayStat(
         sentBytes += bytesUsedInMemory
     }
 
-    fun newSpam(spamDescriptor: String) {
+    fun newSpam(
+        link1: String,
+        link2: String,
+    ) {
         spamCounter++
 
-        val debugMessage =
-            RelayDebugMessage(
-                type = RelayDebugMessageType.SPAM,
-                message = spamDescriptor,
-            )
+        val debugMessage = SpamDebugMessage(link1, link2)
 
         messages.put(debugMessage, debugMessage)
     }
 }
 
-class RelayDebugMessage(
-    val type: RelayDebugMessageType,
-    val message: String,
-    val time: Long = TimeUtils.now(),
-)
-
-enum class RelayDebugMessageType {
-    SPAM,
-    NOTICE,
-    ERROR,
+@Stable
+sealed interface IRelayDebugMessage {
+    val time: Long
 }
+
+class SpamDebugMessage(
+    val link1: String,
+    val link2: String,
+    override val time: Long = TimeUtils.now(),
+) : IRelayDebugMessage
+
+class NoticeDebugMessage(
+    val message: String,
+    override val time: Long = TimeUtils.now(),
+) : IRelayDebugMessage
+
+class ErrorDebugMessage(
+    val message: String,
+    override val time: Long = TimeUtils.now(),
+) : IRelayDebugMessage

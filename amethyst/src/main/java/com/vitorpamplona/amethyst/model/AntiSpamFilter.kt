@@ -95,7 +95,7 @@ class AntiSpamFilter {
                 if (spammer.shouldHide() && relay != null) {
                     Amethyst.instance.relayStats
                         .get(relay)
-                        .newSpam("$link1 $link2")
+                        .newSpam(link1, link2)
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))
@@ -123,7 +123,7 @@ class AntiSpamFilter {
                 if (spammer.shouldHide() && relay != null) {
                     Amethyst.instance.relayStats
                         .get(relay)
-                        .newSpam("$link1 $link2")
+                        .newSpam(link1, link2)
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))

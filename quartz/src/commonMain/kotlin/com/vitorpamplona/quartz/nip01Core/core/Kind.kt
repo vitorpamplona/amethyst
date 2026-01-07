@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
 typealias Kind = Int
 
+fun Kind.isRegular() = this > 0 && this != ContactListEvent.KIND && this < 10_000
+
 fun Kind.isEphemeral() = this >= 20_000 && this < 30_000
 
 fun Kind.isReplaceable() = this == MetadataEvent.KIND || this == ContactListEvent.KIND || (this >= 10_000 && this < 20_000)

@@ -58,12 +58,12 @@ import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.display.BookmarkGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.ListOfBookmarkGroupsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadata.BookmarkGroupMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen

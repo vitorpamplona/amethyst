@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -30,18 +28,14 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
-class BasicTest {
-    private lateinit var db: SQLiteEventStore
-
+class BasicTest : BaseDBTest() {
     val signer = NostrSignerSync()
 
-    companion object Companion {
+    companion object {
         val profile =
             MetadataEvent(
                 id = "490d7439e530423f2540d4f2bdb73a0a2935f3df9e1f2a6f699a140c7db311fe",
@@ -82,168 +76,166 @@ class BasicTest {
             )
     }
 
-    @Before
-    fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        db = SQLiteEventStore(context, null)
-    }
-
-    @After
-    fun tearDown() {
-        db.close()
-    }
-
     @Test
-    fun testInsertDeleteEvent() {
-        val note = signer.sign(TextNoteEvent.build("test1"))
+    fun testInsertDeleteEvent() =
+        forEachDB { db ->
+            val note = signer.sign(TextNoteEvent.build("test1"))
 
-        db.insertEvent(note)
+            db.store.insertEvent(note)
 
-        db.assertQuery(note, Filter(ids = listOf(note.id)))
+            db.store.assertQuery(note, Filter(ids = listOf(note.id)))
 
-        db.delete(note.id)
+            db.store.delete(note.id)
 
-        db.assertQuery(null, Filter(ids = listOf(note.id)))
+            db.store.assertQuery(null, Filter(ids = listOf(note.id)))
 
-        db.insertEvent(note)
+            db.store.insertEvent(note)
 
-        db.assertQuery(note, Filter(ids = listOf(note.id)))
-    }
-
-    @Test
-    fun testEmptyFilter() {
-        val note1 = signer.sign(TextNoteEvent.build("test1", createdAt = 1))
-        val note2 = signer.sign(TextNoteEvent.build("test2", createdAt = 2))
-
-        db.insertEvent(note1)
-
-        db.assertQuery(note1, Filter())
-
-        db.insertEvent(note2)
-
-        db.assertQuery(listOf(note2, note1), Filter())
-    }
-
-    @Test
-    fun testLimitFilter() {
-        val note1 = signer.sign(TextNoteEvent.build("test1", createdAt = 1))
-        val note2 = signer.sign(TextNoteEvent.build("test2", createdAt = 2))
-        val note3 = signer.sign(TextNoteEvent.build("test3", createdAt = 3))
-        val note4 = signer.sign(TextNoteEvent.build("test4", createdAt = 4))
-
-        db.insertEvent(note1)
-
-        db.assertQuery(note1, Filter(limit = 1))
-
-        db.insertEvent(note2)
-        db.insertEvent(note3)
-        db.insertEvent(note4)
-
-        db.assertQuery(listOf(note4), Filter(limit = 1))
-    }
-
-    @Test
-    fun testPubkeyTag() {
-        db.insertEvent(comment)
-        db.insertEvent(profile)
-
-        db.assertQuery(
-            comment,
-            Filter(authors = listOf(comment.pubKey), tags = mapOf("I" to listOf("geo:drt3n"))),
-        )
-    }
-
-    @Test
-    fun testTagOnly() {
-        db.insertEvent(comment)
-        db.insertEvent(profile)
-
-        db.assertQuery(comment, Filter(tags = mapOf("I" to listOf("geo:drt3n"))))
-    }
-
-    @Test
-    fun testTagWithSinceOnly() {
-        db.insertEvent(comment)
-        db.insertEvent(profile)
-
-        db.assertQuery(
-            comment,
-            Filter(tags = mapOf("I" to listOf("geo:drt3n")), since = comment.createdAt - 1),
-        )
-        db.assertQuery(
-            comment,
-            Filter(tags = mapOf("I" to listOf("geo:drt3n")), since = comment.createdAt),
-        )
-        db.assertQuery(
-            null,
-            Filter(tags = mapOf("I" to listOf("geo:drt3n")), since = comment.createdAt + 1),
-        )
-    }
-
-    @Test
-    fun testTagWithUntilOnly() {
-        db.insertEvent(comment)
-        db.insertEvent(profile)
-
-        db.assertQuery(
-            null,
-            Filter(tags = mapOf("I" to listOf("geo:drt3n")), until = comment.createdAt - 1),
-        )
-        db.assertQuery(
-            comment,
-            Filter(tags = mapOf("I" to listOf("geo:drt3n")), until = comment.createdAt),
-        )
-        db.assertQuery(
-            comment,
-            Filter(tags = mapOf("I" to listOf("geo:drt3n")), until = comment.createdAt + 1),
-        )
-    }
-
-    @Test
-    fun testTagWithUntilOnlyEmitting() {
-        db.insertEvent(comment)
-        db.insertEvent(profile)
-
-        db.query<Event>(Filter(tags = mapOf("I" to listOf("geo:drt3n")))) { event ->
-            assertEquals(comment.toJson(), event.toJson())
+            db.store.assertQuery(note, Filter(ids = listOf(note.id)))
         }
-    }
 
     @Test
-    fun hashCodeTest() {
-        val note1 =
-            signer.sign(
-                TextNoteEvent.build("test1") {
-                    hashtag("AaAa")
-                },
-            )
-        val note2 =
-            signer.sign(
-                TextNoteEvent.build("test2") {
-                    hashtag("AaAa")
-                },
-            )
-        val note3 =
-            signer.sign(
-                TextNoteEvent.build("test3") {
-                    hashtag("BBBB")
-                },
-            )
+    fun testEmptyFilter() =
+        forEachDB { db ->
+            val note1 = signer.sign(TextNoteEvent.build("test1", createdAt = 1))
+            val note2 = signer.sign(TextNoteEvent.build("test2", createdAt = 2))
 
-        db.insertEvent(note1)
-        db.insertEvent(note2)
-        db.insertEvent(note3)
+            db.store.insertEvent(note1)
 
-        val list =
-            db.query<TextNoteEvent>(
-                Filter(
-                    tags = mapOf("t" to listOf("AaAa")),
-                ),
-            )
+            db.store.assertQuery(note1, Filter())
 
-        assertEquals(2, list.size)
-        list.forEach {
-            assertTrue(it.isTaggedHash("AaAa"))
+            db.store.insertEvent(note2)
+
+            db.store.assertQuery(listOf(note2, note1), Filter())
         }
-    }
+
+    @Test
+    fun testLimitFilter() =
+        forEachDB { db ->
+            val note1 = signer.sign(TextNoteEvent.build("test1", createdAt = 1))
+            val note2 = signer.sign(TextNoteEvent.build("test2", createdAt = 2))
+            val note3 = signer.sign(TextNoteEvent.build("test3", createdAt = 3))
+            val note4 = signer.sign(TextNoteEvent.build("test4", createdAt = 4))
+
+            db.store.insertEvent(note1)
+
+            db.store.assertQuery(note1, Filter(limit = 1))
+
+            db.store.insertEvent(note2)
+            db.store.insertEvent(note3)
+            db.store.insertEvent(note4)
+
+            db.store.assertQuery(listOf(note4), Filter(limit = 1))
+        }
+
+    @Test
+    fun testPubkeyTag() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+            db.store.insertEvent(profile)
+
+            db.store.assertQuery(
+                comment,
+                Filter(authors = listOf(comment.pubKey), tags = mapOf("I" to listOf("geo:drt3n"))),
+            )
+        }
+
+    @Test
+    fun testTagOnly() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+            db.store.insertEvent(profile)
+
+            db.store.assertQuery(comment, Filter(tags = mapOf("I" to listOf("geo:drt3n"))))
+        }
+
+    @Test
+    fun testTagWithSinceOnly() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+            db.store.insertEvent(profile)
+
+            db.store.assertQuery(
+                comment,
+                Filter(tags = mapOf("I" to listOf("geo:drt3n")), since = comment.createdAt - 1),
+            )
+            db.store.assertQuery(
+                comment,
+                Filter(tags = mapOf("I" to listOf("geo:drt3n")), since = comment.createdAt),
+            )
+            db.store.assertQuery(
+                null,
+                Filter(tags = mapOf("I" to listOf("geo:drt3n")), since = comment.createdAt + 1),
+            )
+        }
+
+    @Test
+    fun testTagWithUntilOnly() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+            db.store.insertEvent(profile)
+
+            db.store.assertQuery(
+                null,
+                Filter(tags = mapOf("I" to listOf("geo:drt3n")), until = comment.createdAt - 1),
+            )
+            db.store.assertQuery(
+                comment,
+                Filter(tags = mapOf("I" to listOf("geo:drt3n")), until = comment.createdAt),
+            )
+            db.store.assertQuery(
+                comment,
+                Filter(tags = mapOf("I" to listOf("geo:drt3n")), until = comment.createdAt + 1),
+            )
+        }
+
+    @Test
+    fun testTagWithUntilOnlyEmitting() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+            db.store.insertEvent(profile)
+
+            db.store.query<Event>(Filter(tags = mapOf("I" to listOf("geo:drt3n")))) { event ->
+                assertEquals(comment.toJson(), event.toJson())
+            }
+        }
+
+    @Test
+    fun hashCodeTest() =
+        forEachDB { db ->
+            val note1 =
+                signer.sign(
+                    TextNoteEvent.build("test1") {
+                        hashtag("AaAa")
+                    },
+                )
+            val note2 =
+                signer.sign(
+                    TextNoteEvent.build("test2") {
+                        hashtag("AaAa")
+                    },
+                )
+            val note3 =
+                signer.sign(
+                    TextNoteEvent.build("test3") {
+                        hashtag("BBBB")
+                    },
+                )
+
+            db.store.insertEvent(note1)
+            db.store.insertEvent(note2)
+            db.store.insertEvent(note3)
+
+            val list =
+                db.query<TextNoteEvent>(
+                    Filter(
+                        tags = mapOf("t" to listOf("AaAa")),
+                    ),
+                )
+
+            assertEquals(2, list.size)
+            list.forEach {
+                assertTrue(it.isTaggedHash("AaAa"))
+            }
+        }
 }

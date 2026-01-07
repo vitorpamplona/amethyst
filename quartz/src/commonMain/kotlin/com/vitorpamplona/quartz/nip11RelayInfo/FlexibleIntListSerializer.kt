@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip11RelayInfo
 
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.text
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -32,15 +33,14 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 
-object FlexibleIntListSerializer : KSerializer<List<Int>?> {
-    private val listSerializer = ListSerializer(Int.serializer())
+object FlexibleIntListSerializer : KSerializer<List<String>?> {
+    private val listSerializer = ListSerializer(String.serializer())
 
     override val descriptor: SerialDescriptor = listSerializer.descriptor
 
-    override fun deserialize(decoder: Decoder): List<Int>? {
+    override fun deserialize(decoder: Decoder): List<String>? {
         require(decoder is JsonDecoder) { "This serializer can only be used with Json format" }
 
         return when (val element = decoder.decodeJsonElement()) {
@@ -51,7 +51,7 @@ object FlexibleIntListSerializer : KSerializer<List<Int>?> {
             is JsonArray -> {
                 element.mapNotNull { arrayElement ->
                     try {
-                        arrayElement.jsonPrimitive.int
+                        arrayElement.jsonPrimitive.text
                     } catch (e: Exception) {
                         // Skip elements that aren't valid integers (strings, booleans, floats, etc.)
                         Log.w("FlexibleIntListSerializer", "Invalid element in array: $arrayElement", e)
@@ -63,7 +63,7 @@ object FlexibleIntListSerializer : KSerializer<List<Int>?> {
             // Handle single integer format (malformed but found in the wild): 1
             is JsonPrimitive if !element.isString -> {
                 try {
-                    listOf(element.int)
+                    listOf(element.text)
                 } catch (e: Exception) {
                     // Can't parse as integer (e.g., float, boolean), treat as missing data
                     Log.w("FlexibleIntListSerializer", "Invalid primitive: $element", e)
@@ -79,7 +79,7 @@ object FlexibleIntListSerializer : KSerializer<List<Int>?> {
     @OptIn(ExperimentalSerializationApi::class)
     override fun serialize(
         encoder: Encoder,
-        value: List<Int>?,
+        value: List<String>?,
     ) {
         if (value == null) {
             encoder.encodeNull()

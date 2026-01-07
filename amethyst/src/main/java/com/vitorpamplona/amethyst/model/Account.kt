@@ -1563,6 +1563,15 @@ class Account(
         }
     }
 
+    suspend fun removeBookmark(note: Note) {
+        if (!isWriteable() || note.isDraft()) return
+
+        val event = bookmarkState.removeBookmark(note)
+        if (event != null) {
+            sendMyPublicAndPrivateOutbox(event)
+        }
+    }
+
     suspend fun createAuthEvent(
         relay: NormalizedRelayUrl,
         challenge: String,

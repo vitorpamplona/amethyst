@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.logging
 
 import android.os.Build
-import android.os.Looper
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
@@ -59,8 +58,8 @@ class Logging {
                     }.penaltyLog()
                     .build(),
             )
-            Looper.getMainLooper().setMessageLogging(LogMonitor())
-            ChoreographerHelper.start()
+            // Looper.getMainLooper().setMessageLogging(LogMonitor())
+            // ChoreographerHelper.start()
 
             // Enable recomposition tracking ONLY in debug builds
             ComposeStabilityAnalyzer.setEnabled(BuildConfig.DEBUG)

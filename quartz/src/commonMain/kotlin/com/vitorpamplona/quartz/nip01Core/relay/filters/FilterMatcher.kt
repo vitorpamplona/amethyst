@@ -29,6 +29,7 @@ object FilterMatcher {
         authors: List<String>? = null,
         kinds: List<Int>? = null,
         tags: Map<String, List<String>>? = null,
+        tagsAll: Map<String, List<String>>? = null,
         since: Long? = null,
         until: Long? = null,
     ): Boolean {
@@ -36,7 +37,23 @@ object FilterMatcher {
         if (kinds?.contains(event.kind) == false) return false
         if (authors?.contains(event.pubKey) == false) return false
         tags?.forEach { tag ->
-            if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
+            val valueSet = tag.value.toSet()
+            // AND between keys, OR between values
+            if (!event.tags.any { it.size > 1 && it[0] == tag.key && it[1] in valueSet }) return false
+        }
+        tagsAll?.forEach { tag ->
+            val eventTagValueSet =
+                event.tags.mapNotNullTo(mutableSetOf()) {
+                    if (it.size > 1 && it[0] == tag.key) {
+                        it[1]
+                    } else {
+                        null
+                    }
+                }
+            // AND between keys, AND between values
+            for (tagValue in tag.value) {
+                if (tagValue !in eventTagValueSet) return false
+            }
         }
         if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
             return false

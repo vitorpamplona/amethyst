@@ -63,6 +63,10 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             }
         }
 
+        if (pubKey.isEmpty()) {
+            throw IllegalArgumentException("Event not found")
+        }
+
         return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
     }
 }

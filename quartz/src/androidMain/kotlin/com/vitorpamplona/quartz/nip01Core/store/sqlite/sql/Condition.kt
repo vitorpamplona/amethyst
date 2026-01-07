@@ -21,6 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite.sql
 
 sealed class Condition {
+    data class Raw(
+        val condition: String,
+    ) : Condition()
+
     data class Equals(
         val column: String,
         val value: Any?,
@@ -81,4 +85,6 @@ sealed class Condition {
     data class Or(
         val conditions: List<Condition>,
     ) : Condition()
+
+    class Empty : Condition()
 }

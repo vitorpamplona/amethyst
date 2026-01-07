@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.utils.Log
@@ -35,6 +37,7 @@ import com.vitorpamplona.quartz.utils.Log
  * - authors: Optional list of author public keys (must be 64 characters).
  * - kinds: Optional list of event kinds to include.
  * - tags: Optional map of tag names to values arrays (common tags like 'p', 'e', 'a' are validated).
+ * - tagsAll: Optional map of tag names to values arrays that must all match (common tags like 'p', 'e', 'a' are validated).
  * - since: Optional timestamp for filtering events with publication time ≥ this value.
  * - until: Optional timestamp for filtering events with publication time ≤ this value.
  * - limit: Optional maximum number of events to request.
@@ -44,10 +47,11 @@ import com.vitorpamplona.quartz.utils.Log
  * follow Nostr requirements (64-char hex, onion addresses) and logs errors for invalid inputs.
  */
 class Filter(
-    val ids: List<String>? = null,
-    val authors: List<String>? = null,
-    val kinds: List<Int>? = null,
+    val ids: List<HexKey>? = null,
+    val authors: List<HexKey>? = null,
+    val kinds: List<Kind>? = null,
     val tags: Map<String, List<String>>? = null,
+    val tagsAll: Map<String, List<String>>? = null,
     val since: Long? = null,
     val until: Long? = null,
     val limit: Int? = null,
@@ -55,31 +59,33 @@ class Filter(
 ) : OptimizedSerializable {
     fun toJson() = OptimizedJsonMapper.toJson(this)
 
-    fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, since, until)
+    fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, tagsAll, since, until)
 
     fun copy(
         ids: List<String>? = this.ids,
         authors: List<String>? = this.authors,
         kinds: List<Int>? = this.kinds,
         tags: Map<String, List<String>>? = this.tags,
+        tagsAll: Map<String, List<String>>? = this.tagsAll,
         since: Long? = this.since,
         until: Long? = this.until,
         limit: Int? = this.limit,
         search: String? = this.search,
-    ) = Filter(ids, authors, kinds, tags, since, until, limit, search)
+    ) = Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search)
 
     /**
-     * Returns true if this filter contains any non-null and non-empty criteria.
+     * Returns true if this filter doesn't filter for anything.
      */
-    fun isFilledFilter() =
-        (ids != null && ids.isNotEmpty()) ||
-            (authors != null && authors.isNotEmpty()) ||
-            (kinds != null && kinds.isNotEmpty()) ||
-            (tags != null && tags.isNotEmpty() && tags.values.all { it.isNotEmpty() }) ||
-            (since != null) ||
-            (until != null) ||
-            (limit != null) ||
-            (search != null && search.isNotEmpty())
+    fun isEmpty() =
+        (ids == null || ids.isEmpty()) &&
+            (authors == null || authors.isEmpty()) &&
+            (kinds == null || kinds.isEmpty()) &&
+            (tags == null || tags.isEmpty() && tags.values.all { it.isNotEmpty() }) &&
+            (tagsAll == null || tagsAll.isEmpty() && tagsAll.values.all { it.isNotEmpty() }) &&
+            (since == null) &&
+            (until == null) &&
+            (limit == null) &&
+            (search == null || search.isEmpty())
 
     init {
         ids?.forEach {
@@ -89,14 +95,27 @@ class Filter(
             if (it.length != 64) Log.e("FilterError", "Invalid author length $it on ${toJson()}")
         }
         // tests common tags.
-        tags?.get("p")?.forEach {
-            if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+        if (tags != null) {
+            tags["p"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+            }
+            tags["e"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
+            }
+            tags["a"]?.forEach {
+                if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
+            }
         }
-        tags?.get("e")?.forEach {
-            if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
-        }
-        tags?.get("a")?.forEach {
-            if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
+        if (tagsAll != null) {
+            tagsAll["p"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+            }
+            tagsAll["e"]?.forEach {
+                if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
+            }
+            tagsAll["a"]?.forEach {
+                if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
+            }
         }
     }
 }

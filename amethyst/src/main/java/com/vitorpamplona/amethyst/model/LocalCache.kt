@@ -1106,7 +1106,6 @@ object LocalCache : ILocalCache {
         val new = consumeBaseReplaceable(event, relay, wasVerified)
 
         if (new) {
-            println("AABBCC New ContactCard about ${event.aboutUser()}")
             val about = checkGetOrCreateUser(event.aboutUser()) ?: return new
             about.cards().addCard(note)
         }
@@ -2890,7 +2889,7 @@ object LocalCache : ILocalCache {
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("LocalCache", "Cannot consume ${event.kind}", e)
+            Log.w("LocalCache", "Cannot consume ${event.toJson()} from ${relay?.url}", e)
             false
         }
 

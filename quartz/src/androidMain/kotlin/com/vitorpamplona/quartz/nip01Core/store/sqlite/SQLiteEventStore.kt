@@ -27,10 +27,13 @@ import android.database.sqlite.SQLiteOpenHelper
 import androidx.core.database.sqlite.transaction
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.utils.EventFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -38,7 +41,7 @@ class SQLiteEventStore(
     val context: Context,
     val dbName: String? = "events.db",
     val relayUrl: String? = null,
-    val tagIndexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
+    val indexStrategy: IndexingStrategy = DefaultIndexingStrategy(),
 ) : SQLiteOpenHelper(context, dbName, null, DATABASE_VERSION) {
     companion object {
         const val DATABASE_VERSION = 2
@@ -47,7 +50,7 @@ class SQLiteEventStore(
     val seedModule = SeedModule()
 
     val fullTextSearchModule = FullTextSearchModule()
-    val eventIndexModule = EventIndexesModule(fullTextSearchModule, seedModule::hasher, tagIndexStrategy)
+    val eventIndexModule = EventIndexesModule(seedModule::hasher, indexStrategy)
 
     val replaceableModule = ReplaceableModule()
     val addressableModule = AddressableModule()
@@ -56,6 +59,8 @@ class SQLiteEventStore(
     val deletionModule = DeletionRequestModule(seedModule::hasher)
     val expirationModule = ExpirationModule()
     val rightToVanishModule = RightToVanishModule(seedModule::hasher)
+
+    val queryBuilder = QueryBuilder(fullTextSearchModule, seedModule::hasher, indexStrategy)
 
     val modules =
         listOf(
@@ -73,6 +78,9 @@ class SQLiteEventStore(
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
 
+        // 32MB memory cache
+        db.execSQL("PRAGMA cache_size=-32000;")
+
         // makes sure the FKs are sane
         db.setForeignKeyConstraintsEnabled(true)
 
@@ -82,7 +90,14 @@ class SQLiteEventStore(
 
         // The DB can be corrupted if the OS is shutdown before sync, which generally
         // doesn't happen on Android
-        db.execSQL("PRAGMA synchronous = OFF")
+        db.execSQL("PRAGMA synchronous = OFF;")
+    }
+
+    fun dbSizeMB(): Int {
+        val f1 = context.getDatabasePath(dbName)
+        val f2 = context.getDatabasePath("$dbName-wal")
+        val total = f1.length() + f2.length()
+        return (total / (1024 * 1024)).toInt()
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -171,33 +186,72 @@ class SQLiteEventStore(
         }
     }
 
-    fun <T : Event> query(filter: Filter): List<T> = eventIndexModule.query(filter, readableDatabase)
+    fun <T : Event> query(filter: Filter): List<T> = queryBuilder.query(filter, readableDatabase)
 
-    fun <T : Event> query(filters: List<Filter>): List<T> = eventIndexModule.query(filters, readableDatabase)
+    fun <T : Event> query(filters: List<Filter>): List<T> = queryBuilder.query(filters, readableDatabase)
 
     fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
-    ) = eventIndexModule.query(filter, readableDatabase, onEach)
+    ) = queryBuilder.query(filter, readableDatabase, onEach)
 
     fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
-    ) = eventIndexModule.query(filters, readableDatabase, onEach)
+    ) = queryBuilder.query(filters, readableDatabase, onEach)
 
-    fun count(filter: Filter): Int = eventIndexModule.count(filter, readableDatabase)
+    fun rawQuery(filter: Filter): List<RawEvent> = queryBuilder.rawQuery(filter, readableDatabase)
 
-    fun count(filters: List<Filter>): Int = eventIndexModule.count(filters, readableDatabase)
+    fun rawQuery(filters: List<Filter>): List<RawEvent> = queryBuilder.rawQuery(filters, readableDatabase)
+
+    fun rawQuery(
+        filter: Filter,
+        onEach: (RawEvent) -> Unit,
+    ) = queryBuilder.rawQuery(filter, readableDatabase, onEach)
+
+    fun rawQuery(
+        filters: List<Filter>,
+        onEach: (RawEvent) -> Unit,
+    ) = queryBuilder.rawQuery(filters, readableDatabase, onEach)
+
+    fun planQuery(filter: Filter) = queryBuilder.planQuery(filter, seedModule.hasher(readableDatabase), readableDatabase)
+
+    fun planQuery(filters: List<Filter>) = queryBuilder.planQuery(filters, seedModule.hasher(readableDatabase), readableDatabase)
+
+    fun count(filter: Filter): Int = queryBuilder.count(filter, readableDatabase)
+
+    fun count(filters: List<Filter>): Int = queryBuilder.count(filters, readableDatabase)
 
     fun delete(filter: Filter) {
-        eventIndexModule.delete(filter, writableDatabase)
+        queryBuilder.delete(filter, writableDatabase)
     }
 
     fun delete(filters: List<Filter>) {
-        eventIndexModule.delete(filters, writableDatabase)
+        queryBuilder.delete(filters, writableDatabase)
     }
 
     fun delete(id: HexKey): Int = writableDatabase.delete("event_headers", "id = ?", arrayOf(id))
 
     fun deleteExpiredEvents() = expirationModule.deleteExpiredEvents(writableDatabase)
+}
+
+class RawEvent(
+    val id: HexKey,
+    val pubKey: HexKey,
+    val createdAt: Long,
+    val kind: Kind,
+    val jsonTags: String,
+    val content: String,
+    val sig: HexKey,
+) {
+    fun <T : Event> toEvent() =
+        EventFactory.create<T>(
+            id.intern(),
+            pubKey.intern(),
+            createdAt,
+            kind,
+            OptimizedJsonMapper.fromJsonToTagArray(jsonTags),
+            content,
+            sig,
+        )
 }
