@@ -30,9 +30,6 @@ import kotlinx.serialization.Serializable
 class UserMetadata {
     var name: String? = null
 
-    @Deprecated("Use name instead", replaceWith = ReplaceWith("name"))
-    var username: String? = null
-
     @SerialName("display_name")
     var displayName: String? = null
     var picture: String? = null
@@ -56,16 +53,16 @@ class UserMetadata {
     @kotlin.jvm.Transient
     var tags: ImmutableListOfLists<String>? = null
 
-    fun anyName(): String? = displayName ?: name ?: username
+    fun anyName(): String? = displayName ?: name
 
     fun anyNameStartsWith(prefix: String): Boolean =
-        listOfNotNull(name, username, displayName, nip05, lud06, lud16).any {
+        listOfNotNull(name, displayName, nip05, lud06, lud16).any {
             it.contains(prefix, true)
         }
 
     fun lnAddress(): String? = lud16 ?: lud06
 
-    fun bestName(): String? = displayName ?: name ?: username
+    fun bestName(): String? = displayName ?: name
 
     fun nip05(): String? = nip05
 
@@ -78,7 +75,6 @@ class UserMetadata {
         if (nip05?.isNotEmpty() == true) nip05 = nip05?.trim()
         if (displayName?.isNotEmpty() == true) displayName = displayName?.trim()
         if (name?.isNotEmpty() == true) name = name?.trim()
-        if (username?.isNotEmpty() == true) username = username?.trim()
         if (lud06?.isNotEmpty() == true) lud06 = lud06?.trim()
         if (lud16?.isNotEmpty() == true) lud16 = lud16?.trim()
         if (pronouns?.isNotEmpty() == true) pronouns = pronouns?.trim()
@@ -91,7 +87,6 @@ class UserMetadata {
         if (nip05?.isBlank() == true) nip05 = null
         if (displayName?.isBlank() == true) displayName = null
         if (name?.isBlank() == true) name = null
-        if (username?.isBlank() == true) username = null
         if (lud06?.isBlank() == true) lud06 = null
         if (lud16?.isBlank() == true) lud16 = null
 
