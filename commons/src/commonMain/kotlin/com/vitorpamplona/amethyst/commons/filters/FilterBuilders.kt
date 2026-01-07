@@ -276,6 +276,7 @@ class FilterBuilder {
     private var authors: List<String>? = null
     private var kinds: List<Int>? = null
     private var tags: MutableMap<String, List<String>>? = null
+    private var tagsAll: MutableMap<String, List<String>>? = null
     private var since: Long? = null
     private var until: Long? = null
     private var limit: Int? = null
@@ -313,6 +314,14 @@ class FilterBuilder {
         tags!![name] = values
     }
 
+    fun tagAll(
+        name: String,
+        values: List<String>,
+    ) {
+        if (tagsAll == null) tagsAll = mutableMapOf()
+        tagsAll!![name] = values
+    }
+
     fun pTag(vararg pubKeys: String) {
         tag("p", pubKeys.toList())
     }
@@ -337,7 +346,7 @@ class FilterBuilder {
         this.search = search
     }
 
-    fun build(): Filter = Filter(ids, authors, kinds, tags, since, until, limit, search)
+    fun build(): Filter = Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search)
 }
 
 /**
