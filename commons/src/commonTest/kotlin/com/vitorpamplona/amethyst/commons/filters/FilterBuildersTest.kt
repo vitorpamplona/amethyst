@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.filters
 
+import com.vitorpamplona.amethyst.commons.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.commons.subscriptions.buildFilter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

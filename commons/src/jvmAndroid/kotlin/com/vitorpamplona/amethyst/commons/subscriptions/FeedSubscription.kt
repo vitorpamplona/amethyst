@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.subscriptions
 
-import com.vitorpamplona.amethyst.commons.filters.FilterBuilders
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
