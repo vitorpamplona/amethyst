@@ -47,7 +47,7 @@ class NewUserMetadataViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
-    // val userName = mutableStateOf("")
+    val name = mutableStateOf("")
     val displayName = mutableStateOf("")
     val about = mutableStateOf("")
 
@@ -74,8 +74,8 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun load() {
         account.userProfile().let {
-            // userName.value = it.bestUsername() ?: ""
-            displayName.value = it.info?.bestName() ?: ""
+            name.value = it.info?.name ?: ""
+            displayName.value = it.info?.displayName ?: ""
             about.value = it.info?.about ?: ""
             picture.value = it.info?.picture ?: ""
             banner.value = it.info?.banner ?: ""
@@ -100,33 +100,31 @@ class NewUserMetadataViewModel : ViewModel() {
         }
     }
 
-    fun create() {
-        // Tries to not delete any existing attribute that we do not work with.
-        accountViewModel.launchSigner {
-            val metadata =
-                account.userMetadata.sendNewUserMetadata(
-                    name = displayName.value,
-                    picture = picture.value,
-                    banner = banner.value,
-                    website = website.value,
-                    pronouns = pronouns.value,
-                    about = about.value,
-                    nip05 = nip05.value,
-                    lnAddress = lnAddress.value,
-                    lnURL = lnURL.value,
-                    twitter = twitter.value,
-                    mastodon = mastodon.value,
-                    github = github.value,
-                )
+    suspend fun create() {
+        val metadata =
+            account.userMetadata.sendNewUserMetadata(
+                name = name.value,
+                displayName = displayName.value,
+                picture = picture.value,
+                banner = banner.value,
+                website = website.value,
+                pronouns = pronouns.value,
+                about = about.value,
+                nip05 = nip05.value,
+                lnAddress = lnAddress.value,
+                lnURL = lnURL.value,
+                twitter = twitter.value,
+                mastodon = mastodon.value,
+                github = github.value,
+            )
 
-            account.sendLiterallyEverywhere(metadata)
+        account.sendLiterallyEverywhere(metadata)
 
-            clear()
-        }
+        clear()
     }
 
     fun clear() {
-        // userName.value = ""
+        name.value = ""
         displayName.value = ""
         about.value = ""
         picture.value = ""

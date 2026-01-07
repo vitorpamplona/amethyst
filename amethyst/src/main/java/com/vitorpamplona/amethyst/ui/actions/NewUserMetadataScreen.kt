@@ -70,11 +70,12 @@ fun NewUserMetadataScreen(
             SavingTopBar(
                 titleRes = R.string.profile,
                 onCancel = {
-                    postViewModel.clear()
                     nav.popBack()
                 },
                 onPost = {
-                    postViewModel.create()
+                    accountViewModel.launchSigner {
+                        postViewModel.create()
+                    }
                     nav.popBack()
                 },
             )
@@ -95,7 +96,27 @@ fun NewUserMetadataScreen(
                 modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
             ) {
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.profile_name)) },
+                    label = { Text(text = stringRes(R.string.profile_name_with_explainer)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.name.value,
+                    onValueChange = { postViewModel.name.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.my_name),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences,
+                        ),
+                    singleLine = true,
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringRes(R.string.display_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.displayName.value,
                     onValueChange = { postViewModel.displayName.value = it },

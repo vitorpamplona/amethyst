@@ -50,6 +50,7 @@ class UserMetadataState(
 
     suspend fun sendNewUserMetadata(
         name: String? = null,
+        displayName: String? = null,
         picture: String? = null,
         banner: String? = null,
         website: String? = null,
@@ -69,7 +70,7 @@ class UserMetadataState(
                 MetadataEvent.updateFromPast(
                     latest = latest,
                     name = name,
-                    displayName = name,
+                    displayName = displayName,
                     picture = picture,
                     banner = banner,
                     website = website,
@@ -85,7 +86,7 @@ class UserMetadataState(
             } else {
                 MetadataEvent.createNew(
                     name = name,
-                    displayName = name,
+                    displayName = displayName,
                     picture = picture,
                     banner = banner,
                     website = website,
