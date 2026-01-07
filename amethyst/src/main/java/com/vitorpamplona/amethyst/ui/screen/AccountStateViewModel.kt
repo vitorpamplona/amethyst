@@ -214,7 +214,7 @@ class AccountStateViewModel : ViewModel() {
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
-                Nip05NostrAddressVerifier().verifyNip05(
+                Nip05NostrAddressVerifier.verifyNip05(
                     key,
                     okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
                     onSuccess = { publicKey ->

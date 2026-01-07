@@ -28,15 +28,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 
-class Nip05NostrAddressVerifier {
+object Nip05NostrAddressVerifier {
     suspend fun fetchNip05Json(
         nip05: String,
         okHttpClient: (String) -> OkHttpClient,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) = withContext(Dispatchers.IO) {
-        checkNotInMainThread()
-
         val url = Nip05().assembleUrl(nip05)
 
         if (url == null) {
@@ -73,15 +71,10 @@ class Nip05NostrAddressVerifier {
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) {
-        // check fails on tests
-        checkNotInMainThread()
-
         fetchNip05Json(
             nip05,
             okHttpClient,
             onSuccess = {
-                checkNotInMainThread()
-
                 Nip05().parseHexKeyFor(nip05, it.lowercase()).fold(
                     onSuccess = { hexKey ->
                         if (hexKey == null) {

@@ -941,7 +941,7 @@ class AccountViewModel(
         val nip05 = userMetadata.nip05?.ifBlank { null } ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-            Nip05NostrAddressVerifier()
+            Nip05NostrAddressVerifier
                 .verifyNip05(
                     nip05,
                     okHttpClient = httpClientBuilder::okHttpClientForNip05,
