@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.commons.account
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.SecureKeyStorage
-import com.vitorpamplona.quartz.nip01Core.crypto.SecureStorageException
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.crypto
+package com.vitorpamplona.amethyst.commons.keystorage
 
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
