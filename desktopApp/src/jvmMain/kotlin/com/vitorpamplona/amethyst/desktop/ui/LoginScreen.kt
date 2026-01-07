@@ -32,14 +32,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.SharedRes
 import com.vitorpamplona.amethyst.commons.account.AccountManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.ui.auth.LoginCard
 import com.vitorpamplona.amethyst.commons.ui.auth.NewKeyWarningCard
+import dev.icerock.moko.resources.compose.stringResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -48,6 +53,7 @@ fun LoginScreen(
 ) {
     var showNewKeyDialog by remember { mutableStateOf(false) }
     var generatedAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -55,7 +61,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            "Welcome to Amethyst",
+            stringResource(SharedRes.strings.login_title),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -63,7 +69,7 @@ fun LoginScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            "A Nostr client for desktop",
+            stringResource(SharedRes.strings.login_subtitle_desktop),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -73,7 +79,11 @@ fun LoginScreen(
         LoginCard(
             onLogin = { keyInput ->
                 accountManager.loginWithKey(keyInput).map {
-                    onLoginSuccess()
+                    // Save account to secure storage (use IO dispatcher to avoid blocking UI)
+                    scope.launch(Dispatchers.IO) {
+                        accountManager.saveCurrentAccount()
+                        onLoginSuccess()
+                    }
                 }
             },
             onGenerateNew = {
@@ -89,7 +99,11 @@ fun LoginScreen(
                 nsec = generatedAccount!!.nsec,
                 onContinue = {
                     showNewKeyDialog = false
-                    onLoginSuccess()
+                    // Save generated account (use IO dispatcher to avoid blocking UI)
+                    scope.launch(Dispatchers.IO) {
+                        accountManager.saveCurrentAccount()
+                        onLoginSuccess()
+                    }
                 },
             )
         }

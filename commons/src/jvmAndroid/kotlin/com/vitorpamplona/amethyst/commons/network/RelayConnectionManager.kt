@@ -99,6 +99,14 @@ open class RelayConnectionManager(
         client.send(event, relays)
     }
 
+    /**
+     * Broadcasts an event to all connected relays.
+     */
+    fun broadcastToAll(event: Event) {
+        val connected = connectedRelays.value
+        send(event, connected)
+    }
+
     private fun updateRelayStatus(
         url: NormalizedRelayUrl,
         update: (RelayStatus) -> RelayStatus,

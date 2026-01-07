@@ -43,6 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.SharedRes
+import dev.icerock.moko.resources.compose.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 /**
  * Login card with Nostr key input field and action buttons.
@@ -60,8 +63,8 @@ fun LoginCard(
     onGenerateNew: () -> Unit,
     modifier: Modifier = Modifier,
     cardWidth: Dp = 400.dp,
-    title: String = "Login with your Nostr key",
-    subtitle: String = "Use nsec for full access or npub for read-only",
+    title: String = stringResource(SharedRes.strings.login_card_title),
+    subtitle: String = stringResource(SharedRes.strings.login_card_subtitle),
 ) {
     var keyInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -118,16 +121,25 @@ fun LoginCard(
                     modifier = Modifier.weight(1f),
                     enabled = keyInput.isNotBlank(),
                 ) {
-                    Text("Login")
+                    Text(stringResource(SharedRes.strings.login_button))
                 }
 
                 OutlinedButton(
                     onClick = onGenerateNew,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Generate New")
+                    Text(stringResource(SharedRes.strings.login_generate_button))
                 }
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun LoginCardPreview() {
+    LoginCard(
+        onLogin = { Result.success(Unit) },
+        onGenerateNew = {},
+    )
 }

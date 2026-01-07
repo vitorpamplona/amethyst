@@ -34,6 +34,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.SharedRes
+import dev.icerock.moko.resources.compose.stringResource
 
 /**
  * A centered loading state with a progress indicator and message.
@@ -67,8 +69,10 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     description: String? = null,
     onRefresh: (() -> Unit)? = null,
-    refreshLabel: String = "Refresh",
+    refreshLabel: String? = null,
 ) {
+    val actualRefreshLabel = refreshLabel ?: stringResource(SharedRes.strings.action_refresh)
+
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -90,7 +94,7 @@ fun EmptyState(
         if (onRefresh != null) {
             Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = onRefresh) {
-                Text(refreshLabel)
+                Text(actualRefreshLabel)
             }
         }
     }
@@ -104,8 +108,10 @@ fun ErrorState(
     message: String,
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
-    retryLabel: String = "Try Again",
+    retryLabel: String? = null,
 ) {
+    val actualRetryLabel = retryLabel ?: stringResource(SharedRes.strings.action_try_again)
+
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -119,7 +125,7 @@ fun ErrorState(
         if (onRetry != null) {
             Spacer(Modifier.height(16.dp))
             Button(onClick = onRetry) {
-                Text(retryLabel)
+                Text(actualRetryLabel)
             }
         }
     }
@@ -131,11 +137,13 @@ fun ErrorState(
 @Composable
 fun FeedEmptyState(
     modifier: Modifier = Modifier,
-    title: String = "Feed is empty",
+    title: String? = null,
     onRefresh: (() -> Unit)? = null,
 ) {
+    val actualTitle = title ?: stringResource(SharedRes.strings.feed_empty)
+
     EmptyState(
-        title = title,
+        title = actualTitle,
         modifier = modifier,
         onRefresh = onRefresh,
     )
@@ -150,8 +158,10 @@ fun FeedErrorState(
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
 ) {
+    val formattedMessage = stringResource(SharedRes.strings.error_loading_feed).format(errorMessage)
+
     ErrorState(
-        message = "Error loading feed: $errorMessage",
+        message = formattedMessage,
         modifier = modifier,
         onRetry = onRetry,
     )

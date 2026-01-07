@@ -23,33 +23,17 @@ package com.vitorpamplona.amethyst.model.nip18Reposts
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.amethyst.commons.actions.RepostAction as CommonsRepostAction
 
+/**
+ * Android wrapper - pure proxy to commons implementation.
+ * All logic and validation handled in commons.
+ */
 class RepostAction {
     companion object {
         suspend fun repost(
             note: Note,
             signer: NostrSigner,
-        ): Event? {
-            val noteEvent = note.event ?: return null
-
-            if (note.hasBoostedInTheLast5Minutes(signer.pubKey)) {
-                // has already bosted in the past 5mins
-                return null
-            }
-
-            val noteHint = note.relayHintUrl()
-            val authorHint = note.author?.bestRelayHint()
-
-            val template =
-                if (noteEvent.kind == 1) {
-                    RepostEvent.build(noteEvent, noteHint, authorHint)
-                } else {
-                    GenericRepostEvent.build(noteEvent, noteHint, authorHint)
-                }
-
-            return signer.sign(template)
-        }
+        ): Event? = CommonsRepostAction.repost(note, signer)
     }
 }

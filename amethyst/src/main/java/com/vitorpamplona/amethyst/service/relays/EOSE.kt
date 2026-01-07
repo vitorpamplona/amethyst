@@ -24,34 +24,10 @@ import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-typealias SincePerRelayMap = MutableMap<NormalizedRelayUrl, MutableTime>
-
-class EOSERelayList {
-    var relayList: SincePerRelayMap = mutableMapOf()
-
-    fun addOrUpdate(
-        relayUrl: NormalizedRelayUrl,
-        time: Long,
-    ) {
-        val eose = relayList[relayUrl]
-        if (eose == null) {
-            relayList[relayUrl] = MutableTime(time)
-        } else {
-            eose.updateIfNewer(time)
-        }
-    }
-
-    fun clear() {
-        relayList = mutableMapOf()
-    }
-
-    fun since() = relayList
-
-    fun newEose(
-        relay: NormalizedRelayUrl,
-        time: Long,
-    ) = addOrUpdate(relay, time)
-}
+// Re-export from commons for backwards compatibility
+typealias EOSERelayList = com.vitorpamplona.amethyst.commons.relays.EOSERelayList
+typealias SincePerRelayMap = com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+typealias MutableTime = com.vitorpamplona.amethyst.commons.relays.MutableTime
 
 open class EOSEByKey<U : Any>(
     cacheSize: Int = 200,

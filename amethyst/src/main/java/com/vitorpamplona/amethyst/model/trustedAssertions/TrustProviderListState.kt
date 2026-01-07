@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.commons.model.trustedAssertions.TrustProviderListState as ITrustProviderListState
 
 class TrustProviderListState(
     val signer: NostrSigner,
@@ -49,7 +50,7 @@ class TrustProviderListState(
     val decryptionCache: TrustProviderListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : ITrustProviderListState {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val trustProviderListNote = cache.getOrCreateAddressableNote(getTrustProviderListAddress())
 
@@ -79,7 +80,7 @@ class TrustProviderListState(
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveUserRankProvider: StateFlow<ServiceProviderTag?> =
+    override val liveUserRankProvider: StateFlow<ServiceProviderTag?> =
         liveTrustProviderList
             .map {
                 it.firstOrNull { it.service == ProviderTypes.rank }
@@ -97,7 +98,7 @@ class TrustProviderListState(
             )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveUserFollowerCount: StateFlow<ServiceProviderTag?> =
+    override val liveUserFollowerCount: StateFlow<ServiceProviderTag?> =
         liveTrustProviderList
             .map { tagList ->
                 tagList.firstOrNull { it.service == ProviderTypes.followerCount }

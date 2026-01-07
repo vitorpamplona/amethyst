@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.mokoResources)
 }
 
 android {
@@ -66,11 +67,19 @@ kotlin {
                 implementation(compose.materialIconsExtended)
                 implementation(compose.components.uiToolingPreview)
 
+                // Image loading (Coil 3 - KMP)
+                implementation(libs.coil.compose)
+                implementation(libs.coil.okhttp)
+
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
+
+                // Moko Resources for KMP string resources
+                api(libs.moko.resources)
+                api(libs.moko.resources.compose)
             }
         }
 
@@ -119,4 +128,9 @@ kotlin {
             }
         }
     }
+}
+
+multiplatformResources {
+    resourcesPackage.set("com.vitorpamplona.amethyst.commons")
+    resourcesClassName.set("SharedRes")
 }

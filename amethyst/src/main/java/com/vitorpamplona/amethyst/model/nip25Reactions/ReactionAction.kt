@@ -22,14 +22,15 @@ package com.vitorpamplona.amethyst.model.nip25Reactions
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
-import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.amethyst.commons.actions.ReactionAction as CommonsReactionAction
 
+/**
+ * Android wrapper - pure proxy to commons implementation.
+ * All logic and validation handled in commons.
+ */
 class ReactionAction {
     companion object {
         suspend fun reactTo(
@@ -39,65 +40,6 @@ class ReactionAction {
             signer: NostrSigner,
             onPublic: (ReactionEvent) -> Unit,
             onPrivate: suspend (NIP17Factory.Result) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
-
-            if (note.hasReacted(by, reaction)) {
-                // has already liked this note
-                return
-            }
-
-            val noteEvent = note.event
-            if (noteEvent is NIP17Group) {
-                val users = noteEvent.groupMembers().toList()
-
-                if (reaction.startsWith(":")) {
-                    val emojiUrl = EmojiUrlTag.decode(reaction)
-                    if (emojiUrl != null) {
-                        note.toEventHint<Event>()?.let {
-                            onPrivate(
-                                NIP17Factory().createReactionWithinGroup(
-                                    emojiUrl = emojiUrl,
-                                    originalNote = it,
-                                    to = users,
-                                    signer = signer,
-                                ),
-                            )
-                        }
-
-                        return
-                    }
-                }
-
-                note.toEventHint<Event>()?.let {
-                    onPrivate(
-                        NIP17Factory().createReactionWithinGroup(
-                            content = reaction,
-                            originalNote = it,
-                            to = users,
-                            signer = signer,
-                        ),
-                    )
-                }
-                return
-            } else {
-                if (reaction.startsWith(":")) {
-                    val emojiUrl = EmojiUrlTag.decode(reaction)
-                    if (emojiUrl != null) {
-                        note.event?.let {
-                            val template = ReactionEvent.build(emojiUrl, EventHintBundle(it, note.relayHintUrl()))
-
-                            onPublic(signer.sign(template))
-                        }
-
-                        return
-                    }
-                }
-
-                note.toEventHint<Event>()?.let {
-                    onPublic(signer.sign(ReactionEvent.build(reaction, it)))
-                }
-            }
-        }
+        ) = CommonsReactionAction.reactTo(note, reaction, by, signer, onPublic, onPrivate)
     }
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -43,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 
 /**
@@ -50,7 +54,9 @@ import com.vitorpamplona.amethyst.commons.util.toTimeAgo
  */
 data class NoteDisplayData(
     val id: String,
+    val pubKeyHex: String,
     val pubKeyDisplay: String,
+    val profilePictureUrl: String? = null,
     val content: String,
     val createdAt: Long,
 )
@@ -64,6 +70,7 @@ fun NoteCard(
     note: NoteDisplayData,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onAuthorClick: ((String) -> Unit)? = null,
 ) {
     val richTextParser = remember { RichTextParser() }
     val urls = remember(note.content) { richTextParser.parseValidUrls(note.content) }
@@ -82,13 +89,32 @@ fun NoteCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Author (truncated)
-                Text(
-                    text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                )
+                // Author with avatar
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        if (onAuthorClick != null) {
+                            Modifier.clickable { onAuthorClick(note.pubKeyHex) }
+                        } else {
+                            Modifier
+                        },
+                ) {
+                    UserAvatar(
+                        userHex = note.pubKeyHex,
+                        pictureUrl = note.profilePictureUrl,
+                        size = 32.dp,
+                        contentDescription = "Profile picture of ${note.pubKeyDisplay}",
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    Text(
+                        text = note.pubKeyDisplay.take(20) + if (note.pubKeyDisplay.length > 20) "..." else "",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                    )
+                }
 
                 // Timestamp
                 Text(

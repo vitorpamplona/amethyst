@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip47WalletConnect
 
+import com.vitorpamplona.amethyst.commons.model.INwcSignerState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -66,7 +67,7 @@ class NwcSignerState(
     val cache: LocalCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
-) {
+) : INwcSignerState {
     /**
      * Derives a NIP-47 signer from the zap payment request in settings.
      * If there's no valid configuration, it defaults to the main signer.
@@ -112,7 +113,7 @@ class NwcSignerState(
 
     fun hasWalletConnectSetup(): Boolean = settings.zapPaymentRequest.value != null
 
-    fun isNIP47Author(pubkeyHex: String?): Boolean = nip47Signer.value.pubKey == pubkeyHex
+    override fun isNIP47Author(pubkeyHex: String?): Boolean = nip47Signer.value.pubKey == pubkeyHex
 
     /**
      * Decrypts a NIP-47 payment request using the current signer.
@@ -120,7 +121,7 @@ class NwcSignerState(
      * @param nwcRequest the NIP-47 payment request event to decrypt
      * @return the decrypted request or null if not set up or decryption fails
      */
-    suspend fun decryptRequest(nwcRequest: LnZapPaymentRequestEvent): Request? {
+    override suspend fun decryptRequest(nwcRequest: LnZapPaymentRequestEvent): Request? {
         if (!hasWalletConnectSetup()) return null
         return zapPaymentRequestDecryptionCache.value.decryptRequest(nwcRequest)
     }
@@ -131,7 +132,7 @@ class NwcSignerState(
      * @param nwsResponse the NIP-47 payment response event to decrypt
      * @return the decrypted response or null if not set up or decryption fails
      */
-    suspend fun decryptResponse(nwsResponse: LnZapPaymentResponseEvent): Response? {
+    override suspend fun decryptResponse(nwsResponse: LnZapPaymentResponseEvent): Response? {
         if (!hasWalletConnectSetup()) return null
         return zapPaymentResponseDecryptionCache.value.decryptResponse(nwsResponse)
     }
