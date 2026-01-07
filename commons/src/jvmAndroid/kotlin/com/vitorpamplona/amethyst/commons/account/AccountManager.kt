@@ -48,6 +48,7 @@ sealed class AccountState {
     ) : AccountState()
 }
 
+@Stable
 class AccountManager private constructor(
     private val secureStorage: SecureKeyStorage,
 ) {
