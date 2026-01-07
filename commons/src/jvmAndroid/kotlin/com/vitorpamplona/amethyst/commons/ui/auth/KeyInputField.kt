@@ -41,6 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.SharedRes
+import dev.icerock.moko.resources.compose.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 /**
  * Text field for entering Nostr keys (nsec or npub) with visibility toggle.
@@ -50,8 +53,8 @@ fun KeyInputField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "nsec or npub",
-    placeholder: String = "nsec1... or npub1...",
+    label: String = stringResource(SharedRes.strings.login_key_label),
+    placeholder: String = stringResource(SharedRes.strings.login_key_placeholder),
     errorMessage: String? = null,
 ) {
     var showKey by remember { mutableStateOf(false) }
@@ -73,7 +76,7 @@ fun KeyInputField(
             IconButton(onClick = { showKey = !showKey }) {
                 Icon(
                     if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                    contentDescription = if (showKey) "Hide key" else "Show key",
+                    contentDescription = if (showKey) stringResource(SharedRes.strings.login_hide_key) else stringResource(SharedRes.strings.login_show_key),
                 )
             }
         },
@@ -107,4 +110,21 @@ fun SelectableKeyText(
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
+}
+
+@Preview
+@Composable
+fun KeyInputFieldPreview() {
+    KeyInputField(
+        value = "nsec1example1234567890",
+        onValueChange = {},
+    )
+}
+
+@Preview
+@Composable
+fun SelectableKeyTextPreview() {
+    SelectableKeyText(
+        key = "npub1example1234567890abcdefghijklmnopqrstuvwxyz1234567890",
+    )
 }

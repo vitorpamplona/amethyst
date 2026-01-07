@@ -28,6 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.SharedRes
+import dev.icerock.moko.resources.compose.stringResource
 
 /**
  * Generic placeholder screen with title and description.
@@ -58,8 +60,8 @@ fun PlaceholderScreen(
 @Composable
 fun SearchPlaceholder(modifier: Modifier = Modifier) {
     PlaceholderScreen(
-        title = "Search",
-        description = "Search for users, notes, and hashtags.",
+        title = stringResource(SharedRes.strings.screen_search_title),
+        description = stringResource(SharedRes.strings.screen_search_description),
         modifier = modifier,
     )
 }
@@ -70,8 +72,8 @@ fun SearchPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 fun MessagesPlaceholder(modifier: Modifier = Modifier) {
     PlaceholderScreen(
-        title = "Messages",
-        description = "Your encrypted direct messages will appear here.",
+        title = stringResource(SharedRes.strings.screen_messages_title),
+        description = stringResource(SharedRes.strings.screen_messages_description),
         modifier = modifier,
     )
 }
@@ -82,8 +84,8 @@ fun MessagesPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 fun NotificationsPlaceholder(modifier: Modifier = Modifier) {
     PlaceholderScreen(
-        title = "Notifications",
-        description = "Mentions, replies, and reactions will appear here.",
+        title = stringResource(SharedRes.strings.screen_notifications_title),
+        description = stringResource(SharedRes.strings.screen_notifications_description),
         modifier = modifier,
     )
 }

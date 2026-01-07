@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Login & Auth -->
+    <string name="login_title">Welcome to Amethyst</string>
+    <string name="login_subtitle">Sign in to your Nostr account</string>
+    <string name="login_subtitle_desktop">A Nostr client for desktop</string>
+    <string name="login_card_title">Login with your Nostr key</string>
+    <string name="login_card_subtitle">Use nsec for full access or npub for read-only</string>
+    <string name="login_with_key">Login with Key</string>
+    <string name="login_button">Login</string>
+    <string name="login_generate_new">Generate New Key</string>
+    <string name="login_generate_button">Generate New</string>
+    <string name="login_key_hint">Enter your private key (nsec) or public key (npub)</string>
+    <string name="login_key_label">nsec or npub</string>
+    <string name="login_key_placeholder">nsec1... or npub1...</string>
+    <string name="login_show_key">Show key</string>
+    <string name="login_hide_key">Hide key</string>
+
+    <!-- New Key Warning -->
+    <string name="new_key_warning_title">IMPORTANT: Save your keys!</string>
+    <string name="new_key_warning_message">Your secret key (nsec) is the ONLY way to access your account. If you lose it, your account is gone forever. Save it somewhere safe!</string>
+    <string name="new_key_public_label">Public Key (shareable):</string>
+    <string name="new_key_secret_label">Secret Key (NEVER share this!):</string>
+    <string name="new_key_continue_button">I've saved my keys, continue</string>
+
+    <!-- Common Actions -->
+    <string name="action_copy">Copy</string>
+    <string name="action_paste">Paste</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_share">Share</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_key">Invalid key format. Please check and try again.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_generic">An error occurred. Please try again.</string>
+
+    <!-- Loading & Empty States -->
+    <string name="action_refresh">Refresh</string>
+    <string name="action_try_again">Try Again</string>
+    <string name="feed_empty">Feed is empty</string>
+    <string name="error_loading_feed">Error loading feed: %s</string>
+
+    <!-- Placeholder Screens -->
+    <string name="screen_search_title">Search</string>
+    <string name="screen_search_description">Search for users, notes, and hashtags.</string>
+    <string name="screen_messages_title">Messages</string>
+    <string name="screen_messages_description">Your encrypted direct messages will appear here.</string>
+    <string name="screen_notifications_title">Notifications</string>
+    <string name="screen_notifications_description">Mentions, replies, and reactions will appear here.</string>
+</resources>
