@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.previews
 
+import com.vitorpamplona.amethyst.commons.preview.OpenGraphParser
+import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

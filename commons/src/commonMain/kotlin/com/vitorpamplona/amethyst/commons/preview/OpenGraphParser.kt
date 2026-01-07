@@ -18,9 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.previews
-
-import com.vitorpamplona.amethyst.commons.preview.MetaTag
+package com.vitorpamplona.amethyst.commons.preview
 
 class OpenGraphParser {
     class Result(

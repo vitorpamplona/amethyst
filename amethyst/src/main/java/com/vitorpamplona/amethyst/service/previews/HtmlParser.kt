@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.previews
 
+import com.vitorpamplona.amethyst.commons.preview.HtmlCharsetParser
 import com.vitorpamplona.amethyst.commons.preview.MetaTag
 import com.vitorpamplona.amethyst.commons.preview.MetaTagsParser
 import kotlinx.coroutines.Dispatchers
@@ -31,10 +32,6 @@ import java.nio.charset.Charset
 
 class HtmlParser {
     companion object {
-        val ATTRIBUTE_VALUE_CHARSET = "charset"
-        val ATTRIBUTE_VALUE_HTTP_EQUIV = "http-equiv"
-        val CONTENT = "content"
-
         // taken from okhttp
         private val UNICODE_BOMS =
             Options.of(
@@ -49,25 +46,30 @@ class HtmlParser {
                 // UTF-32LE
                 "ffff0000".decodeHex(),
             )
-
-        private val RE_CONTENT_TYPE_CHARSET = Regex("""charset=([^;]+)""")
     }
 
     suspend fun parseHtml(
         source: BufferedSource,
         type: Charset?,
     ): Sequence<MetaTag> =
+        parseHtml(
+            source.readByteArray(),
+            type ?: source.readBomAsCharset(),
+        )
+
+    suspend fun parseHtml(
+        bodyBytes: ByteArray,
+        type: Charset?,
+    ): Sequence<MetaTag> =
         withContext(Dispatchers.IO) {
             // sniff charset from Content-Type header or BOM
-            val sniffedCharset = type ?: source.readBomAsCharset()
-            if (sniffedCharset != null) {
-                val content = source.readByteArray().toString(sniffedCharset)
+            if (type != null) {
+                val content = bodyBytes.toString(type)
                 return@withContext MetaTagsParser.parse(content)
             }
 
             // if sniffing was failed, detect charset from content
-            val bodyBytes = source.readByteArray()
-            val charset = detectCharset(bodyBytes)
+            val charset = HtmlCharsetParser.detectCharset(bodyBytes)
             val content = bodyBytes.toString(charset)
             return@withContext MetaTagsParser.parse(content)
         }
@@ -82,29 +84,4 @@ class HtmlParser {
             -1 -> null
             else -> throw AssertionError()
         }
-
-    private fun detectCharset(bodyBytes: ByteArray): Charset {
-        // try to detect charset from meta tags parsed from first 1024 bytes of body
-        val firstPart = String(bodyBytes, 0, 1024, Charset.forName("utf-8"))
-        val metaTags = MetaTagsParser.parse(firstPart)
-        metaTags.forEach { meta ->
-            val charsetAttr = meta.attr(ATTRIBUTE_VALUE_CHARSET)
-            if (charsetAttr.isNotEmpty()) {
-                runCatching { Charset.forName(charsetAttr) }.getOrNull()?.let {
-                    return it
-                }
-            }
-            if (meta.attr(ATTRIBUTE_VALUE_HTTP_EQUIV).lowercase() == "content-type") {
-                RE_CONTENT_TYPE_CHARSET
-                    .find(meta.attr(CONTENT))
-                    ?.let {
-                        runCatching { Charset.forName(it.groupValues[1]) }.getOrNull()
-                    }?.let {
-                        return it
-                    }
-            }
-        }
-        // defaults to UTF-8
-        return Charset.forName("utf-8")
-    }
 }

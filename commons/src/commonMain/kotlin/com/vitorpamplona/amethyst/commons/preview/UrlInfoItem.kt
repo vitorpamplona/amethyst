@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.previews
+package com.vitorpamplona.amethyst.commons.preview
 
 import androidx.compose.runtime.Immutable
 import java.net.URL
@@ -31,7 +31,7 @@ class UrlInfoItem(
     val image: String = "",
     val mimeType: String,
 ) {
-    val verifiedUrl = kotlin.runCatching { URL(url) }.getOrNull()
+    val verifiedUrl = runCatching { URL(url) }.getOrNull()
     val imageUrlFullPath =
         if (image.startsWith("/")) {
             URL(verifiedUrl, image).toString()

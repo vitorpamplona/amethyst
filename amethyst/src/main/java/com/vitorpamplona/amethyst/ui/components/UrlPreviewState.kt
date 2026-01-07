@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 
 @Immutable
 sealed class UrlPreviewState {
