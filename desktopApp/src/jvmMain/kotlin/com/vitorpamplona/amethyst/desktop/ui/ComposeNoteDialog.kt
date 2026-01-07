@@ -44,7 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.account.AccountState
-import com.vitorpamplona.amethyst.commons.actions.PublishAction
+import com.vitorpamplona.amethyst.commons.model.nip10TextNotes.PublishAction
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

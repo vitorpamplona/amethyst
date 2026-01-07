@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.state
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.actions.FollowAction
+import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
