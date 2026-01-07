@@ -18,11 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.model
 
-import com.vitorpamplona.amethyst.model.ListChange
-import kotlinx.coroutines.flow.MutableSharedFlow
+sealed class ListChange<out T> {
+    data class Addition<T>(
+        val item: T,
+    ) : ListChange<T>()
 
-interface ChangesFlowFilter<T> : IAdditiveFeedFilter<T> {
-    fun changesFlow(): MutableSharedFlow<ListChange<T>>
+    data class Deletion<T>(
+        val item: T,
+    ) : ListChange<T>()
+
+    data class SetAddition<T>(
+        val item: Set<T>,
+    ) : ListChange<T>()
+
+    data class SetDeletion<T>(
+        val item: Set<T>,
+    ) : ListChange<T>()
 }
