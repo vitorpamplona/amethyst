@@ -142,7 +142,7 @@ class JacksonMapperTest {
             serialized,
         )
 
-        val deserialized = JacksonMapper.fromJson(serialized)
+        val deserialized = JacksonMapper.fromJsonToEventTemplate(serialized)
 
         assertEquals(followCardTemplate.kind, deserialized.kind)
         assertEquals(followCardTemplate.createdAt, deserialized.createdAt)
