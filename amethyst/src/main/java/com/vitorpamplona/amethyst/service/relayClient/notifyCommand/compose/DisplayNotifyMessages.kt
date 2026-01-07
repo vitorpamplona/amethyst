@@ -47,7 +47,10 @@ fun DisplayNotifyMessages(
     val flow =
         remember(accountViewModel) {
             requests.transientPaymentRequests.map {
-                it.filter { it.relayUrl in accountViewModel.account.trustedRelays.flow.value }
+                it.filter { notifyMsg ->
+                    notifyMsg.relayUrl in accountViewModel.account.dmRelayList.flow.value ||
+                        notifyMsg.relayUrl in accountViewModel.account.nip65RelayList.allFlowNoDefaults.value
+                }
             }
         }
 
