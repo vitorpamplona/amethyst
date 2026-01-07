@@ -104,6 +104,9 @@ kotlin {
                 // Desktop-specific Compose
                 implementation(compose.desktop.currentOs)
                 implementation(compose.uiTooling)
+
+                // Secure key storage via OS keychain (macOS/Windows/Linux)
+                implementation(libs.java.keyring)
             }
         }
 
@@ -112,6 +115,10 @@ kotlin {
             dependencies {
                 // Android-specific Compose tooling
                 implementation(libs.androidx.ui.tooling.preview)
+
+                // Secure key storage via Android Keystore
+                implementation(libs.androidx.security.crypto.ktx)
+                implementation(libs.androidx.datastore.preferences)
             }
         }
 

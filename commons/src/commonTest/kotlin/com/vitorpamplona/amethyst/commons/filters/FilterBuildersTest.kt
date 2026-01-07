@@ -418,7 +418,7 @@ class FilterBuildersTest {
     fun testGlobalFeedScenario() {
         val filter = FilterBuilders.textNotesGlobal(limit = 50)
 
-        assertTrue(filter.isFilledFilter())
+        assertTrue(!filter.isEmpty())
         assertEquals(listOf(1), filter.kinds)
         assertEquals(50, filter.limit)
     }
@@ -428,7 +428,7 @@ class FilterBuildersTest {
         val followedUsers = listOf(testPubKey, testPubKey2)
         val filter = FilterBuilders.textNotesFromAuthors(followedUsers, limit = 50)
 
-        assertTrue(filter.isFilledFilter())
+        assertTrue(!filter.isEmpty())
         assertEquals(listOf(1), filter.kinds)
         assertEquals(followedUsers, filter.authors)
         assertEquals(50, filter.limit)
@@ -440,9 +440,9 @@ class FilterBuildersTest {
         val postsFilter = FilterBuilders.textNotesFromAuthors(listOf(testPubKey), limit = 50)
         val contactListFilter = FilterBuilders.contactList(testPubKey)
 
-        assertTrue(metadataFilter.isFilledFilter())
-        assertTrue(postsFilter.isFilledFilter())
-        assertTrue(contactListFilter.isFilledFilter())
+        assertTrue(!metadataFilter.isEmpty())
+        assertTrue(!postsFilter.isEmpty())
+        assertTrue(!contactListFilter.isEmpty())
 
         assertEquals(listOf(0), metadataFilter.kinds)
         assertEquals(listOf(1), postsFilter.kinds)
@@ -453,7 +453,7 @@ class FilterBuildersTest {
     fun testNotificationsScenario() {
         val filter = FilterBuilders.notificationsForUser(testPubKey, limit = 100)
 
-        assertTrue(filter.isFilledFilter())
+        assertTrue(!filter.isEmpty())
         assertEquals(listOf(1, 7, 6, 16, 9735), filter.kinds)
         assertNotNull(filter.tags)
         assertEquals(listOf(testPubKey), filter.tags!!["p"])
@@ -470,7 +470,7 @@ class FilterBuildersTest {
                 limit(100)
             }
 
-        assertTrue(filter.isFilledFilter())
+        assertTrue(!filter.isEmpty())
         assertEquals(listOf(1), filter.kinds)
         assertNotNull(filter.tags)
         assertEquals(listOf(testEventId), filter.tags!!["e"])
@@ -485,7 +485,7 @@ class FilterBuildersTest {
                 limit(50)
             }
 
-        assertTrue(filter.isFilledFilter())
+        assertTrue(!filter.isEmpty())
         assertEquals(listOf(7), filter.kinds)
         assertNotNull(filter.tags)
         assertEquals(listOf(testEventId), filter.tags!!["e"])
@@ -500,7 +500,7 @@ class FilterBuildersTest {
                 limit(50)
             }
 
-        assertTrue(filter.isFilledFilter())
+        assertTrue(!filter.isEmpty())
         assertEquals(listOf(1), filter.kinds)
         assertNotNull(filter.tags)
         assertEquals(listOf("bitcoin"), filter.tags!!["t"])
