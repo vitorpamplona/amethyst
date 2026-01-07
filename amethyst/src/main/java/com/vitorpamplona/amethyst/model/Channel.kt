@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.dal.ListChange
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
