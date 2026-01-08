@@ -259,16 +259,16 @@ repositories {
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz:1:05.0')
 ```
 
 Variations to each platform are also available:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz-android:<Amethyst Version>')
-implementation('com.vitorpamplona.quartz:quartz-jvm:<Amethyst Version>')
-implementation('com.vitorpamplona.quartz:quartz-iosarm64:<Amethyst Version>')
-implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:<Amethyst Version>')
+implementation('com.vitorpamplona.quartz:quartz-android:1:05.0')
+implementation('com.vitorpamplona.quartz:quartz-jvm:1:05.0')
+implementation('com.vitorpamplona.quartz:quartz-iosarm64:1:05.0')
+implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1:05.0')
 ```
 
 Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)

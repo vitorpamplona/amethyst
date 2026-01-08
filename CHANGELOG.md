@@ -1,3 +1,133 @@
+<a id="v1.05.0"></a>
+# [Release v1.05.0: Bookmark Lists and WoT Scores](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
+
+#Amethyst v1.05.0: Bookmark Lists, Voice Notes, and WoT Scores
+
+This release introduces Bookmark List management, a complete overhaul of Voice Notes/YakBaks,
+and the debut of Web of Trust (WoT) scores for a safer social experience.
+
+This version adds support for creating, managing, deleting, and viewing multiple bookmark lists,
+which include both public and private members. You will find an improved "Bookmarks" menu option in
+the sidebar and extra bookmark options in the context menu of each post, allowing you to add posts
+directly to one or more individual lists.
+
+The Voice Notes UI has been redesigned to allow recording directly within the new Post Screen and a
+dedicated Voice Reply screen. Users can record a new voice message, preview it with waveform
+visualization, re-record if needed, select a media server, and post the reply. You now have full control.
+
+Amethyst now supports Trusted Assertions. By connecting to a WoT provider, you can see trust scores
+and verified follower counts directly on user pictures. This helps filter signal from noise, identifying
+reputable accounts to follow, which DMs to open, and which notifications to prioritize. To activate
+this, you will need to find a provider capable of computing these scores. While providers are
+currently limited and resource-constrained, we hope more will bring their own algorithms to Nostr over time.
+
+Quartz received a significantly improved database engine capable of sub-microsecond queries using Android's
+default SQLite database. The engine is optimized for mobile environments, using as little memory as
+possible to avoid impacting other apps.
+
+In the background, we have begun building Amethyst Desktop. While much work remains, the goal is a
+standalone, mouse-first application that moves away from mobile-centric UI layouts.
+
+New Features
+- Trusted Assertions: Added support for trust scores displayed on user profile pictures
+- WoT Followers: Displays verified follower counts in user profiles
+- Bookmark Lists: Full support for custom lists by @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
+- Relay Information: New UI with expanded NIP-11 feature support
+- Voice Notes & Replies: Redesigned experience by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Profile Banner: New default banner by @npub1tx5ccpregnm9afq0xaj42hh93xl4qd3lfa7u74v5cdvyhwcnlanqplhd8g
+- Native Links: Intercept njump, yakihonne, primal, iris.to, zap.stream, and shosho.live to open directly on Amethyst by @npub1lu4l4wh7482u8vq0u63g2yuj8yqjdq8ne06r432n92rnd22lspcq0cxa32
+
+Improvements:
+- New in-memory graph-based cache scheme; moved reports and WoT scores to this new system
+- Disabled top bar reappearance to prevent feed shifting when navigating between pages
+- Lenient Kotlin Serialization to prevent crashes from malformed JSON;
+- Removed expired addressable events from cache
+- Moves reports from the old caching system to the new Graph-based one.
+- Reverted to a 500-post load limit for Profile screens to handle high-reply accounts
+- Moved the QR Code screen from a Dialog to a full Route.
+- Re-adds name as a tagging name to the profile edit page.
+
+Performance:
+- Faster event id checker by serializing, sha256 hashing, and ID comparison without creating any intermediary buffers.
+- Faster event JSON parsers by avoiding new variables and thus garbage collection calls
+- Faster tag array Deserializer
+- Manages the pool state without having to loop through relays, saving some milliseconds of processing.
+- Adds a cache system for WoT scores
+- Improved Compose stability for video UI
+
+BugFixes:
+- Fixes JSON serialization of UTF-8 Emoji surrogates for compatibility with standard Nostr implementations
+- Improves error message on zap configuration errors with detailed NWC URI by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Centers QR dialog content and reduce excessive top spacing by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
+- Closes subscriptions when ending them on NostrClient instead of waiting for them to finish
+- Requires a relay to be an outbox/inbox relay to be able to NOTIFY a user of a payment
+- Improves the speed of parsing of invalid kinds inside an address string
+- Fixes count not working for LIMIT queries in the DB
+- Fixes icon bug with incorrect resource id by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Fixes missing updates to the feed when the top list is not yet available locally
+- Fixes List of supported NIPs as Integers on NIP-11 by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Fixes ConcurrentExceptions on event outboxes
+
+Desktop:
+- Base Compose Multiplatform Desktop App with posts and global/following feeds by @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
+
+Web:
+- New website by @npub18ams6ewn5aj2n3wt2qawzglx9mr4nzksxhvrdc4gzrecw7n5tvjqctp424
+
+Quartz:
+- Adds support for Trust Provider lists and Contact Cards for NIP-85
+- Early support for Payment targets as per [NIP-A3](https://github.com/nostr-protocol/nips/pull/2119) by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- Initial support for NIP 46 by @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- Adds support for fast MurMur hash 3 64 bits
+- Adds a nextLong secure random method
+- Removing the generalist approach of ptag-mentions
+- Removes deprecated fields in UserMetadata
+- Removes compose bom from Quartz to avoid unnecessary dependencies.
+- Removes datetime dependencies from Quartz
+- Adds dependency on coroutines directly (instead of through compose runtime)
+- Removes old secp256 target dependencies
+- Adds Default scope for NostrClient and Relay Authenticator
+
+Quartz-Event Store:
+- Moves from text tags to probabilistic 64-bit MurMur Hash3 integers for performance
+- Moves from range index queries to kind,pubkey queries by default.
+- Adds simpler SQL queries for specific simple Nostr filters
+- Expose SQL query plans, vacuum, and analyse to lib users
+- Implements AND Tag queries from [NIP-91](https://github.com/nostr-protocol/nips/pull/1365)
+- Implements GiftWrap deletions by p-Tag with deletions and vanish requests
+- Offers several indexing strategy options to users.
+- Adds several test cases that verify not only the SQL but also the indexes used
+- Exposes raw queries that return columns for relays that might not need the tag array
+- Forces the use of the index on Addressables and Replaceables on triggers
+- Fixes duplicated events being returned from the DB
+- Fixes unused Or condition in the SQL builder
+- Refine the structure of the module classes for the DB
+- Removes the Statement cache since statements are not thread safe
+- Creating interfaces for multiple EventStores
+
+Code Quality:
+- Updates kotlin, compose, multiplatform, activity, serialization, media3, mockk, secp256, tor, androidxCamera, stdlib
+- Adds a compose stability plugin to allow traces in debug
+- Updates to the latest Zapstore config
+- Updates quarts instructions in the ReadMe.
+
+Updated translations:
+- Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Polish by @npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm
+- Hungarian by @npub1ww8kjxz2akn82qptdpl7glywnchhkx3x04hez3d3rye397turrhssenvtp @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
+- Hindi by @npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6
+- Slovenian by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
+- Spanish by @npub1luhyzgce7qtcs6r6v00ryjxza8av8u4dzh3avg0zks38tjktnmxspxq903
+- Latvian by @npub1l60stxkwwmkts76kv02vdjppka9uy6y3paztck7paau7g64l687saaw6av
+- Dutch by @npub1w4la29u3zv09r6crx5u8yxax0ffxgekzdm2egzjkjckef7xc83fs0ftxcd
+- French by @npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz and Alexis Magzalci
+- Chinese by @npub1gd8e0xfkylc7v8c5a6hkpj4gelwwcy99jt90lqjseqjj2t253s2s6ch58h
+
+<a id="v1.04.2"></a>
+# [Release v1.04.2: Fix for Google Play](https://github.com/vitorpamplona/amethyst/releases/tag/v1.04.2) - 2025-11-15
+
+Quick release for Google.
+
 <a id="v1.04.1"></a>
 # [Release v1.04.1: Bugfixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.04.1) - 2025-11-15
 
