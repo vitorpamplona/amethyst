@@ -61,6 +61,24 @@ interface ICacheProvider {
      * @return Count of users matching the predicate
      */
     fun countUsers(predicate: (String, Any) -> Boolean): Int
+
+    /**
+     * Gets a Note if it exists in cache.
+     * Used by ThreadAssembler for finding existing notes.
+     *
+     * @param hexKey The note's ID in hex format
+     * @return The Note if exists in cache, null otherwise
+     */
+    fun getNoteIfExists(hexKey: HexKey): Any?
+
+    /**
+     * Gets an existing Note or creates a new one if it doesn't exist.
+     * Used by ThreadAssembler for building thread structures.
+     *
+     * @param hexKey The note's ID in hex format
+     * @return The Note (existing or newly created)
+     */
+    fun checkGetOrCreateNote(hexKey: HexKey): Any?
 }
 
 /**

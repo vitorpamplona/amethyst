@@ -18,15 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import java.lang.Long.min
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import kotlin.math.min
 
 data class LevelSignature(
     val signature: String,
@@ -34,15 +31,13 @@ data class LevelSignature(
     val author: User?,
 )
 
+/**
+ * Platform-specific date-time formatter for thread signatures.
+ * Returns formatted timestamp in pattern "uuuu-MM-dd-HH:mm:ss"
+ */
+expect fun formattedDateTime(timestamp: Long): String
+
 object ThreadLevelCalculator {
-    val levelFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd-HH:mm:ss")
-
-    private fun formattedDateTime(timestamp: Long): String =
-        Instant
-            .ofEpochSecond(timestamp)
-            .atZone(ZoneId.systemDefault())
-            .format(levelFormatter)
-
     /**
      * This method caches signatures during each execution to avoid recalculation in longer threads
      */

@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -29,7 +30,9 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
-class ThreadAssembler {
+class ThreadAssembler(
+    private val cache: ICacheProvider,
+) {
     private fun searchRoot(
         note: Note,
         testedNotes: MutableSet<Note> = mutableSetOf(),
@@ -48,9 +51,10 @@ class ThreadAssembler {
                 ?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }
                 ?.getOrNull(1)
         if (markedAsRoot != null) {
-            // Check to ssee if there is an error in the tag and the root has replies
-            if (LocalCache.getNoteIfExists(markedAsRoot)?.replyTo?.isEmpty() == true) {
-                return LocalCache.checkGetOrCreateNote(markedAsRoot)
+            // Check to see if there is an error in the tag and the root has replies
+            val rootNote = cache.getNoteIfExists(markedAsRoot) as? Note
+            if (rootNote?.replyTo?.isEmpty() == true) {
+                return cache.checkGetOrCreateNote(markedAsRoot) as? Note
             }
         }
 
@@ -84,7 +88,7 @@ class ThreadAssembler {
     )
 
     fun findRoot(noteId: String): Note? {
-        val note = LocalCache.checkGetOrCreateNote(noteId) ?: return null
+        val note = cache.checkGetOrCreateNote(noteId) as? Note ?: return null
 
         return if (note.event != null) {
             val thread = OnlyLatestVersionSet()
@@ -98,7 +102,7 @@ class ThreadAssembler {
     fun findThreadFor(noteId: String): ThreadInfo? {
         checkNotInMainThread()
 
-        val note = LocalCache.checkGetOrCreateNote(noteId) ?: return null
+        val note = cache.checkGetOrCreateNote(noteId) as? Note ?: return null
 
         return if (note.event != null) {
             val thread = OnlyLatestVersionSet()

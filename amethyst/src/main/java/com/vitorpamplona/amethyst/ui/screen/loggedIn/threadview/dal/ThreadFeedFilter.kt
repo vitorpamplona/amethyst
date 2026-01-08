@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.LevelSignature
+import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
+import com.vitorpamplona.amethyst.commons.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LevelSignature
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableSet
@@ -40,7 +41,7 @@ class ThreadFeedFilter(
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
         val followingKeySet = account.kind3FollowList.flow.value.authors
-        val eventsToWatch = ThreadAssembler().findThreadFor(noteId) ?: return emptyList()
+        val eventsToWatch = ThreadAssembler(LocalCache).findThreadFor(noteId) ?: return emptyList()
 
         // Filter out drafts made by other accounts on device
         val filteredEvents =
