@@ -53,4 +53,6 @@ interface IRequestListener {
         relay: String,
         forFilters: List<Filter>,
     ) {}
+
+    fun onCloseReq(relay: String) {}
 }

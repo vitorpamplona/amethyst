@@ -43,7 +43,7 @@ class RelayActiveRequestStates(
     private val clientListener =
         object : IRelayClientListener {
             override fun onConnecting(relay: IRelayClient) {
-                subStates.put(relay.url, RequestSubscriptionState())
+                subStates[relay.url] = RequestSubscriptionState()
             }
 
             override fun onIncomingMessage(

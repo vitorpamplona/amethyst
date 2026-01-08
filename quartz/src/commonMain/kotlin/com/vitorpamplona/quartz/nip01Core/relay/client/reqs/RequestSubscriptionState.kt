@@ -22,6 +22,10 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
+/**
+ * Manages the State of Subscriptions by logging states as the
+ * subscription progresses.
+ */
 class RequestSubscriptionState<T> {
     // Logs the state of each channel to:
     // 1. inform when an event is received as live
@@ -32,36 +36,53 @@ class RequestSubscriptionState<T> {
     private val subStates = mutableMapOf<T, ReqSubStatus>()
     private val filterStates = mutableMapOf<T, List<Filter>>()
 
+    /**
+     * This cache is used to make sure we know what the relay was processing
+     * before a close or disconnect so that if new events still arrive
+     * we can link them with the appropriate filters.
+     */
+    private val lastKnownFilterStates = mutableMapOf<T, List<Filter>>()
+
     fun currentFilters() = filterStates
 
     fun currentFilters(reference: T) = filterStates[reference]
+
+    fun lastKnownFilterStates(reference: T) = lastKnownFilterStates[reference]
 
     fun currentState(reference: T) = subStates[reference]
 
     fun onNewEvent(reference: T) {
         if (subStates[reference] == ReqSubStatus.SENT) {
-            subStates.put(reference, ReqSubStatus.QUERYING_PAST)
+            subStates[reference] = ReqSubStatus.QUERYING_PAST
         }
     }
 
     fun onEose(reference: T) {
-        subStates.put(reference, ReqSubStatus.LIVE)
+        subStates[reference] = ReqSubStatus.LIVE
     }
 
     fun onClosed(reference: T) {
-        subStates.put(reference, ReqSubStatus.CLOSED)
+        subStates[reference] = ReqSubStatus.CLOSED
+        // Closed messages are usually relays refusing to process a REQ
+        // This message keeps the state of filterStates intact to
+        // avoid sending the same filter, and getting immediately closed,
+        // over and over again.
+
+        // filterStates.remove(reference)
     }
 
     fun onOpenReq(
         reference: T,
         filters: List<Filter>,
     ) {
-        subStates.put(reference, ReqSubStatus.SENT)
-        filterStates.put(reference, filters)
+        subStates[reference] = ReqSubStatus.SENT
+        filterStates[reference] = filters
+        lastKnownFilterStates[reference] = filters
     }
 
     fun onCloseReq(reference: T) {
-        subStates.put(reference, ReqSubStatus.CLOSED)
+        subStates[reference] = ReqSubStatus.CLOSED
+        filterStates.remove(reference)
     }
 
     fun connecting(reference: T) {
@@ -70,8 +91,7 @@ class RequestSubscriptionState<T> {
     }
 
     fun disconnected(reference: T) {
-        // Can't remove filterStates because disconnections happen
-        // before processing all the events in the channel queue.
         subStates.remove(reference)
+        filterStates.remove(reference)
     }
 }

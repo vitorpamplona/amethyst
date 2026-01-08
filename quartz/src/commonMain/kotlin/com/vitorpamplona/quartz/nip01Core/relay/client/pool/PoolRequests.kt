@@ -36,21 +36,39 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 
+/**
+ * Manages relay subscriptions for the entire pool in a way that only
+ * sends new states to the relay if they have changed.
+ *
+ * This code also awaits a subscription to come to EOSE since many relays
+ * have through switching subs while they are processing the past.
+ */
 class PoolRequests {
     /**
-     * Desired subs and listeners are changed immediately when the local code requests
+     * Desired subs and listeners
+     *
+     * These are changed immediately when the local code requests and should map
+     * to what the app whants to do.
      */
     private val desiredSubs = LargeCache<String, Map<NormalizedRelayUrl, List<Filter>>>()
     private val desiredSubListeners = LargeCache<String, IRequestListener>()
     val desiredRelays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
     /**
-     * relay states are kept and only removed after everything is processed.
+     * Relay states map what we think the relay is doing
+     *
+     * This is important to link responses with which filter was a sub replying to and
+     * to figure out if we need to update the relay if a REQ has changed.
      */
     private val relayState = LargeCache<String, RequestSubscriptionState<NormalizedRelayUrl>>()
 
     fun subState(subId: String): RequestSubscriptionState<NormalizedRelayUrl> = relayState.getOrCreate(subId) { RequestSubscriptionState() }
 
+    /**
+     * This is called when a sub is added or removed from this class and
+     * should update the desired relay list to get the pool to connect
+     * to new ones or disconnect to old ones if they are not needed anymore
+     */
     private fun updateRelays() {
         val myRelays = mutableSetOf<NormalizedRelayUrl>()
         desiredSubs.forEach { sub, perRelayFilters ->
@@ -62,19 +80,23 @@ class PoolRequests {
         }
     }
 
+    /**
+     * Returns all the active filters for a relay, per subscription
+     */
     fun activeFiltersFor(url: NormalizedRelayUrl): Map<String, List<Filter>> {
         val myRelays = mutableMapOf<String, List<Filter>>()
         desiredSubs.forEach { sub, perRelayFilters ->
             val filters = perRelayFilters[url]
             if (filters != null) {
-                myRelays.put(sub, filters)
+                myRelays[sub] = filters
             }
         }
         return myRelays
     }
 
     /**
-     * Adds a new filter to the pool, and returns the relays that need to be updated.
+     * Adds a new subscription to the pool, and returns which relays
+     * MIGHT need to be updated.
      */
     fun addOrUpdate(
         subId: String,
@@ -98,7 +120,8 @@ class PoolRequests {
     }
 
     /**
-     * Removes the sub from the pool, and returns the relays that need to be updated.
+     * Removes the sub from the pool, and returns which relays
+     * MIGHT need to be updated.
      */
     fun remove(subId: String): Set<NormalizedRelayUrl> =
         if (desiredSubs.containsKey(subId)) {
@@ -108,8 +131,6 @@ class PoolRequests {
             desiredSubs.remove(subId)
             // update listener
             desiredSubListeners.remove(subId)
-            // remove states
-            relayState.remove(subId)
             // update relays for pool
             updateRelays()
             // return all affected relays
@@ -123,9 +144,99 @@ class PoolRequests {
     // --------------------------
     // State management functions
     // --------------------------
+
+    /**
+     * When a connecting, updates the state of all subs
+     */
     fun onConnecting(url: NormalizedRelayUrl) {
+        // Change states to connecting.
         relayState.forEach { subId, state ->
             state.connecting(url)
+        }
+    }
+
+    /**
+     * When a new command is sent to this relay, updates the state
+     */
+    fun onSent(
+        relay: NormalizedRelayUrl,
+        cmd: Command,
+    ) {
+        when (cmd) {
+            is ReqCmd -> {
+                subState(cmd.subId).onOpenReq(relay, cmd.filters)
+                desiredSubListeners.get(cmd.subId)?.onStartReq(
+                    relay = relay.url,
+                    forFilters = cmd.filters,
+                )
+            }
+            is CloseCmd -> {
+                subState(cmd.subId).onCloseReq(relay)
+                desiredSubListeners.get(cmd.subId)?.onCloseReq(
+                    relay = relay.url,
+                )
+            }
+        }
+    }
+
+    /**
+     * When a new message is received by the relay, updates the sub
+     */
+    fun onIncomingMessage(
+        relay: IRelayClient,
+        msg: Message,
+    ) {
+        when (msg) {
+            is EventMessage -> {
+                val state = relayState.get(msg.subId)
+                state?.onNewEvent(relay.url)
+                desiredSubListeners.get(msg.subId)?.onEvent(
+                    event = msg.event,
+                    isLive = state?.currentState(relay.url) == ReqSubStatus.LIVE,
+                    relay = relay.url,
+                    forFilters = state?.lastKnownFilterStates(relay.url),
+                )
+            }
+            is EoseMessage -> {
+                val state = relayState.get(msg.subId)
+                state?.onEose(relay.url)
+                desiredSubListeners.get(msg.subId)?.onEose(
+                    relay = relay.url,
+                    forFilters = state?.lastKnownFilterStates(relay.url),
+                )
+
+                // send a newer version when done
+                sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
+                    relay.sendOrConnectAndSync(cmd)
+                }
+            }
+            is ClosedMessage -> {
+                val state = relayState.get(msg.subId)
+                state?.onClosed(relay.url)
+
+                desiredSubListeners.get(msg.subId)?.onClosed(
+                    message = msg.message,
+                    relay = relay.url,
+                    forFilters = state?.lastKnownFilterStates(relay.url),
+                )
+
+                // send a newer version when done
+                sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
+                    // don't send a close if just closed
+                    if (cmd !is CloseCmd) {
+                        relay.sendOrConnectAndSync(cmd)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * When the relay disconnects
+     */
+    fun onDisconnected(url: NormalizedRelayUrl) {
+        relayState.forEach { subId, state ->
+            state.disconnected(url)
         }
     }
 
@@ -143,77 +254,6 @@ class PoolRequests {
         }
     }
 
-    fun onSent(
-        relay: NormalizedRelayUrl,
-        cmd: Command,
-    ) {
-        when (cmd) {
-            is ReqCmd -> {
-                subState(cmd.subId).onOpenReq(relay, cmd.filters)
-                desiredSubListeners.get(cmd.subId)?.onStartReq(
-                    relay = relay.url,
-                    forFilters = cmd.filters,
-                )
-            }
-            is CloseCmd -> subState(cmd.subId).onCloseReq(relay)
-        }
-    }
-
-    fun onIncomingMessage(
-        relay: IRelayClient,
-        msg: Message,
-    ) {
-        when (msg) {
-            is EventMessage -> {
-                val state = relayState.get(msg.subId)
-                state?.onNewEvent(relay.url)
-                desiredSubListeners.get(msg.subId)?.onEvent(
-                    event = msg.event,
-                    isLive = state?.currentState(relay.url) == ReqSubStatus.LIVE,
-                    relay = relay.url,
-                    forFilters = state?.currentFilters(relay.url),
-                )
-            }
-            is EoseMessage -> {
-                val state = relayState.get(msg.subId)
-                state?.onEose(relay.url)
-                desiredSubListeners.get(msg.subId)?.onEose(
-                    relay = relay.url,
-                    forFilters = state?.currentFilters(relay.url),
-                )
-
-                // send a newer version when done
-                sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
-                    relay.sendOrConnectAndSync(cmd)
-                }
-            }
-            is ClosedMessage -> {
-                val state = relayState.get(msg.subId)
-                state?.onClosed(relay.url)
-
-                desiredSubListeners.get(msg.subId)?.onClosed(
-                    message = msg.message,
-                    relay = relay.url,
-                    forFilters = state?.currentFilters(relay.url),
-                )
-
-                // send a newer version when done
-                sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
-                    // don't send a close if just closed
-                    if (cmd !is CloseCmd) {
-                        relay.sendOrConnectAndSync(cmd)
-                    }
-                }
-            }
-        }
-    }
-
-    fun onDisconnected(url: NormalizedRelayUrl) {
-        relayState.forEach { subId, state ->
-            state.disconnected(url)
-        }
-    }
-
     /**
      * If cannot connect, closes subs
      */
@@ -225,7 +265,7 @@ class PoolRequests {
             desiredSubListeners.get(subId)?.onCannotConnect(
                 message = errorMessage,
                 relay = url,
-                forFilters = state.currentFilters(url),
+                forFilters = state.lastKnownFilterStates(url),
             )
         }
     }
@@ -258,7 +298,8 @@ class PoolRequests {
         relay: NormalizedRelayUrl,
         sync: (Command) -> Unit,
     ) {
-        val oldFilters = relayState.get(subId)?.currentFilters(relay)
+        val state = relayState.get(subId)
+        val oldFilters = state?.currentFilters(relay)
         val newFilters = desiredSubs.get(subId)?.get(relay)
         sendToRelayIfChanged(subId, oldFilters, newFilters, sync)
     }

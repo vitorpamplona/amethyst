@@ -59,9 +59,9 @@ class SubscriptionController(
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 
     fun dismissSubscription(subscription: Subscription) {
-        client.close(subscription.id)
         subscription.reset()
         subscriptions.remove(subscription.id)
+        client.close(subscription.id)
     }
 
     fun updateRelays() {
