@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.BoostedMark
@@ -225,6 +226,7 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 
 @Composable
@@ -499,7 +501,16 @@ fun ClickableNote(
                             } else {
                                 baseNote
                             }
-                        routeFor(redirectToNote, accountViewModel.account)?.let { nav.nav(it) }
+
+                        nav.nav {
+                            if (redirectToNote.event is DraftWrapEvent) {
+                                with(Dispatchers.IO) {
+                                    routeEditDraftTo(redirectToNote, accountViewModel.account)
+                                }
+                            } else {
+                                routeFor(redirectToNote, accountViewModel.account)
+                            }
+                        }
                     },
                     onLongClick = showPopup,
                 ).background(backgroundColor.value)
