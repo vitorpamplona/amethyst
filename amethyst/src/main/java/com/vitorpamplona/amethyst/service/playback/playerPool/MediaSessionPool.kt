@@ -197,8 +197,6 @@ class MediaSessionPool(
             controller: MediaSession.ControllerInfo,
             mediaItems: List<MediaItem>,
         ): ListenableFuture<List<MediaItem>> {
-            mediaSession.player.setMediaItems(mediaItems)
-
             // set up return call when clicking on the Notification bar
             mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString("callbackUri")?.let {
                 mediaSession.setSessionActivity(
