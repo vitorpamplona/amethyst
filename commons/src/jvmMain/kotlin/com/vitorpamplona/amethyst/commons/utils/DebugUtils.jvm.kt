@@ -18,31 +18,6 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.commons.utils
 
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.Note
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Stable
-sealed class FeedState {
-    object Loading : FeedState()
-
-    class Loaded(
-        val feed: MutableStateFlow<LoadedFeedState<Note>>,
-    ) : FeedState()
-
-    object Empty : FeedState()
-
-    class FeedError(
-        val errorMessage: String,
-    ) : FeedState()
-}
-
-@Immutable
-class LoadedFeedState<T>(
-    val list: ImmutableList<T>,
-    val showHidden: Boolean,
-)
+actual val isDebug: Boolean = System.getProperty("amethyst.debug", "false").toBoolean()

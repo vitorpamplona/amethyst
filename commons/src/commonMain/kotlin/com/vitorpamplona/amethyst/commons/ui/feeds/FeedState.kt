@@ -18,20 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.Note
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
-class UserAppRecommendationsFeedViewModel(
-    val user: User,
-) : AndroidFeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserAppRecommendationsFeedViewModel(user) as T
-    }
+@Stable
+sealed class FeedState {
+    object Loading : FeedState()
+
+    class Loaded(
+        val feed: MutableStateFlow<LoadedFeedState<Note>>,
+    ) : FeedState()
+
+    object Empty : FeedState()
+
+    class FeedError(
+        val errorMessage: String,
+    ) : FeedState()
 }
+
+@Immutable
+class LoadedFeedState<T>(
+    val list: ImmutableList<T>,
+    val showHidden: Boolean,
+)

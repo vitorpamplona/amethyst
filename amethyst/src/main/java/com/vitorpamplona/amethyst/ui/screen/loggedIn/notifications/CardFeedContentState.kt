@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -35,8 +37,6 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
@@ -458,20 +458,6 @@ class CardFeedContentState(
         bundlerInsert.cancel()
         bundler.cancel()
     }
-}
-
-fun <T> equalImmutableLists(
-    list1: ImmutableList<T>,
-    list2: ImmutableList<T>,
-): Boolean {
-    if (list1 === list2) return true
-    if (list1.size != list2.size) return false
-    for (i in 0 until list1.size) {
-        if (list1[i] !== list2[i]) {
-            return false
-        }
-    }
-    return true
 }
 
 @Immutable

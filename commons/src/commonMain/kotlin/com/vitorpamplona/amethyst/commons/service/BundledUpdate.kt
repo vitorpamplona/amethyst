@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.service
 
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,9 +30,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.AtomicBoolean
 
 /** This class is designed to have a waiting time between two calls of invalidate */
 class BundledUpdate(
@@ -65,21 +65,25 @@ class BasicBundledUpdate(
     val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     val scope: CoroutineScope,
 ) {
-    private var onlyOneInBlock = AtomicBoolean()
+    private val mutex = Mutex()
+    private var isProcessing = false
     private var invalidatesAgain = false
 
     fun invalidate(
         ignoreIfDoing: Boolean = false,
         onUpdate: suspend () -> Unit,
     ) {
-        if (onlyOneInBlock.getAndSet(true)) {
-            if (!ignoreIfDoing) {
-                invalidatesAgain = true
-            }
-            return
-        }
-
         scope.launch(dispatcher) {
+            mutex.withLock {
+                if (isProcessing) {
+                    if (!ignoreIfDoing) {
+                        invalidatesAgain = true
+                    }
+                    return@launch
+                }
+                isProcessing = true
+            }
+
             try {
                 onUpdate()
                 delay(delay)
@@ -88,8 +92,10 @@ class BasicBundledUpdate(
                 }
             } finally {
                 withContext(NonCancellable) {
-                    invalidatesAgain = false
-                    onlyOneInBlock.set(false)
+                    mutex.withLock {
+                        invalidatesAgain = false
+                        isProcessing = false
+                    }
                 }
             }
         }
@@ -127,37 +133,44 @@ class BasicBundledInsert<T>(
     val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     val scope: CoroutineScope,
 ) {
-    private var onlyOneInBlock = AtomicBoolean()
-    private var queue = LinkedBlockingQueue<T>()
+    private val mutex = Mutex()
+    private var isProcessing = false
+    private val queue = mutableListOf<T>()
 
     fun invalidateList(
         newObject: T,
         onUpdate: suspend (Set<T>) -> Unit,
     ) {
-        queue.put(newObject)
-
-        if (onlyOneInBlock.getAndSet(true)) {
-            // if it was true already, returns.
-            return
-        }
-
         scope.launch(dispatcher) {
-            try {
-                while (true) {
-                    val batch = mutableSetOf<T>()
-                    queue.drainTo(batch)
-                    if (batch.isNotEmpty()) {
-                        onUpdate(batch)
-                    } else {
-                        break
+            mutex.withLock {
+                queue.add(newObject)
+
+                if (isProcessing) {
+                    return@launch
+                }
+                isProcessing = true
+            }
+
+            processLoop@ while (true) {
+                val batch =
+                    mutex.withLock {
+                        if (queue.isEmpty()) {
+                            isProcessing = false
+                            null
+                        } else {
+                            val items = queue.toSet()
+                            queue.clear()
+                            items
+                        }
                     }
 
-                    delay(delay)
+                if (batch == null) break@processLoop
+
+                if (batch.isNotEmpty()) {
+                    onUpdate(batch)
                 }
-            } finally {
-                withContext(NonCancellable) {
-                    onlyOneInBlock.set(false)
-                }
+
+                delay(delay)
             }
         }
     }

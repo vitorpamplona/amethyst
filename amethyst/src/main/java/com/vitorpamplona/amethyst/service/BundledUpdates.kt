@@ -18,20 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
+package com.vitorpamplona.amethyst.service
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
-
-class UserAppRecommendationsFeedViewModel(
-    val user: User,
-) : AndroidFeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserAppRecommendationsFeedViewModel(user) as T
-    }
-}
+// Re-export from commons for backwards compatibility
+typealias BundledUpdate = com.vitorpamplona.amethyst.commons.service.BundledUpdate
+typealias BasicBundledUpdate = com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
+typealias BundledInsert<T> = com.vitorpamplona.amethyst.commons.service.BundledInsert<T>
+typealias BasicBundledInsert<T> = com.vitorpamplona.amethyst.commons.service.BasicBundledInsert<T>

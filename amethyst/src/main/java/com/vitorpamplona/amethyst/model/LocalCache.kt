@@ -402,6 +402,19 @@ object LocalCache : ILocalCache, ICacheProvider {
         return null
     }
 
+    override fun getEventStream(): com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream =
+        object : com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream {
+            override val newEventBundles = live.newEventBundles
+            override val deletedEventBundles = live.deletedEventBundles
+        }
+
+    override fun hasBeenDeleted(event: Any): Boolean =
+        if (event is Event) {
+            deletionIndex.hasBeenDeleted(event)
+        } else {
+            false
+        }
+
     fun getOrAddAliasNote(
         idHex: String,
         note: Note,

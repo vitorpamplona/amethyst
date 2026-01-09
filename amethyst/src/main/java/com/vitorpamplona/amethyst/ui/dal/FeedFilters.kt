@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-interface IAdditiveFeedFilter<T> : IFeedFilter<T> {
-    fun applyFilter(newItems: Set<T>): Set<T>
-
-    fun sort(items: Set<T>): List<T>
-}
+// Re-export from commons for backwards compatibility
+typealias IFeedFilter<T> = com.vitorpamplona.amethyst.commons.ui.feeds.IFeedFilter<T>
+typealias IAdditiveFeedFilter<T> = com.vitorpamplona.amethyst.commons.ui.feeds.IAdditiveFeedFilter<T>
+typealias FeedFilter<T> = com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter<T>
+typealias AdditiveFeedFilter<T> = com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter<T>

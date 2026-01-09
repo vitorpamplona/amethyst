@@ -18,20 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlinx.collections.immutable.ImmutableList
 
-class UserAppRecommendationsFeedViewModel(
-    val user: User,
-) : AndroidFeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserAppRecommendationsFeedViewModel(user) as T
-    }
-}
+// Re-export from commons for backwards compatibility
+fun <T> equalImmutableLists(
+    list1: ImmutableList<T>,
+    list2: ImmutableList<T>,
+): Boolean =
+    com.vitorpamplona.amethyst.commons.utils
+        .equalImmutableLists(list1, list2)

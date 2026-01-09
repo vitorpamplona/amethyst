@@ -18,19 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.BasicBundledInsert
-import com.vitorpamplona.amethyst.service.BasicBundledUpdate
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.IFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
+import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
+import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
+import com.vitorpamplona.amethyst.commons.utils.equalImmutableLists
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
@@ -45,6 +43,7 @@ import kotlinx.coroutines.launch
 class FeedContentState(
     val localFilter: IFeedFilter<Note>,
     val viewModelScope: CoroutineScope,
+    val cacheProvider: ICacheProvider,
 ) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<FeedState>(FeedState.Loading)
     val feedContent = _feedContent.asStateFlow()
@@ -152,7 +151,7 @@ class FeedContentState(
                             .filter {
                                 val noteEvent = it.event
                                 if (noteEvent != null) {
-                                    !LocalCache.deletionIndex.hasBeenDeleted(noteEvent)
+                                    !cacheProvider.hasBeenDeleted(noteEvent)
                                 } else {
                                     false
                                 }

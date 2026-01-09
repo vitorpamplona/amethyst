@@ -18,20 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
+package com.vitorpamplona.amethyst.commons.model.cache
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import com.vitorpamplona.amethyst.commons.model.Note
+import kotlinx.coroutines.flow.SharedFlow
 
-class UserAppRecommendationsFeedViewModel(
-    val user: User,
-) : AndroidFeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserAppRecommendationsFeedViewModel(user) as T
-    }
+/**
+ * Event stream interface for cache updates.
+ *
+ * Abstracts the real-time event notification system used by ViewModels
+ * to react to new notes and deletions. Platform implementations
+ * (Android LocalCache, Desktop cache) provide these streams.
+ *
+ * ViewModels collect these flows to incrementally update feed state
+ * without full refresh.
+ */
+interface ICacheEventStream {
+    /**
+     * Flow of new note bundles added to the cache.
+     * Emits sets of Note objects when new events arrive from relays.
+     */
+    val newEventBundles: SharedFlow<Set<Note>>
+
+    /**
+     * Flow of deleted note bundles removed from the cache.
+     * Emits sets of Note objects when deletion events are processed.
+     */
+    val deletedEventBundles: SharedFlow<Set<Note>>
 }

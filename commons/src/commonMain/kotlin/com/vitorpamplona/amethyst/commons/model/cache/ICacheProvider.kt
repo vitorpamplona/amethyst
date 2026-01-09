@@ -79,6 +79,23 @@ interface ICacheProvider {
      * @return The Note (existing or newly created)
      */
     fun checkGetOrCreateNote(hexKey: HexKey): Any?
+
+    /**
+     * Gets the event stream for cache updates.
+     * Used by ViewModels to react to new notes and deletions.
+     *
+     * @return The event stream interface
+     */
+    fun getEventStream(): ICacheEventStream
+
+    /**
+     * Checks if an event has been deleted via NIP-09 deletion events.
+     * Used by feed state to filter out deleted notes.
+     *
+     * @param event The event to check
+     * @return true if the event has been deleted, false otherwise
+     */
+    fun hasBeenDeleted(event: Any): Boolean
 }
 
 /**

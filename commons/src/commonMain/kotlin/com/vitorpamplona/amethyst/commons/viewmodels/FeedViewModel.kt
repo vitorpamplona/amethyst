@@ -18,60 +18,55 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal
+package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ListChange
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class ChatroomFeedViewModel(
-    val user: ChatroomKey,
-    val account: Account,
-) : ListChangeFeedViewModel(ChatroomFeedFilter(user, account)) {
-    class Factory(
-        val user: ChatroomKey,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChatroomFeedViewModel(user, account) as T
-    }
-}
-
 @Stable
-abstract class ListChangeFeedViewModel(
-    localFilter: ChangesFlowFilter<Note>,
+abstract class FeedViewModel(
+    localFilter: FeedFilter<Note>,
+    val cacheProvider: ICacheProvider,
 ) : ViewModel(),
     InvalidatableContent {
-    val feedState = FeedContentState(localFilter, viewModelScope, LocalCache)
+    val feedState = FeedContentState(localFilter, viewModelScope, cacheProvider)
 
     override val isRefreshing = feedState.isRefreshing
+
+    fun sendToTop() = feedState.sendToTop()
+
+    suspend fun sentToTop() = feedState.sentToTop()
 
     override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
 
     init {
-        Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
+        Log.d("Init", "Starting new Model: ${this::class.simpleName}")
         viewModelScope.launch(Dispatchers.IO) {
-            localFilter.changesFlow().collect {
-                Log.d("Init", "Collecting changes to: ${this@ListChangeFeedViewModel.javaClass.simpleName}")
-                when (it) {
-                    is ListChange.Addition -> feedState.updateFeedWith(setOf(it.item))
-                    is ListChange.Deletion -> feedState.deleteFromFeed(setOf(it.item))
-                    is ListChange.SetAddition -> feedState.updateFeedWith(it.item)
-                    is ListChange.SetDeletion -> feedState.deleteFromFeed(it.item)
-                }
+            cacheProvider.getEventStream().newEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}")
+                feedState.updateFeedWith(newNotes)
             }
         }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            cacheProvider.getEventStream().deletedEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Delete from feeds: ${this@FeedViewModel::class.simpleName} with ${newNotes.size}")
+                feedState.deleteFromFeed(newNotes)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        Log.d("Init", "OnCleared: ${this::class.simpleName}")
+        super.onCleared()
     }
 }
