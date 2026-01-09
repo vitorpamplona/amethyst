@@ -1,3 +1,9 @@
+<a id="v1.05.1"></a>
+# [Release v1.05.1: BugFixes](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
+
+- Fixed mixed DMs between logged in users.
+- Fixed draft screen click to edit post.
+
 <a id="v1.05.0"></a>
 # [Release v1.05.0: Bookmark Lists and WoT Scores](https://github.com/vitorpamplona/amethyst/releases/tag/v1.05.0) - 2025-01-08
 

@@ -264,7 +264,7 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.05.0"
+        version = "1.05.1"
     )
 
     // Configure publishing to Maven Central
