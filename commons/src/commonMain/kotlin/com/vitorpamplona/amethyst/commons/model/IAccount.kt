@@ -81,4 +81,7 @@ interface IAccount {
     val hiddenWordsCase: List<DualCase>
     val hiddenUsersHashCodes: Set<Int>
     val spammersHashCodes: Set<Int>
+
+    /** Set of followed user pubkeys (for feed ordering/highlighting) */
+    fun followingKeySet(): Set<String>
 }

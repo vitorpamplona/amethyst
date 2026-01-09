@@ -1662,7 +1662,7 @@ class Account(
 
     fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
 
-    fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
+    override fun followingKeySet(): Set<HexKey> = kind3FollowList.flow.value.authors
 
     fun isAcceptable(user: User): Boolean {
         if (userProfile().pubkeyHex == user.pubkeyHex) {
