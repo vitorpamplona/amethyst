@@ -64,7 +64,7 @@
     <string name="zaps">Zapy</string>
     <string name="view_count">Liczba wyświetleń</string>
     <string name="boost">Powtórz</string>
-    <string name="boosted">powtórzony</string>
+    <string name="boosted">powtórzono</string>
     <string name="edited">edytowano</string>
     <string name="edited_number">edytuj #%1$s</string>
     <string name="original">oryginalny</string>
@@ -135,6 +135,8 @@
     <string name="add_a_user">Dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
     <string name="profile_name">Imię</string>
+    <string name="profile_name_with_explainer">Imię (dla @tagging)</string>
+    <string name="my_name">Moje imię @tag</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
     <string name="my_awesome_name">G Braun</string>
