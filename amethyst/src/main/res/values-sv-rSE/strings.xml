@@ -672,6 +672,7 @@
     <string name="posting_policy">Publiceringspolicy</string>
     <string name="privacy_policy">Integritetspolicy</string>
     <string name="terms_and_conditions">Villkor &amp; bestämmelser</string>
+    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fel och meddelanden från detta relä</string>
     <string name="message_length">Meddelandelängd</string>
     <string name="subscriptions">Prenumerationer</string>

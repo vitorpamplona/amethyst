@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.util
 
-import com.sun.org.apache.xalan.internal.lib.ExsltDatetime.time
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.Locale

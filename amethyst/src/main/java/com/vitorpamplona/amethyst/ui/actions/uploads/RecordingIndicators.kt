@@ -35,7 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -206,8 +206,8 @@ fun FloatingRecordingIndicator(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = innerPadding),
         ) {
-            // Pulsing red dot
-            val infiniteTransition = rememberInfiniteTransition(label = "recording_dot")
+            // Pulsing stop square
+            val infiniteTransition = rememberInfiniteTransition(label = "recording_stop")
             val dotAlpha by infiniteTransition.animateFloat(
                 initialValue = 1f,
                 targetValue = 0.5f,
@@ -220,7 +220,7 @@ fun FloatingRecordingIndicator(
             )
 
             Icon(
-                imageVector = Icons.Default.FiberManualRecord,
+                imageVector = Icons.Default.Stop,
                 contentDescription = recordingLabel,
                 tint = Color.White,
                 modifier =
