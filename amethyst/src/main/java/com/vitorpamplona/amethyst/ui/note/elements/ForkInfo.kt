@@ -83,7 +83,7 @@ fun ForkInformationRowLightColor(
     nav: INav,
 ) {
     val noteState by observeNote(originalVersion, accountViewModel)
-    val note = noteState?.note ?: return
+    val note = noteState.note
     val author = note.author ?: return
     val route = remember(note) { routeFor(note, accountViewModel.account) }
 
@@ -129,7 +129,7 @@ fun ForkInformationRow(
     nav: INav,
 ) {
     val noteState by observeNote(originalVersion, accountViewModel)
-    val note = noteState?.note ?: return
+    val note = noteState.note
     val route = remember(note) { routeFor(note, accountViewModel.account) }
 
     if (route != null) {

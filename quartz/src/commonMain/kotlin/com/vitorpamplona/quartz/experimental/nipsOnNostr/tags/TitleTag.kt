@@ -18,21 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.forks
+package com.vitorpamplona.quartz.experimental.nipsOnNostr.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun BaseThreadedEvent.isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+class TitleTag {
+    companion object {
+        const val TAG_NAME = "title"
 
-fun BaseThreadedEvent.forkFromAddress() =
-    tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "fork" }?.let {
-        val aTagValue = it[1]
-        Address.parse(aTagValue)
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(title: String) = arrayOf(TAG_NAME, title)
     }
-
-fun BaseThreadedEvent.forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseFork)
-
-fun BaseThreadedEvent.isForkFromAddressWithPubkey(authorHex: HexKey) = tags.any { it.size > 3 && it[0] == "a" && it[3] == "fork" && it[1].contains(authorHex) }
+}

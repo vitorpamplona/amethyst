@@ -18,70 +18,75 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip54Wiki
+package com.vitorpamplona.quartz.experimental.nipsOnNostr
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.forks.parseFork
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.tags.ForkTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
 import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
-import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
-import com.vitorpamplona.quartz.nip19Bech32.pubKeys
-import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
-class WikiNoteEvent(
+class NipTextEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressableEvent,
+    RootScope,
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider,
-    PublishedAtProvider,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
+    override fun indexableContent() = "title: " + title() + "\n" + content
+
+    override fun dTag() = tags.dTag()
+
+    override fun aTag(relayHint: NormalizedRelayUrl?) = ATag(kind, pubKey, dTag(), relayHint)
+
+    override fun address() = Address(kind, pubKey, dTag())
+
+    override fun addressTag() = Address.assemble(kind, pubKey, dTag())
 
     override fun eventHints(): List<EventIdHint> {
-        val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
         val nip19Hints = citedNIP19().eventHints()
 
-        return eHints + qHints + nip19Hints
+        return qHints + nip19Hints
     }
 
     override fun linkedEventIds(): List<HexKey> {
-        val eHints = tags.mapNotNull(MarkedETag::parseId)
         val qHints = tags.mapNotNull(QTag::parseEventId)
         val nip19Hints = citedNIP19().eventIds()
 
-        return eHints + qHints + nip19Hints
+        return qHints + nip19Hints
     }
 
     override fun addressHints(): List<AddressHint> {
@@ -100,64 +105,47 @@ class WikiNoteEvent(
         return aHints + qHints + nip19Hints
     }
 
-    override fun pubKeyHints(): List<PubKeyHint> {
-        val pHints = tags.mapNotNull(PTag::parseAsHint)
-        val nip19Hints = citedNIP19().pubKeyHints()
+    fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
 
-        return pHints + nip19Hints
-    }
+    fun forkFromAddress() = tags.firstNotNullOfOrNull(ForkTag::parseAddress)
 
-    override fun linkedPubKeys(): List<HexKey> {
-        val pHints = tags.mapNotNull(PTag::parseKey)
-        val nip19Hints = citedNIP19().pubKeys()
+    fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseFork)
 
-        return pHints + nip19Hints
-    }
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    override fun dTag() = tags.dTag()
-
-    override fun aTag(relayHint: NormalizedRelayUrl?) = ATag(kind, pubKey, dTag(), relayHint)
-
-    override fun address() = Address(kind, pubKey, dTag())
-
-    override fun addressTag() = Address.assemble(kind, pubKey, dTag())
-
-    fun topics() = hashtags()
-
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
-
-    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
-
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
-
-    override fun publishedAt(): Long? {
-        val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse) ?: return null
-
-        // removes posts in the future.
-        return if (publishedAt <= createdAt) {
-            publishedAt
-        } else {
-            null
+    fun summary() =
+        content.lineSequence().drop(1).firstNotNullOfOrNull {
+            if (it.isBlank() ||
+                it.startsWith("---") ||
+                it.startsWith("`draft") ||
+                it.startsWith("#")
+            ) {
+                null
+            } else {
+                it
+            }
         }
-    }
 
     companion object {
-        const val KIND = 30818
+        const val KIND = 30817
+        const val KIND_STR = "30817"
 
-        suspend fun create(
-            msg: String,
-            title: String?,
-            replyTos: List<String>?,
-            mentions: List<String>?,
-            signer: NostrSigner,
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            description: String,
+            title: String,
+            kinds: List<Int>,
+            dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-        ): WikiNoteEvent {
-            val tags = mutableListOf<Array<String>>()
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
-            mentions?.forEach { tags.add(arrayOf("p", it)) }
-            title?.let { tags.add(arrayOf("title", it)) }
-            tags.add(AltTag.assemble("Wiki Post: $title"))
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), msg)
+            initializer: TagArrayBuilder<NipTextEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            dTag(dTag)
+            alt("NIP: $title")
+
+            title(title)
+            kinds(kinds)
+
+            initializer()
         }
     }
 }

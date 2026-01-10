@@ -1465,4 +1465,5 @@
 
     <string name="follow_set_delete">Delete List</string>
     <string name="follow_pack_delete">Delete Pack</string>
+    <string name="kinds">Kinds</string>
 </resources>

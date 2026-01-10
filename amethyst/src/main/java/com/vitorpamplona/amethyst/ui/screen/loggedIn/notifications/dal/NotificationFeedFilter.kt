@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
 import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -77,6 +78,7 @@ class NotificationFeedFilter(
             listOf(
                 AudioTrackEvent.KIND,
                 WikiNoteEvent.KIND,
+                NipTextEvent.KIND,
                 ClassifiedsEvent.KIND,
                 LongTextNoteEvent.KIND,
                 CalendarTimeSlotEvent.KIND,

@@ -191,6 +191,7 @@ import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -545,6 +546,7 @@ private fun FullBleedNoteCompose(
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
+            is NipTextEvent -> RenderNipHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
         }
 
@@ -1154,6 +1156,27 @@ private fun RenderWikiHeaderForThread(
                         color = Color.Gray,
                     )
                 }
+        }
+    }
+}
+
+@Composable
+private fun RenderNipHeaderForThread(
+    noteEvent: NipTextEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
+
+    Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        Column {
+            forkedAddress?.let {
+                LoadAddressableNote(it, accountViewModel) { originalVersion ->
+                    if (originalVersion != null) {
+                        ForkInformationRow(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
+                    }
+                }
+            }
         }
     }
 }

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Commen
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -58,6 +59,7 @@ val PostsByHashtagKinds2 =
         InteractiveStorySceneEvent.KIND,
         AudioTrackEvent.KIND,
         AudioHeaderEvent.KIND,
+        NipTextEvent.KIND,
     )
 
 fun filterPostsByHashtags(

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -76,6 +77,7 @@ class UserProfileMutualFeedFilter(
                     it.event is GenericRepostEvent ||
                     it.event is LongTextNoteEvent ||
                     it.event is WikiNoteEvent ||
+                    it.event is NipTextEvent ||
                     it.event is PollNoteEvent ||
                     it.event is HighlightEvent ||
                     it.event is InteractiveStoryPrologueEvent ||
