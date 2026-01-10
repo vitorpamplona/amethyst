@@ -26,7 +26,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -71,7 +70,6 @@ fun AudioWaveformReadOnly(
     progressBrush: Brush = SolidColor(Color.Blue),
     waveformAlignment: WaveformAlignment = WaveformAlignment.Center,
     amplitudeType: AmplitudeType = AmplitudeType.Avg,
-    onProgressChangeFinished: (() -> Unit)? = null,
     spikeAnimationSpec: AnimationSpec<Float> = tween(500),
     spikeWidth: Dp = 3.dp,
     spikeRadius: Dp = 2.dp,
@@ -80,7 +78,6 @@ fun AudioWaveformReadOnly(
     amplitudes: List<Float>,
     onProgressChange: (Float) -> Unit,
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.background
     val progressState = remember(progress) { progress.coerceIn(MIN_PROGRESS, MAX_PROGRESS) }
     val spikeWidthState =
         remember(spikeWidth) { spikeWidth.coerceIn(MinSpikeWidthDp, MaxSpikeWidthDp) }
@@ -195,7 +192,20 @@ internal fun <T> Iterable<T>.chunkToSize(
 internal fun Iterable<Float>.normalize(
     min: Float,
     max: Float,
-): List<Float> = map { (max - min) * ((it - min()) / (max() - min())) + min }
+): List<Float> {
+    val values = toList()
+    if (values.isEmpty()) return emptyList()
+
+    val currentMin = values.minOrNull() ?: return emptyList()
+    val currentMax = values.maxOrNull() ?: return emptyList()
+    val range = currentMax - currentMin
+    if (!range.isFinite() || range == 0f) {
+        return List(values.size) { min }
+    }
+
+    val scale = max - min
+    return values.map { scale * ((it - currentMin) / range) + min }
+}
 
 private fun Int.safeDiv(value: Int): Float {
     return if (value == 0) return 0F else this / value.toFloat()

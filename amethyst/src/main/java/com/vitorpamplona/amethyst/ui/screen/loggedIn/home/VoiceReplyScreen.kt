@@ -35,6 +35,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
+import com.vitorpamplona.amethyst.ui.actions.uploads.formatSecondsToTime
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -212,29 +214,44 @@ private fun ReRecordButton(viewModel: VoiceReplyViewModel) {
             onRecordTaken = { recording ->
                 viewModel.selectRecording(recording)
             },
-        ) { isRecording, _ ->
+        ) { isRecording, elapsedSeconds ->
+            val contentColor =
+                if (isRecording) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onBackground
+                }
+            val icon =
+                if (isRecording) {
+                    Icons.Default.Stop
+                } else {
+                    Icons.Default.Mic
+                }
+            val label =
+                if (isRecording) {
+                    formatSecondsToTime(elapsedSeconds)
+                } else {
+                    stringRes(id = R.string.re_record)
+                }
+            val iconDescription =
+                if (isRecording) {
+                    stringRes(id = R.string.recording_indicator_description)
+                } else {
+                    stringRes(id = R.string.record_a_message)
+                }
             Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = stringRes(id = R.string.record_a_message),
-                    tint =
-                        if (isRecording) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onBackground
-                        },
+                    imageVector = icon,
+                    contentDescription = iconDescription,
+                    tint = contentColor,
                 )
                 Text(
-                    text = stringRes(id = R.string.re_record),
-                    color =
-                        if (isRecording) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onBackground
-                        },
+                    text = label,
+                    color = contentColor,
                 )
             }
         }

@@ -28,17 +28,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -64,116 +59,6 @@ fun ClickableBox(
     }
 }
 
-@Composable
-fun ClickAndHoldBox(
-    modifier: Modifier = Modifier,
-    onPress: () -> Unit,
-    onRelease: () -> Unit,
-    content: @Composable (Boolean) -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    LaunchedEffect(isPressed) {
-        if (isPressed) {
-            // Button is pressed
-            onPress()
-        } else {
-            // Button is released
-            onRelease()
-        }
-    }
-
-    // Animation for the button scale
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 1.5f else 1.0f, // Scale up when recording
-        animationSpec = tween(durationMillis = 150), // Smooth animation
-    )
-
-    // Animation for the button color
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
-        animationSpec = tween(durationMillis = 150),
-    )
-
-    Box(
-        modifier
-            .scale(scale)
-            .background(backgroundColor, CircleShape)
-            .clickable(
-                role = Role.Button,
-                interactionSource = interactionSource,
-                indication = ripple24dp,
-                onClick = { },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        content(isPressed)
-    }
-}
-
-@Composable
-fun ClickAndHoldBoxComposable(
-    modifier: Modifier = Modifier,
-    onPress: () -> Unit,
-    onRelease: suspend () -> Unit,
-    onCancel: suspend () -> Unit,
-    content: @Composable (Boolean) -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    var isPressed by remember { mutableStateOf(false) }
-
-    LaunchedEffect(interactionSource) {
-        val pressInteractions = mutableListOf<PressInteraction.Press>()
-        interactionSource.interactions.collect { interaction ->
-            when (interaction) {
-                is PressInteraction.Press -> {
-                    if (pressInteractions.isEmpty()) {
-                        onPress()
-                    }
-                    pressInteractions.add(interaction)
-                }
-                is PressInteraction.Release -> {
-                    onRelease()
-                    pressInteractions.remove(interaction.press)
-                }
-                is PressInteraction.Cancel -> {
-                    onCancel()
-                    pressInteractions.remove(interaction.press)
-                }
-            }
-            isPressed = pressInteractions.isNotEmpty()
-        }
-    }
-
-    // Animation for the button scale
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 1.5f else 1.0f, // Scale up when recording
-        animationSpec = tween(durationMillis = 150), // Smooth animation
-    )
-
-    // Animation for the button color
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
-        animationSpec = tween(durationMillis = 150),
-    )
-
-    Box(
-        modifier
-            .scale(scale)
-            .background(backgroundColor, CircleShape)
-            .clickable(
-                role = Role.Button,
-                interactionSource = interactionSource,
-                indication = ripple24dp,
-                onClick = { },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        content(isPressed)
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClickableBox(
@@ -193,5 +78,40 @@ fun ClickableBox(
         contentAlignment = Alignment.Center,
     ) {
         content()
+    }
+}
+
+@Composable
+fun ToggleableBox(
+    modifier: Modifier = Modifier,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    content: @Composable (Boolean) -> Unit,
+) {
+    // Animation for the button scale
+    val scale by animateFloatAsState(
+        targetValue = if (isActive) 1.5f else 1.0f,
+        animationSpec = tween(durationMillis = 150),
+    )
+
+    // Animation for the button color
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
+        animationSpec = tween(durationMillis = 150),
+    )
+
+    Box(
+        modifier
+            .scale(scale)
+            .background(backgroundColor, CircleShape)
+            .clickable(
+                role = Role.Button,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple24dp,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content(isActive)
     }
 }
