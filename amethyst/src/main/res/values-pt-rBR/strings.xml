@@ -673,6 +673,7 @@
     <string name="posting_policy">Política de postagem</string>
     <string name="privacy_policy">Política de privacidade</string>
     <string name="terms_and_conditions">Termos &amp; condições</string>
+    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Erros e Avisos deste Relé</string>
     <string name="message_length">Tamanho da mensagem</string>
     <string name="subscriptions">Assinaturas</string>
@@ -686,6 +687,8 @@
     <string name="accepts_up_to">Aceita até</string>
     <string name="time_in_the_future">%1$s no futuro</string>
     <string name="time_in_the_past">há %1$s</string>
+    <string name="amount_in_zeros">%1$s zeros</string>
+    <string name="amount_in_bits">%1$s bits</string>
     <string name="event_retention">Retenção de eventos</string>
     <string name="content_size">Tamanho do conteúdo</string>
     <string name="connectivity">Conectividade</string>

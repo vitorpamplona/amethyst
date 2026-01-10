@@ -678,6 +678,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="posting_policy">Veröffentlichungsrichtlinie</string>
     <string name="privacy_policy">Datenschutzerklärung</string>
     <string name="terms_and_conditions">Allgemeine Geschäftsbedingungen</string>
+    <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fehler und Hinweise von diesem Relais</string>
     <string name="message_length">Nachrichtenlänge</string>
     <string name="subscriptions">Abonnements</string>
