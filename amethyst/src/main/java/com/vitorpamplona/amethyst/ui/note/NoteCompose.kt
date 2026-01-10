@@ -1088,7 +1088,7 @@ fun SecondUserInfoRow(
     ) {
         Column(modifier = remember(noteEvent) { Modifier.weight(1f) }) {
             if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
-                ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+                ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
             } else {
                 ObserveDisplayNip05Status(noteAuthor, accountViewModel, nav)
             }
