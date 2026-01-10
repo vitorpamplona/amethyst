@@ -107,6 +107,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
+import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -134,6 +137,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -1154,8 +1158,6 @@ class AccountViewModel(
         context: Context,
     ) {
         if (isWriteable()) {
-            val hint = note.toEventHint<BaseVoiceEvent>() ?: return
-
             launchSigner {
                 val uploader = UploadOrchestrator()
                 val result =
@@ -1171,14 +1173,41 @@ class AccountViewModel(
                     )
 
                 if (result is UploadingState.Finished && result.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                    account.sendVoiceReplyMessage(
-                        result.result.url,
-                        result.result.fileHeader.mimeType ?: recording.mimeType,
-                        result.result.fileHeader.hash,
-                        recording.duration,
-                        recording.amplitudes,
-                        hint,
-                    )
+                    val audioMeta =
+                        AudioMeta(
+                            url = result.result.url,
+                            mimeType = result.result.fileHeader.mimeType ?: recording.mimeType,
+                            hash = result.result.fileHeader.hash,
+                            duration = recording.duration,
+                            waveform = recording.amplitudes,
+                        )
+
+                    // Check if replying to a voice event
+                    val voiceHint = note.toEventHint<BaseVoiceEvent>()
+                    if (voiceHint != null) {
+                        // Create VoiceReplyEvent (KIND 1244) for voice-to-voice replies
+                        account.sendVoiceReplyMessage(
+                            result.result.url,
+                            result.result.fileHeader.mimeType ?: recording.mimeType,
+                            result.result.fileHeader.hash,
+                            recording.duration,
+                            recording.amplitudes,
+                            voiceHint,
+                        )
+                    } else {
+                        // Create TextNoteEvent (KIND 1) with audio IMeta for voice replies to regular notes
+                        val template =
+                            TextNoteEvent.build(audioMeta.url) {
+                                val replyingTo = note.toEventHint<TextNoteEvent>()
+                                if (replyingTo != null) {
+                                    val tags = prepareETagsAsReplyTo(replyingTo, null)
+                                    markedETags(tags)
+                                }
+                                // Add audio as IMeta attachment
+                                add(audioMeta.toIMetaArray())
+                            }
+                        account.signAndComputeBroadcast(template)
+                    }
                 } else if (result is UploadingState.Error) {
                     toastManager.toast(
                         R.string.failed_to_upload_media_no_details,

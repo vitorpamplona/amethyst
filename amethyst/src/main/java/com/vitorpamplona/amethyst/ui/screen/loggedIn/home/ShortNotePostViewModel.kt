@@ -542,17 +542,48 @@ open class ShortNotePostViewModel :
         voiceMetadata?.let { audioMeta ->
             // Only create voice reply if original note is also a voice message
             val originalVoiceHint = originalNote?.toEventHint<BaseVoiceEvent>()
-            return if (originalVoiceHint != null) {
-                // Create voice reply event
-                VoiceReplyEvent.build(
+            if (originalVoiceHint != null) {
+                // Create voice reply event (KIND 1244)
+                return VoiceReplyEvent.build(
                     voiceMessage = audioMeta,
                     replyingTo = originalVoiceHint,
                 )
-            } else {
-                // Create root voice event (no reply or original is not a voice message)
-                VoiceEvent.build(
+            }
+            // If no original note, create a standalone voice event (KIND 1222)
+            if (originalNote == null) {
+                return VoiceEvent.build(
                     voiceMessage = audioMeta,
                 )
+            }
+            // Otherwise, original note exists but is not a voice message
+            // Create a TextNoteEvent (KIND 1) with audio as IMeta attachment
+            return TextNoteEvent.build(audioMeta.url) {
+                val replyingTo = originalNote?.toEventHint<TextNoteEvent>()
+                if (replyingTo != null) {
+                    val tags = prepareETagsAsReplyTo(replyingTo, null)
+                    tags.forEach {
+                        val note = accountViewModel.getNoteIfExists(it.eventId)
+                        val ourAuthor = note?.author?.pubkeyHex
+                        val ourHint = note?.relayHintUrl()
+                        if (it.author == null || it.author?.isBlank() == true) {
+                            it.author = ourAuthor
+                        } else {
+                            if (ourAuthor != null && it.author != ourAuthor) {
+                                it.author = ourAuthor
+                            }
+                        }
+                        if (it.relay == null) {
+                            it.relay = ourHint
+                        } else {
+                            if (ourHint != null && it.relay != ourHint) {
+                                it.relay = ourHint
+                            }
+                        }
+                    }
+                    markedETags(tags)
+                }
+                // Add audio as IMeta attachment
+                add(audioMeta.toIMetaArray())
             }
         }
 
