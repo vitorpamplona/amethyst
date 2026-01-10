@@ -21,9 +21,13 @@
 package com.vitorpamplona.quartz.nip54Wiki
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.tags.ForkTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -31,13 +35,14 @@ import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
@@ -46,10 +51,16 @@ import com.vitorpamplona.quartz.nip19Bech32.eventHints
 import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
+import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class WikiNoteEvent(
@@ -59,12 +70,14 @@ class WikiNoteEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressableEvent,
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
     PublishedAtProvider,
+    IForkableEvent,
+    RootScope,
     SearchableEvent {
     override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
 
@@ -124,11 +137,17 @@ class WikiNoteEvent(
 
     fun topics() = hashtags()
 
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
+    override fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+
+    override fun forkFromAddress() = tags.firstNotNullOfOrNull(ForkTag::parseAddress)
+
+    override fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseForkedEventId)
 
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse) ?: return null
@@ -144,20 +163,27 @@ class WikiNoteEvent(
     companion object {
         const val KIND = 30818
 
-        suspend fun create(
-            msg: String,
-            title: String?,
-            replyTos: List<String>?,
-            mentions: List<String>?,
-            signer: NostrSigner,
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            description: String,
+            title: String,
+            summary: String? = null,
+            image: String? = null,
+            publishedAt: Long? = null,
+            dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-        ): WikiNoteEvent {
-            val tags = mutableListOf<Array<String>>()
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
-            mentions?.forEach { tags.add(arrayOf("p", it)) }
-            title?.let { tags.add(arrayOf("title", it)) }
-            tags.add(AltTag.assemble("Wiki Post: $title"))
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), msg)
-        }
+            initializer: TagArrayBuilder<WikiNoteEvent>.() -> Unit = {},
+        ): EventTemplate<WikiNoteEvent> =
+            eventTemplate(KIND, description, createdAt) {
+                dTag(dTag)
+                alt("Wiki entry: $title")
+
+                title(title)
+                summary?.let { summary(it) }
+                image?.let { image(it) }
+                publishedAt?.let { publishedAt(it) }
+
+                initializer()
+            }
     }
 }

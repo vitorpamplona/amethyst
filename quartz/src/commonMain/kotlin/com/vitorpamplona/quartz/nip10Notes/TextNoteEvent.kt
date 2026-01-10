@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -47,6 +49,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.json.JsonNull.content
 
 @Immutable
 class TextNoteEvent(
@@ -60,6 +63,7 @@ class TextNoteEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider,
+    IForkableEvent,
     SearchableEvent {
     override fun indexableContent() = "Subject: " + subject() + "\n" + content
 
@@ -108,6 +112,12 @@ class TextNoteEvent(
 
         return pHints + nip19Hints
     }
+
+    override fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+
+    override fun forkFromAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+
+    override fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseForkedEventId)
 
     companion object {
         const val KIND = 1

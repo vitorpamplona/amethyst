@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.forks
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.MARKER
@@ -36,4 +37,11 @@ fun MarkedETag.Companion.parseFork(tag: Array<String>): MarkedETag? {
             ORDER_PUBKEY,
         ),
     )
+}
+
+fun MarkedETag.Companion.parseForkedEventId(tag: Array<String>): HexKey? {
+    if (tag.size < 4 || tag[0] != "e") return null
+    if (tag[ORDER_MARKER] != MARKER.FORK.code) return null
+    // ["e", id hex, relay hint, marker, pubkey]
+    return tag[ORDER_EVT_ID]
 }

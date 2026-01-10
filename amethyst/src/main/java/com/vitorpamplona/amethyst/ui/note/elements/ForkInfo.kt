@@ -47,13 +47,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.nip05
-import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
-import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 
 @Composable
 fun ShowForkInformation(
-    noteEvent: BaseThreadedEvent,
+    noteEvent: IForkableEvent,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -67,7 +65,7 @@ fun ShowForkInformation(
             }
         }
     } else if (forkedEvent != null) {
-        LoadNote(forkedEvent.eventId, accountViewModel) { event ->
+        LoadNote(forkedEvent, accountViewModel) { event ->
             if (event != null) {
                 ForkInformationRowLightColor(event, modifier, accountViewModel, nav)
             }

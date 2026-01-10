@@ -21,7 +21,8 @@
 package com.vitorpamplona.quartz.experimental.nipsOnNostr
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.forks.parseFork
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.forks.parseForkedEventId
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.tags.ForkTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -64,6 +65,7 @@ class NipTextEvent(
     RootScope,
     EventHintProvider,
     AddressHintProvider,
+    IForkableEvent,
     SearchableEvent {
     override fun indexableContent() = "title: " + title() + "\n" + content
 
@@ -105,11 +107,11 @@ class NipTextEvent(
         return aHints + qHints + nip19Hints
     }
 
-    fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
+    override fun isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[0] == "e") && it[3] == "fork" }
 
-    fun forkFromAddress() = tags.firstNotNullOfOrNull(ForkTag::parseAddress)
+    override fun forkFromAddress() = tags.firstNotNullOfOrNull(ForkTag::parseAddress)
 
-    fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseFork)
+    override fun forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseForkedEventId)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -1394,16 +1395,20 @@ private fun BoostTypeChoicePopup(
                     Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
                 }
 
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = onFork,
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                // removes the option to fork for now because we do not have screens for
+                // LongForm, Wiki and NIP posting.
+                if (baseNote.event is TextNoteEvent) {
+                    Button(
+                        modifier = Modifier.padding(horizontal = 3.dp),
+                        onClick = onFork,
+                        shape = ButtonBorder,
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                            ),
+                    ) {
+                        Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                    }
                 }
             }
         }
