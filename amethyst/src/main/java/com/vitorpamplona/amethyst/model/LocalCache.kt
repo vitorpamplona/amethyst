@@ -2100,6 +2100,10 @@ object LocalCache : ILocalCache {
         }
 
         return notes.filter { _, note ->
+            if (note.event is AddressableEvent) {
+                return@filter false
+            }
+
             if (excludeNoteEventFromSearchResults(note)) {
                 return@filter false
             }
