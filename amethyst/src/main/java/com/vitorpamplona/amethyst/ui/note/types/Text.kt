@@ -100,6 +100,13 @@ fun RenderTextEvent(
         }
     }
 
+    // Check if this is an audio-only event (content is just an audio URL with waveform IMeta)
+    val isAudioOnly = remember(noteEvent) { noteEvent.isAudioOnlyContent() }
+    if (isAudioOnly) {
+        RenderAudioFromIMeta(note, accountViewModel, nav)
+        return
+    }
+
     LoadDecryptedContent(
         note,
         accountViewModel,

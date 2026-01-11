@@ -69,8 +69,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size75Modifier
 import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 
 @Composable
@@ -107,6 +110,32 @@ fun VoiceHeader(
                 ?.let { WaveformData(it) }
         }
 
+    RenderAudioWithWaveform(
+        mediaUrl = media,
+        title = noteEvent.subject(),
+        mimeType = null,
+        waveform = waveform,
+        note = note,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+/**
+ * Shared composable for rendering audio with waveform visualization.
+ * Used by both VoiceHeader (for BaseVoiceEvent) and RenderAudioFromIMeta (for other events with audio IMeta).
+ */
+@Composable
+fun RenderAudioWithWaveform(
+    mediaUrl: String,
+    title: String?,
+    mimeType: String?,
+    waveform: WaveformData?,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = note.event ?: return
     val callbackUri = remember(note) { note.toNostrUri() }
 
     Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -114,14 +143,14 @@ fun VoiceHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             GetMediaItem(
-                videoUri = media,
-                title = noteEvent.subject(),
+                videoUri = mediaUrl,
+                title = title,
                 artworkUri = null,
                 authorName = note.author?.toBestDisplayName(),
                 callbackUri = callbackUri,
-                mimeType = null,
+                mimeType = mimeType,
                 aspectRatio = null,
-                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(media),
+                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
                 keepPlaying = false,
                 waveformData = waveform,
             ) { mediaItem ->
@@ -168,7 +197,7 @@ fun RenderVoicePlayer(
             factory = { context: Context ->
                 PlayerView(context).apply {
                     player = controllerState.controller
-                    // if we alrady know the size of the frame, this forces the player to stay in the size
+                    // if we already know the size of the frame, this forces the player to stay in the size
                     layoutParams =
                         FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
@@ -262,4 +291,55 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
             )
         }
     }
+}
+
+/**
+ * Extracts AudioMeta from an event's IMeta tags if it has audio content with waveform.
+ * Returns the first audio IMeta that has a waveform, or null if none found.
+ */
+fun Event.getAudioMetaWithWaveform(): AudioMeta? {
+    val audioMetas = imetas().map { AudioMeta.parse(it) }
+    return audioMetas.firstOrNull { meta ->
+        meta.waveform != null &&
+            (meta.mimeType == null || meta.mimeType?.startsWith("audio/") == true)
+    }
+}
+
+/**
+ * Checks if the event content is primarily an audio attachment (content is just the audio URL).
+ */
+fun Event.isAudioOnlyContent(): Boolean {
+    val audioMeta = getAudioMetaWithWaveform() ?: return false
+    return content.trim() == audioMeta.url
+}
+
+/**
+ * Renders audio with waveform for any event type that has audio IMeta attachment.
+ * This allows KIND 1 (TextNoteEvent) and KIND 1111 (CommentEvent) with voice
+ * attachments to display the same waveform UI as VoiceEvent.
+ */
+@Composable
+fun RenderAudioFromIMeta(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = note.event ?: return
+
+    val audioMeta = remember(noteEvent) { noteEvent.getAudioMetaWithWaveform() } ?: return
+
+    val waveform =
+        remember(audioMeta) {
+            audioMeta.waveform?.let { WaveformData(it) }
+        }
+
+    RenderAudioWithWaveform(
+        mediaUrl = audioMeta.url,
+        title = null,
+        mimeType = audioMeta.mimeType,
+        waveform = waveform,
+        note = note,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
