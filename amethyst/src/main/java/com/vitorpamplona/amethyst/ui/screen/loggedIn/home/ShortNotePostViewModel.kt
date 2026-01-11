@@ -582,6 +582,18 @@ open class ShortNotePostViewModel :
                     }
                     markedETags(tags)
                 }
+                pTags?.let { userList ->
+                    val tags =
+                        userList.map {
+                            val tag = it.toPTag()
+                            if (tag.relayHint == null) {
+                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                            } else {
+                                tag
+                            }
+                        }
+                    notify(tags)
+                }
                 // Add audio as IMeta attachment
                 add(audioMeta.toIMetaArray())
             }

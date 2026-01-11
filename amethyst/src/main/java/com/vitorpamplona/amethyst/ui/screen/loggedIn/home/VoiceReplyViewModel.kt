@@ -38,8 +38,10 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
+import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
@@ -232,6 +234,7 @@ class VoiceReplyViewModel : ViewModel() {
                                     if (replyingTo != null) {
                                         val tags = prepareETagsAsReplyTo(replyingTo, null)
                                         markedETags(tags)
+                                        notify(replyingTo.toPTag())
                                     }
                                     // Add audio as IMeta attachment
                                     add(audioMeta.toIMetaArray())

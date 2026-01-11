@@ -105,10 +105,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
+import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -394,7 +396,7 @@ class AccountViewModel(
                 note.flow().author(),
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
-            ) { hiddenUsers, followingUsers, autor, metadata, reports ->
+            ) { hiddenUsers, followingUsers, _, metadata, _ ->
                 emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.authors))
             }.onStart {
                 emit(
@@ -1015,11 +1017,11 @@ class AccountViewModel(
             LocalCache.findLatestModificationForNote(note)
         }
 
-    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel? = LocalCache.getOrCreatePublicChatChannel(key)
+    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = LocalCache.getOrCreatePublicChatChannel(key)
 
-    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel? = LocalCache.getOrCreateLiveChannel(key)
+    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel = LocalCache.getOrCreateLiveChannel(key)
 
-    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel? = LocalCache.getOrCreateEphemeralChannel(key)
+    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel = LocalCache.getOrCreateEphemeralChannel(key)
 
     fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
@@ -1202,6 +1204,7 @@ class AccountViewModel(
                                 if (replyingTo != null) {
                                     val tags = prepareETagsAsReplyTo(replyingTo, null)
                                     markedETags(tags)
+                                    notify(replyingTo.toPTag())
                                 }
                                 // Add audio as IMeta attachment
                                 add(audioMeta.toIMetaArray())
@@ -1451,7 +1454,7 @@ class AccountViewModel(
             // First check if we have an actual response from the DVM in LocalCache
             val response =
                 LocalCache.notes.maxOrNullOf(
-                    filter = { key, note ->
+                    filter = { _, note ->
                         val noteEvent = note.event
                         noteEvent is NIP90ContentDiscoveryResponseEvent &&
                             noteEvent.pubKey == pubkeyHex &&
@@ -1559,8 +1562,6 @@ class AccountViewModel(
             )
         }
     }
-
-    fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
 
     fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> =
         loggedInAccounts

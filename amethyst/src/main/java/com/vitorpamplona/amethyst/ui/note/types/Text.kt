@@ -68,13 +68,6 @@ fun RenderTextEvent(
 ) {
     val noteEvent = note.event ?: return
 
-    // Check if this is an audio-only event (content is just an audio URL with waveform IMeta)
-    val isAudioOnly = remember(noteEvent) { noteEvent.isAudioOnlyContent() }
-    if (isAudioOnly) {
-        RenderAudioFromIMeta(note, accountViewModel, nav)
-        return
-    }
-
     val showReply by
         remember(note) {
             derivedStateOf {
@@ -105,6 +98,13 @@ fun RenderTextEvent(
             ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)
         }
+    }
+
+    // Check if this is an audio-only event (content is just an audio URL with waveform IMeta)
+    val isAudioOnly = remember(noteEvent) { noteEvent.isAudioOnlyContent() }
+    if (isAudioOnly) {
+        RenderAudioFromIMeta(note, accountViewModel, nav)
+        return
     }
 
     LoadDecryptedContent(
