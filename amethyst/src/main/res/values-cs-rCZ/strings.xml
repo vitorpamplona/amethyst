@@ -1227,4 +1227,5 @@
     <string name="follow_pack_broadcast">Broadcast sady doporučení</string>
     <string name="follow_set_delete">Smazat seznam</string>
     <string name="follow_pack_delete">Smazat sadu doporučení</string>
+    <string name="kinds">Typy</string>
 </resources>
