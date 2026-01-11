@@ -348,6 +348,9 @@ dependencies {
     // Image compression lib
     implementation libs.zelory.image.compressor
 
+    // Voice anonymization DSP
+    implementation libs.tarsosdsp
+
     // Cbor for cashuB format
     implementation libs.kotlinx.serialization.cbor
 
