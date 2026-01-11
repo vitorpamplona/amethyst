@@ -69,8 +69,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size75Modifier
 import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 
 @Composable
@@ -260,6 +263,87 @@ fun PlayPauseButton(controllerState: MediaControllerState) {
                 modifier = Size50Modifier,
                 tint = Color.White,
             )
+        }
+    }
+}
+
+/**
+ * Extracts AudioMeta from an event's IMeta tags if it has audio content with waveform.
+ * Returns the first audio IMeta that has a waveform, or null if none found.
+ */
+fun Event.getAudioMetaWithWaveform(): AudioMeta? {
+    val audioMetas = imetas().map { AudioMeta.parse(it) }
+    return audioMetas.firstOrNull { meta ->
+        meta.waveform != null &&
+            meta.mimeType?.startsWith("audio/") == true
+    }
+}
+
+/**
+ * Checks if the event content is primarily an audio attachment (content is just the audio URL).
+ */
+fun Event.isAudioOnlyContent(): Boolean {
+    val audioMeta = getAudioMetaWithWaveform() ?: return false
+    return content.trim() == audioMeta.url
+}
+
+/**
+ * Renders audio with waveform for any event type that has audio IMeta attachment.
+ * This allows KIND 1 (TextNoteEvent) and KIND 1111 (CommentEvent) with voice
+ * attachments to display the same waveform UI as VoiceEvent.
+ */
+@Composable
+fun RenderAudioFromIMeta(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = note.event ?: return
+
+    val audioMeta = remember(noteEvent) { noteEvent.getAudioMetaWithWaveform() } ?: return
+
+    val waveform =
+        remember(audioMeta) {
+            audioMeta.waveform?.let { WaveformData(it) }
+        }
+
+    val callbackUri = remember(note) { note.toNostrUri() }
+
+    Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GetMediaItem(
+                videoUri = audioMeta.url,
+                title = null,
+                artworkUri = null,
+                authorName = note.author?.toBestDisplayName(),
+                callbackUri = callbackUri,
+                mimeType = audioMeta.mimeType,
+                aspectRatio = null,
+                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(audioMeta.url),
+                keepPlaying = false,
+                waveformData = waveform,
+            ) { mediaItem ->
+                GetVideoController(
+                    mediaItem = mediaItem,
+                    muted = false,
+                ) { controller ->
+                    RenderVoicePlayer(
+                        mediaItem = mediaItem,
+                        controllerState = controller,
+                        waveform = waveform,
+                        borderModifier = MaterialTheme.colorScheme.imageModifier,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
+
+        if (noteEvent.hasHashtags()) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                DisplayUncitedHashtags(noteEvent, callbackUri, accountViewModel, nav)
+            }
         }
     }
 }
