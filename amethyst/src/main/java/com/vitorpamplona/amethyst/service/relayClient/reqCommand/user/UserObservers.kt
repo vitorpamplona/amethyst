@@ -249,15 +249,12 @@ fun observeUserFollowCount(
         remember(user) {
             user
                 .flow()
-                .followers.stateFlow
-                .sample(200)
-                .mapLatest { userState ->
-                    userState.user.transientFollowCount() ?: 0
-                }.distinctUntilChanged()
+                .follows.stateFlow
+                .mapLatest { it.user.transientFollowCount() ?: 0 }
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(0)
+    return flow.collectAsStateWithLifecycle(user.transientFollowCount() ?: 0)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
