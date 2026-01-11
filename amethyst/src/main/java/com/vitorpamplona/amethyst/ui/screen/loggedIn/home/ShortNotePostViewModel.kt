@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -561,26 +562,9 @@ open class ShortNotePostViewModel :
                 val replyingTo = originalNote?.toEventHint<TextNoteEvent>()
                 if (replyingTo != null) {
                     val tags = prepareETagsAsReplyTo(replyingTo, null)
-                    tags.forEach {
-                        val note = accountViewModel.getNoteIfExists(it.eventId)
-                        val ourAuthor = note?.author?.pubkeyHex
-                        val ourHint = note?.relayHintUrl()
-                        if (it.author == null || it.author?.isBlank() == true) {
-                            it.author = ourAuthor
-                        } else {
-                            if (ourAuthor != null && it.author != ourAuthor) {
-                                it.author = ourAuthor
-                            }
-                        }
-                        if (it.relay == null) {
-                            it.relay = ourHint
-                        } else {
-                            if (ourHint != null && it.relay != ourHint) {
-                                it.relay = ourHint
-                            }
-                        }
-                    }
+                    accountViewModel.fixReplyTagHints(tags)
                     markedETags(tags)
+                    notify(replyingTo.toPTag())
                 }
                 pTags?.let { userList ->
                     val tags =

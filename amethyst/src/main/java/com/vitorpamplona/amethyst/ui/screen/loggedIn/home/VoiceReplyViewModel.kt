@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
@@ -222,7 +221,7 @@ class VoiceReplyViewModel : ViewModel() {
                             accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, voiceHint))
                         } else {
                             // Create TextNoteEvent (KIND 1) with audio IMeta for voice replies to regular notes
-                            val textHint = note.toEventHint<Event>()
+                            val textHint = note.toEventHint<TextNoteEvent>()
                             if (textHint == null) {
                                 accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
                                 return
@@ -230,12 +229,10 @@ class VoiceReplyViewModel : ViewModel() {
 
                             val template =
                                 TextNoteEvent.build(audioMeta.url) {
-                                    val replyingTo = note.toEventHint<TextNoteEvent>()
-                                    if (replyingTo != null) {
-                                        val tags = prepareETagsAsReplyTo(replyingTo, null)
-                                        markedETags(tags)
-                                        notify(replyingTo.toPTag())
-                                    }
+                                    val tags = prepareETagsAsReplyTo(textHint, null)
+                                    accountViewModel.fixReplyTagHints(tags)
+                                    markedETags(tags)
+                                    notify(textHint.toPTag())
                                     // Add audio as IMeta attachment
                                     add(audioMeta.toIMetaArray())
                                 }

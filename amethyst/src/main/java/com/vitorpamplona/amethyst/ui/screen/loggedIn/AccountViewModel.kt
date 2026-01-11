@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -67,12 +66,8 @@ import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
@@ -105,13 +100,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
-import com.vitorpamplona.quartz.nip10Notes.tags.notify
-import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -139,8 +130,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
-import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1004,6 +993,32 @@ class AccountViewModel(
 
     fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
+    /**
+     * Fixes author and relay hints in MarkedETag list by looking up notes from cache.
+     * This ensures reply tags have proper author pubkeys and relay hints for threading.
+     */
+    fun fixReplyTagHints(tags: List<MarkedETag>) {
+        tags.forEach { tag ->
+            val note = getNoteIfExists(tag.eventId)
+            val cachedAuthor = note?.author?.pubkeyHex
+            val cachedRelay = note?.relayHintUrl()
+
+            // Fix author if missing or different from cached
+            if (tag.author.isNullOrBlank() && cachedAuthor != null) {
+                tag.author = cachedAuthor
+            } else if (cachedAuthor != null && tag.author != cachedAuthor) {
+                tag.author = cachedAuthor
+            }
+
+            // Fix relay hint if missing or different from cached
+            if (tag.relay == null && cachedRelay != null) {
+                tag.relay = cachedRelay
+            } else if (cachedRelay != null && tag.relay != cachedRelay) {
+                tag.relay = cachedRelay
+            }
+        }
+    }
+
     override suspend fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
@@ -1152,79 +1167,6 @@ class AccountViewModel(
         Log.d("Init", "AccountViewModel onCleared")
         feedStates.destroy()
         super.onCleared()
-    }
-
-    fun sendVoiceReply(
-        note: Note,
-        recording: RecordingResult,
-        context: Context,
-    ) {
-        if (isWriteable()) {
-            launchSigner {
-                val uploader = UploadOrchestrator()
-                val result =
-                    uploader.upload(
-                        uri = recording.file.toUri(),
-                        mimeType = recording.mimeType,
-                        alt = null,
-                        contentWarningReason = null,
-                        compressionQuality = CompressorQuality.UNCOMPRESSED,
-                        server = account.settings.defaultFileServer,
-                        account = account,
-                        context = context,
-                    )
-
-                if (result is UploadingState.Finished && result.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                    val audioMeta =
-                        AudioMeta(
-                            url = result.result.url,
-                            mimeType = result.result.fileHeader.mimeType ?: recording.mimeType,
-                            hash = result.result.fileHeader.hash,
-                            duration = recording.duration,
-                            waveform = recording.amplitudes,
-                        )
-
-                    // Check if replying to a voice event
-                    val voiceHint = note.toEventHint<BaseVoiceEvent>()
-                    if (voiceHint != null) {
-                        // Create VoiceReplyEvent (KIND 1244) for voice-to-voice replies
-                        account.sendVoiceReplyMessage(
-                            result.result.url,
-                            result.result.fileHeader.mimeType ?: recording.mimeType,
-                            result.result.fileHeader.hash,
-                            recording.duration,
-                            recording.amplitudes,
-                            voiceHint,
-                        )
-                    } else {
-                        // Create TextNoteEvent (KIND 1) with audio IMeta for voice replies to regular notes
-                        val template =
-                            TextNoteEvent.build(audioMeta.url) {
-                                val replyingTo = note.toEventHint<TextNoteEvent>()
-                                if (replyingTo != null) {
-                                    val tags = prepareETagsAsReplyTo(replyingTo, null)
-                                    markedETags(tags)
-                                    notify(replyingTo.toPTag())
-                                }
-                                // Add audio as IMeta attachment
-                                add(audioMeta.toIMetaArray())
-                            }
-                        account.signAndComputeBroadcast(template)
-                    }
-                } else if (result is UploadingState.Error) {
-                    toastManager.toast(
-                        R.string.failed_to_upload_media_no_details,
-                        result.errorResource,
-                        *result.params,
-                    )
-                }
-            }
-        } else {
-            toastManager.toast(
-                R.string.read_only_user,
-                R.string.login_with_a_private_key_to_be_able_to_reply,
-            )
-        }
     }
 
     fun loadThumb(

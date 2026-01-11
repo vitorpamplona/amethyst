@@ -301,7 +301,7 @@ fun Event.getAudioMetaWithWaveform(): AudioMeta? {
     val audioMetas = imetas().map { AudioMeta.parse(it) }
     return audioMetas.firstOrNull { meta ->
         meta.waveform != null &&
-            meta.mimeType?.startsWith("audio/") != false
+            (meta.mimeType == null || meta.mimeType?.startsWith("audio/") == true)
     }
 }
 
