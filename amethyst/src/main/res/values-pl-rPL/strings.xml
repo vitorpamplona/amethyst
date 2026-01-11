@@ -1229,4 +1229,5 @@
     <string name="follow_pack_broadcast">Upowszechnij kategorię</string>
     <string name="follow_set_delete">Usuń listę</string>
     <string name="follow_pack_delete">Usuń kategorię</string>
+    <string name="kinds">Typy</string>
 </resources>

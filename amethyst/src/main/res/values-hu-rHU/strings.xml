@@ -135,6 +135,8 @@
     <string name="add_a_user">Felhasználó ozzáadása</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
     <string name="profile_name">Név</string>
+    <string name="profile_name_with_explainer">Név (az @említéshez)</string>
+    <string name="my_name">Saját @említési név</string>
     <string name="display_name">Megjelenítendő név</string>
     <string name="my_display_name">Saját megjelenítendő név</string>
     <string name="my_awesome_name">Strucc McNagyszerű</string>
@@ -1230,4 +1232,5 @@
     <string name="follow_pack_broadcast">Közvetítési csomag</string>
     <string name="follow_set_delete">Lista törlése</string>
     <string name="follow_pack_delete">Csomag törlése</string>
+    <string name="kinds">Változatok</string>
 </resources>

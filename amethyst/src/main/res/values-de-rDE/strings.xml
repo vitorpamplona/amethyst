@@ -1232,4 +1232,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_pack_broadcast">Empfehlungspaket veröffentlichen</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
+    <string name="kinds">Typen</string>
 </resources>
