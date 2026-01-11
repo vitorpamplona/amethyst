@@ -110,6 +110,32 @@ fun VoiceHeader(
                 ?.let { WaveformData(it) }
         }
 
+    RenderAudioWithWaveform(
+        mediaUrl = media,
+        title = noteEvent.subject(),
+        mimeType = null,
+        waveform = waveform,
+        note = note,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+/**
+ * Shared composable for rendering audio with waveform visualization.
+ * Used by both VoiceHeader (for BaseVoiceEvent) and RenderAudioFromIMeta (for other events with audio IMeta).
+ */
+@Composable
+fun RenderAudioWithWaveform(
+    mediaUrl: String,
+    title: String?,
+    mimeType: String?,
+    waveform: WaveformData?,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = note.event ?: return
     val callbackUri = remember(note) { note.toNostrUri() }
 
     Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -117,14 +143,14 @@ fun VoiceHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             GetMediaItem(
-                videoUri = media,
-                title = noteEvent.subject(),
+                videoUri = mediaUrl,
+                title = title,
                 artworkUri = null,
                 authorName = note.author?.toBestDisplayName(),
                 callbackUri = callbackUri,
-                mimeType = null,
+                mimeType = mimeType,
                 aspectRatio = null,
-                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(media),
+                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(mediaUrl),
                 keepPlaying = false,
                 waveformData = waveform,
             ) { mediaItem ->
@@ -171,7 +197,7 @@ fun RenderVoicePlayer(
             factory = { context: Context ->
                 PlayerView(context).apply {
                     player = controllerState.controller
-                    // if we alrady know the size of the frame, this forces the player to stay in the size
+                    // if we already know the size of the frame, this forces the player to stay in the size
                     layoutParams =
                         FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
@@ -307,43 +333,13 @@ fun RenderAudioFromIMeta(
             audioMeta.waveform?.let { WaveformData(it) }
         }
 
-    val callbackUri = remember(note) { note.toNostrUri() }
-
-    Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GetMediaItem(
-                videoUri = audioMeta.url,
-                title = null,
-                artworkUri = null,
-                authorName = note.author?.toBestDisplayName(),
-                callbackUri = callbackUri,
-                mimeType = audioMeta.mimeType,
-                aspectRatio = null,
-                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(audioMeta.url),
-                keepPlaying = false,
-                waveformData = waveform,
-            ) { mediaItem ->
-                GetVideoController(
-                    mediaItem = mediaItem,
-                    muted = false,
-                ) { controller ->
-                    RenderVoicePlayer(
-                        mediaItem = mediaItem,
-                        controllerState = controller,
-                        waveform = waveform,
-                        borderModifier = MaterialTheme.colorScheme.imageModifier,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
-        }
-
-        if (noteEvent.hasHashtags()) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                DisplayUncitedHashtags(noteEvent, callbackUri, accountViewModel, nav)
-            }
-        }
-    }
+    RenderAudioWithWaveform(
+        mediaUrl = audioMeta.url,
+        title = null,
+        mimeType = audioMeta.mimeType,
+        waveform = waveform,
+        note = note,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
