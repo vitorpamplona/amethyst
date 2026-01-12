@@ -44,7 +44,7 @@ class KindTag {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1].toInt()
+            return tag[1].toIntOrNull()
         }
 
         fun assemble(kind: Int) = arrayOf(TAG_NAME, kind.toString())

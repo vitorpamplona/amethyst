@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
@@ -266,6 +267,7 @@ class EventFactory {
                 MetadataEvent.KIND -> MetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 MuteListEvent.KIND -> MuteListEvent(id, pubKey, createdAt, tags, content, sig)
                 NNSEvent.KIND -> NNSEvent(id, pubKey, createdAt, tags, content, sig)
+                NipTextEvent.KIND -> NipTextEvent(id, pubKey, createdAt, tags, content, sig)
                 NostrConnectEvent.KIND -> NostrConnectEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90StatusEvent.KIND -> NIP90StatusEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90ContentDiscoveryRequestEvent.KIND -> NIP90ContentDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)

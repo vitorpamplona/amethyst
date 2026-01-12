@@ -18,30 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.forks
+package com.vitorpamplona.quartz.nip54Wiki
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.MARKER
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 
-fun MarkedETag.Companion.parseFork(tag: Array<String>): MarkedETag? {
-    if (tag.size < 4 || tag[0] != "e") return null
-    if (tag[ORDER_MARKER] != MARKER.FORK.code) return null
-    // ["e", id hex, relay hint, marker, pubkey]
-    return MarkedETag(
-        tag[ORDER_EVT_ID],
-        tag[ORDER_RELAY].ifBlank { null }?.let { RelayUrlNormalizer.normalizeOrNull(it) },
-        MARKER.FORK,
-        tag.getOrNull(
-            ORDER_PUBKEY,
-        ),
-    )
-}
+fun TagArrayBuilder<WikiNoteEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
-fun MarkedETag.Companion.parseForkedEventId(tag: Array<String>): HexKey? {
-    if (tag.size < 4 || tag[0] != "e") return null
-    if (tag[ORDER_MARKER] != MARKER.FORK.code) return null
-    // ["e", id hex, relay hint, marker, pubkey]
-    return tag[ORDER_EVT_ID]
-}
+fun TagArrayBuilder<WikiNoteEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
+
+fun TagArrayBuilder<WikiNoteEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
+
+fun TagArrayBuilder<WikiNoteEvent>.publishedAt(publishedAt: Long) = addUnique(PublishedAtTag.assemble(publishedAt))

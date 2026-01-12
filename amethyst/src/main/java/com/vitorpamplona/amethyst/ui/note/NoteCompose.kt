@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
+import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
@@ -163,15 +164,15 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
-import com.vitorpamplona.quartz.experimental.forks.isAFork
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -727,6 +728,7 @@ private fun RenderNoteRow(
         is ReportEvent -> RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is LongTextNoteEvent -> RenderLongFormContent(baseNote, accountViewModel, nav)
         is WikiNoteEvent -> RenderWikiContent(baseNote, accountViewModel, nav)
+        is NipTextEvent -> RenderNipContent(baseNote, accountViewModel, nav)
         is BadgeAwardEvent -> RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
         is FhirResourceEvent -> RenderFhirResource(baseNote, accountViewModel, nav)
         is PeopleListEvent -> DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
@@ -1085,8 +1087,8 @@ fun SecondUserInfoRow(
         modifier = UserNameMaxRowHeight,
     ) {
         Column(modifier = remember(noteEvent) { Modifier.weight(1f) }) {
-            if (noteEvent is BaseThreadedEvent && noteEvent.isAFork()) {
-                ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
+            if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
+                ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
             } else {
                 ObserveDisplayNip05Status(noteAuthor, accountViewModel, nav)
             }

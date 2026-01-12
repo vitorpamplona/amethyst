@@ -111,9 +111,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPos
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayReward
-import com.vitorpamplona.amethyst.ui.note.elements.ForkInformationRow
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.Reward
+import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -185,7 +185,7 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
-import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
@@ -478,11 +478,15 @@ private fun FullBleedNoteCompose(
                     Column(
                         remember { Modifier.weight(1f) },
                     ) {
-                        ObserveDisplayNip05Status(
-                            baseNote,
-                            accountViewModel,
-                            nav,
-                        )
+                        if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
+                            ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
+                        } else {
+                            ObserveDisplayNip05Status(
+                                baseNote,
+                                accountViewModel,
+                                nav,
+                            )
+                        }
                     }
 
                     val geo = remember { noteEvent.geoHashOrScope() }
@@ -1078,8 +1082,6 @@ private fun RenderWikiHeaderForThread(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
-
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
             noteEvent.image()?.let {
@@ -1103,14 +1105,6 @@ private fun RenderWikiHeaderForThread(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth(),
                 )
-            }
-
-            forkedAddress?.let {
-                LoadAddressableNote(it, accountViewModel) { originalVersion ->
-                    if (originalVersion != null) {
-                        ForkInformationRow(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
-                    }
-                }
             }
 
             noteEvent

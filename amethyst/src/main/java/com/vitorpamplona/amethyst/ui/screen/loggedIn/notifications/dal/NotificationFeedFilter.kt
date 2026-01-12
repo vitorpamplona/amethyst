@@ -29,13 +29,13 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
-import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
+import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -77,6 +77,7 @@ class NotificationFeedFilter(
             listOf(
                 AudioTrackEvent.KIND,
                 WikiNoteEvent.KIND,
+                NipTextEvent.KIND,
                 ClassifiedsEvent.KIND,
                 LongTextNoteEvent.KIND,
                 CalendarTimeSlotEvent.KIND,
@@ -185,7 +186,7 @@ class NotificationFeedFilter(
             return true
         }
 
-        if (event is BaseThreadedEvent) {
+        if (event is BaseNoteEvent) {
             if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) {
                 return true
             }
@@ -208,11 +209,23 @@ class NotificationFeedFilter(
             }
 
             val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
-            val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
-            val isAuthorOfAFork =
-                event.isForkFromAddressWithPubkey(authorHex) || (event.forkFromVersion()?.let { LocalCache.getNoteIfExists(it.eventId)?.author?.pubkeyHex == authorHex } == true)
 
-            return isAuthoredPostCited || isAuthorDirectlyCited || isAuthorOfAFork
+            if (isAuthoredPostCited) return true
+
+            val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
+
+            if (isAuthorDirectlyCited) return true
+
+            return if (event is IForkableEvent && event.isAFork()) {
+                val address = event.forkFromAddress()
+                val version = event.forkFromVersion()
+
+                // Displays notifications about forks
+                address?.pubKeyHex == authorHex ||
+                    (version?.let { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex } == true)
+            } else {
+                false
+            }
         }
 
         if (event is ReactionEvent) {

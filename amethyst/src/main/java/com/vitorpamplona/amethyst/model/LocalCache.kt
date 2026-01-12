@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
@@ -700,6 +701,51 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
+        event: NipTextEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        val isVerified =
+            if (version.event == null && (wasVerified || justVerify(event))) {
+                version.loadEvent(event, author, emptyList())
+                version.moveAllReferencesTo(note)
+                true
+            } else {
+                wasVerified
+            }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event?.id == event.id) return wasVerified
+
+        if (antiSpam.isSpam(event, relay)) {
+            return false
+        }
+
+        if (isVerified || justVerify(event)) {
+            val replyTo = computeReplyTo(event)
+
+            if (event.createdAt > (note.createdAt() ?: 0L)) {
+                note.loadEvent(event, author, replyTo)
+
+                refreshNewNoteObservers(note)
+
+                return true
+            }
+        }
+
+        return false
+    }
+
+    fun consume(
         event: LongTextNoteEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -793,7 +839,6 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
             is PollNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is WikiNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
             is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
@@ -2089,6 +2134,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         return notes.filter { _, note ->
+            if (note.event is AddressableEvent) {
+                return@filter false
+            }
+
             if (excludeNoteEventFromSearchResults(note)) {
                 return@filter false
             }
@@ -2886,6 +2935,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is MetadataEvent -> consume(event, relay, wasVerified)
                 is MuteListEvent -> consume(event, relay, wasVerified)
                 is NNSEvent -> consume(event, relay, wasVerified)
+                is NipTextEvent -> consume(event, relay, wasVerified)
                 is OtsEvent -> consume(event, relay, wasVerified)
                 is PictureEvent -> consume(event, relay, wasVerified)
                 is PrivateDmEvent -> consume(event, relay, wasVerified)

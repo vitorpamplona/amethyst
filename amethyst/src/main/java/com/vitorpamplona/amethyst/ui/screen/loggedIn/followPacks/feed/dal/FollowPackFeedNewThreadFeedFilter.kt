@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -49,12 +50,13 @@ class FollowPackFeedNewThreadFeedFilter(
     val followPackNote: AddressableNote,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    companion object Companion {
+    companion object {
         val ADDRESSABLE_KINDS =
             listOf(
                 AudioTrackEvent.KIND,
                 InteractiveStoryPrologueEvent.KIND,
                 WikiNoteEvent.KIND,
+                NipTextEvent.KIND,
                 ClassifiedsEvent.KIND,
                 LongTextNoteEvent.KIND,
             )
