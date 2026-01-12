@@ -1227,4 +1227,10 @@
     <string name="follow_set_delete">Ta bort lista</string>
     <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
     <string name="kinds">Typer</string>
+    <string name="voice_preset_none">Ingen</string>
+    <string name="voice_preset_deep">Djup</string>
+    <string name="voice_preset_high">Hög</string>
+    <string name="voice_preset_neutral">Neutral</string>
+    <string name="voice_anonymize_title">Anonymisera</string>
+    <string name="voice_anonymize_description">Ändrar tonhöjden på din röst. Obs: enkla förändringar av tonhöjd kan potentiellt återskapas av målmedvetna lyssnare.</string>
 </resources>

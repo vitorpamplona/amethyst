@@ -1233,4 +1233,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
     <string name="kinds">Typen</string>
+    <string name="voice_preset_none">Keine</string>
+    <string name="voice_preset_deep">Tief</string>
+    <string name="voice_preset_high">Hoch</string>
+    <string name="voice_preset_neutral">Neutral</string>
+    <string name="voice_anonymize_title">Anonymisieren</string>
+    <string name="voice_anonymize_description">Verändert die Tonhöhe deiner Stimme. Hinweis: einfache Tonhöhenänderungen können von entschlossenen Zuhörern möglicherweise rückgängig gemacht werden.</string>
 </resources>
