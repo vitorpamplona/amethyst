@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePresetSelector
 import com.vitorpamplona.amethyst.ui.actions.uploads.formatSecondsToTime
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -153,15 +154,27 @@ private fun VoiceReplyScreenBody(
             UploadProgressIndicator(orchestrator)
         } ?: run {
             viewModel.getVoicePreviewMetadata()?.let { metadata ->
+                val displayMetadata =
+                    metadata.copy(
+                        waveform = viewModel.activeWaveform ?: metadata.waveform,
+                    )
                 VoiceMessagePreview(
-                    voiceMetadata = metadata,
-                    localFile = viewModel.voiceLocalFile,
+                    voiceMetadata = displayMetadata,
+                    localFile = viewModel.activeFile,
                     onRemove = {
                         viewModel.cancel()
                         nav.popBack()
                     },
                 )
             }
+
+            // Voice preset selector (only show when not uploading)
+            Spacer(modifier = Modifier.height(12.dp))
+            VoicePresetSelector(
+                selectedPreset = viewModel.selectedPreset,
+                isProcessing = viewModel.isProcessingPreset,
+                onPresetSelected = { viewModel.selectPreset(it) },
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
