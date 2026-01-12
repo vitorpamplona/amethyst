@@ -50,9 +50,12 @@ import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.AnonymizedResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizer
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -128,6 +131,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -193,6 +197,28 @@ open class ShortNotePostViewModel :
     var voiceMetadata by mutableStateOf<AudioMeta?>(null)
     var voiceSelectedServer by mutableStateOf<ServerName?>(null)
     var voiceOrchestrator by mutableStateOf<UploadOrchestrator?>(null)
+
+    // Voice Anonymization
+    var selectedPreset: VoicePreset by mutableStateOf(VoicePreset.NONE)
+    var isProcessingPreset: Boolean by mutableStateOf(false)
+    var distortedFiles: Map<VoicePreset, AnonymizedResult> by mutableStateOf(emptyMap())
+    private var processingJob: Job? = null
+
+    val activeFile: java.io.File?
+        get() =
+            if (selectedPreset == VoicePreset.NONE) {
+                voiceLocalFile
+            } else {
+                distortedFiles[selectedPreset]?.file
+            }
+
+    val activeWaveform: List<Float>?
+        get() =
+            if (selectedPreset == VoicePreset.NONE) {
+                voiceRecording?.amplitudes
+            } else {
+                distortedFiles[selectedPreset]?.waveform
+            }
 
     // Polls
     var canUsePoll by mutableStateOf(false)
@@ -794,6 +820,7 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        processingJob?.cancel()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -801,6 +828,8 @@ open class ShortNotePostViewModel :
         voiceMetadata = null
         voiceSelectedServer = null
         voiceOrchestrator = null
+        selectedPreset = VoicePreset.NONE
+        isProcessingPreset = false
         pTags = null
 
         wantsPoll = false
@@ -922,7 +951,7 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage
+            return !isUploadingVoice && !isUploadingImage && !isProcessingPreset
         }
 
         // Regular text/media posts require text
@@ -951,10 +980,14 @@ open class ShortNotePostViewModel :
     }
 
     fun selectVoiceRecording(recording: RecordingResult) {
-        // Delete any existing temp file before replacing
+        // Cancel any ongoing processing and delete existing files
+        processingJob?.cancel()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
+        voiceMetadata = null
+        selectedPreset = VoicePreset.NONE
+        isProcessingPreset = false
     }
 
     fun getVoicePreviewMetadata(): AudioMeta? =
@@ -967,7 +1000,49 @@ open class ShortNotePostViewModel :
             )
         }
 
+    fun selectPreset(preset: VoicePreset) {
+        if (isProcessingPreset || preset == selectedPreset) return
+
+        if (preset == VoicePreset.NONE) {
+            selectedPreset = preset
+            return
+        }
+
+        if (distortedFiles.containsKey(preset)) {
+            selectedPreset = preset
+            return
+        }
+
+        val originalFile = voiceLocalFile ?: return
+
+        processingJob?.cancel()
+        processingJob =
+            viewModelScope.launch {
+                isProcessingPreset = true
+                try {
+                    val anonymizer = VoiceAnonymizer()
+                    val result = anonymizer.anonymize(originalFile, preset)
+
+                    result
+                        .onSuccess { anonymizedResult ->
+                            distortedFiles = distortedFiles + (preset to anonymizedResult)
+                            selectedPreset = preset
+                        }.onFailure { error ->
+                            Log.w("ShortNotePostViewModel", "Failed to anonymize voice", error)
+                            accountViewModel.toastManager.toast(
+                                stringRes(Amethyst.instance.appContext, R.string.error),
+                                error.message ?: "Voice anonymization failed",
+                            )
+                        }
+                } finally {
+                    isProcessingPreset = false
+                    processingJob = null
+                }
+            }
+    }
+
     fun removeVoiceMessage() {
+        processingJob?.cancel()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -975,6 +1050,8 @@ open class ShortNotePostViewModel :
         voiceSelectedServer = null
         isUploadingVoice = false
         voiceOrchestrator = null
+        selectedPreset = VoicePreset.NONE
+        isProcessingPreset = false
     }
 
     private fun deleteVoiceLocalFile() {
@@ -988,6 +1065,18 @@ open class ShortNotePostViewModel :
                 Log.w("ShortNotePostViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
             }
         }
+
+        distortedFiles.values.forEach { result ->
+            try {
+                if (result.file.exists()) {
+                    result.file.delete()
+                    Log.d("ShortNotePostViewModel", "Deleted distorted file: ${result.file.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("ShortNotePostViewModel", "Failed to delete distorted file: ${result.file.absolutePath}", e)
+            }
+        }
+        distortedFiles = emptyMap()
     }
 
     suspend fun uploadVoiceMessageSync(
@@ -995,6 +1084,8 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         val recording = voiceRecording ?: return
+        val fileToUpload = activeFile ?: recording.file
+        val waveform = activeWaveform ?: recording.amplitudes
         val appContext = Amethyst.instance.appContext
         val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
         val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
@@ -1006,7 +1097,7 @@ open class ShortNotePostViewModel :
         isUploadingVoice = true
 
         try {
-            val uri = android.net.Uri.fromFile(recording.file)
+            val uri = android.net.Uri.fromFile(fileToUpload)
             val orchestrator = UploadOrchestrator()
             voiceOrchestrator = orchestrator
 
@@ -1033,7 +1124,7 @@ open class ShortNotePostViewModel :
                                     mimeType = recording.mimeType,
                                     hash = orchestratorResult.fileHeader.hash,
                                     duration = recording.duration,
-                                    waveform = recording.amplitudes,
+                                    waveform = waveform,
                                 )
                             // Delete the local file after successful upload
                             deleteVoiceLocalFile()

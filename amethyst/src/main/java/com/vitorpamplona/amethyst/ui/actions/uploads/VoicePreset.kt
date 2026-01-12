@@ -29,7 +29,7 @@ enum class VoicePreset(
     @StringRes val labelRes: Int,
 ) {
     NONE(1.0, 0.0, R.string.voice_preset_none),
-    DEEP(0.75, -3.0, R.string.voice_preset_deep),
-    HIGH(1.4, 4.0, R.string.voice_preset_high),
-    NEUTRAL(1.0, -2.0, R.string.voice_preset_neutral),
+    DEEP(1.4, -3.0, R.string.voice_preset_deep),
+    HIGH(0.75, 4.0, R.string.voice_preset_high),
+    NEUTRAL(0.9, -2.0, R.string.voice_preset_neutral),
 }

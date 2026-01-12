@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePresetSelector
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -366,11 +367,25 @@ private fun NewPostScreenBody(
                         postViewModel.voiceOrchestrator?.let { orchestrator ->
                             UploadProgressIndicator(orchestrator)
                         } ?: run {
+                            val displayMetadata =
+                                metadata.copy(
+                                    waveform = postViewModel.activeWaveform ?: metadata.waveform,
+                                )
                             VoiceMessagePreview(
-                                voiceMetadata = metadata,
-                                localFile = postViewModel.voiceLocalFile,
+                                voiceMetadata = displayMetadata,
+                                localFile = postViewModel.activeFile,
                                 onRemove = { postViewModel.removeVoiceMessage() },
                             )
+
+                            // Voice preset selector (only show when not uploading and voice is pending)
+                            if (postViewModel.voiceRecording != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                VoicePresetSelector(
+                                    selectedPreset = postViewModel.selectedPreset,
+                                    isProcessing = postViewModel.isProcessingPreset,
+                                    onPresetSelected = { postViewModel.selectPreset(it) },
+                                )
+                            }
                         }
 
                         FileServerSelectionRow(
