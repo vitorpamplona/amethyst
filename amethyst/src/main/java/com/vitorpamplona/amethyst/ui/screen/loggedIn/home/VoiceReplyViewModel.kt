@@ -71,7 +71,7 @@ class VoiceReplyViewModel : ViewModel() {
     var isUploading: Boolean by mutableStateOf(false)
 
     var selectedPreset: VoicePreset by mutableStateOf(VoicePreset.NONE)
-    var isProcessingPreset: Boolean by mutableStateOf(false)
+    var processingPreset: VoicePreset? by mutableStateOf(null)
     var distortedFiles: Map<VoicePreset, AnonymizedResult> by mutableStateOf(emptyMap())
     private var processingJob: Job? = null
 
@@ -138,6 +138,7 @@ class VoiceReplyViewModel : ViewModel() {
     fun selectRecording(recording: RecordingResult) {
         cancelUpload()
         processingJob?.cancel()
+        processingPreset = null
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
@@ -175,10 +176,10 @@ class VoiceReplyViewModel : ViewModel() {
         distortedFiles = emptyMap()
     }
 
-    fun canSend(): Boolean = voiceRecording != null && !isUploading && !isProcessingPreset
+    fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
 
     fun selectPreset(preset: VoicePreset) {
-        if (isProcessingPreset || preset == selectedPreset) return
+        if (processingPreset != null || preset == selectedPreset) return
 
         if (preset == VoicePreset.NONE) {
             selectedPreset = preset
@@ -195,7 +196,7 @@ class VoiceReplyViewModel : ViewModel() {
         processingJob?.cancel()
         processingJob =
             viewModelScope.launch {
-                isProcessingPreset = true
+                processingPreset = preset
                 try {
                     val anonymizer = VoiceAnonymizer()
                     val result = anonymizer.anonymize(originalFile, preset)
@@ -212,7 +213,7 @@ class VoiceReplyViewModel : ViewModel() {
                             )
                         }
                 } finally {
-                    isProcessingPreset = false
+                    processingPreset = null
                     processingJob = null
                 }
             }
@@ -356,7 +357,7 @@ class VoiceReplyViewModel : ViewModel() {
         isUploading = false
         voiceOrchestrator = null
         selectedPreset = VoicePreset.NONE
-        isProcessingPreset = false
+        processingPreset = null
     }
 
     override fun onCleared() {

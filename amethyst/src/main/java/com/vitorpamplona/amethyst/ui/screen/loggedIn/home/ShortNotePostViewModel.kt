@@ -200,7 +200,7 @@ open class ShortNotePostViewModel :
 
     // Voice Anonymization
     var selectedPreset: VoicePreset by mutableStateOf(VoicePreset.NONE)
-    var isProcessingPreset: Boolean by mutableStateOf(false)
+    var processingPreset: VoicePreset? by mutableStateOf(null)
     var distortedFiles: Map<VoicePreset, AnonymizedResult> by mutableStateOf(emptyMap())
     private var processingJob: Job? = null
 
@@ -829,7 +829,7 @@ open class ShortNotePostViewModel :
         voiceSelectedServer = null
         voiceOrchestrator = null
         selectedPreset = VoicePreset.NONE
-        isProcessingPreset = false
+        processingPreset = null
         pTags = null
 
         wantsPoll = false
@@ -951,7 +951,7 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage && !isProcessingPreset
+            return !isUploadingVoice && !isUploadingImage && processingPreset == null
         }
 
         // Regular text/media posts require text
@@ -987,7 +987,7 @@ open class ShortNotePostViewModel :
         voiceLocalFile = recording.file
         voiceMetadata = null
         selectedPreset = VoicePreset.NONE
-        isProcessingPreset = false
+        processingPreset = null
     }
 
     fun getVoicePreviewMetadata(): AudioMeta? =
@@ -1001,7 +1001,7 @@ open class ShortNotePostViewModel :
         }
 
     fun selectPreset(preset: VoicePreset) {
-        if (isProcessingPreset || preset == selectedPreset) return
+        if (processingPreset != null || preset == selectedPreset) return
 
         if (preset == VoicePreset.NONE) {
             selectedPreset = preset
@@ -1018,7 +1018,7 @@ open class ShortNotePostViewModel :
         processingJob?.cancel()
         processingJob =
             viewModelScope.launch {
-                isProcessingPreset = true
+                processingPreset = preset
                 try {
                     val anonymizer = VoiceAnonymizer()
                     val result = anonymizer.anonymize(originalFile, preset)
@@ -1035,7 +1035,7 @@ open class ShortNotePostViewModel :
                             )
                         }
                 } finally {
-                    isProcessingPreset = false
+                    processingPreset = null
                     processingJob = null
                 }
             }
@@ -1051,7 +1051,7 @@ open class ShortNotePostViewModel :
         isUploadingVoice = false
         voiceOrchestrator = null
         selectedPreset = VoicePreset.NONE
-        isProcessingPreset = false
+        processingPreset = null
     }
 
     private fun deleteVoiceLocalFile() {

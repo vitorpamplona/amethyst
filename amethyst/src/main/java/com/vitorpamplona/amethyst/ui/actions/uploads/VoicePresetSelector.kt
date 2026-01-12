@@ -39,11 +39,12 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @Composable
 fun VoicePresetSelector(
     selectedPreset: VoicePreset,
-    isProcessing: Boolean,
+    processingPreset: VoicePreset?,
     onPresetSelected: (VoicePreset) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val isProcessing = processingPreset != null
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -51,7 +52,7 @@ fun VoicePresetSelector(
     ) {
         VoicePreset.entries.forEach { preset ->
             val isSelected = preset == selectedPreset
-            val isThisProcessing = isProcessing && preset == selectedPreset
+            val isThisProcessing = preset == processingPreset
             val isEnabled = !isProcessing || preset == VoicePreset.NONE
 
             FilterChip(

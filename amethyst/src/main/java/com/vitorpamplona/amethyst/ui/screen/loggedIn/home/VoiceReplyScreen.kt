@@ -198,7 +198,7 @@ private fun VoiceReplyScreenBody(
             Spacer(modifier = Modifier.height(8.dp))
             VoicePresetSelector(
                 selectedPreset = viewModel.selectedPreset,
-                isProcessing = viewModel.isProcessingPreset,
+                processingPreset = viewModel.processingPreset,
                 onPresetSelected = { viewModel.selectPreset(it) },
             )
         }

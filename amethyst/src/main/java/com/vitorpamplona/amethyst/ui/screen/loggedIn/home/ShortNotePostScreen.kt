@@ -409,7 +409,7 @@ private fun NewPostScreenBody(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 VoicePresetSelector(
                                     selectedPreset = postViewModel.selectedPreset,
-                                    isProcessing = postViewModel.isProcessingPreset,
+                                    processingPreset = postViewModel.processingPreset,
                                     onPresetSelected = { postViewModel.selectPreset(it) },
                                 )
                             }
