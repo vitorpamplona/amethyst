@@ -50,7 +50,6 @@ data class AnonymizedResult(
 class VoiceAnonymizer {
     companion object {
         private const val TAG = "VoiceAnonymizer"
-        private const val SAMPLE_RATE = 44100
         private const val CHANNELS = 1
         private const val BIT_RATE = 128000
     }
@@ -206,7 +205,16 @@ class VoiceAnonymizer {
         sampleRate: Int,
         onProgress: (Float) -> Unit,
     ): FloatArray {
-        val factor = preset.pitchFactor
+        val baseFactor = preset.pitchFactor
+        val factor =
+            when (preset) {
+                VoicePreset.DEEP, VoicePreset.HIGH -> {
+                    // Add ±10% random variation
+                    val randomShift = 0.9 + (Math.random() * 0.2)
+                    baseFactor * randomShift
+                }
+                else -> baseFactor
+            }
         val processedSamples = mutableListOf<Float>()
         val totalSamples = pcmData.size
 
