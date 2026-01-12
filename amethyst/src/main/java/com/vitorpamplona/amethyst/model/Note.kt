@@ -24,6 +24,4 @@ package com.vitorpamplona.amethyst.model
 typealias Note = com.vitorpamplona.amethyst.commons.model.Note
 typealias NotesGatherer = com.vitorpamplona.amethyst.commons.model.NotesGatherer
 typealias AddressableNote = com.vitorpamplona.amethyst.commons.model.AddressableNote
-typealias NoteFlowSet = com.vitorpamplona.amethyst.commons.model.NoteFlowSet
-typealias NoteBundledRefresherFlow = com.vitorpamplona.amethyst.commons.model.NoteBundledRefresherFlow
 typealias NoteState = com.vitorpamplona.amethyst.commons.model.NoteState
