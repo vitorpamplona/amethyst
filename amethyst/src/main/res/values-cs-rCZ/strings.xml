@@ -30,7 +30,7 @@
     <string name="copy_text">Kopírovat text</string>
     <string name="copy_user_pubkey">Kopírovat ID autora</string>
     <string name="copy_note_id">Kopírovat ID poznámky</string>
-    <string name="broadcast">Vysílání</string>
+    <string name="broadcast">Rozšířit na relé</string>
     <string name="timestamp_it">Časové razítko</string>
     <string name="timestamp_pending">Časové razítko: Čeká na potvrzení</string>
     <string name="timestamp_pending_short">OTS: Čeká</string>
@@ -114,7 +114,7 @@
     <string name="about_us">"O nás…"</string>
     <string name="what_s_on_your_mind">Co vás napadá?</string>
     <string name="write_a_message">Napište zprávu…</string>
-    <string name="post">Příspěvek</string>
+    <string name="post">Publikovat</string>
     <string name="save">Uložit</string>
     <string name="create">Vytvořit</string>
     <string name="rename">Přejmenovat</string>
@@ -741,7 +741,7 @@
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
     <string name="connectivity_type_unmetered_wifi_only">Neomezená WiFi</string>
     <string name="connectivity_type_never">Nikdy</string>
-    <string name="ui_feature_set_type_complete">Hotovo</string>
+    <string name="ui_feature_set_type_complete">Kompletní</string>
     <string name="ui_feature_set_type_simplified">Zjednodušené</string>
     <string name="ui_feature_set_type_performance">Výkonost</string>
     <string name="gallery_type_classic">Klasický</string>
