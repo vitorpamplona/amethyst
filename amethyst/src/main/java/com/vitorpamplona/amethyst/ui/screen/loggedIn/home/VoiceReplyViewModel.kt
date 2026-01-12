@@ -37,6 +37,11 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
+import com.vitorpamplona.quartz.nip10Notes.tags.notify
+import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
@@ -200,12 +205,6 @@ class VoiceReplyViewModel : ViewModel() {
             is UploadingState.Finished -> {
                 when (val orchestratorResult = result.result) {
                     is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                        val hint = note.toEventHint<BaseVoiceEvent>()
-                        if (hint == null) {
-                            accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
-                            return
-                        }
-
                         val audioMeta =
                             AudioMeta(
                                 url = orchestratorResult.url,
@@ -215,7 +214,30 @@ class VoiceReplyViewModel : ViewModel() {
                                 waveform = recording.amplitudes,
                             )
 
-                        accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, hint))
+                        // Check if replying to a voice event
+                        val voiceHint = note.toEventHint<BaseVoiceEvent>()
+                        if (voiceHint != null) {
+                            // Create VoiceReplyEvent (KIND 1244) for voice-to-voice replies
+                            accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, voiceHint))
+                        } else {
+                            // Create TextNoteEvent (KIND 1) with audio IMeta for voice replies to regular notes
+                            val textHint = note.toEventHint<TextNoteEvent>()
+                            if (textHint == null) {
+                                accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
+                                return
+                            }
+
+                            val template =
+                                TextNoteEvent.build(audioMeta.url) {
+                                    val tags = prepareETagsAsReplyTo(textHint, null)
+                                    accountViewModel.fixReplyTagHints(tags)
+                                    markedETags(tags)
+                                    notify(textHint.toPTag())
+                                    // Add audio as IMeta attachment
+                                    add(audioMeta.toIMetaArray())
+                                }
+                            accountViewModel.account.signAndComputeBroadcast(template)
+                        }
 
                         if (server.type != ServerType.NIP95) {
                             accountViewModel.account.settings.changeDefaultFileServer(server)
