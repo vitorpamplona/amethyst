@@ -112,91 +112,94 @@ class VoiceAnonymizer {
         onProgress: (Float) -> Unit,
     ): DecodedAudio {
         val extractor = MediaExtractor()
-        extractor.setDataSource(inputFile.absolutePath)
+        var decoder: MediaCodec? = null
 
-        var audioTrackIndex = -1
-        var format: MediaFormat? = null
-        for (i in 0 until extractor.trackCount) {
-            val trackFormat = extractor.getTrackFormat(i)
-            val mime = trackFormat.getString(MediaFormat.KEY_MIME)
-            if (mime?.startsWith("audio/") == true) {
-                audioTrackIndex = i
-                format = trackFormat
-                break
+        try {
+            extractor.setDataSource(inputFile.absolutePath)
+
+            var audioTrackIndex = -1
+            var format: MediaFormat? = null
+            for (i in 0 until extractor.trackCount) {
+                val trackFormat = extractor.getTrackFormat(i)
+                val mime = trackFormat.getString(MediaFormat.KEY_MIME)
+                if (mime?.startsWith("audio/") == true) {
+                    audioTrackIndex = i
+                    format = trackFormat
+                    break
+                }
             }
-        }
 
-        if (audioTrackIndex == -1 || format == null) {
-            extractor.release()
-            throw IllegalStateException("No audio track found in file")
-        }
+            if (audioTrackIndex == -1 || format == null) {
+                throw IllegalStateException("No audio track found in file")
+            }
 
-        extractor.selectTrack(audioTrackIndex)
-        val mime = format.getString(MediaFormat.KEY_MIME) ?: "audio/mp4a-latm"
-        val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-        val durationUs = format.getLong(MediaFormat.KEY_DURATION)
-        val duration = (durationUs / 1_000_000).toInt()
+            extractor.selectTrack(audioTrackIndex)
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: "audio/mp4a-latm"
+            val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+            val durationUs = format.getLong(MediaFormat.KEY_DURATION)
+            val duration = (durationUs / 1_000_000).toInt()
 
-        val decoder = MediaCodec.createDecoderByType(mime)
-        decoder.configure(format, null, null, 0)
-        decoder.start()
+            decoder = MediaCodec.createDecoderByType(mime)
+            decoder.configure(format, null, null, 0)
+            decoder.start()
 
-        val pcmSamples = mutableListOf<Float>()
-        val bufferInfo = MediaCodec.BufferInfo()
-        var inputDone = false
-        var outputDone = false
+            val pcmSamples = mutableListOf<Float>()
+            val bufferInfo = MediaCodec.BufferInfo()
+            var inputDone = false
+            var outputDone = false
 
-        while (!outputDone && currentCoroutineContext().isActive) {
-            if (!inputDone) {
-                val inputBufferIndex = decoder.dequeueInputBuffer(10000)
-                if (inputBufferIndex >= 0) {
-                    val inputBuffer = decoder.getInputBuffer(inputBufferIndex)!!
-                    val sampleSize = extractor.readSampleData(inputBuffer, 0)
-                    if (sampleSize < 0) {
-                        decoder.queueInputBuffer(
-                            inputBufferIndex,
-                            0,
-                            0,
-                            0,
-                            MediaCodec.BUFFER_FLAG_END_OF_STREAM,
-                        )
-                        inputDone = true
-                    } else {
-                        val presentationTimeUs = extractor.sampleTime
-                        decoder.queueInputBuffer(
-                            inputBufferIndex,
-                            0,
-                            sampleSize,
-                            presentationTimeUs,
-                            0,
-                        )
-                        extractor.advance()
-                        if (durationUs > 0) {
-                            onProgress((presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
+            while (!outputDone && currentCoroutineContext().isActive) {
+                if (!inputDone) {
+                    val inputBufferIndex = decoder.dequeueInputBuffer(10000)
+                    if (inputBufferIndex >= 0) {
+                        val inputBuffer = decoder.getInputBuffer(inputBufferIndex)!!
+                        val sampleSize = extractor.readSampleData(inputBuffer, 0)
+                        if (sampleSize < 0) {
+                            decoder.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                0,
+                                0,
+                                MediaCodec.BUFFER_FLAG_END_OF_STREAM,
+                            )
+                            inputDone = true
+                        } else {
+                            val presentationTimeUs = extractor.sampleTime
+                            decoder.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                sampleSize,
+                                presentationTimeUs,
+                                0,
+                            )
+                            extractor.advance()
+                            if (durationUs > 0) {
+                                onProgress((presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
+                            }
                         }
+                    }
+                }
+
+                val outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 10000)
+                if (outputBufferIndex >= 0) {
+                    val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)!!
+                    val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
+                    while (shortBuffer.hasRemaining()) {
+                        pcmSamples.add(shortBuffer.get() / 32768f)
+                    }
+                    decoder.releaseOutputBuffer(outputBufferIndex, false)
+                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                        outputDone = true
                     }
                 }
             }
 
-            val outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 10000)
-            if (outputBufferIndex >= 0) {
-                val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)!!
-                val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-                while (shortBuffer.hasRemaining()) {
-                    pcmSamples.add(shortBuffer.get() / 32768f)
-                }
-                decoder.releaseOutputBuffer(outputBufferIndex, false)
-                if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                    outputDone = true
-                }
-            }
+            return DecodedAudio(pcmSamples.toFloatArray(), sampleRate, duration)
+        } finally {
+            decoder?.stop()
+            decoder?.release()
+            extractor.release()
         }
-
-        decoder.stop()
-        decoder.release()
-        extractor.release()
-
-        return DecodedAudio(pcmSamples.toFloatArray(), sampleRate, duration)
     }
 
     private fun processPcmWithTarsos(
@@ -320,86 +323,90 @@ class VoiceAnonymizer {
         format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
 
         val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
-        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        encoder.start()
-
         val muxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        var audioTrackIndex = -1
         var muxerStarted = false
 
-        val bufferInfo = MediaCodec.BufferInfo()
-        var inputOffset = 0
-        var inputDone = false
-        var outputDone = false
-        val totalSamples = pcmData.size
+        try {
+            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            encoder.start()
 
-        while (!outputDone) {
-            if (!inputDone) {
-                val inputBufferIndex = encoder.dequeueInputBuffer(10000)
-                if (inputBufferIndex >= 0) {
-                    val inputBuffer = encoder.getInputBuffer(inputBufferIndex)!!
-                    inputBuffer.clear()
+            var audioTrackIndex = -1
+            val bufferInfo = MediaCodec.BufferInfo()
+            var inputOffset = 0
+            var inputDone = false
+            var outputDone = false
+            val totalSamples = pcmData.size
 
-                    val samplesToWrite = minOf((inputBuffer.capacity() / 2), pcmData.size - inputOffset)
-                    if (samplesToWrite <= 0) {
-                        encoder.queueInputBuffer(
-                            inputBufferIndex,
-                            0,
-                            0,
-                            0,
-                            MediaCodec.BUFFER_FLAG_END_OF_STREAM,
-                        )
-                        inputDone = true
-                    } else {
-                        for (i in 0 until samplesToWrite) {
-                            val sample =
-                                (pcmData[inputOffset + i] * 32767)
-                                    .toInt()
-                                    .coerceIn(-32768, 32767)
-                                    .toShort()
-                            inputBuffer.putShort(sample)
+            while (!outputDone) {
+                if (!inputDone) {
+                    val inputBufferIndex = encoder.dequeueInputBuffer(10000)
+                    if (inputBufferIndex >= 0) {
+                        val inputBuffer = encoder.getInputBuffer(inputBufferIndex)!!
+                        inputBuffer.clear()
+
+                        val samplesToWrite = minOf((inputBuffer.capacity() / 2), pcmData.size - inputOffset)
+                        if (samplesToWrite <= 0) {
+                            encoder.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                0,
+                                0,
+                                MediaCodec.BUFFER_FLAG_END_OF_STREAM,
+                            )
+                            inputDone = true
+                        } else {
+                            for (i in 0 until samplesToWrite) {
+                                val sample =
+                                    (pcmData[inputOffset + i] * 32767)
+                                        .toInt()
+                                        .coerceIn(-32768, 32767)
+                                        .toShort()
+                                inputBuffer.putShort(sample)
+                            }
+                            val presentationTimeUs = (inputOffset * 1_000_000L) / sampleRate
+                            encoder.queueInputBuffer(
+                                inputBufferIndex,
+                                0,
+                                inputBuffer.position(),
+                                presentationTimeUs,
+                                0,
+                            )
+                            inputOffset += samplesToWrite
+                            onProgress(inputOffset.toFloat() / totalSamples)
                         }
-                        val presentationTimeUs = (inputOffset * 1_000_000L) / sampleRate
-                        encoder.queueInputBuffer(
-                            inputBufferIndex,
-                            0,
-                            inputBuffer.position(),
-                            presentationTimeUs,
-                            0,
-                        )
-                        inputOffset += samplesToWrite
-                        onProgress(inputOffset.toFloat() / totalSamples)
+                    }
+                }
+
+                val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10000)
+                when {
+                    outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                        audioTrackIndex = muxer.addTrack(encoder.outputFormat)
+                        muxer.start()
+                        muxerStarted = true
+                    }
+
+                    outputBufferIndex >= 0 -> {
+                        val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)!!
+                        if (muxerStarted && bufferInfo.size > 0) {
+                            outputBuffer.position(bufferInfo.offset)
+                            outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
+                            muxer.writeSampleData(audioTrackIndex, outputBuffer, bufferInfo)
+                        }
+                        encoder.releaseOutputBuffer(outputBufferIndex, false)
+                        if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            outputDone = true
+                        }
                     }
                 }
             }
-
-            val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10000)
-            when {
-                outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                    audioTrackIndex = muxer.addTrack(encoder.outputFormat)
-                    muxer.start()
-                    muxerStarted = true
-                }
-
-                outputBufferIndex >= 0 -> {
-                    val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)!!
-                    if (muxerStarted && bufferInfo.size > 0) {
-                        outputBuffer.position(bufferInfo.offset)
-                        outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
-                        muxer.writeSampleData(audioTrackIndex, outputBuffer, bufferInfo)
-                    }
-                    encoder.releaseOutputBuffer(outputBufferIndex, false)
-                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                        outputDone = true
-                    }
-                }
+        } finally {
+            encoder.stop()
+            encoder.release()
+            if (muxerStarted) {
+                muxer.stop()
             }
+            muxer.release()
         }
-
-        encoder.stop()
-        encoder.release()
-        muxer.stop()
-        muxer.release()
     }
 }
 

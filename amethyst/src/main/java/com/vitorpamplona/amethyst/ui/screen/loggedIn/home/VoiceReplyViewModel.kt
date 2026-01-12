@@ -74,10 +74,12 @@ class VoiceReplyViewModel : ViewModel() {
             scope = viewModelScope,
             logTag = "VoiceReplyViewModel",
             onError = { error ->
-                accountViewModel.toastManager.toast(
-                    stringRes(Amethyst.instance.appContext, R.string.error),
-                    error.message ?: "Voice anonymization failed",
-                )
+                if (::accountViewModel.isInitialized) {
+                    accountViewModel.toastManager.toast(
+                        stringRes(Amethyst.instance.appContext, R.string.error),
+                        error.message ?: "Voice anonymization failed",
+                    )
+                }
             },
         )
 
