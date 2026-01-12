@@ -34,9 +34,8 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.uploads.AnonymizedResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizer
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -70,26 +69,29 @@ class VoiceReplyViewModel : ViewModel() {
     var voiceOrchestrator: UploadOrchestrator? by mutableStateOf(null)
     var isUploading: Boolean by mutableStateOf(false)
 
-    var selectedPreset: VoicePreset by mutableStateOf(VoicePreset.NONE)
-    var processingPreset: VoicePreset? by mutableStateOf(null)
-    var distortedFiles: Map<VoicePreset, AnonymizedResult> by mutableStateOf(emptyMap())
-    private var processingJob: Job? = null
+    private val voiceAnonymization =
+        VoiceAnonymizationController(
+            scope = viewModelScope,
+            logTag = "VoiceReplyViewModel",
+            onError = { error ->
+                accountViewModel.toastManager.toast(
+                    stringRes(Amethyst.instance.appContext, R.string.error),
+                    error.message ?: "Voice anonymization failed",
+                )
+            },
+        )
 
     val activeFile: File?
-        get() =
-            if (selectedPreset == VoicePreset.NONE) {
-                voiceLocalFile
-            } else {
-                distortedFiles[selectedPreset]?.file
-            }
+        get() = voiceAnonymization.activeFile(voiceLocalFile)
 
     val activeWaveform: List<Float>?
-        get() =
-            if (selectedPreset == VoicePreset.NONE) {
-                voiceRecording?.amplitudes
-            } else {
-                distortedFiles[selectedPreset]?.waveform
-            }
+        get() = voiceAnonymization.activeWaveform(voiceRecording?.amplitudes)
+
+    val selectedPreset: VoicePreset
+        get() = voiceAnonymization.selectedPreset
+
+    val processingPreset: VoicePreset?
+        get() = voiceAnonymization.processingPreset
 
     private var uploadJob: Job? = null
 
@@ -137,13 +139,11 @@ class VoiceReplyViewModel : ViewModel() {
 
     fun selectRecording(recording: RecordingResult) {
         cancelUpload()
-        processingJob?.cancel()
-        processingPreset = null
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
         voiceMetadata = null
-        selectedPreset = VoicePreset.NONE
     }
 
     private fun cancelUpload() {
@@ -162,61 +162,12 @@ class VoiceReplyViewModel : ViewModel() {
                 Log.w("VoiceReplyViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
             }
         }
-
-        distortedFiles.values.forEach { result ->
-            try {
-                if (result.file.exists()) {
-                    result.file.delete()
-                    Log.d("VoiceReplyViewModel", "Deleted distorted file: ${result.file.absolutePath}")
-                }
-            } catch (e: Exception) {
-                Log.w("VoiceReplyViewModel", "Failed to delete distorted file: ${result.file.absolutePath}", e)
-            }
-        }
-        distortedFiles = emptyMap()
     }
 
     fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
 
     fun selectPreset(preset: VoicePreset) {
-        if (processingPreset != null || preset == selectedPreset) return
-
-        if (preset == VoicePreset.NONE) {
-            selectedPreset = preset
-            return
-        }
-
-        if (distortedFiles.containsKey(preset)) {
-            selectedPreset = preset
-            return
-        }
-
-        val originalFile = voiceLocalFile ?: return
-
-        processingJob?.cancel()
-        processingJob =
-            viewModelScope.launch {
-                processingPreset = preset
-                try {
-                    val anonymizer = VoiceAnonymizer()
-                    val result = anonymizer.anonymize(originalFile, preset)
-
-                    result
-                        .onSuccess { anonymizedResult ->
-                            distortedFiles = distortedFiles + (preset to anonymizedResult)
-                            selectedPreset = preset
-                        }.onFailure { error ->
-                            Log.w("VoiceReplyViewModel", "Failed to anonymize voice", error)
-                            accountViewModel.toastManager.toast(
-                                stringRes(Amethyst.instance.appContext, R.string.error),
-                                error.message ?: "Voice anonymization failed",
-                            )
-                        }
-                } finally {
-                    processingPreset = null
-                    processingJob = null
-                }
-            }
+        voiceAnonymization.selectPreset(preset, voiceLocalFile)
     }
 
     fun sendVoiceReply(onSuccess: () -> Unit) {
@@ -326,6 +277,7 @@ class VoiceReplyViewModel : ViewModel() {
                         }
 
                         deleteVoiceLocalFile()
+                        voiceAnonymization.deleteDistortedFiles()
                         voiceLocalFile = null
                         voiceRecording = null
                         voiceMetadata = audioMeta
@@ -348,7 +300,7 @@ class VoiceReplyViewModel : ViewModel() {
 
     fun cancel() {
         cancelUpload()
-        processingJob?.cancel()
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -356,8 +308,6 @@ class VoiceReplyViewModel : ViewModel() {
         voiceSelectedServer = null
         isUploading = false
         voiceOrchestrator = null
-        selectedPreset = VoicePreset.NONE
-        processingPreset = null
     }
 
     override fun onCleared() {

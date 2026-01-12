@@ -20,16 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.R
 
 enum class VoicePreset(
     val pitchFactor: Double,
-    val formantShift: Double,
-    @StringRes val labelRes: Int,
+    val labelRes: Int,
 ) {
-    NONE(1.0, 0.0, R.string.voice_preset_none),
-    DEEP(1.4, -3.0, R.string.voice_preset_deep),
-    HIGH(0.75, 4.0, R.string.voice_preset_high),
-    NEUTRAL(0.9, -2.0, R.string.voice_preset_neutral),
+    NONE(1.0, R.string.voice_preset_none),
+    DEEP(1.4, R.string.voice_preset_deep),
+    HIGH(0.75, R.string.voice_preset_high),
+    NEUTRAL(0.9, R.string.voice_preset_neutral),
 }

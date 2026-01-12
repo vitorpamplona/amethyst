@@ -34,11 +34,11 @@ import be.tarsos.dsp.io.TarsosDSPAudioFloatConverter
 import be.tarsos.dsp.io.TarsosDSPAudioFormat
 import be.tarsos.dsp.resample.RateTransposer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.ByteOrder
-import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 
 data class AnonymizedResult(
@@ -147,7 +147,7 @@ class VoiceAnonymizer {
         var inputDone = false
         var outputDone = false
 
-        while (!outputDone && coroutineContext.isActive) {
+        while (!outputDone && currentCoroutineContext().isActive) {
             if (!inputDone) {
                 val inputBufferIndex = decoder.dequeueInputBuffer(10000)
                 if (inputBufferIndex >= 0) {
