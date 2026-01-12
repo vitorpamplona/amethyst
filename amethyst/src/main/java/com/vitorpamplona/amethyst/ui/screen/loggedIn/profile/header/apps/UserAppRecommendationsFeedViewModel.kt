@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 class UserAppRecommendationsFeedViewModel(
     val user: User,
-) : FeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
+) : AndroidFeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
     class Factory(
         val user: User,
     ) : ViewModelProvider.Factory {

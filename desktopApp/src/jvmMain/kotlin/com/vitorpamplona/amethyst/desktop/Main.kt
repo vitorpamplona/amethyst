@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
+import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +109,10 @@ sealed class DesktopScreen {
 
     data class UserProfile(
         val pubKeyHex: String,
+    ) : DesktopScreen()
+
+    data class Thread(
+        val noteId: String,
     ) : DesktopScreen()
 
     object Settings : DesktopScreen()
@@ -351,6 +356,9 @@ fun MainContent(
                         onNavigateToProfile = { pubKeyHex ->
                             onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
                         },
+                        onNavigateToThread = { noteId ->
+                            onScreenChange(DesktopScreen.Thread(noteId))
+                        },
                     )
                 DesktopScreen.Search -> SearchPlaceholder()
                 DesktopScreen.Messages -> MessagesPlaceholder()
@@ -375,6 +383,19 @@ fun MainContent(
                         onCompose = onShowComposeDialog,
                         onNavigateToProfile = { pubKeyHex ->
                             onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                        },
+                    )
+                is DesktopScreen.Thread ->
+                    ThreadScreen(
+                        noteId = currentScreen.noteId,
+                        relayManager = relayManager,
+                        account = account,
+                        onBack = { onScreenChange(DesktopScreen.Feed) },
+                        onNavigateToProfile = { pubKeyHex ->
+                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                        },
+                        onNavigateToThread = { noteId ->
+                            onScreenChange(DesktopScreen.Thread(noteId))
                         },
                     )
                 DesktopScreen.Settings -> RelaySettingsScreen(relayManager, account)

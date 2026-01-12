@@ -61,6 +61,41 @@ interface ICacheProvider {
      * @return Count of users matching the predicate
      */
     fun countUsers(predicate: (String, Any) -> Boolean): Int
+
+    /**
+     * Gets a Note if it exists in cache.
+     * Used by ThreadAssembler for finding existing notes.
+     *
+     * @param hexKey The note's ID in hex format
+     * @return The Note if exists in cache, null otherwise
+     */
+    fun getNoteIfExists(hexKey: HexKey): Any?
+
+    /**
+     * Gets an existing Note or creates a new one if it doesn't exist.
+     * Used by ThreadAssembler for building thread structures.
+     *
+     * @param hexKey The note's ID in hex format
+     * @return The Note (existing or newly created)
+     */
+    fun checkGetOrCreateNote(hexKey: HexKey): Any?
+
+    /**
+     * Gets the event stream for cache updates.
+     * Used by ViewModels to react to new notes and deletions.
+     *
+     * @return The event stream interface
+     */
+    fun getEventStream(): ICacheEventStream
+
+    /**
+     * Checks if an event has been deleted via NIP-09 deletion events.
+     * Used by feed state to filter out deleted notes.
+     *
+     * @param event The event to check
+     * @return true if the event has been deleted, false otherwise
+     */
+    fun hasBeenDeleted(event: Any): Boolean
 }
 
 /**

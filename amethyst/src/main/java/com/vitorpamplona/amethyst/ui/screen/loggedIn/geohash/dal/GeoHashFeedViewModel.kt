@@ -25,7 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
@@ -33,7 +33,7 @@ class GeoHashFeedViewModel(
     val geohash: String,
     val relays: Set<NormalizedRelayUrl>,
     val account: Account,
-) : FeedViewModel(
+) : AndroidFeedViewModel(
         GeoHashFeedFilter(geohash, relays, account, LocalCache),
     ) {
     @Suppress("UNCHECKED_CAST")

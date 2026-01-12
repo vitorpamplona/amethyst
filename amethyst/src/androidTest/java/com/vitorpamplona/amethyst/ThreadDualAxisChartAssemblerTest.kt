@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -174,7 +174,7 @@ class ThreadDualAxisChartAssemblerTest {
                     null,
                 )
 
-            val filter = ThreadFeedFilter(account, naddr.toTag())
+            val filter = ThreadFeedFilter(account, naddr.toTag(), LocalCache)
             val calculatedFeed = filter.feed()
 
             val expectedOrder =

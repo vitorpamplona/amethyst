@@ -86,3 +86,48 @@ fun createContactListSubscription(
         onEvent = onEvent,
         onEose = onEose,
     )
+
+/**
+ * Creates a subscription config for fetching a specific note by ID.
+ */
+fun createNoteSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    noteId: String,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig =
+    SubscriptionConfig(
+        subId = generateSubId("note-${noteId.take(8)}"),
+        filters = listOf(FilterBuilders.byIds(listOf(noteId))),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+
+/**
+ * Creates a subscription config for fetching all replies to a note (thread).
+ *
+ * @param noteId The root note ID to fetch replies for
+ * @param limit Maximum number of reply events to request
+ */
+fun createThreadRepliesSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    noteId: String,
+    limit: Int = 200,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig =
+    SubscriptionConfig(
+        subId = generateSubId("thread-${noteId.take(8)}"),
+        filters =
+            listOf(
+                FilterBuilders.byETags(
+                    eventIds = listOf(noteId),
+                    kinds = listOf(1), // TextNoteEvent
+                    limit = limit,
+                ),
+            ),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )

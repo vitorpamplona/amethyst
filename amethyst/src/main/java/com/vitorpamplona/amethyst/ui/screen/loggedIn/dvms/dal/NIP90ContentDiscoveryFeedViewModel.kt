@@ -24,14 +24,14 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 @Stable
 class NIP90ContentDiscoveryFeedViewModel(
     val account: Account,
     dvmKey: String,
     requestId: String,
-) : FeedViewModel(NIP90ContentDiscoveryResponseFilter(account, dvmKey, requestId)) {
+) : AndroidFeedViewModel(NIP90ContentDiscoveryResponseFilter(account, dvmKey, requestId)) {
     class Factory(
         val account: Account,
         val dvmKey: String,

@@ -24,12 +24,12 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 @Stable
 class BookmarkPublicFeedViewModel(
     val account: Account,
-) : FeedViewModel(BookmarkPublicFeedFilter(account)) {
+) : AndroidFeedViewModel(BookmarkPublicFeedFilter(account)) {
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {

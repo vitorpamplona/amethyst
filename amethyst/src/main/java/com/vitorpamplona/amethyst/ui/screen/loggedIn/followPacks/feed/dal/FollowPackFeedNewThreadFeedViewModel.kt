@@ -24,12 +24,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 class FollowPackFeedNewThreadFeedViewModel(
     val note: AddressableNote,
     val account: Account,
-) : FeedViewModel(FollowPackFeedNewThreadFeedFilter(note, account)) {
+) : AndroidFeedViewModel(FollowPackFeedNewThreadFeedFilter(note, account)) {
     class Factory(
         val note: AddressableNote,
         val account: Account,

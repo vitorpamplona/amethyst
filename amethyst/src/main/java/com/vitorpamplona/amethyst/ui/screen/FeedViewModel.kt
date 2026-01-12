@@ -20,52 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
-@Stable
-abstract class FeedViewModel(
+// Re-export from commons for backwards compatibility
+typealias FeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
+
+/**
+ * Android-specific FeedViewModel base class that provides LocalCache as the cache provider.
+ * Subclasses can extend this to automatically use LocalCache without passing cacheProvider.
+ */
+abstract class AndroidFeedViewModel(
     localFilter: FeedFilter<Note>,
-) : ViewModel(),
-    InvalidatableContent {
-    val feedState = FeedContentState(localFilter, viewModelScope)
-
-    override val isRefreshing = feedState.isRefreshing
-
-    fun sendToTop() = feedState.sendToTop()
-
-    suspend fun sentToTop() = feedState.sentToTop()
-
-    override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
-
-    init {
-        Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.newEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
-                feedState.updateFeedWith(newNotes)
-            }
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            LocalCache.live.deletedEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Delete from feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
-                feedState.deleteFromFeed(newNotes)
-            }
-        }
-    }
-
-    override fun onCleared() {
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        super.onCleared()
-    }
-}
+) : FeedViewModel(localFilter, LocalCache)

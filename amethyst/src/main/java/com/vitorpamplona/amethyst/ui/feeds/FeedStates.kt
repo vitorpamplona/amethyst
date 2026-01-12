@@ -18,26 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.feeds
 
-import com.vitorpamplona.amethyst.logTime
+// Re-export from commons for backwards compatibility - import everything
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState as CommonsFeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState as CommonsFeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent as CommonsInvalidatableContent
+import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState as CommonsLoadedFeedState
 
-abstract class AdditiveFeedFilter<T> :
-    FeedFilter<T>(),
-    IAdditiveFeedFilter<T> {
-    open fun updateListWith(
-        oldList: List<T>,
-        newItems: Set<T>,
-    ): List<T> =
-        logTime(
-            debugMessage = { "${this.javaClass.simpleName} AdditiveFeedFilter updating ${newItems.size} new items to ${it.size} items" },
-        ) {
-            val newItemsToBeAdded = applyFilter(newItems)
-            if (newItemsToBeAdded.isNotEmpty()) {
-                val newList = oldList.toSet() + newItemsToBeAdded
-                sort(newList).take(limit())
-            } else {
-                oldList
-            }
-        }
-}
+typealias FeedState = CommonsFeedState
+typealias LoadedFeedState<T> = CommonsLoadedFeedState<T>
+typealias InvalidatableContent = CommonsInvalidatableContent
+typealias FeedContentState = CommonsFeedContentState

@@ -18,17 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-interface IFeedFilter<T> {
-    fun loadTop(): List<T>
+import com.vitorpamplona.amethyst.commons.utils.logTime
 
-    fun limit(): Int = 500
-
-    /** Returns a string that serves as the key to invalidate the list if it changes. */
-    fun feedKey(): Any
-
-    fun showHiddenKey(): Boolean = false
-
-    fun feed(): List<T>
+abstract class FeedFilter<T> : IFeedFilter<T> {
+    override fun loadTop(): List<T> {
+        val feed =
+            logTime(
+                debugMessage = { "${this::class.simpleName} FeedFilter returning ${it.size} objects" },
+                block = ::feed,
+            )
+        return feed.take(limit())
+    }
 }

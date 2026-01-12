@@ -18,12 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.feeds
+package com.vitorpamplona.amethyst.commons.utils
 
-import androidx.compose.runtime.State
-
-interface InvalidatableContent {
-    fun invalidateData(ignoreIfDoing: Boolean = false)
-
-    val isRefreshing: State<Boolean>
-}
+// Debug flag for commons module - kept false to avoid application dependencies
+// Application-level modules (amethyst, desktopApp) can implement their own debug timing
+actual val isDebug: Boolean = false

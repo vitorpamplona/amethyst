@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.cache.IChannel
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
@@ -212,7 +214,7 @@ interface ILocalCache {
     ) {}
 }
 
-object LocalCache : ILocalCache {
+object LocalCache : ILocalCache, ICacheProvider {
     val antiSpam = AntiSpamFilter()
 
     val users = LargeSoftCache<HexKey, User>()
@@ -317,16 +319,35 @@ object LocalCache : ILocalCache {
         }
     }
 
-    fun getUserIfExists(key: String): User? {
+    override fun getUserIfExists(key: String): User? {
         if (key.isEmpty()) return null
         return users.get(key)
+    }
+
+    override fun countUsers(predicate: (String, Any) -> Boolean): Int {
+        var count = 0
+        users.forEach { key, user ->
+            if (predicate(key, user)) count++
+        }
+        return count
+    }
+
+    override fun getAnyChannel(note: Any?): IChannel? {
+        val channelNote = note as? Note ?: return null
+        val channel = getAnyChannel(channelNote)
+        // Wrap Channel to implement IChannel interface
+        return channel?.let {
+            object : IChannel {
+                override fun relays(): List<Any>? = it.relays().toList()
+            }
+        }
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
     fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
-    fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
+    override fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
@@ -357,7 +378,7 @@ object LocalCache : ILocalCache {
         return null
     }
 
-    fun checkGetOrCreateNote(key: String): Note? {
+    override fun checkGetOrCreateNote(key: String): Note? {
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
@@ -381,6 +402,19 @@ object LocalCache : ILocalCache {
         }
         return null
     }
+
+    override fun getEventStream(): com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream =
+        object : com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream {
+            override val newEventBundles = live.newEventBundles
+            override val deletedEventBundles = live.deletedEventBundles
+        }
+
+    override fun hasBeenDeleted(event: Any): Boolean =
+        if (event is Event) {
+            deletionIndex.hasBeenDeleted(event)
+        } else {
+            false
+        }
 
     fun getOrAddAliasNote(
         idHex: String,

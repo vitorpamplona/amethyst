@@ -20,76 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 
-abstract class LevelFeedViewModel(
+// Re-export from commons for backwards compatibility
+typealias LevelFeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
+
+/**
+ * Android-specific LevelFeedViewModel base class that provides LocalCache as the cache provider.
+ * Subclasses can extend this to automatically use LocalCache without passing cacheProvider.
+ */
+abstract class AndroidLevelFeedViewModel(
     localFilter: FeedFilter<Note>,
-) : FeedViewModel(localFilter) {
-    var llState: LazyListState by mutableStateOf(LazyListState(0, 0))
-
-    val hasDragged = mutableStateOf(false)
-
-    val selectedIDHex =
-        llState.interactionSource.interactions
-            .onEach {
-                if (it is DragInteraction.Start) {
-                    hasDragged.value = true
-                }
-            }.stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                null,
-            )
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val levelCacheFlow: StateFlow<Map<Note, Int>> =
-        feedState.feedContent
-            .transformLatest { feed ->
-                emitAll(
-                    if (feed is FeedState.Loaded) {
-                        feed.feed.map {
-                            val cache = mutableMapOf<Note, Int>()
-                            it.list.forEach {
-                                ThreadLevelCalculator.replyLevel(it, cache)
-                            }
-                            cache
-                        }
-                    } else {
-                        MutableStateFlow(mapOf())
-                    },
-                )
-            }.flowOn(Dispatchers.IO)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                mapOf(),
-            )
-
-    fun levelFlowForItem(note: Note) =
-        levelCacheFlow
-            .map {
-                it[note] ?: 0
-            }.distinctUntilChanged()
-}
+) : LevelFeedViewModel(localFilter, LocalCache)

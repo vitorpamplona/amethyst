@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
+import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindAddress
@@ -53,9 +53,10 @@ fun filterMissingEventsForThread(
 
     val missingAddresses =
         mapOfSet {
-            if (threadInfo.root.event == null && threadInfo.root is AddressableNote) {
-                potentialRelaysToFindEvent(threadInfo.root).ifEmpty { defaultRelays }.forEach { relayUrl ->
-                    add(relayUrl, threadInfo.root.address)
+            val rootNote = threadInfo.root
+            if (rootNote.event == null && rootNote is AddressableNote) {
+                potentialRelaysToFindEvent(rootNote).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    add(relayUrl, rootNote.address)
                 }
             }
 

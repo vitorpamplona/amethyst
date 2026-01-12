@@ -18,34 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
+package com.vitorpamplona.amethyst.commons.viewmodels.thread
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LevelSignature
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.LevelSignature
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
+import com.vitorpamplona.amethyst.commons.model.ThreadLevelCalculator
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableSet
 
+/**
+ * Filter for assembling and sorting thread feeds.
+ *
+ * This filter uses ThreadAssembler to find all notes in a thread and
+ * ThreadLevelCalculator to sort them by reply level and relevance.
+ *
+ * @param account The current user's account (provides user profile and following set)
+ * @param noteId The root note ID of the thread to display
+ * @param cacheProvider The cache provider for accessing notes
+ */
 @Immutable
 class ThreadFeedFilter(
-    val account: Account,
+    val account: IAccount,
     private val noteId: String,
+    private val cacheProvider: ICacheProvider,
 ) : FeedFilter<Note>() {
     override fun feedKey(): String = noteId
 
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
-        val followingKeySet = account.kind3FollowList.flow.value.authors
-        val eventsToWatch = ThreadAssembler().findThreadFor(noteId) ?: return emptyList()
+        val followingKeySet = account.followingKeySet()
+        val eventsToWatch = ThreadAssembler(cacheProvider).findThreadFor(noteId) ?: return emptyList()
 
         // Filter out drafts made by other accounts on device
         val filteredEvents =
             eventsToWatch.allNotes
-                .filter { !it.isDraft() || (it.author?.pubkeyHex == account.userProfile().pubkeyHex) }
+                .filter { !it.isDraft() || (it.author?.pubkeyHex == account.pubKey) }
                 .toImmutableSet()
         val filteredThreadInfo = ThreadAssembler.ThreadInfo(eventsToWatch.root, filteredEvents)
 

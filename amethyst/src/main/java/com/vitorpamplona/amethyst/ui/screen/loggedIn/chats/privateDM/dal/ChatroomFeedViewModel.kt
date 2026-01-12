@@ -24,12 +24,13 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.ListChange
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
-import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +54,7 @@ abstract class ListChangeFeedViewModel(
     localFilter: ChangesFlowFilter<Note>,
 ) : ViewModel(),
     InvalidatableContent {
-    val feedState = FeedContentState(localFilter, viewModelScope)
+    val feedState = FeedContentState(localFilter, viewModelScope, LocalCache)
 
     override val isRefreshing = feedState.isRefreshing
 

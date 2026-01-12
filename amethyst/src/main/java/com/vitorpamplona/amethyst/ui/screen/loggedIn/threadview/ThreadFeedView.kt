@@ -48,7 +48,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,8 +55,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -74,6 +71,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
@@ -83,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -359,34 +357,6 @@ fun RenderThreadFeed(
         }
     }
 }
-
-// Creates a Zebra pattern where each bar is a reply level.
-fun Modifier.drawReplyLevel(
-    level: State<Int>,
-    color: Color,
-    selected: Color,
-): Modifier =
-    this
-        .drawBehind {
-            val paddingDp = 2
-            val strokeWidthDp = 2
-            val levelWidthDp = strokeWidthDp + 1
-
-            val padding = paddingDp.dp.toPx()
-            val strokeWidth = strokeWidthDp.dp.toPx()
-            val levelWidth = levelWidthDp.dp.toPx()
-
-            repeat(level.value) {
-                this.drawLine(
-                    if (it == level.value - 1) selected else color,
-                    Offset(padding + it * levelWidth, 0f),
-                    Offset(padding + it * levelWidth, size.height),
-                    strokeWidth = strokeWidth,
-                )
-            }
-
-            return@drawBehind
-        }.padding(start = (2 + (level.value * 3)).dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

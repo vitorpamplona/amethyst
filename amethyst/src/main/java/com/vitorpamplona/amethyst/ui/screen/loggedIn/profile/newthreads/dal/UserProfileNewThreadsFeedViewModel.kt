@@ -24,12 +24,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 class UserProfileNewThreadsFeedViewModel(
     val user: User,
     val account: Account,
-) : FeedViewModel(UserProfileNewThreadFeedFilter(user, account)) {
+) : AndroidFeedViewModel(UserProfileNewThreadFeedFilter(user, account)) {
     class Factory(
         val user: User,
         val account: Account,
