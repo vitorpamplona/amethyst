@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -75,8 +76,14 @@ fun FeedNoteCard(
     account: AccountState.LoggedIn?,
     onReply: () -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
 ) {
-    Column {
+    Column(
+        modifier =
+            Modifier.clickable {
+                onNavigateToThread(event.id)
+            },
+    ) {
         NoteCard(
             note = event.toNoteDisplayData(),
             onAuthorClick = onNavigateToProfile,
@@ -101,6 +108,7 @@ fun FeedScreen(
     account: AccountState.LoggedIn? = null,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -274,6 +282,7 @@ fun FeedScreen(
                         account = account,
                         onReply = { replyToEvent = event },
                         onNavigateToProfile = onNavigateToProfile,
+                        onNavigateToThread = onNavigateToThread,
                     )
                 }
             }
