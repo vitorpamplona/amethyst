@@ -34,7 +34,10 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.AnonymizedResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizer
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
@@ -66,6 +69,27 @@ class VoiceReplyViewModel : ViewModel() {
     var voiceSelectedServer: ServerName? by mutableStateOf(null)
     var voiceOrchestrator: UploadOrchestrator? by mutableStateOf(null)
     var isUploading: Boolean by mutableStateOf(false)
+
+    var selectedPreset: VoicePreset by mutableStateOf(VoicePreset.NONE)
+    var isProcessingPreset: Boolean by mutableStateOf(false)
+    var distortedFiles: Map<VoicePreset, AnonymizedResult> by mutableStateOf(emptyMap())
+    private var processingJob: Job? = null
+
+    val activeFile: File?
+        get() =
+            if (selectedPreset == VoicePreset.NONE) {
+                voiceLocalFile
+            } else {
+                distortedFiles[selectedPreset]?.file
+            }
+
+    val activeWaveform: List<Float>?
+        get() =
+            if (selectedPreset == VoicePreset.NONE) {
+                voiceRecording?.amplitudes
+            } else {
+                distortedFiles[selectedPreset]?.waveform
+            }
 
     private var uploadJob: Job? = null
 
@@ -113,10 +137,12 @@ class VoiceReplyViewModel : ViewModel() {
 
     fun selectRecording(recording: RecordingResult) {
         cancelUpload()
+        processingJob?.cancel()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
         voiceMetadata = null
+        selectedPreset = VoicePreset.NONE
     }
 
     private fun cancelUpload() {
@@ -135,13 +161,67 @@ class VoiceReplyViewModel : ViewModel() {
                 Log.w("VoiceReplyViewModel", "Failed to delete voice file: ${file.absolutePath}", e)
             }
         }
+
+        distortedFiles.values.forEach { result ->
+            try {
+                if (result.file.exists()) {
+                    result.file.delete()
+                    Log.d("VoiceReplyViewModel", "Deleted distorted file: ${result.file.absolutePath}")
+                }
+            } catch (e: Exception) {
+                Log.w("VoiceReplyViewModel", "Failed to delete distorted file: ${result.file.absolutePath}", e)
+            }
+        }
+        distortedFiles = emptyMap()
     }
 
-    fun canSend(): Boolean = voiceRecording != null && !isUploading
+    fun canSend(): Boolean = voiceRecording != null && !isUploading && !isProcessingPreset
+
+    fun selectPreset(preset: VoicePreset) {
+        if (isProcessingPreset || preset == selectedPreset) return
+
+        if (preset == VoicePreset.NONE) {
+            selectedPreset = preset
+            return
+        }
+
+        if (distortedFiles.containsKey(preset)) {
+            selectedPreset = preset
+            return
+        }
+
+        val originalFile = voiceLocalFile ?: return
+
+        processingJob?.cancel()
+        processingJob =
+            viewModelScope.launch {
+                isProcessingPreset = true
+                try {
+                    val anonymizer = VoiceAnonymizer()
+                    val result = anonymizer.anonymize(originalFile, preset)
+
+                    result
+                        .onSuccess { anonymizedResult ->
+                            distortedFiles = distortedFiles + (preset to anonymizedResult)
+                            selectedPreset = preset
+                        }.onFailure { error ->
+                            Log.w("VoiceReplyViewModel", "Failed to anonymize voice", error)
+                            accountViewModel.toastManager.toast(
+                                stringRes(Amethyst.instance.appContext, R.string.error),
+                                error.message ?: "Voice anonymization failed",
+                            )
+                        }
+                } finally {
+                    isProcessingPreset = false
+                    processingJob = null
+                }
+            }
+    }
 
     fun sendVoiceReply(onSuccess: () -> Unit) {
         val note = replyToNote ?: return
         val recording = voiceRecording ?: return
+        val fileToUpload = activeFile ?: recording.file
         val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
 
         cancelUpload()
@@ -154,7 +234,7 @@ class VoiceReplyViewModel : ViewModel() {
                 try {
                     val result =
                         withContext(Dispatchers.IO) {
-                            val uri = android.net.Uri.fromFile(recording.file)
+                            val uri = android.net.Uri.fromFile(fileToUpload)
                             orchestrator.upload(
                                 uri = uri,
                                 mimeType = recording.mimeType,
@@ -168,7 +248,7 @@ class VoiceReplyViewModel : ViewModel() {
                             )
                         }
 
-                    handleUploadResult(note, recording, serverToUse, result, onSuccess)
+                    handleUploadResult(note, recording, activeWaveform ?: recording.amplitudes, serverToUse, result, onSuccess)
                 } catch (e: CancellationException) {
                     Log.w("VoiceReplyViewModel", "User canceled, or ViewModel cleared", e)
                 } catch (e: Exception) {
@@ -192,6 +272,7 @@ class VoiceReplyViewModel : ViewModel() {
     private suspend fun handleUploadResult(
         note: Note,
         recording: RecordingResult,
+        waveform: List<Float>,
         server: ServerName,
         result: UploadingState,
         onSuccess: () -> Unit,
@@ -211,7 +292,7 @@ class VoiceReplyViewModel : ViewModel() {
                                 mimeType = recording.mimeType,
                                 hash = orchestratorResult.fileHeader.hash,
                                 duration = recording.duration,
-                                waveform = recording.amplitudes,
+                                waveform = waveform,
                             )
 
                         // Check if replying to a voice event
@@ -266,6 +347,7 @@ class VoiceReplyViewModel : ViewModel() {
 
     fun cancel() {
         cancelUpload()
+        processingJob?.cancel()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -273,6 +355,8 @@ class VoiceReplyViewModel : ViewModel() {
         voiceSelectedServer = null
         isUploading = false
         voiceOrchestrator = null
+        selectedPreset = VoicePreset.NONE
+        isProcessingPreset = false
     }
 
     override fun onCleared() {
