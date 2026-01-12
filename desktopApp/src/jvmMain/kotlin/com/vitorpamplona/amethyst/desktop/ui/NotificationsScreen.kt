@@ -41,8 +41,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.subscriptions.createNotificationsSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
@@ -120,6 +123,10 @@ fun NotificationsScreen(
         }
     val notifications by notificationState.items.collectAsState()
 
+    // Track EOSE to know when initial load is complete
+    var eoseReceivedCount by remember { mutableStateOf(0) }
+    val initialLoadComplete = eoseReceivedCount > 0
+
     // Subscribe to notifications
     rememberSubscription(relayStatuses, account.pubKeyHex, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
@@ -168,6 +175,9 @@ fun NotificationsScreen(
 
                     notificationState.addItem(notification)
                 },
+                onEose = { _, _ ->
+                    eoseReceivedCount++
+                },
             )
         } else {
             null
@@ -185,8 +195,14 @@ fun NotificationsScreen(
 
         if (connectedRelays.isEmpty()) {
             LoadingState("Connecting to relays...")
-        } else if (notifications.isEmpty()) {
+        } else if (notifications.isEmpty() && !initialLoadComplete) {
             LoadingState("Loading notifications...")
+        } else if (notifications.isEmpty() && initialLoadComplete) {
+            EmptyState(
+                title = "No notifications yet",
+                description = "When someone interacts with your posts, you'll see it here",
+                onRefresh = { relayManager.connect() },
+            )
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),

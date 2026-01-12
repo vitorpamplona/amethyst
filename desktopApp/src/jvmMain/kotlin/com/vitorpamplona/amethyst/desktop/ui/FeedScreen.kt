@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.subscriptions.createContactListSubscri
 import com.vitorpamplona.amethyst.commons.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.createGlobalFeedSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
@@ -127,6 +128,10 @@ fun FeedScreen(
     var feedMode by remember { mutableStateOf(FeedMode.GLOBAL) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
 
+    // Track EOSE to know when initial load is complete
+    var eoseReceivedCount by remember { mutableStateOf(0) }
+    val initialLoadComplete = eoseReceivedCount > 0
+
     // Load followed users for Following feed mode
     rememberSubscription(relayStatuses, account, feedMode, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
@@ -145,9 +150,10 @@ fun FeedScreen(
         }
     }
 
-    // Clear events when feed mode changes
+    // Clear events and reset EOSE when feed mode changes
     remember(feedMode) {
         eventState.clear()
+        eoseReceivedCount = 0
     }
 
     // Subscribe to feed based on mode
@@ -164,6 +170,9 @@ fun FeedScreen(
                     onEvent = { event, _, _, _ ->
                         eventState.addItem(event)
                     },
+                    onEose = { _, _ ->
+                        eoseReceivedCount++
+                    },
                 )
             }
             FeedMode.FOLLOWING -> {
@@ -173,6 +182,9 @@ fun FeedScreen(
                         followedUsers = followedUsers.toList(),
                         onEvent = { event, _, _, _ ->
                             eventState.addItem(event)
+                        },
+                        onEose = { _, _ ->
+                            eoseReceivedCount++
                         },
                     )
                 } else {
@@ -263,13 +275,23 @@ fun FeedScreen(
             LoadingState("Connecting to relays...")
         } else if (feedMode == FeedMode.FOLLOWING && followedUsers.isEmpty()) {
             LoadingState("Loading followed users...")
-        } else if (events.isEmpty()) {
-            LoadingState(
-                if (feedMode == FeedMode.FOLLOWING) {
-                    "No notes from followed users yet"
-                } else {
-                    "Loading notes..."
-                },
+        } else if (events.isEmpty() && !initialLoadComplete) {
+            LoadingState("Loading notes...")
+        } else if (events.isEmpty() && initialLoadComplete) {
+            EmptyState(
+                title =
+                    if (feedMode == FeedMode.FOLLOWING) {
+                        "No notes from followed users"
+                    } else {
+                        "No notes found"
+                    },
+                description =
+                    if (feedMode == FeedMode.FOLLOWING) {
+                        "Notes from people you follow will appear here"
+                    } else {
+                        "Notes from the network will appear here"
+                    },
+                onRefresh = { relayManager.connect() },
             )
         } else {
             LazyColumn(

@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.subscriptions.createNoteSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.createThreadRepliesSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
@@ -98,6 +99,10 @@ fun ThreadScreen(
     // Cache for calculating reply levels
     val levelCache = remember(noteId) { mutableMapOf<String, Int>() }
 
+    // Track EOSE to know when initial load is complete
+    var rootNoteEoseReceived by remember(noteId) { mutableStateOf(false) }
+    var repliesEoseReceived by remember(noteId) { mutableStateOf(false) }
+
     // Subscribe to the root note
     rememberSubscription(relayStatuses, noteId, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
@@ -110,6 +115,9 @@ fun ThreadScreen(
                         rootNote = event
                         levelCache[event.id] = 0
                     }
+                },
+                onEose = { _, _ ->
+                    rootNoteEoseReceived = true
                 },
             )
         } else {
@@ -126,6 +134,9 @@ fun ThreadScreen(
                 noteId = noteId,
                 onEvent = { event, _, _, _ ->
                     replyEventState.addItem(event)
+                },
+                onEose = { _, _ ->
+                    repliesEoseReceived = true
                 },
             )
         } else {
@@ -172,8 +183,15 @@ fun ThreadScreen(
 
         if (connectedRelays.isEmpty()) {
             LoadingState("Connecting to relays...")
-        } else if (rootNote == null) {
+        } else if (rootNote == null && !rootNoteEoseReceived) {
             LoadingState("Loading thread...")
+        } else if (rootNote == null && rootNoteEoseReceived) {
+            EmptyState(
+                title = "Note not found",
+                description = "This note may have been deleted or is not available from connected relays",
+                onRefresh = onBack,
+                refreshLabel = "Go back",
+            )
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -241,11 +259,21 @@ fun ThreadScreen(
                 }
 
                 // Empty state for no replies
-                if (replyEvents.isEmpty()) {
+                if (replyEvents.isEmpty() && repliesEoseReceived) {
                     item {
                         Spacer(Modifier.height(32.dp))
                         Text(
                             "No replies yet",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                } else if (replyEvents.isEmpty() && !repliesEoseReceived) {
+                    item {
+                        Spacer(Modifier.height(32.dp))
+                        Text(
+                            "Loading replies...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp),
