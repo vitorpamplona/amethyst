@@ -174,6 +174,11 @@ erie gespeichert</string>
     <string name="upload_error_voice_message_unexpected_state">Unerwarteter Upload-Status</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
     <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
+    <string name="voice_preset_none">Keine</string>
+    <string name="voice_preset_deep">Tief</string>
+    <string name="voice_preset_high">Hoch</string>
+    <string name="voice_anonymize_title">Anonymisieren</string>
+    <string name="voice_anonymize_description">Verändert die Tonhöhe deiner Stimme. Hinweis: einfache Tonhöhenänderungen können von entschlossenen Zuhörern möglicherweise rückgängig gemacht werden.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
     <string name="reply_here">"Hier antworten…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiert die Notiz-ID zum Teilen in die Zwischenablage</string>
@@ -1233,10 +1238,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
     <string name="kinds">Typen</string>
-    <string name="voice_preset_none">Keine</string>
-    <string name="voice_preset_deep">Tief</string>
-    <string name="voice_preset_high">Hoch</string>
-    <string name="voice_preset_neutral">Neutral</string>
-    <string name="voice_anonymize_title">Anonymisieren</string>
-    <string name="voice_anonymize_description">Verändert die Tonhöhe deiner Stimme. Hinweis: einfache Tonhöhenänderungen können von entschlossenen Zuhörern möglicherweise rückgängig gemacht werden.</string>
 </resources>
