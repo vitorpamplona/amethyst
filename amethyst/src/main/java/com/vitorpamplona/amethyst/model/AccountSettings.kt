@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -143,7 +145,8 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
-) {
+) : EphemeralChatRepository,
+    PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())
 
@@ -389,7 +392,9 @@ class AccountSettings(
         }
     }
 
-    fun updateChannelListTo(newChannelList: ChannelListEvent?) {
+    override fun channelList() = backupChannelList
+
+    override fun updateChannelListTo(newChannelList: ChannelListEvent?) {
         if (newChannelList == null || newChannelList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
@@ -429,7 +434,9 @@ class AccountSettings(
         }
     }
 
-    fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?) {
+    override fun ephemeralChatList() = backupEphemeralChatList
+
+    override fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?) {
         if (newEphemeralChatList == null || newEphemeralChatList.tags.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.

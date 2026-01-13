@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -81,7 +84,16 @@ interface ICacheProvider {
      * @param hexKey The note's ID in hex format
      * @return The Note (existing or newly created)
      */
-    fun checkGetOrCreateNote(hexKey: HexKey): Any?
+    fun checkGetOrCreateNote(hexKey: HexKey): Note?
+
+    /**
+     * Gets an existing AddressableNote or creates a new one if it doesn't exist.
+     * Used by ThreadAssembler for building thread structures.
+     *
+     * @param address The note's ID in address format
+     * @return The AddressableNote (existing or newly created)
+     */
+    fun getOrCreateAddressableNote(key: Address): AddressableNote
 
     /**
      * Gets the event stream for cache updates.
@@ -99,4 +111,6 @@ interface ICacheProvider {
      * @return true if the event has been deleted, false otherwise
      */
     fun hasBeenDeleted(event: Any): Boolean
+
+    fun justConsumeMyOwnEvent(event: Event): Boolean
 }

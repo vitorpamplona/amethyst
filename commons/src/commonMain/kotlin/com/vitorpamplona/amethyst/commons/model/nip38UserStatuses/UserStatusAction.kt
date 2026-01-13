@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip38UserStatuses
+package com.vitorpamplona.amethyst.commons.model.nip38UserStatuses
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.quartz.nip01Core.core.Event

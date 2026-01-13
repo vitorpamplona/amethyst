@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip28PublicChats
+package com.vitorpamplona.amethyst.commons.model.nip28PublicChats
 
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -43,12 +42,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
+interface PublicChatListRepository {
+    fun channelList(): ChannelListEvent?
+
+    fun updateChannelListTo(newChannelList: ChannelListEvent?)
+}
+
 class PublicChatListState(
     val signer: NostrSigner,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     val decryptionCache: PublicChatListDecryptionCache,
     val scope: CoroutineScope,
-    val settings: AccountSettings,
+    val settings: PublicChatListRepository,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val publicChatListNote = cache.getOrCreateAddressableNote(getChannelListAddress())
@@ -60,7 +65,7 @@ class PublicChatListState(
     fun getChannelList(): ChannelListEvent? = publicChatListNote.event as? ChannelListEvent
 
     suspend fun publicChatListWithBackup(note: Note): Set<ChannelTag> {
-        val event = note.event as? ChannelListEvent ?: settings.backupChannelList
+        val event = note.event as? ChannelListEvent ?: settings.channelList()
         return event?.let { decryptionCache.channelSet(it) } ?: emptySet()
     }
 
@@ -124,11 +129,11 @@ class PublicChatListState(
     }
 
     init {
-        settings.backupChannelList?.let { event ->
+        settings.channelList()?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved channel list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 

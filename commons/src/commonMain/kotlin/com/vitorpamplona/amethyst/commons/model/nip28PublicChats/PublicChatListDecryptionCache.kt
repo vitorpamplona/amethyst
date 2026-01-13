@@ -18,24 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.emphChat
+package com.vitorpamplona.amethyst.commons.model.nip28PublicChats
 
-import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
-import com.vitorpamplona.quartz.experimental.ephemChat.list.roomSet
-import com.vitorpamplona.quartz.experimental.ephemChat.list.rooms
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.channelSet
+import com.vitorpamplona.quartz.nip28PublicChat.list.channels
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
 
-class EphemeralChatListDecryptionCache(
+class PublicChatListDecryptionCache(
     val signer: NostrSigner,
 ) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<EphemeralChatListEvent>(signer)
+    val cachedPrivateLists = PrivateTagArrayEventCache<ChannelListEvent>(signer)
 
-    fun cachedRoomSet(event: EphemeralChatListEvent) = cachedPrivateLists.mergeTagListPrecached(event).roomSet()
+    fun cachedChannelSet(event: ChannelListEvent) = cachedPrivateLists.mergeTagListPrecached(event).channelSet()
 
-    fun cachedRooms(event: EphemeralChatListEvent) = cachedPrivateLists.mergeTagListPrecached(event).rooms()
+    fun cachedChannels(event: ChannelListEvent) = cachedPrivateLists.mergeTagListPrecached(event).channels()
 
-    suspend fun roomSet(event: EphemeralChatListEvent) = cachedPrivateLists.mergeTagList(event).roomSet()
+    suspend fun channelSet(event: ChannelListEvent) = cachedPrivateLists.mergeTagList(event).channelSet()
 
-    suspend fun rooms(event: EphemeralChatListEvent) = cachedPrivateLists.mergeTagList(event).rooms()
+    suspend fun channels(event: ChannelListEvent) = cachedPrivateLists.mergeTagList(event).channels()
 }

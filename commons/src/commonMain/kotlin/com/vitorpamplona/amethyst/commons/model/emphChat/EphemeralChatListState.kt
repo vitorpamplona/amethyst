@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.emphChat
+package com.vitorpamplona.amethyst.commons.model.emphChat
 
-import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -41,12 +40,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
+interface EphemeralChatRepository {
+    fun ephemeralChatList(): EphemeralChatListEvent?
+
+    fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?)
+}
+
 class EphemeralChatListState(
     val signer: NostrSigner,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     val decryptionCache: EphemeralChatListDecryptionCache,
     val scope: CoroutineScope,
-    val settings: AccountSettings,
+    val settings: EphemeralChatRepository,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val ephemeralChatListNote = cache.getOrCreateAddressableNote(getEphemeralChatListAddress())
@@ -58,7 +63,7 @@ class EphemeralChatListState(
     fun getEphemeralChatList(): EphemeralChatListEvent? = ephemeralChatListNote.event as? EphemeralChatListEvent
 
     suspend fun ephemeralChatListWithBackup(note: Note): Set<RoomId> {
-        val event = note.event as? EphemeralChatListEvent ?: settings.backupEphemeralChatList
+        val event = note.event as? EphemeralChatListEvent ?: settings.ephemeralChatList()
         return event?.let { decryptionCache.roomSet(it) } ?: emptySet()
     }
 
@@ -109,11 +114,11 @@ class EphemeralChatListState(
     }
 
     init {
-        settings.backupEphemeralChatList?.let { event ->
+        settings.ephemeralChatList()?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                LocalCache.justConsumeMyOwnEvent(event)
+                cache.justConsumeMyOwnEvent(event)
             }
         }
 
