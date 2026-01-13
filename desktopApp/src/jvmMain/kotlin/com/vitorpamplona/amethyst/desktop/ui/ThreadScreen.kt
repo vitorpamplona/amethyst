@@ -50,16 +50,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
-import com.vitorpamplona.amethyst.commons.subscriptions.createNoteSubscription
-import com.vitorpamplona.amethyst.commons.subscriptions.createThreadRepliesSubscription
-import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
-import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
-import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
+import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.createNoteSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**

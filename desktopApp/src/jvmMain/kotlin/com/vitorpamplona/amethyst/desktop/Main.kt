@@ -73,12 +73,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.commons.account.AccountManager
-import com.vitorpamplona.amethyst.commons.account.AccountState
-import com.vitorpamplona.amethyst.commons.ui.profile.ProfileInfoCard
-import com.vitorpamplona.amethyst.commons.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
+import com.vitorpamplona.amethyst.desktop.account.AccountManager
+import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
@@ -86,6 +84,8 @@ import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
 import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
+import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
+import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

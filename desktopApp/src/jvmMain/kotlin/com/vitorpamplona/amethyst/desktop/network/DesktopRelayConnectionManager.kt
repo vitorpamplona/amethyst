@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.network
 
-import com.vitorpamplona.amethyst.commons.network.RelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 
 /**

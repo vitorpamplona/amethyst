@@ -18,32 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.network
+package com.vitorpamplona.amethyst.desktop.ui
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-/**
- * Represents the connection status of a Nostr relay.
- * Used by both Android and Desktop apps.
- */
-data class RelayStatus(
-    val url: NormalizedRelayUrl,
-    val connected: Boolean,
-    val pingMs: Int? = null,
-    val compressed: Boolean = false,
-    val error: String? = null,
-)
+import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
 /**
- * Default relay URLs for Nostr connectivity.
+ * Extension to convert Event to NoteDisplayData for the shared NoteCard.
  */
-object DefaultRelays {
-    val RELAYS =
-        listOf(
-            "wss://relay.damus.io",
-            "wss://relay.nostr.band",
-            "wss://nos.lol",
-            "wss://relay.snort.social",
-            "wss://nostr.wine",
-        )
+fun Event.toNoteDisplayData(): NoteDisplayData {
+    val npub =
+        try {
+            pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
+        } catch (e: Exception) {
+            pubKey.take(16) + "..."
+        }
+
+    return NoteDisplayData(
+        id = id,
+        pubKeyHex = pubKey,
+        pubKeyDisplay = npub,
+        content = content,
+        createdAt = createdAt,
+    )
 }

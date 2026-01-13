@@ -38,10 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.SharedRes
-import com.vitorpamplona.amethyst.commons.account.AccountManager
-import com.vitorpamplona.amethyst.commons.account.AccountState
-import com.vitorpamplona.amethyst.commons.ui.auth.LoginCard
-import com.vitorpamplona.amethyst.commons.ui.auth.NewKeyWarningCard
+import com.vitorpamplona.amethyst.desktop.account.AccountManager
+import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.ui.auth.LoginCard
+import com.vitorpamplona.amethyst.desktop.ui.auth.NewKeyWarningCard
 import dev.icerock.moko.resources.compose.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

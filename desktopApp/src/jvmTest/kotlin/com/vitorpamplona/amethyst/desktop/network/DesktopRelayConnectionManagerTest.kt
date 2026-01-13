@@ -44,7 +44,7 @@ class DesktopRelayConnectionManagerTest {
     fun testRelayConnectionManagerInheritsFromBaseClass() {
         val manager = DesktopRelayConnectionManager()
         assertTrue(
-            manager is com.vitorpamplona.amethyst.commons.network.RelayConnectionManager,
+            manager is RelayConnectionManager,
             "DesktopRelayConnectionManager should extend RelayConnectionManager",
         )
     }

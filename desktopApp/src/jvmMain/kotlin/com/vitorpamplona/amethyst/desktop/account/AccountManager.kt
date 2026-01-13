@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.account
+package com.vitorpamplona.amethyst.desktop.account
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
 
 sealed class AccountState {
     data object LoggedOut : AccountState()
@@ -221,8 +222,8 @@ class AccountManager private constructor(
         getPrefsFile().delete()
     }
 
-    private fun getPrefsFile(): java.io.File {
+    private fun getPrefsFile(): File {
         val homeDir = System.getProperty("user.home")
-        return java.io.File(homeDir, ".amethyst/last_account.txt")
+        return File(homeDir, ".amethyst/last_account.txt")
     }
 }

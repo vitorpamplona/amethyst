@@ -18,29 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.desktop.network
 
-import com.vitorpamplona.amethyst.commons.ui.note.NoteDisplayData
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
- * Extension to convert Event to NoteDisplayData for the shared NoteCard.
+ * Represents the connection status of a Nostr relay.
+ * Used by both Android and Desktop apps.
  */
-fun Event.toNoteDisplayData(): NoteDisplayData {
-    val npub =
-        try {
-            pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
-        } catch (e: Exception) {
-            pubKey.take(16) + "..."
-        }
+data class RelayStatus(
+    val url: NormalizedRelayUrl,
+    val connected: Boolean,
+    val pingMs: Int? = null,
+    val compressed: Boolean = false,
+    val error: String? = null,
+)
 
-    return NoteDisplayData(
-        id = id,
-        pubKeyHex = pubKey,
-        pubKeyDisplay = npub,
-        content = content,
-        createdAt = createdAt,
-    )
+/**
+ * Default relay URLs for Nostr connectivity.
+ */
+object DefaultRelays {
+    val RELAYS =
+        listOf(
+            "wss://relay.damus.io",
+            "wss://relay.nostr.band",
+            "wss://nos.lol",
+            "wss://relay.snort.social",
+            "wss://nostr.wine",
+        )
 }

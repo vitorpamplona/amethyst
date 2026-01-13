@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.subscriptions
+package com.vitorpamplona.amethyst.desktop.subscriptions
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.network.RelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter

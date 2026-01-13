@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.network
+package com.vitorpamplona.amethyst.desktop.network
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -65,7 +65,7 @@ open class RelayConnectionManager(
     }
 
     fun addRelay(url: String): NormalizedRelayUrl? {
-        val normalized = RelayUrlNormalizer.normalizeOrNull(url) ?: return null
+        val normalized = RelayUrlNormalizer.Companion.normalizeOrNull(url) ?: return null
         updateRelayStatus(normalized) { it.copy(connected = false, error = null) }
         return normalized
     }
