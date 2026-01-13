@@ -184,6 +184,12 @@
     <string name="upload_error_voice_message_unexpected_state">Unexpected upload state</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 is not supported for voice messages yet</string>
     <string name="upload_error_voice_message_exception">Voice upload failed: %1$s</string>
+    <string name="voice_preset_none">None</string>
+    <string name="voice_preset_deep">Deep</string>
+    <string name="voice_preset_high">High</string>
+    <string name="voice_preset_neutral">Neutral</string>
+    <string name="voice_anonymize_title">Anonymize</string>
+    <string name="voice_anonymize_description">Alters your voice pitch. Note: basic pitch changes can potentially be reversed by determined listeners.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
     <string name="reply_here">"reply here.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>

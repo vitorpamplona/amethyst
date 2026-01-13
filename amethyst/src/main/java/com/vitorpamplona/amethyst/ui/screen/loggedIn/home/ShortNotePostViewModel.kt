@@ -53,6 +53,8 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -193,6 +195,31 @@ open class ShortNotePostViewModel :
     var voiceMetadata by mutableStateOf<AudioMeta?>(null)
     var voiceSelectedServer by mutableStateOf<ServerName?>(null)
     var voiceOrchestrator by mutableStateOf<UploadOrchestrator?>(null)
+
+    // Voice Anonymization
+    private val voiceAnonymization =
+        VoiceAnonymizationController(
+            scope = viewModelScope,
+            logTag = "ShortNotePostViewModel",
+            onError = { error ->
+                accountViewModel.toastManager.toast(
+                    stringRes(Amethyst.instance.appContext, R.string.error),
+                    error.message ?: "Voice anonymization failed",
+                )
+            },
+        )
+
+    val activeFile: java.io.File?
+        get() = voiceAnonymization.activeFile(voiceLocalFile)
+
+    val activeWaveform: List<Float>?
+        get() = voiceAnonymization.activeWaveform(voiceRecording?.amplitudes)
+
+    val selectedPreset: VoicePreset
+        get() = voiceAnonymization.selectedPreset
+
+    val processingPreset: VoicePreset?
+        get() = voiceAnonymization.processingPreset
 
     // Polls
     var canUsePoll by mutableStateOf(false)
@@ -794,6 +821,7 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -922,7 +950,7 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage
+            return !isUploadingVoice && !isUploadingImage && processingPreset == null
         }
 
         // Regular text/media posts require text
@@ -951,10 +979,12 @@ open class ShortNotePostViewModel :
     }
 
     fun selectVoiceRecording(recording: RecordingResult) {
-        // Delete any existing temp file before replacing
+        // Cancel any ongoing processing and delete existing files
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
+        voiceMetadata = null
     }
 
     fun getVoicePreviewMetadata(): AudioMeta? =
@@ -967,7 +997,12 @@ open class ShortNotePostViewModel :
             )
         }
 
+    fun selectPreset(preset: VoicePreset) {
+        voiceAnonymization.selectPreset(preset, voiceLocalFile)
+    }
+
     fun removeVoiceMessage() {
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -995,6 +1030,8 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         val recording = voiceRecording ?: return
+        val fileToUpload = activeFile ?: recording.file
+        val waveform = activeWaveform ?: recording.amplitudes
         val appContext = Amethyst.instance.appContext
         val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
         val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
@@ -1006,7 +1043,7 @@ open class ShortNotePostViewModel :
         isUploadingVoice = true
 
         try {
-            val uri = android.net.Uri.fromFile(recording.file)
+            val uri = android.net.Uri.fromFile(fileToUpload)
             val orchestrator = UploadOrchestrator()
             voiceOrchestrator = orchestrator
 
@@ -1033,10 +1070,11 @@ open class ShortNotePostViewModel :
                                     mimeType = recording.mimeType,
                                     hash = orchestratorResult.fileHeader.hash,
                                     duration = recording.duration,
-                                    waveform = recording.amplitudes,
+                                    waveform = waveform,
                                 )
                             // Delete the local file after successful upload
                             deleteVoiceLocalFile()
+                            voiceAnonymization.deleteDistortedFiles()
                             voiceLocalFile = null
                             voiceRecording = null
                         }

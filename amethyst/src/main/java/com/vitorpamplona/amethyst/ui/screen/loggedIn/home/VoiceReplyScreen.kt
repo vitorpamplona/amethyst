@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.actions.uploads.formatSecondsToTime
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -153,15 +154,26 @@ private fun VoiceReplyScreenBody(
             UploadProgressIndicator(orchestrator)
         } ?: run {
             viewModel.getVoicePreviewMetadata()?.let { metadata ->
+                val displayMetadata =
+                    metadata.copy(
+                        waveform = viewModel.activeWaveform ?: metadata.waveform,
+                    )
                 VoiceMessagePreview(
-                    voiceMetadata = metadata,
-                    localFile = viewModel.voiceLocalFile,
+                    voiceMetadata = displayMetadata,
+                    localFile = viewModel.activeFile,
                     onRemove = {
                         viewModel.cancel()
                         nav.popBack()
                     },
                 )
             }
+
+            // Voice anonymization section
+            VoiceAnonymizationSection(
+                selectedPreset = viewModel.selectedPreset,
+                processingPreset = viewModel.processingPreset,
+                onPresetSelected = { viewModel.selectPreset(it) },
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

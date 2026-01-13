@@ -1228,4 +1228,10 @@
     <string name="follow_set_delete">Smazat seznam</string>
     <string name="follow_pack_delete">Smazat sadu doporučení</string>
     <string name="kinds">Typy</string>
+    <string name="voice_preset_none">Žádný</string>
+    <string name="voice_preset_deep">Hluboký</string>
+    <string name="voice_preset_high">Vysoký</string>
+    <string name="voice_preset_neutral">Neutrální</string>
+    <string name="voice_anonymize_title">Anonymizovat</string>
+    <string name="voice_anonymize_description">Upravuje výšku vašeho hlasu. Poznámka: základní změny výšky hlasu mohou být odhodlanými posluchači potenciálně zpětně rozpoznány.</string>
 </resources>

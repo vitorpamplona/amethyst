@@ -1228,4 +1228,10 @@
     <string name="follow_set_delete">Excluir lista</string>
     <string name="follow_pack_delete">Excluir pacote de recomendações</string>
     <string name="kinds">Tipos</string>
+    <string name="voice_preset_none">Nenhum</string>
+    <string name="voice_preset_deep">Grave</string>
+    <string name="voice_preset_high">Agudo</string>
+    <string name="voice_preset_neutral">Neutro</string>
+    <string name="voice_anonymize_title">Anonimizar</string>
+    <string name="voice_anonymize_description">Altera o tom da sua voz. Nota: alterações básicas de tom podem potencialmente ser revertidas por ouvintes determinados.</string>
 </resources>
