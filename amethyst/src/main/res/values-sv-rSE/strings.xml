@@ -175,6 +175,7 @@
     <string name="voice_preset_none">Ingen</string>
     <string name="voice_preset_deep">Djup</string>
     <string name="voice_preset_high">Hög</string>
+    <string name="voice_preset_neutral">Neutral</string>
     <string name="voice_anonymize_title">Anonymisera</string>
     <string name="voice_anonymize_description">Ändrar tonhöjden på din röst. Obs: enkla förändringar av tonhöjd kan potentiellt återskapas av målmedvetna lyssnare.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren har inte en Lightningadressinställning för att ta emot sats</string>
