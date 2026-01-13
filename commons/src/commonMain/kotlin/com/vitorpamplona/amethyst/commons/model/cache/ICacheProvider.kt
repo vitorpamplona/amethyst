@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -60,7 +61,7 @@ interface ICacheProvider {
      * @param predicate Filter function for counting users
      * @return Count of users matching the predicate
      */
-    fun countUsers(predicate: (String, Any) -> Boolean): Int
+    fun countUsers(predicate: (String, User) -> Boolean): Int
 
     /**
      * Gets a Note if it exists in cache.

@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
@@ -51,7 +51,6 @@ class User(
     val pubkeyHex: String,
     val nip65RelayListNote: Note,
     val dmRelayListNote: Note,
-    private val cacheProvider: ICacheProvider? = null,
 ) {
     private var reports: UserReportCache? = null
     private var cards: UserCardsCache? = null
@@ -120,8 +119,8 @@ class User(
 
     fun profilePicture(): String? = info?.picture
 
-    fun updateContactList(event: ContactListEvent) {
-        if (event.id == latestContactList?.id) return
+    fun updateContactList(event: ContactListEvent): Set<HexKey> {
+        if (event.id == latestContactList?.id) return emptySet()
 
         val oldContactListEvent = latestContactList
         latestContactList = event
@@ -129,20 +128,9 @@ class User(
         // Update following of the current user
         flowSet?.follows?.invalidateData()
 
-        // Update Followers of the past user list
-        // Update Followers of the new contact list
-        (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
-            (cacheProvider?.getUserIfExists(it) as? User)
-                ?.flowSet
-                ?.followers
-                ?.invalidateData()
-        }
-        (latestContactList)?.unverifiedFollowKeySet()?.forEach {
-            (cacheProvider?.getUserIfExists(it) as? User)
-                ?.flowSet
-                ?.followers
-                ?.invalidateData()
-        }
+        val affectedUsers = event.verifiedFollowKeySet() + (oldContactListEvent?.verifiedFollowKeySet() ?: emptySet())
+
+        return affectedUsers
     }
 
     fun addZap(
@@ -216,11 +204,6 @@ class User(
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
 
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
-
-    fun transientFollowerCount(): Int =
-        cacheProvider?.countUsers { _, it ->
-            (it as? User)?.latestContactList?.isTaggedUser(pubkeyHex) ?: false
-        } ?: 0
 
     fun reportsOrNull(): UserReportCache? = reports
 

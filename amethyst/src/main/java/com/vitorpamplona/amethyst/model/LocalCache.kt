@@ -324,7 +324,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         return users.get(key)
     }
 
-    override fun countUsers(predicate: (String, Any) -> Boolean): Int {
+    override fun countUsers(predicate: (String, User) -> Boolean): Int {
         var count = 0
         users.forEach { key, user ->
             if (predicate(key, user)) count++
@@ -531,8 +531,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         // avoids processing empty contact lists.
         if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty() && (wasVerified || justVerify(event))) {
-            user.updateContactList(event)
+            val needsToUpdateFollowers = user.updateContactList(event)
             // Log.d("CL", "Consumed contact list ${user.toNostrUri()} ${event.relays()?.size}")
+
+            needsToUpdateFollowers.forEach {
+                getUserIfExists(it)?.flowSet?.followers?.invalidateData()
+            }
 
             updateObservables(event)
 

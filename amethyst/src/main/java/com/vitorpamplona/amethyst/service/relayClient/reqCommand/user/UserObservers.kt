@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -392,7 +393,9 @@ fun observeUserFollowerCount(
                 .followers.stateFlow
                 .sample(200)
                 .mapLatest { userState ->
-                    userState.user.transientFollowerCount()
+                    LocalCache.countUsers { _, user ->
+                        user.latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
+                    }
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }
