@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
+import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListD
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
-import com.vitorpamplona.amethyst.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
@@ -571,7 +571,8 @@ class Account(
     suspend fun report(
         user: User,
         type: ReportType,
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, userProfile(), signer))
+        content: String = "",
+    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
 
     suspend fun delete(note: Note) = delete(listOf(note))
 

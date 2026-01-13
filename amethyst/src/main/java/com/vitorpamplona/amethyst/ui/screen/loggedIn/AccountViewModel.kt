@@ -701,9 +701,10 @@ class AccountViewModel(
     fun report(
         user: User,
         type: ReportType,
+        content: String = "",
     ) {
         launchSigner {
-            account.report(user, type)
+            account.report(user, type, content)
             account.hideUser(user.pubkeyHex)
         }
     }

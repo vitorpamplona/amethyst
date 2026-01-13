@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip56Reports
+package com.vitorpamplona.amethyst.commons.model.nip56Reports
 
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -31,6 +31,7 @@ class ReportAction {
         suspend fun report(
             user: User,
             type: ReportType,
+            content: String = "",
             by: User,
             signer: NostrSigner,
         ): ReportEvent? {
@@ -39,7 +40,7 @@ class ReportAction {
                 return null
             }
 
-            val template = ReportEvent.build(user.pubkeyHex, type)
+            val template = ReportEvent.build(user.pubkeyHex, type, content)
 
             return signer.sign(template)
         }
@@ -57,7 +58,7 @@ class ReportAction {
             }
 
             return note.event?.let {
-                signer.sign(ReportEvent.build(it, type))
+                signer.sign(ReportEvent.build(it, type, content))
             }
         }
     }

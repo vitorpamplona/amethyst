@@ -77,8 +77,9 @@ class ReportEvent(
         fun build(
             reportedPost: Event,
             type: ReportType,
+            comment: String = "",
             createdAt: Long = TimeUtils.now(),
-        ) = eventTemplate(KIND, "", createdAt) {
+        ) = eventTemplate(KIND, comment, createdAt) {
             alt(ALT_PREFIX + type.code)
             event(reportedPost.id, type)
             user(reportedPost.pubKey, type)
@@ -91,8 +92,9 @@ class ReportEvent(
         fun build(
             reportedUser: HexKey,
             type: ReportType,
+            comment: String = "",
             createdAt: Long = TimeUtils.now(),
-        ) = eventTemplate(KIND, "", createdAt) {
+        ) = eventTemplate(KIND, comment, createdAt) {
             alt(ALT_PREFIX + type.code)
             user(reportedUser, type)
         }
