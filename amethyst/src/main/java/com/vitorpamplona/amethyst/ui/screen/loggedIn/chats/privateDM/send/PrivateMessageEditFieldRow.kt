@@ -127,7 +127,6 @@ fun PrivateMessageEditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithEmoji,
                 channelScreenModel::autocompleteWithEmojiUrl,
-                accountViewModel,
             )
         }
 

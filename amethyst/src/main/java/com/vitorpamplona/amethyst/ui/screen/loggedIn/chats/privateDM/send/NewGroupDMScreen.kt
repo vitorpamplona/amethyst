@@ -311,7 +311,6 @@ fun GroupDMScreenContent(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                accountViewModel,
                 Modifier.heightIn(0.dp, 300.dp),
             )
         }

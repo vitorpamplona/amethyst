@@ -104,7 +104,6 @@ fun EditFieldRow(
                 it,
                 channelScreenModel::autocompleteWithEmoji,
                 channelScreenModel::autocompleteWithEmojiUrl,
-                accountViewModel,
             )
         }
 

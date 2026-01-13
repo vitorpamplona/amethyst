@@ -327,7 +327,6 @@ private fun NewProductBody(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                accountViewModel,
                 modifier = Modifier.heightIn(0.dp, 300.dp),
             )
         }

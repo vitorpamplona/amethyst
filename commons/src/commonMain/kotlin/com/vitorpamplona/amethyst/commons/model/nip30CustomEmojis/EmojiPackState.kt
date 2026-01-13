@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip30CustomEmojis
+package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -43,12 +42,12 @@ import kotlinx.coroutines.flow.transformLatest
 
 class EmojiPackState(
     val signer: NostrSigner,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     val scope: CoroutineScope,
 ) {
     class EmojiMedia(
         val code: String,
-        val link: MediaUrlImage,
+        val link: String,
     )
 
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
@@ -84,7 +83,7 @@ class EmojiPackState(
 
     fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> =
         pack.taggedEmojis().map {
-            EmojiMedia(it.code, MediaUrlImage(it.url))
+            EmojiMedia(it.code, it.url)
         }
 
     fun mergePack(list: Array<NoteState>): List<EmojiMedia> =

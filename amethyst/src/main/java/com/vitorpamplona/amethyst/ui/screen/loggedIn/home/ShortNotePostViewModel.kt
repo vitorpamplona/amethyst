@@ -36,11 +36,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -719,7 +719,7 @@ open class ShortNotePostViewModel :
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
         }
     }
 
@@ -929,11 +929,11 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmojiUrl(item: EmojiMedia) {
-        val wordToInsert = item.link.url + " "
+        val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link.url) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link.url)
+            iMetaAttachments.downloadAndPrepare(item.link) {
+                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 

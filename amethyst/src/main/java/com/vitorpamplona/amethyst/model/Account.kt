@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
