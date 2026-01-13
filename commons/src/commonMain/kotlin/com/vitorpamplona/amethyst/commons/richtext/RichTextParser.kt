@@ -140,7 +140,7 @@ class RichTextParser {
         val imageUrls = imagesForPager.filterValues { it is MediaUrlImage }.keys
         val videoUrls = imagesForPager.filterValues { it is MediaUrlVideo }.keys
 
-        val emojiMap = CustomEmoji.createEmojiMap(tags)
+        val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
         val segments = findTextSegments(content, imageUrls, videoUrls, urlSet, emojiMap, tags)
 

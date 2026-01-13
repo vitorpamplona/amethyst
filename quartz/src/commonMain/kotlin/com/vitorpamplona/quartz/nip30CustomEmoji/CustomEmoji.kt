@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -32,10 +31,10 @@ class CustomEmoji {
 
         fun fastMightContainEmoji(
             input: String,
-            allTags: ImmutableListOfLists<String>?,
+            allTags: Array<Array<String>>?,
         ): Boolean {
             if (allTags == null) return false
-            if (allTags.lists.any { it.size > 2 && it[0] == EmojiUrlTag.TAG_NAME }) return true
+            if (allTags.any { it.size > 2 && it[0] == EmojiUrlTag.TAG_NAME }) return true
             return input.contains(":")
         }
 
@@ -47,7 +46,7 @@ class CustomEmoji {
             return input.contains(":")
         }
 
-        fun createEmojiMap(tags: ImmutableListOfLists<String>): Map<String, String> = tags.lists.filter { it.size > 2 && it[0] == EmojiUrlTag.TAG_NAME }.associate { ":${it[1]}:" to it[2] }
+        fun createEmojiMap(tags: Array<Array<String>>): Map<String, String> = tags.filter { it.size > 2 && it[0] == EmojiUrlTag.TAG_NAME }.associate { ":${it[1]}:" to it[2] }
 
         fun findAllEmojis(input: String): List<String> {
             val matcher = customEmojiPattern.findAll(input)
@@ -67,11 +66,11 @@ class CustomEmoji {
 
         fun assembleAnnotatedList(
             input: String,
-            allTags: ImmutableListOfLists<String>?,
+            tags: Array<Array<String>>?,
         ): ImmutableList<Renderable>? {
-            if (allTags == null || allTags.lists.isEmpty()) return null
+            if (tags == null || tags.isEmpty()) return null
 
-            val emojiPairs = createEmojiMap(allTags)
+            val emojiPairs = createEmojiMap(tags)
 
             return assembleAnnotatedList(input, emojiPairs)
         }

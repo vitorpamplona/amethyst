@@ -375,7 +375,7 @@ fun CustomEmojiChecker(
     onEmojiText: @Composable (ImmutableList<CustomEmoji.Renderable>) -> Unit,
 ) {
     val mayContainEmoji by remember(text, tags) {
-        mutableStateOf(CustomEmoji.fastMightContainEmoji(text, tags))
+        mutableStateOf(CustomEmoji.fastMightContainEmoji(text, tags?.lists))
     }
 
     if (mayContainEmoji) {
@@ -385,7 +385,7 @@ fun CustomEmojiChecker(
             }
 
         LaunchedEffect(text, tags) {
-            val newEmojiList = CustomEmoji.assembleAnnotatedList(text, tags)
+            val newEmojiList = CustomEmoji.assembleAnnotatedList(text, tags?.lists)
             if (newEmojiList != null) {
                 emojiList = newEmojiList
             }
