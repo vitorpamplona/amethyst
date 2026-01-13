@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
 
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive.ChannelMetadataAndLiveActivityWatcherSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.ChannelLoaderSubAssembler

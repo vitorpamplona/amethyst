@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.model.cache.IChannel
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
@@ -330,17 +330,6 @@ object LocalCache : ILocalCache, ICacheProvider {
             if (predicate(key, user)) count++
         }
         return count
-    }
-
-    override fun getAnyChannel(note: Any?): IChannel? {
-        val channelNote = note as? Note ?: return null
-        val channel = getAnyChannel(channelNote)
-        // Wrap Channel to implement IChannel interface
-        return channel?.let {
-            object : IChannel {
-                override fun relays(): List<Any>? = it.relays().toList()
-            }
-        }
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
@@ -1409,7 +1398,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun getAnyChannel(note: Note): Channel? = note.event?.let { getAnyChannel(it) }
+    override fun getAnyChannel(note: Note): Channel? = note.event?.let { getAnyChannel(it) }
 
     fun getAnyChannel(noteEvent: Event): Channel? =
         when (noteEvent) {

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -43,7 +45,7 @@ interface ICacheProvider {
      * @param note The note to look up channel for
      * @return The channel if found, null otherwise
      */
-    fun getAnyChannel(note: Any?): IChannel?
+    fun getAnyChannel(note: Note): Channel?
 
     /**
      * Gets a User by public key hex.
@@ -97,17 +99,4 @@ interface ICacheProvider {
      * @return true if the event has been deleted, false otherwise
      */
     fun hasBeenDeleted(event: Any): Boolean
-}
-
-/**
- * Minimal channel interface for relay resolution.
- * Full channel implementations (PublicChatChannel, LiveActivitiesChannel)
- * implement this interface.
- */
-interface IChannel {
-    /**
-     * Gets the relay URLs for this channel.
-     * @return List of relay URLs or null if none configured
-     */
-    fun relays(): List<Any>?
 }

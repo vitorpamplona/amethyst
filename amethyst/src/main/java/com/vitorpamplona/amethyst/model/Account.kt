@@ -1658,7 +1658,7 @@ class Account(
 
     fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
-    fun isHidden(user: User) = isHidden(user.pubkeyHex)
+    override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
     fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
 

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.emphChat
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
 @Stable

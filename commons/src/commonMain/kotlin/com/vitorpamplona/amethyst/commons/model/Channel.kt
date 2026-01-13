@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -32,6 +31,11 @@ import java.lang.ref.WeakReference
 
 @Stable
 abstract class Channel : NotesGatherer {
+    companion object {
+        val DefaultFeedOrder: Comparator<Note> =
+            compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex }
+    }
+
     val notes = LargeCache<HexKey, Note>()
     var lastNote: Note? = null
 
@@ -143,7 +147,7 @@ abstract class Channel : NotesGatherer {
         return toBeRemoved.toSet()
     }
 
-    fun pruneHiddenMessages(account: Account): Set<Note> {
+    fun pruneHiddenMessages(account: IAccount): Set<Note> {
         val hidden =
             notes
                 .filter { key, it ->

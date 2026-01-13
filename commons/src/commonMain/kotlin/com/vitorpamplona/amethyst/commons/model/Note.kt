@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -109,7 +110,6 @@ class AddressableNote(
 @Stable
 open class Note(
     val idHex: String,
-    private val cacheProvider: ICacheProvider? = null,
 ) : NotesGatherer {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
@@ -196,15 +196,28 @@ open class Note(
     }
 
     fun relayHintUrl(): NormalizedRelayUrl? {
-        val noteEvent = event
-        val communityPostRelays =
-            when (noteEvent) {
-                is CommunityDefinitionEvent -> noteEvent.relayUrls().ifEmpty { null }?.toSet()
-                is IsInPublicChatChannel -> cacheProvider?.getAnyChannel(this)?.relays()
-                else -> null
+        // checks Community Events first
+        when (val noteEvent = event) {
+            is CommunityDefinitionEvent -> noteEvent.relayUrls().firstOrNull()?.let { return it }
+            is IsInPublicChatChannel -> {
+                inGatherers?.forEach {
+                    if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
+                        it.relays().firstOrNull()?.let { return it }
+                    }
+                }
             }
-
-        if (!communityPostRelays.isNullOrEmpty()) return (communityPostRelays as? Collection<NormalizedRelayUrl?>)?.firstOrNull()
+            is LiveActivitiesEvent -> {
+                noteEvent.relays().ifEmpty { null }?.toSet()
+            }
+            is LiveActivitiesChatMessageEvent -> {
+                inGatherers?.forEach {
+                    if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
+                        it.relays().firstOrNull()?.let { return it }
+                    }
+                }
+            }
+            is EphemeralChatEvent -> noteEvent.roomId()?.let { return it.relayUrl }
+        }
 
         val currentOutbox = author?.outboxRelays()?.toSet()
 

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.privateChats
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.ListChange
+import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NotesGatherer
 import com.vitorpamplona.amethyst.model.User

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model.nip53LiveActivities
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
