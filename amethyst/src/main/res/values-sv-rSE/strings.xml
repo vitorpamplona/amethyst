@@ -172,6 +172,11 @@
     <string name="upload_error_voice_message_unexpected_state">Oväntat uppladdningstillstånd</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 stöds ännu inte för röstmeddelanden</string>
     <string name="upload_error_voice_message_exception">Uppladdning av röst misslyckades: %1$s</string>
+    <string name="voice_preset_none">Ingen</string>
+    <string name="voice_preset_deep">Djup</string>
+    <string name="voice_preset_high">Hög</string>
+    <string name="voice_anonymize_title">Anonymisera</string>
+    <string name="voice_anonymize_description">Ändrar tonhöjden på din röst. Obs: enkla förändringar av tonhöjd kan potentiellt återskapas av målmedvetna lyssnare.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Användaren har inte en Lightningadressinställning för att ta emot sats</string>
     <string name="reply_here">"svara här.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopierar antecknings-ID till urklipp för delning</string>
@@ -1227,10 +1232,4 @@
     <string name="follow_set_delete">Ta bort lista</string>
     <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
     <string name="kinds">Typer</string>
-    <string name="voice_preset_none">Ingen</string>
-    <string name="voice_preset_deep">Djup</string>
-    <string name="voice_preset_high">Hög</string>
-    <string name="voice_preset_neutral">Neutral</string>
-    <string name="voice_anonymize_title">Anonymisera</string>
-    <string name="voice_anonymize_description">Ändrar tonhöjden på din röst. Obs: enkla förändringar av tonhöjd kan potentiellt återskapas av målmedvetna lyssnare.</string>
 </resources>
