@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
-import com.vitorpamplona.amethyst.commons.base64Image.Base64Image
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
@@ -45,8 +44,8 @@ import kotlinx.collections.immutable.toPersistentList
 import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
-import java.util.regex.Pattern
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.text.iterator
 
 class RichTextParser {
     fun createMediaContent(
@@ -108,7 +107,7 @@ class RichTextParser {
 
         return urls.mapNotNullTo(LinkedHashSet(urls.size)) {
             if (it.originalUrl.contains("@")) {
-                if (Patterns.EMAIL_ADDRESS.matcher(it.originalUrl).matches()) {
+                if (Patterns.EMAIL_ADDRESS.matches(it.originalUrl)) {
                     null
                 } else {
                     it.originalUrl
@@ -201,7 +200,7 @@ class RichTextParser {
             }.toImmutableList()
     }
 
-    private fun isNumber(word: String) = numberPattern.matcher(word).matches()
+    private fun isNumber(word: String) = numberPattern.matches(word)
 
     private fun isPhoneNumberChar(c: Char): Boolean =
         when (c) {
@@ -225,7 +224,7 @@ class RichTextParser {
         return isPotentialNumber
     }
 
-    fun isDate(word: String): Boolean = shortDatePattern.matcher(word).matches() || longDatePattern.matcher(word).matches()
+    fun isDate(word: String): Boolean = shortDatePattern.matches(word) || longDatePattern.matches(word)
 
     private fun isArabic(text: String): Boolean = text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
 
@@ -239,7 +238,9 @@ class RichTextParser {
     ): Segment {
         if (word.isEmpty()) return RegularTextSegment(word)
 
-        if (word.startsWith("data:image/") && Base64Image.isBase64(word)) return Base64Segment(word)
+        if (word.startsWith("data:image/")) {
+            if (Patterns.BASE64_IMAGE.matches(word)) return Base64Segment(word)
+        }
 
         if (images.contains(word)) return ImageSegment(word)
 
@@ -260,25 +261,22 @@ class RichTextParser {
         if (EmojiCoder.isCoded(word)) return SecretEmoji(word)
 
         if (word.contains("@")) {
-            if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) return EmailSegment(word)
+            if (Patterns.EMAIL_ADDRESS.matches(word)) return EmailSegment(word)
         }
 
         if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
-            if (Patterns.PHONE.matcher(word).matches()) return PhoneSegment(word)
+            if (Patterns.PHONE.matches(word)) return PhoneSegment(word)
         }
 
         val indexOfPeriod = word.indexOf(".")
         if (indexOfPeriod > 0 && indexOfPeriod < word.length - 1) { // periods cannot be the last one
-            val schemelessMatcher = noProtocolUrlValidator.matcher(word)
-            if (schemelessMatcher.find()) {
-                val url = schemelessMatcher.group(1) // url
-                val additionalChars = schemelessMatcher.group(4).ifEmpty { null } // additional chars
-                val pattern =
-                    """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
-                        .toRegex(RegexOption.IGNORE_CASE)
-                if (pattern.find(word) != null && url != null) {
+            val schemelessMatcher = noProtocolUrlValidator.find(word)
+            if (schemelessMatcher != null) {
+                val url = schemelessMatcher.groups[1]?.value // url
+                val additionalChars = schemelessMatcher.groups[4]?.value?.ifEmpty { null } // additional chars
+                if (additionalUrlSchema.find(word) != null && url != null) {
                     return SchemelessUrlSegment(word, url, additionalChars)
                 }
             }
@@ -292,12 +290,11 @@ class RichTextParser {
         tags: ImmutableListOfLists<String>,
     ): Segment {
         // First #[n]
-
-        val matcher = tagIndex.matcher(word)
         try {
-            if (matcher.find()) {
-                val index = matcher.group(1)?.toInt()
-                val suffix = matcher.group(2)
+            val matcher = tagIndex.find(word)
+            if (matcher != null) {
+                val index = matcher.groups[1]?.value?.toInt()
+                val suffix = matcher.groups[2]?.value
 
                 if (index != null && index >= 0 && index < tags.lists.size) {
                     val tag = tags.lists[index]
@@ -317,13 +314,12 @@ class RichTextParser {
         }
 
         // Second #Amethyst
-        val hashtagMatcher = hashTagsPattern.matcher(word)
-
         try {
-            if (hashtagMatcher.find()) {
-                val hashtag = hashtagMatcher.group(1)
+            val hashtagMatcher = hashTagsPattern.find(word)
+            if (hashtagMatcher != null) {
+                val hashtag = hashtagMatcher.groups[1]?.value
                 if (hashtag != null) {
-                    return HashTagSegment(word, hashtag, hashtagMatcher.group(2).ifEmpty { null })
+                    return HashTagSegment(word, hashtag, hashtagMatcher.groups[2]?.value?.ifEmpty { null })
                 }
             }
         } catch (e: Exception) {
@@ -335,21 +331,25 @@ class RichTextParser {
     }
 
     companion object {
-        val longDatePattern: Pattern = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$")
-        val shortDatePattern: Pattern = Pattern.compile("^\\d{2}-\\d{2}-\\d{2}$")
-        val numberPattern: Pattern = Pattern.compile("^(-?[\\d.]+)([a-zA-Z%]*)$")
+        val longDatePattern: Regex = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+        val shortDatePattern: Regex = Regex("^\\d{2}-\\d{2}-\\d{2}$")
+        val numberPattern: Regex = Regex("^(-?[\\d.]+)([a-zA-Z%]*)$")
 
         // Android9 seems to have an issue starting this regex.
         val noProtocolUrlValidator =
             try {
-                Pattern.compile(
+                Regex(
                     "(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)",
                 )
             } catch (e: Exception) {
-                Pattern.compile(
+                Regex(
                     "(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)",
                 )
             }
+
+        val additionalUrlSchema =
+            """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
+                .toRegex(RegexOption.IGNORE_CASE)
 
         val HTTPRegex =
             "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?"
@@ -361,9 +361,9 @@ class RichTextParser {
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
 
-        val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
-        val hashTagsPattern: Pattern =
-            Pattern.compile("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", Pattern.CASE_INSENSITIVE)
+        val tagIndex = Regex("\\#\\[([0-9]+)\\](.*)")
+        val hashTagsPattern: Regex =
+            Regex("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", RegexOption.IGNORE_CASE)
 
         val acceptedNIP19schemes =
             listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1", "nembed") +
@@ -436,6 +436,6 @@ class RichTextParser {
             }
         }
 
-        fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matcher(url).matches()
+        fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matches(url)
     }
 }

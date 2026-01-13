@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import java.util.regex.Pattern
-
 /**
  * Pattern constants for email and phone validation.
  * These replace android.util.Patterns for KMP compatibility.
@@ -30,16 +28,21 @@ object Patterns {
     /**
      * Email address pattern from RFC 5322... From android.util.Patterns.
      */
-    val EMAIL_ADDRESS: Pattern =
-        Pattern.compile(
+    val EMAIL_ADDRESS: Regex =
+        Regex(
             "[a-zA-Z0-9+._%-]{1,256}@[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}(\\.[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25})+",
         )
 
     /**
      * Phone number pattern - matches common phone formats.
      */
-    val PHONE: Pattern =
-        Pattern.compile(
+    val PHONE: Regex =
+        Regex(
             "^[+]?[(]?[0-9]{1,4}[)]?[-\\s./0-9]*\$",
+        )
+
+    val BASE64_IMAGE: Regex =
+        Regex(
+            "data:image/(${RichTextParser.imageExtensions.joinToString(separator = "|")});base64,([a-zA-Z0-9+/]+={0,2})",
         )
 }

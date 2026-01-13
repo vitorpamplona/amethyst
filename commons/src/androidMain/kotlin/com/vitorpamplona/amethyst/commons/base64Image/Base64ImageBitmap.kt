@@ -24,6 +24,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
+import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 import java.util.Base64
 
 fun Base64Image.toBitmap(content: String): Bitmap {

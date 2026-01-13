@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.base64Image
 
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
+import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 import java.io.ByteArrayInputStream
 import java.util.Base64
 import javax.imageio.ImageIO
