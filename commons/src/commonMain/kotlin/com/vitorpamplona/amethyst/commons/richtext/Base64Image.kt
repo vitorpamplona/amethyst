@@ -18,22 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
+package com.vitorpamplona.amethyst.commons.richtext
 
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import com.vitorpamplona.amethyst.commons.richtext.Base64Image
-import java.io.ByteArrayInputStream
-import javax.imageio.ImageIO
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import java.util.Base64
 
-/**
- * Converts a base64 image data URI to a PlatformImage (BufferedImage wrapper).
- */
-fun Base64Image.toPlatformImage(content: String): PlatformImage {
-    val byteArray = parse(content)
+object Base64Image {
+    val pattern = Patterns.BASE64_IMAGE
 
-    val bufferedImage =
-        ImageIO.read(ByteArrayInputStream(byteArray))
-            ?: throw Exception("Unable to decode base64 image: $content")
-    return bufferedImage.toPlatformImage()
+    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
+
+    fun parse(content: String): ByteArray {
+        val matcher = pattern.find(content)
+        if (matcher != null) {
+            val base64String = matcher.groups[2]?.value
+            val byteArray = Base64.getDecoder().decode(base64String)
+            return byteArray
+        }
+
+        throw Exception("Unable to convert base64 to image $content")
+    }
 }
