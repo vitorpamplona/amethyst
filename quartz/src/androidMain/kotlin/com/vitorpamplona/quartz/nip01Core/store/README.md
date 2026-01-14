@@ -11,14 +11,20 @@ consistency can be sacrificed, but a database that will never crash and never go
   Stores Nostr events and retrieves using Nostr filters
 
 - **Replaceable Events**:
+  - Forces unique constraint by kind, pubkey
   - Old versions are removed when newer versions arrive.
   - Old versions are blocked if newer versions exist.
+
+- **Addressable Events**:
+    - Forces unique constraint by kind, pubkey, d-tag
+    - Old versions are removed when newer versions arrive.
+    - Old versions are blocked if newer versions exist.
 
 - **Ephemeral Events**
   - Ephemeral events never stored.
 
 - **NIP-40 Expirations**
-  - Prunes expired events.
+  - Deletes expired events.
   - Blocks expired events from being reinserted
 
 - **NIP-09 Deletion Events**
@@ -28,7 +34,8 @@ consistency can be sacrificed, but a database that will never crash and never go
   - GiftWraps are deleted by p-tag
 
 - **NIP-62 Right to Vanish**
-  - Supports deleting an entire user until the `created_at` for enhanced privacy
+  - Deletes all user events until the `created_at`
+  - Blocks vanished events from being re-inserted.
   - GiftWraps are deleted by p-tag
 
 - **NIP-45 Counts**:
