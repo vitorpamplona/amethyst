@@ -20,14 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.dTag
 
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-
 class DTag(
     val dId: String,
 ) {
-    fun countMemory(): Int = 1 * pointerSizeInBytes + dId.bytesUsedInMemory()
-
     fun toTagArray() = assemble(dId)
 
     companion object {

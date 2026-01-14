@@ -23,18 +23,12 @@ package com.vitorpamplona.quartz.nip51Lists.muteList.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class WordTag(
     val word: String,
 ) : MuteTag {
-    fun countMemory(): Int =
-        1 * pointerSizeInBytes + // 1 fields, 4 bytes each reference (32bit)
-            word.bytesUsedInMemory()
-
     override fun toTagArray() = assemble(word)
 
     override fun toTagIdOnly() = assemble(word)

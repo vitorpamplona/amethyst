@@ -51,8 +51,6 @@ class AppDefinitionEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PublishedAtProvider {
-    override fun countMemory(): Int = super.countMemory() + (cachedMetadata?.countMemory() ?: 8)
-
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     private var cachedMetadata: AppMetadata? = null

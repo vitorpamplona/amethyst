@@ -22,8 +22,6 @@ package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -51,26 +49,6 @@ class AppMetadata {
     var domain: String? = null
     var lud06: String? = null
     var lud16: String? = null
-
-    fun countMemory(): Int =
-        20 * pointerSizeInBytes + // 20 fields, 4 bytes for each reference
-            (name?.bytesUsedInMemory() ?: 0) +
-            (username?.bytesUsedInMemory() ?: 0) +
-            (displayName?.bytesUsedInMemory() ?: 0) +
-            (picture?.bytesUsedInMemory() ?: 0) +
-            (banner?.bytesUsedInMemory() ?: 0) +
-            (image?.bytesUsedInMemory() ?: 0) +
-            (website?.bytesUsedInMemory() ?: 0) +
-            (about?.bytesUsedInMemory() ?: 0) +
-            (subscription?.bytesUsedInMemory() ?: 0) +
-            (acceptsNutZaps?.bytesUsedInMemory() ?: 0) +
-            (supportsEncryption?.bytesUsedInMemory() ?: 0) +
-            (personalized?.bytesUsedInMemory() ?: 0) + // A Boolean has 8 bytes of header, plus 1 byte of payload, for a total of 9 bytes of information. The JVM then rounds it up to the next multiple of 8. so the one instance of java.lang.Boolean takes up 16 bytes of memory.
-            (amount?.bytesUsedInMemory() ?: 0) +
-            (nip05?.bytesUsedInMemory() ?: 0) +
-            (domain?.bytesUsedInMemory() ?: 0) +
-            (lud06?.bytesUsedInMemory() ?: 0) +
-            (lud16?.bytesUsedInMemory() ?: 0)
 
     fun anyName(): String? = displayName ?: name ?: username
 

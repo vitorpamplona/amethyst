@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 
 /**
  * Listens to NostrClient's onNotify messages from the relay
@@ -47,7 +48,7 @@ class RelaySpeedLogger(
                 msg: Message,
             ) {
                 if (msg is EventMessage) {
-                    current.increment(msg.event.kind, msg.subId, relay.url, msg.event.countMemory())
+                    current.increment(msg.event.kind, msg.subId, relay.url, msgStr.bytesUsedInMemory())
                 }
             }
         }

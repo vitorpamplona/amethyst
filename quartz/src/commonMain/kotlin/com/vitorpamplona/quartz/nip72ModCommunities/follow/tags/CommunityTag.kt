@@ -28,16 +28,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 class CommunityTag(
     val address: Address,
     val relayHint: NormalizedRelayUrl? = null,
 ) {
-    fun countMemory(): Int = 2 * pointerSizeInBytes + address.countMemory() + (relayHint?.url?.bytesUsedInMemory() ?: 0)
-
     fun toTag() = Address.assemble(address.kind, address.pubKeyHex, address.dTag)
 
     fun toTagArray() = assemble(address, relayHint)

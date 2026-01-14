@@ -32,9 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class ATag(
@@ -44,13 +42,6 @@ data class ATag(
     val relay: NormalizedRelayUrl? = null,
 ) {
     constructor(address: Address, relayHint: NormalizedRelayUrl? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
-
-    fun countMemory(): Int =
-        5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
-            8 + // kind
-            pubKeyHex.bytesUsedInMemory() +
-            dTag.bytesUsedInMemory() +
-            (relay?.url?.bytesUsedInMemory() ?: 0)
 
     fun toTag() = AddressSerializer.assemble(kind, pubKeyHex, dTag)
 

@@ -22,17 +22,13 @@ package com.vitorpamplona.quartz.nip48ProxyTags
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class ProxyTag(
     val id: String,
     val protocol: String,
 ) {
-    fun countMemory(): Int = 2 * pointerSizeInBytes + id.bytesUsedInMemory() + protocol.bytesUsedInMemory()
-
     fun toTagArray() = assemble(id, protocol)
 
     companion object {

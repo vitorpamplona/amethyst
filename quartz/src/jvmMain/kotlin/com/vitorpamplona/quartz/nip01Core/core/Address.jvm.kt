@@ -20,21 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-
 actual data class Address actual constructor(
     actual val kind: Kind,
     actual val pubKeyHex: HexKey,
     actual val dTag: String,
 ) : Comparable<Address> {
     actual fun toValue() = assemble(kind, pubKeyHex, dTag)
-
-    actual fun countMemory(): Int =
-        3 * pointerSizeInBytes +
-            8 + // kind
-            pubKeyHex.bytesUsedInMemory() +
-            dTag.bytesUsedInMemory()
 
     actual override fun compareTo(other: Address): Int {
         val result = kind.compareTo(other.kind)

@@ -30,19 +30,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 class UserTag(
     val pubKey: HexKey,
     val relayHint: NormalizedRelayUrl? = null,
 ) : MuteTag {
-    fun countMemory(): Int =
-        2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
-            pubKey.bytesUsedInMemory() +
-            (relayHint?.url?.bytesUsedInMemory() ?: 0)
-
     fun toNProfile(): String = NProfile.create(pubKey, relayHint?.let { listOf(it) } ?: emptyList())
 
     fun toNPub(): String = pubKey.hexToByteArray().toNpub()

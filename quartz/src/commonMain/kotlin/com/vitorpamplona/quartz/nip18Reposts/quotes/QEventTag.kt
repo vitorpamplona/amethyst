@@ -28,9 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class QEventTag(
@@ -43,12 +41,6 @@ data class QEventTag(
         this.relay = relayHint
         this.author = authorPubKeyHex
     }
-
-    fun countMemory(): Int =
-        3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
-            eventId.bytesUsedInMemory() +
-            (relay?.url?.bytesUsedInMemory() ?: 0) +
-            (author?.bytesUsedInMemory() ?: 0)
 
     override fun toTagArray() = assemble(eventId, relay, author)
 

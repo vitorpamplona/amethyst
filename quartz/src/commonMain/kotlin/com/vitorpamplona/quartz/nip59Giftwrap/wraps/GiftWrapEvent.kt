@@ -34,8 +34,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class GiftWrapEvent(
@@ -49,10 +47,6 @@ class GiftWrapEvent(
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var innerEventId: HexKey? = null
-
-    override fun countMemory(): Int =
-        super.countMemory() +
-            pointerSizeInBytes + (innerEventId?.bytesUsedInMemory() ?: 0)
 
     fun copyNoContent(): GiftWrapEvent {
         val copy =

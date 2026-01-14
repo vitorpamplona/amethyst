@@ -20,17 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-
 open class BunkerResponse(
     val id: String,
     val result: String?,
     val error: String?,
-) : BunkerMessage() {
-    override fun countMemory(): Int =
-        3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
-            id.bytesUsedInMemory() +
-            (result?.bytesUsedInMemory() ?: 0) +
-            (error?.bytesUsedInMemory() ?: 0)
-}
+) : BunkerMessage()
