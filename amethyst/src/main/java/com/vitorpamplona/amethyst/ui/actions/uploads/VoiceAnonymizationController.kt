@@ -77,9 +77,9 @@ class VoiceAnonymizationController(
         val file = originalFile ?: return
 
         processingJob?.cancel()
+        processingPreset = preset
         processingJob =
             scope.launch {
-                processingPreset = preset
                 try {
                     val anonymizer = VoiceAnonymizer()
                     val result = anonymizer.anonymize(file, preset)
