@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
+import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
@@ -226,6 +227,7 @@ private fun ReRecordButton(viewModel: VoiceReplyViewModel) {
             onRecordTaken = { recording ->
                 viewModel.selectRecording(recording)
             },
+            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         ) { isRecording, elapsedSeconds ->
             val contentColor =
                 if (isRecording) {

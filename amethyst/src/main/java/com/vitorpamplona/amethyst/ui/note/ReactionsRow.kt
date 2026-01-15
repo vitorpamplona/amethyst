@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
+import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -635,6 +636,7 @@ fun ReplyViaVoiceReaction(
                 )
             }
         },
+        maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
     ) { isRecording, elapsedSeconds ->
         if (voiceRecordingState != null) {
             SideEffect {
