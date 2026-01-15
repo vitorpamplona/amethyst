@@ -61,6 +61,7 @@ class VoiceAnonymizationController(
         preset: VoicePreset,
         originalFile: File?,
     ) {
+        Log.d(logTag, "selectPreset called with: ${preset.name}, pitchFactor: ${preset.pitchFactor}")
         if (processingPreset != null || preset == selectedPreset) return
 
         if (preset == VoicePreset.NONE) {
