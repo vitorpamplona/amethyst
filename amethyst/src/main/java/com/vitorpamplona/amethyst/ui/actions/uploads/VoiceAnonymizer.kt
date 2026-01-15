@@ -158,9 +158,7 @@ class VoiceAnonymizer {
                 }
             }
 
-            if (audioTrackIndex == -1 || format == null) {
-                throw IllegalStateException("No audio track found in file")
-            }
+            check(audioTrackIndex != -1 && format != null) { "No audio track found in file" }
 
             extractor.selectTrack(audioTrackIndex)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: "audio/mp4a-latm"
@@ -286,7 +284,9 @@ class VoiceAnonymizer {
                     return true
                 }
 
-                override fun processingFinished() {}
+                override fun processingFinished() {
+                    // No-op: no cleanup needed
+                }
             }
 
         val dispatcher =
@@ -310,7 +310,9 @@ class VoiceAnonymizer {
                     return true
                 }
 
-                override fun processingFinished() {}
+                override fun processingFinished() {
+                    // No-op: no cleanup needed
+                }
             }
         dispatcher.addAudioProcessor(progressProcessor)
 
@@ -484,5 +486,7 @@ private class FloatArrayAudioInputStream(
         return actualSkip.toLong() * 2
     }
 
-    override fun close() {}
+    override fun close() {
+        // No-op: no cleanup needed
+    }
 }
