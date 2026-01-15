@@ -126,7 +126,8 @@ class VoiceAnonymizer {
     ): File {
         val baseName = inputFile.nameWithoutExtension
         val presetSuffix = preset.name.lowercase()
-        return File(inputFile.parentFile, "${baseName}_$presetSuffix.mp4")
+        val parentDir = inputFile.parentFile ?: inputFile.absoluteFile.parentFile
+        return File(parentDir, "${baseName}_$presetSuffix.mp4")
     }
 
     private data class DecodedAudio(
