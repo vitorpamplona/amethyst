@@ -41,12 +41,26 @@ import java.io.File
 import java.nio.ByteOrder
 import kotlin.math.abs
 
+/**
+ * Result of voice anonymization processing.
+ *
+ * @property file The output audio file (AAC in MP4 container)
+ * @property waveform Amplitude data for waveform visualization (one value per second)
+ * @property duration Audio duration in seconds
+ */
 data class AnonymizedResult(
     val file: File,
     val waveform: List<Float>,
     val duration: Int,
 )
 
+/**
+ * Processes audio files to alter voice characteristics for privacy.
+ *
+ * Uses TarsosDSP's WSOLA (Waveform Similarity Overlap-Add) algorithm combined with
+ * rate transposition to shift pitch while preserving duration. Note that in TarsosDSP,
+ * pitch factors work inversely: factor < 1 raises pitch, factor > 1 lowers pitch.
+ */
 class VoiceAnonymizer {
     companion object {
         private const val TAG = "VoiceAnonymizer"
@@ -54,6 +68,20 @@ class VoiceAnonymizer {
         private const val BIT_RATE = 128000
     }
 
+    /**
+     * Applies voice anonymization to an audio file.
+     *
+     * The process involves three stages:
+     * 1. Decode input audio to PCM (0-30% progress)
+     * 2. Apply pitch shifting with TarsosDSP (30-70% progress)
+     * 3. Encode processed audio to AAC (70-100% progress)
+     *
+     * @param inputFile Source audio file (supports formats decodable by MediaCodec)
+     * @param preset Voice transformation preset (NONE is not allowed)
+     * @param onProgress Callback invoked with progress value from 0.0 to 1.0
+     * @return [Result.success] with [AnonymizedResult] containing the output file,
+     *         waveform data, and duration; or [Result.failure] with the exception
+     */
     suspend fun anonymize(
         inputFile: File,
         preset: VoicePreset,
