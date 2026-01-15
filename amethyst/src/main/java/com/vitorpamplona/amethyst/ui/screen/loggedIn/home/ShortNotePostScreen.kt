@@ -375,6 +375,8 @@ private fun NewPostScreenBody(
                             VoiceMessagePreview(
                                 voiceMetadata = displayMetadata,
                                 localFile = postViewModel.activeFile,
+                                onReRecord = { recording -> postViewModel.selectVoiceRecording(recording) },
+                                isUploading = postViewModel.isUploadingVoice,
                                 onRemove = { postViewModel.removeVoiceMessage() },
                             )
 

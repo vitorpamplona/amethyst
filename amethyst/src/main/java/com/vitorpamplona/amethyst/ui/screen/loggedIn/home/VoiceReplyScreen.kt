@@ -21,47 +21,32 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
-import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
-import com.vitorpamplona.amethyst.ui.actions.uploads.formatSecondsToTime
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -103,9 +88,6 @@ fun VoiceReplyScreen(
                     nav.popBack()
                 },
             )
-        },
-        bottomBar = {
-            ReRecordButton(viewModel)
         },
     ) { pad ->
         Surface(
@@ -162,6 +144,8 @@ private fun VoiceReplyScreenBody(
                 VoiceMessagePreview(
                     voiceMetadata = displayMetadata,
                     localFile = viewModel.activeFile,
+                    onReRecord = { recording -> viewModel.selectRecording(recording) },
+                    isUploading = viewModel.isUploading,
                     onRemove = {
                         viewModel.cancel()
                         nav.popBack()
@@ -191,83 +175,5 @@ private fun VoiceReplyScreenBody(
         )
 
         Spacer(modifier = Modifier.height(80.dp))
-    }
-}
-
-@Composable
-private fun ReRecordButton(viewModel: VoiceReplyViewModel) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(vertical = 16.dp, horizontal = Size10dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (viewModel.isUploading) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = stringRes(id = R.string.record_a_message),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-                Text(
-                    text = stringRes(id = R.string.re_record),
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-            return
-        }
-
-        RecordAudioBox(
-            modifier = Modifier,
-            onRecordTaken = { recording ->
-                viewModel.selectRecording(recording)
-            },
-            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
-        ) { isRecording, elapsedSeconds ->
-            val contentColor =
-                if (isRecording) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onBackground
-                }
-            val icon =
-                if (isRecording) {
-                    Icons.Default.Stop
-                } else {
-                    Icons.Default.Mic
-                }
-            val label =
-                if (isRecording) {
-                    formatSecondsToTime(elapsedSeconds)
-                } else {
-                    stringRes(id = R.string.re_record)
-                }
-            val iconDescription =
-                if (isRecording) {
-                    stringRes(id = R.string.recording_indicator_description)
-                } else {
-                    stringRes(id = R.string.record_a_message)
-                }
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = iconDescription,
-                    tint = contentColor,
-                )
-                Text(
-                    text = label,
-                    color = contentColor,
-                )
-            }
-        }
     }
 }
