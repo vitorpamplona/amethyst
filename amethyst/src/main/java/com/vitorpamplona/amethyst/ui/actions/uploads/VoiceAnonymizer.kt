@@ -172,7 +172,8 @@ class VoiceAnonymizer {
             decoder.configure(format, null, null, 0)
             decoder.start()
 
-            val pcmSamples = mutableListOf<Float>()
+            val estimatedSamples = (sampleRate.toLong() * durationUs / 1_000_000).toInt()
+            val pcmSamples = ArrayList<Float>(estimatedSamples)
             val bufferInfo = MediaCodec.BufferInfo()
             var inputDone = false
             var outputDone = false
@@ -251,8 +252,8 @@ class VoiceAnonymizer {
                 }
                 else -> baseFactor
             }
-        val processedSamples = mutableListOf<Float>()
         val totalSamples = pcmData.size
+        val processedSamples = ArrayList<Float>(totalSamples)
 
         val wsola =
             WaveformSimilarityBasedOverlapAdd(
