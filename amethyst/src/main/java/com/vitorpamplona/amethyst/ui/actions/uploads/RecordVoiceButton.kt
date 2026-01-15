@@ -42,7 +42,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun RecordVoiceButton(onVoiceTaken: (RecordingResult) -> Unit) {
+fun RecordVoiceButton(
+    onVoiceTaken: (RecordingResult) -> Unit,
+    maxDurationSeconds: Int? = null,
+) {
     var isRecording by remember { mutableStateOf(false) }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
 
@@ -61,6 +64,7 @@ fun RecordVoiceButton(onVoiceTaken: (RecordingResult) -> Unit) {
                 elapsedSeconds = 0
                 onVoiceTaken(recording)
             },
+            maxDurationSeconds = maxDurationSeconds,
         ) { recordingState, elapsed ->
             // Update parent state after composition completes
             SideEffect {

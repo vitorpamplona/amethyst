@@ -41,12 +41,26 @@ import java.io.File
 import java.nio.ByteOrder
 import kotlin.math.abs
 
+/**
+ * Result of voice anonymization processing.
+ *
+ * @property file The output audio file (AAC in MP4 container)
+ * @property waveform Amplitude data for waveform visualization (one value per second)
+ * @property duration Audio duration in seconds
+ */
 data class AnonymizedResult(
     val file: File,
     val waveform: List<Float>,
     val duration: Int,
 )
 
+/**
+ * Processes audio files to alter voice characteristics for privacy.
+ *
+ * Uses TarsosDSP's WSOLA (Waveform Similarity Overlap-Add) algorithm combined with
+ * rate transposition to shift pitch while preserving duration. Note that in TarsosDSP,
+ * pitch factors work inversely: factor < 1 raises pitch, factor > 1 lowers pitch.
+ */
 class VoiceAnonymizer {
     companion object {
         private const val TAG = "VoiceAnonymizer"
@@ -54,6 +68,20 @@ class VoiceAnonymizer {
         private const val BIT_RATE = 128000
     }
 
+    /**
+     * Applies voice anonymization to an audio file.
+     *
+     * The process involves three stages:
+     * 1. Decode input audio to PCM (0-30% progress)
+     * 2. Apply pitch shifting with TarsosDSP (30-70% progress)
+     * 3. Encode processed audio to AAC (70-100% progress)
+     *
+     * @param inputFile Source audio file (supports formats decodable by MediaCodec)
+     * @param preset Voice transformation preset (NONE is not allowed)
+     * @param onProgress Callback invoked with progress value from 0.0 to 1.0
+     * @return [Result.success] with [AnonymizedResult] containing the output file,
+     *         waveform data, and duration; or [Result.failure] with the exception
+     */
     suspend fun anonymize(
         inputFile: File,
         preset: VoicePreset,
@@ -98,7 +126,8 @@ class VoiceAnonymizer {
     ): File {
         val baseName = inputFile.nameWithoutExtension
         val presetSuffix = preset.name.lowercase()
-        return File(inputFile.parentFile, "${baseName}_$presetSuffix.mp4")
+        val parentDir = inputFile.parentFile ?: inputFile.absoluteFile.parentFile
+        return File(parentDir, "${baseName}_$presetSuffix.mp4")
     }
 
     private data class DecodedAudio(
@@ -129,9 +158,7 @@ class VoiceAnonymizer {
                 }
             }
 
-            if (audioTrackIndex == -1 || format == null) {
-                throw IllegalStateException("No audio track found in file")
-            }
+            check(audioTrackIndex != -1 && format != null) { "No audio track found in file" }
 
             extractor.selectTrack(audioTrackIndex)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: "audio/mp4a-latm"
@@ -143,7 +170,8 @@ class VoiceAnonymizer {
             decoder.configure(format, null, null, 0)
             decoder.start()
 
-            val pcmSamples = mutableListOf<Float>()
+            val estimatedSamples = (sampleRate.toLong() * durationUs / 1_000_000).toInt()
+            val pcmSamples = ArrayList<Float>(estimatedSamples)
             val bufferInfo = MediaCodec.BufferInfo()
             var inputDone = false
             var outputDone = false
@@ -196,7 +224,11 @@ class VoiceAnonymizer {
 
             return DecodedAudio(pcmSamples.toFloatArray(), sampleRate, duration)
         } finally {
-            decoder?.stop()
+            try {
+                decoder?.stop()
+            } catch (_: IllegalStateException) {
+                // Decoder was never started
+            }
             decoder?.release()
             extractor.release()
         }
@@ -218,8 +250,8 @@ class VoiceAnonymizer {
                 }
                 else -> baseFactor
             }
-        val processedSamples = mutableListOf<Float>()
         val totalSamples = pcmData.size
+        val processedSamples = ArrayList<Float>(totalSamples)
 
         val wsola =
             WaveformSimilarityBasedOverlapAdd(
@@ -252,7 +284,9 @@ class VoiceAnonymizer {
                     return true
                 }
 
-                override fun processingFinished() {}
+                override fun processingFinished() {
+                    // No-op: no cleanup needed
+                }
             }
 
         val dispatcher =
@@ -276,7 +310,9 @@ class VoiceAnonymizer {
                     return true
                 }
 
-                override fun processingFinished() {}
+                override fun processingFinished() {
+                    // No-op: no cleanup needed
+                }
             }
         dispatcher.addAudioProcessor(progressProcessor)
 
@@ -400,7 +436,11 @@ class VoiceAnonymizer {
                 }
             }
         } finally {
-            encoder.stop()
+            try {
+                encoder.stop()
+            } catch (_: IllegalStateException) {
+                // Encoder was never started
+            }
             encoder.release()
             if (muxerStarted) {
                 muxer.stop()
@@ -446,5 +486,7 @@ private class FloatArrayAudioInputStream(
         return actualSkip.toLong() * 2
     }
 
-    override fun close() {}
+    override fun close() {
+        // No-op: no cleanup needed
+    }
 }

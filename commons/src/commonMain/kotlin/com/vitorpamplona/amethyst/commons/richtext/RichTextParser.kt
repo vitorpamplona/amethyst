@@ -45,7 +45,6 @@ import java.net.MalformedURLException
 import java.net.URISyntaxException
 import java.net.URL
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.text.iterator
 
 class RichTextParser {
     fun createMediaContent(

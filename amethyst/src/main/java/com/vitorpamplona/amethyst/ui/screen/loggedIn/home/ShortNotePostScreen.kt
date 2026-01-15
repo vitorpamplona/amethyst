@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -374,6 +375,8 @@ private fun NewPostScreenBody(
                             VoiceMessagePreview(
                                 voiceMetadata = displayMetadata,
                                 localFile = postViewModel.activeFile,
+                                onReRecord = { recording -> postViewModel.selectVoiceRecording(recording) },
+                                isUploading = postViewModel.isUploadingVoice,
                                 onRemove = { postViewModel.removeVoiceMessage() },
                             )
 
@@ -497,6 +500,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             onVoiceTaken = { recording ->
                 postViewModel.selectVoiceRecording(recording)
             },
+            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
 
         if (postViewModel.canUsePoll) {

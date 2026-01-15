@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.R.attr.label
-import android.R.attr.maxLines
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow

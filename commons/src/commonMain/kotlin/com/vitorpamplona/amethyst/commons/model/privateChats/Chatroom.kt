@@ -34,7 +34,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.lang.ref.WeakReference
-import kotlin.collections.plus
 
 @Stable
 class Chatroom : NotesGatherer {
