@@ -196,7 +196,11 @@ class VoiceAnonymizer {
 
             return DecodedAudio(pcmSamples.toFloatArray(), sampleRate, duration)
         } finally {
-            decoder?.stop()
+            try {
+                decoder?.stop()
+            } catch (_: IllegalStateException) {
+                // Decoder was never started
+            }
             decoder?.release()
             extractor.release()
         }
@@ -400,7 +404,11 @@ class VoiceAnonymizer {
                 }
             }
         } finally {
-            encoder.stop()
+            try {
+                encoder.stop()
+            } catch (_: IllegalStateException) {
+                // Encoder was never started
+            }
             encoder.release()
             if (muxerStarted) {
                 muxer.stop()
