@@ -37,6 +37,12 @@ object ShareHelper {
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
     private const val SHARED_FILE_PREFIX = "shared_media"
 
+    data class SharableFile(
+        val uri: Uri,
+        val extension: String,
+        val file: File,
+    )
+
     // Image type magic numbers
     private val JPEG_MAGIC = byteArrayOf(0xFF.toByte(), 0xD8.toByte())
     private val PNG_MAGIC = byteArrayOf(0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte())
@@ -81,7 +87,7 @@ object ShareHelper {
 
     private fun getImageExtension(file: File): String = getMediaExtension(file, isVideo = false)
 
-    fun getVideoExtension(file: File): String = getMediaExtension(file, isVideo = true)
+    private fun getVideoExtension(file: File): String = getMediaExtension(file, isVideo = true)
 
     private fun getMediaExtension(
         file: File,
@@ -97,43 +103,49 @@ object ShareHelper {
                     return defaultExtension
                 }
 
-                when {
-                    // Image formats
-                    // JPEG: Check first 2 bytes
-                    matchesMagicNumbers(header, 0, JPEG_MAGIC) -> "jpg"
+                if (isVideo) {
+                    when {
+                        // Video formats
+                        // WebM/MKV: Check first 4 bytes (EBML header)
+                        // Both use Matroska container; default to webm as it's more common on web
+                        matchesMagicNumbers(header, 0, WEBM_MAGIC) -> "webm"
 
-                    // PNG: Check first 4 bytes
-                    matchesMagicNumbers(header, 0, PNG_MAGIC) -> "png"
+                        // AVI: Check "RIFF" (bytes 0-3) and "AVI " (bytes 8-11)
+                        matchesMagicNumbers(header, 0, AVI_HEADER_START) &&
+                            bytesRead >= 12 &&
+                            matchesMagicNumbers(header, 8, AVI_HEADER_END) -> "avi"
 
-                    // GIF: Check first 4 bytes for "GIF8"
-                    matchesMagicNumbers(header, 0, GIF_MAGIC) -> "gif"
+                        // MP4/MOV: Check for ftyp box (bytes 4-7 should be "ftyp")
+                        bytesRead >= 12 && matchesMagicNumbers(header, 4, MOV_FTYP) -> detectMp4OrMov(header)
 
-                    // WEBP: Check "RIFF" (bytes 0-3) and "WEBP" (bytes 8-11)
-                    matchesMagicNumbers(header, 0, WEBP_HEADER_START) &&
-                        bytesRead >= 12 &&
-                        matchesMagicNumbers(header, 8, WEBP_HEADER_END) -> "webp"
+                        // MP4/MOV alternative: moov, mdat, or free at offset 4
+                        bytesRead >= 8 && (
+                            matchesMagicNumbers(header, 4, MOV_MOOV) ||
+                                matchesMagicNumbers(header, 4, MOV_MDAT) ||
+                                matchesMagicNumbers(header, 4, MOV_FREE)
+                        ) -> "mp4"
 
-                    // Video formats
-                    // WebM/MKV: Check first 4 bytes (EBML header)
-                    // Both use Matroska container; default to webm as it's more common on web
-                    matchesMagicNumbers(header, 0, WEBM_MAGIC) -> "webm"
+                        else -> defaultExtension
+                    }
+                } else {
+                    when {
+                        // Image formats
+                        // JPEG: Check first 2 bytes
+                        matchesMagicNumbers(header, 0, JPEG_MAGIC) -> "jpg"
 
-                    // AVI: Check "RIFF" (bytes 0-3) and "AVI " (bytes 8-11)
-                    matchesMagicNumbers(header, 0, AVI_HEADER_START) &&
-                        bytesRead >= 12 &&
-                        matchesMagicNumbers(header, 8, AVI_HEADER_END) -> "avi"
+                        // PNG: Check first 4 bytes
+                        matchesMagicNumbers(header, 0, PNG_MAGIC) -> "png"
 
-                    // MP4/MOV: Check for ftyp box (bytes 4-7 should be "ftyp")
-                    bytesRead >= 12 && matchesMagicNumbers(header, 4, MOV_FTYP) -> detectMp4OrMov(header)
+                        // GIF: Check first 4 bytes for "GIF8"
+                        matchesMagicNumbers(header, 0, GIF_MAGIC) -> "gif"
 
-                    // MP4/MOV alternative: moov, mdat, or free at offset 4
-                    bytesRead >= 8 && (
-                        matchesMagicNumbers(header, 4, MOV_MOOV) ||
-                            matchesMagicNumbers(header, 4, MOV_MDAT) ||
-                            matchesMagicNumbers(header, 4, MOV_FREE)
-                    ) -> "mp4"
+                        // WEBP: Check "RIFF" (bytes 0-3) and "WEBP" (bytes 8-11)
+                        matchesMagicNumbers(header, 0, WEBP_HEADER_START) &&
+                            bytesRead >= 12 &&
+                            matchesMagicNumbers(header, 8, WEBP_HEADER_END) -> "webp"
 
-                    else -> defaultExtension
+                        else -> defaultExtension
+                    }
                 }
             }
         } catch (e: IOException) {
@@ -209,21 +221,36 @@ object ShareHelper {
     fun prepareTempVideoForSharing(
         context: Context,
         tempFile: File,
-    ): Pair<Uri, String> {
+    ): SharableFile {
         val extension = getVideoExtension(tempFile)
         val timestamp = System.currentTimeMillis()
         val sharableFile = File(context.cacheDir, "${SHARED_FILE_PREFIX}_$timestamp.$extension")
 
         try {
-            tempFile.renameTo(sharableFile)
+            moveTempFileForSharing(tempFile, sharableFile)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to rename temp video file for sharing", e)
             throw e
         }
 
-        return Pair(
-            FileProvider.getUriForFile(context, "${context.packageName}.provider", sharableFile),
-            extension,
+        return SharableFile(
+            uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", sharableFile),
+            extension = extension,
+            file = sharableFile,
         )
+    }
+
+    internal fun moveTempFileForSharing(
+        tempFile: File,
+        sharableFile: File,
+        rename: (File, File) -> Boolean = { source, dest -> source.renameTo(dest) },
+    ) {
+        val renamed = rename(tempFile, sharableFile)
+        if (!renamed) {
+            tempFile.copyTo(sharableFile, overwrite = true)
+            if (!tempFile.delete()) {
+                Log.w(TAG, "Failed to delete temp file ${tempFile.path} after copy")
+            }
+        }
     }
 }

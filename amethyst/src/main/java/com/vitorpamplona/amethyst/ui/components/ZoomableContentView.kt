@@ -121,6 +121,7 @@ import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import okio.sink
 import java.io.File
+import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -884,6 +885,7 @@ private suspend fun shareVideoFile(
     onError: () -> Unit,
 ) {
     val tempFile = ShareHelper.createTempVideoFile(context)
+    var sharedFile: File? = null
     try {
         withContext(Dispatchers.IO) {
             // Download video using streaming
@@ -897,15 +899,20 @@ private suspend fun shareVideoFile(
 
             client.newCall(request).executeAsync().use { response ->
                 check(response.isSuccessful) { "Download failed: ${response.code}" }
+                val responseBody = response.body
 
                 // Stream the response to the temp file
                 tempFile.outputStream().use { outputStream ->
-                    response.body.source().readAll(outputStream.sink())
+                    val bytesCopied = responseBody.source().readAll(outputStream.sink())
+                    if (bytesCopied == 0L) {
+                        throw IOException("Download failed: empty response body")
+                    }
                 }
             }
 
             // Prepare the temp file for sharing (determines extension and creates sharable URI)
-            val (uri, extension) = ShareHelper.prepareTempVideoForSharing(context, tempFile)
+            val (uri, extension, sharableFile) = ShareHelper.prepareTempVideoForSharing(context, tempFile)
+            sharedFile = sharableFile
 
             // Determine mime type
             val determinedMimeType = mimeType ?: "video/$extension"
@@ -924,7 +931,7 @@ private suspend fun shareVideoFile(
 
             // Schedule cleanup after 60 seconds to allow the receiving app time to copy the file
             Handler(Looper.getMainLooper()).postDelayed({
-                tempFile.delete()
+                sharableFile.delete()
             }, 60_000)
         }
 
@@ -937,6 +944,7 @@ private suspend fun shareVideoFile(
 
         // Clean up temp file on error
         tempFile.delete()
+        sharedFile?.delete()
 
         withContext(Dispatchers.Main) {
             Toast
