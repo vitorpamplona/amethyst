@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -112,7 +110,9 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -876,6 +876,7 @@ private suspend fun shareImageFile(
     }
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 private suspend fun shareVideoFile(
     context: Context,
     videoUrl: String,
@@ -928,11 +929,13 @@ private suspend fun shareVideoFile(
             withContext(Dispatchers.Main) {
                 context.startActivity(Intent.createChooser(shareIntent, null))
             }
+        }
 
-            // Schedule cleanup after 60 seconds to allow the receiving app time to copy the file
-            Handler(Looper.getMainLooper()).postDelayed({
-                sharableFile.delete()
-            }, 60_000)
+        // Schedule cleanup after 60 seconds to allow the receiving app time to copy the file
+        // Launch in separate coroutine so we don't block the completion callback
+        GlobalScope.launch(Dispatchers.IO) {
+            delay(60_000)
+            sharedFile?.delete()
         }
 
         withContext(Dispatchers.Main) {
