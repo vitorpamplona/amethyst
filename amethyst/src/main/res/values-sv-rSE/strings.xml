@@ -1233,4 +1233,7 @@
     <string name="follow_set_delete">Ta bort lista</string>
     <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
     <string name="kinds">Typer</string>
+    <string name="share_video">Dela video…</string>
+    <string name="unable_to_share_video">Det gick inte att dela videon, försök igen senare…</string>
+    <string name="downloading_video_for_sharing">Laddar ner videon…</string>
 </resources>
