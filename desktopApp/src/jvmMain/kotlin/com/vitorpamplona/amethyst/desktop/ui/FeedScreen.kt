@@ -55,17 +55,30 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.subscriptions.FeedMode
+import com.vitorpamplona.amethyst.commons.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.commons.subscriptions.createBatchMetadataSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.createGlobalFeedSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createReactionsSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createRepliesSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createRepostsSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
+import com.vitorpamplona.amethyst.desktop.DesktopPreferences
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 /**
  * Note card with action buttons.
@@ -74,11 +87,23 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 fun FeedNoteCard(
     event: Event,
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     account: AccountState.LoggedIn?,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     onReply: () -> Unit,
+    onZapFeedback: (ZapFeedback) -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
+    zapReceipts: List<ZapReceipt> = emptyList(),
+    reactionCount: Int = 0,
+    replyCount: Int = 0,
+    repostCount: Int = 0,
+    bookmarkList: BookmarkListEvent? = null,
+    isBookmarked: Boolean = false,
+    onBookmarkChanged: (BookmarkListEvent) -> Unit = {},
 ) {
+    val zapAmountSats = zapReceipts.sumOf { it.amountSats }
+
     Column(
         modifier =
             Modifier.clickable {
@@ -86,7 +111,7 @@ fun FeedNoteCard(
             },
     ) {
         NoteCard(
-            note = event.toNoteDisplayData(),
+            note = event.toNoteDisplayData(localCache),
             onAuthorClick = onNavigateToProfile,
         )
 
@@ -95,9 +120,21 @@ fun FeedNoteCard(
             NoteActionsRow(
                 event = event,
                 relayManager = relayManager,
+                localCache = localCache,
                 account = account,
+                nwcConnection = nwcConnection,
                 onReplyClick = onReply,
+                onZapFeedback = onZapFeedback,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                zapCount = zapReceipts.size,
+                zapAmountSats = zapAmountSats,
+                zapReceipts = zapReceipts,
+                reactionCount = reactionCount,
+                replyCount = replyCount,
+                repostCount = repostCount,
+                bookmarkList = bookmarkList,
+                isBookmarked = isBookmarked,
+                onBookmarkChanged = onBookmarkChanged,
             )
         }
     }
@@ -106,10 +143,13 @@ fun FeedNoteCard(
 @Composable
 fun FeedScreen(
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -125,8 +165,14 @@ fun FeedScreen(
         }
     val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
-    var feedMode by remember { mutableStateOf(FeedMode.GLOBAL) }
+    var feedMode by remember { mutableStateOf(DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
+    var reactionsByEvent by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var repliesByEvent by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var repostsByEvent by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
+    var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Track EOSE to know when initial load is complete
     var eoseReceivedCount by remember { mutableStateOf(0) }
@@ -144,6 +190,41 @@ fun FeedScreen(
                         followedUsers = event.verifiedFollowKeySet()
                     }
                 },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Load user's bookmark list
+    rememberSubscription(relayStatuses, account, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isNotEmpty() && account != null) {
+            com.vitorpamplona.amethyst.commons.subscriptions.SubscriptionConfig(
+                subId = "bookmarks-${account.pubKeyHex.take(8)}",
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(account.pubKeyHex),
+                            kinds = listOf(BookmarkListEvent.KIND),
+                            limit = 1,
+                        ),
+                    ),
+                relays = configuredRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is BookmarkListEvent) {
+                        bookmarkList = event
+                        // Extract public bookmarked event IDs
+                        val pubIds =
+                            event
+                                .publicBookmarks()
+                                .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
+                                .map { it.eventId }
+                                .toSet()
+                        bookmarkedEventIds = pubIds
+                    }
+                },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -168,6 +249,10 @@ fun FeedScreen(
                 createGlobalFeedSubscription(
                     relays = configuredRelays,
                     onEvent = { event, _, _, _ ->
+                        // Store metadata events in cache
+                        if (event is MetadataEvent) {
+                            localCache.consumeMetadata(event)
+                        }
                         eventState.addItem(event)
                     },
                     onEose = { _, _ ->
@@ -181,6 +266,10 @@ fun FeedScreen(
                         relays = configuredRelays,
                         followedUsers = followedUsers.toList(),
                         onEvent = { event, _, _, _ ->
+                            // Store metadata events in cache
+                            if (event is MetadataEvent) {
+                                localCache.consumeMetadata(event)
+                            }
                             eventState.addItem(event)
                         },
                         onEose = { _, _ ->
@@ -192,6 +281,164 @@ fun FeedScreen(
                 }
             }
         }
+    }
+
+    // Subscribe to zaps for visible events
+    val eventIds = events.map { it.id }
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createZapsSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is LnZapEvent) {
+                    val receipt = event.toZapReceipt(localCache) ?: return@createZapsSubscription
+                    val targetEventId = event.zappedPost().firstOrNull() ?: return@createZapsSubscription
+                    zapsByEvent =
+                        zapsByEvent.toMutableMap().apply {
+                            val existing = this[targetEventId] ?: emptyList()
+                            if (existing.none { it.createdAt == receipt.createdAt && it.senderPubKey == receipt.senderPubKey }) {
+                                this[targetEventId] = existing + receipt
+                            }
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to metadata for zap senders (to show display names)
+    val zapSenderPubkeys =
+        zapsByEvent.values
+            .flatten()
+            .map { it.senderPubKey }
+            .distinct()
+    rememberSubscription(relayStatuses, zapSenderPubkeys, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || zapSenderPubkeys.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        // Only fetch metadata for users we don't have yet
+        val missingPubkeys =
+            zapSenderPubkeys.filter { pubkey ->
+                localCache.getUserIfExists(pubkey)?.info == null
+            }
+        if (missingPubkeys.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createBatchMetadataSubscription(
+            relays = configuredRelays,
+            pubKeyHexList = missingPubkeys,
+            onEvent = { event, _, _, _ ->
+                if (event is MetadataEvent) {
+                    localCache.consumeMetadata(event)
+                }
+            },
+        )
+    }
+
+    // Subscribe to reactions for visible events
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createReactionsSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is ReactionEvent) {
+                    val targetEventId = event.originalPost().firstOrNull() ?: return@createReactionsSubscription
+                    reactionsByEvent =
+                        reactionsByEvent.toMutableMap().apply {
+                            this[targetEventId] = (this[targetEventId] ?: 0) + 1
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to replies for visible events
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createRepliesSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                // Find the event this is replying to
+                val replyToId =
+                    event.tags
+                        .filter { it.size >= 2 && it[0] == "e" }
+                        .lastOrNull()
+                        ?.get(1) ?: return@createRepliesSubscription
+                if (replyToId in eventIds) {
+                    repliesByEvent =
+                        repliesByEvent.toMutableMap().apply {
+                            this[replyToId] = (this[replyToId] ?: 0) + 1
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to reposts for visible events
+    rememberSubscription(relayStatuses, eventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || eventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createRepostsSubscription(
+            relays = configuredRelays,
+            eventIds = eventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is RepostEvent) {
+                    val targetEventId = event.boostedEventId() ?: return@createRepostsSubscription
+                    repostsByEvent =
+                        repostsByEvent.toMutableMap().apply {
+                            this[targetEventId] = (this[targetEventId] ?: 0) + 1
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to metadata for note authors (to enable zaps and populate search cache)
+    val authorPubkeys = events.map { it.pubKey }.distinct()
+    rememberSubscription(relayStatuses, authorPubkeys, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || authorPubkeys.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        // Only fetch metadata for users we don't have yet
+        val missingPubkeys =
+            authorPubkeys.filter { pubkey ->
+                localCache.getUserIfExists(pubkey)?.info == null
+            }
+        if (missingPubkeys.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createBatchMetadataSubscription(
+            relays = configuredRelays,
+            pubKeyHexList = missingPubkeys,
+            onEvent = { event, _, _, _ ->
+                if (event is MetadataEvent) {
+                    localCache.consumeMetadata(event)
+                }
+            },
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -217,12 +464,18 @@ fun FeedScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             FilterChip(
                                 selected = feedMode == FeedMode.GLOBAL,
-                                onClick = { feedMode = FeedMode.GLOBAL },
+                                onClick = {
+                                    feedMode = FeedMode.GLOBAL
+                                    DesktopPreferences.feedMode = FeedMode.GLOBAL
+                                },
                                 label = { Text("Global") },
                             )
                             FilterChip(
                                 selected = feedMode == FeedMode.FOLLOWING,
-                                onClick = { feedMode = FeedMode.FOLLOWING },
+                                onClick = {
+                                    feedMode = FeedMode.FOLLOWING
+                                    DesktopPreferences.feedMode = FeedMode.FOLLOWING
+                                },
                                 label = { Text("Following") },
                             )
                         }
@@ -301,10 +554,29 @@ fun FeedScreen(
                     FeedNoteCard(
                         event = event,
                         relayManager = relayManager,
+                        localCache = localCache,
                         account = account,
+                        nwcConnection = nwcConnection,
                         onReply = { replyToEvent = event },
+                        onZapFeedback = onZapFeedback,
                         onNavigateToProfile = onNavigateToProfile,
                         onNavigateToThread = onNavigateToThread,
+                        zapReceipts = zapsByEvent[event.id] ?: emptyList(),
+                        reactionCount = reactionsByEvent[event.id] ?: 0,
+                        replyCount = repliesByEvent[event.id] ?: 0,
+                        repostCount = repostsByEvent[event.id] ?: 0,
+                        bookmarkList = bookmarkList,
+                        isBookmarked = bookmarkedEventIds.contains(event.id),
+                        onBookmarkChanged = { newList ->
+                            bookmarkList = newList
+                            val pubIds =
+                                newList
+                                    .publicBookmarks()
+                                    .filterIsInstance<com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark>()
+                                    .map { it.eventId }
+                                    .toSet()
+                            bookmarkedEventIds = pubIds
+                        },
                     )
                 }
             }

@@ -107,6 +107,61 @@ open class RelayConnectionManager(
         send(event, connected)
     }
 
+    /**
+     * Sends an event to a specific relay (for NWC).
+     * Adds the relay if not already in the list.
+     */
+    fun sendToRelay(
+        relay: NormalizedRelayUrl,
+        event: Event,
+    ) {
+        if (relay !in availableRelays.value) {
+            updateRelayStatus(relay) { it.copy(connected = false, error = null) }
+        }
+        client.send(event, setOf(relay))
+    }
+
+    /**
+     * Subscribes on a specific relay (for NWC).
+     * Adds the relay if not already in the list.
+     */
+    fun subscribeOnRelay(
+        relay: NormalizedRelayUrl,
+        subId: String,
+        filters: List<Filter>,
+        onEvent: (Event, NormalizedRelayUrl) -> Unit,
+    ) {
+        if (relay !in availableRelays.value) {
+            updateRelayStatus(relay) { it.copy(connected = false, error = null) }
+        }
+        val filterMap = mapOf(relay to filters)
+        client.openReqSubscription(
+            subId = subId,
+            filters = filterMap,
+            listener =
+                object : IRequestListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        onEvent(event, relay)
+                    }
+                },
+        )
+    }
+
+    /**
+     * Closes a subscription on a specific relay.
+     */
+    fun closeSubscription(
+        relay: NormalizedRelayUrl,
+        subId: String,
+    ) {
+        client.close(subId)
+    }
+
     private fun updateRelayStatus(
         url: NormalizedRelayUrl,
         update: (RelayStatus) -> RelayStatus,

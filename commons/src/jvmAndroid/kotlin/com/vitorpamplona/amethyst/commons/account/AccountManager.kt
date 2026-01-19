@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,6 +68,9 @@ class AccountManager private constructor(
 
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
+
+    private val _nwcConnection = MutableStateFlow<Nip47WalletConnect.Nip47URINorm?>(null)
+    val nwcConnection: StateFlow<Nip47WalletConnect.Nip47URINorm?> = _nwcConnection.asStateFlow()
 
     /**
      * Loads the last saved account from secure storage.
@@ -204,6 +208,47 @@ class AccountManager private constructor(
     fun isLoggedIn(): Boolean = _accountState.value is AccountState.LoggedIn
 
     fun currentAccount(): AccountState.LoggedIn? = _accountState.value as? AccountState.LoggedIn
+
+    // NWC (Nostr Wallet Connect) methods
+    fun hasNwcSetup(): Boolean = _nwcConnection.value != null
+
+    fun setNwcConnection(uri: String): Result<Nip47WalletConnect.Nip47URINorm> =
+        try {
+            val parsed = Nip47WalletConnect.parse(uri)
+            _nwcConnection.value = parsed
+            saveNwcUri(uri)
+            Result.success(parsed)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    fun clearNwcConnection() {
+        _nwcConnection.value = null
+        getNwcFile().delete()
+    }
+
+    fun loadNwcConnection() {
+        val uri = getNwcFile().takeIf { it.exists() }?.readText()?.trim()
+        if (!uri.isNullOrEmpty()) {
+            try {
+                _nwcConnection.value = Nip47WalletConnect.parse(uri)
+            } catch (e: Exception) {
+                // Invalid stored URI, clear it
+                getNwcFile().delete()
+            }
+        }
+    }
+
+    private fun saveNwcUri(uri: String) {
+        val file = getNwcFile()
+        file.parentFile?.mkdirs()
+        file.writeText(uri)
+    }
+
+    private fun getNwcFile(): java.io.File {
+        val homeDir = System.getProperty("user.home")
+        return java.io.File(homeDir, ".amethyst/nwc_connection.txt")
+    }
 
     // Simple file-based storage for last npub (non-sensitive data)
     private fun getLastNpub(): String? {

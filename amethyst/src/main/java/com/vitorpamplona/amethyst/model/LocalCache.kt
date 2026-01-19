@@ -25,6 +25,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.IChannel
+import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
@@ -225,7 +226,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
-    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, suspend (LnZapPaymentResponseEvent) -> Unit>>(10)
+    val paymentTracker = NwcPaymentTracker()
 
     val relayHints = HintIndexer()
 
@@ -308,7 +309,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    fun getOrCreateUser(key: HexKey): User {
+    override fun getOrCreateUser(key: HexKey): User {
         require(isValidHex(key = key)) { "$key is not a valid hex" }
 
         return users.getOrCreate(key) {
@@ -1976,7 +1977,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             zappedNote?.addZapPayment(note, null)
 
-            awaitingPaymentRequests.put(event.id, Pair(zappedNote, onResponse))
+            paymentTracker.registerRequest(event.id, zappedNote, onResponse)
 
             refreshNewNoteObservers(note)
 
@@ -1992,9 +1993,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
-        val pair = awaitingPaymentRequests[requestId] ?: return false
+        val pending = paymentTracker.onResponseReceived(requestId) ?: return false
 
-        val (zappedNote, responseCallback) = pair
+        val zappedNote = pending.zappedNote
+        val responseCallback = pending.onResponse
 
         val requestNote = requestId?.let { checkGetOrCreateNote(requestId) }
 

@@ -52,16 +52,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
+import com.vitorpamplona.amethyst.commons.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.commons.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.commons.subscriptions.createNoteSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createReactionsSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createRepliesSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createRepostsSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.createThreadRepliesSubscription
+import com.vitorpamplona.amethyst.commons.subscriptions.createZapsSubscription
 import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 /**
  * Desktop Thread Screen - displays a note and all its replies in a thread view.
@@ -72,10 +84,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 fun ThreadScreen(
     noteId: String,
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     account: AccountState.LoggedIn?,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     onBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
+    onReply: (Event) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -102,6 +118,50 @@ fun ThreadScreen(
     // Track EOSE to know when initial load is complete
     var rootNoteEoseReceived by remember(noteId) { mutableStateOf(false) }
     var repliesEoseReceived by remember(noteId) { mutableStateOf(false) }
+
+    // Track zaps per event
+    var zapsByEvent by remember(noteId) { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
+    var reactionsByEvent by remember(noteId) { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var repliesByEvent by remember(noteId) { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var repostsByEvent by remember(noteId) { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
+    // Bookmark state
+    var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
+    var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    // Subscribe to user's bookmark list
+    rememberSubscription(relayStatuses, account, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isNotEmpty() && account != null) {
+            SubscriptionConfig(
+                subId = "thread-bookmarks-${account.pubKeyHex.take(8)}",
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(account.pubKeyHex),
+                            kinds = listOf(BookmarkListEvent.KIND),
+                            limit = 1,
+                        ),
+                    ),
+                relays = configuredRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is BookmarkListEvent) {
+                        bookmarkList = event
+                        val pubIds =
+                            event
+                                .publicBookmarks()
+                                .filterIsInstance<EventBookmark>()
+                                .map { it.eventId }
+                                .toSet()
+                        bookmarkedEventIds = pubIds
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
 
     // Subscribe to the root note
     rememberSubscription(relayStatuses, noteId, relayManager = relayManager) {
@@ -142,6 +202,103 @@ fun ThreadScreen(
         } else {
             null
         }
+    }
+
+    // Subscribe to zaps for thread events
+    val allEventIds = listOf(noteId) + replyEvents.map { it.id }
+    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createZapsSubscription(
+            relays = configuredRelays,
+            eventIds = allEventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is LnZapEvent) {
+                    val receipt = event.toZapReceipt(localCache) ?: return@createZapsSubscription
+                    val targetEventId = event.zappedPost().firstOrNull() ?: return@createZapsSubscription
+                    zapsByEvent =
+                        zapsByEvent.toMutableMap().apply {
+                            val existing = this[targetEventId] ?: emptyList()
+                            if (existing.none { it.createdAt == receipt.createdAt && it.senderPubKey == receipt.senderPubKey }) {
+                                this[targetEventId] = existing + receipt
+                            }
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to reactions for thread events
+    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createReactionsSubscription(
+            relays = configuredRelays,
+            eventIds = allEventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is ReactionEvent) {
+                    val targetEventId = event.originalPost().firstOrNull() ?: return@createReactionsSubscription
+                    reactionsByEvent =
+                        reactionsByEvent.toMutableMap().apply {
+                            this[targetEventId] = (this[targetEventId] ?: 0) + 1
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to replies for thread events (for counts)
+    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createRepliesSubscription(
+            relays = configuredRelays,
+            eventIds = allEventIds,
+            onEvent = { event, _, _, _ ->
+                val replyToId =
+                    event.tags
+                        .filter { it.size >= 2 && it[0] == "e" }
+                        .lastOrNull()
+                        ?.get(1) ?: return@createRepliesSubscription
+                if (replyToId in allEventIds) {
+                    repliesByEvent =
+                        repliesByEvent.toMutableMap().apply {
+                            this[replyToId] = (this[replyToId] ?: 0) + 1
+                        }
+                }
+            },
+        )
+    }
+
+    // Subscribe to reposts for thread events
+    rememberSubscription(relayStatuses, allEventIds, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || allEventIds.isEmpty()) {
+            return@rememberSubscription null
+        }
+
+        createRepostsSubscription(
+            relays = configuredRelays,
+            eventIds = allEventIds,
+            onEvent = { event, _, _, _ ->
+                if (event is RepostEvent) {
+                    val targetEventId = event.boostedEventId() ?: return@createRepostsSubscription
+                    repostsByEvent =
+                        repostsByEvent.toMutableMap().apply {
+                            this[targetEventId] = (this[targetEventId] ?: 0) + 1
+                        }
+                }
+            },
+        )
     }
 
     // Calculate reply level for an event based on e-tags
@@ -205,16 +362,38 @@ fun ThreadScreen(
                             },
                     ) {
                         NoteCard(
-                            note = rootNote!!.toNoteDisplayData(),
+                            note = rootNote!!.toNoteDisplayData(localCache),
                             onAuthorClick = onNavigateToProfile,
                         )
                         if (account != null) {
+                            val rootZaps = zapsByEvent[noteId] ?: emptyList()
                             NoteActionsRow(
                                 event = rootNote!!,
                                 relayManager = relayManager,
+                                localCache = localCache,
                                 account = account,
-                                onReplyClick = { /* TODO: Open reply dialog */ },
+                                nwcConnection = nwcConnection,
+                                onReplyClick = { onReply(rootNote!!) },
+                                onZapFeedback = onZapFeedback,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                zapCount = rootZaps.size,
+                                zapAmountSats = rootZaps.sumOf { it.amountSats },
+                                zapReceipts = rootZaps,
+                                reactionCount = reactionsByEvent[noteId] ?: 0,
+                                replyCount = repliesByEvent[noteId] ?: 0,
+                                repostCount = repostsByEvent[noteId] ?: 0,
+                                bookmarkList = bookmarkList,
+                                isBookmarked = bookmarkedEventIds.contains(noteId),
+                                onBookmarkChanged = { newList ->
+                                    bookmarkList = newList
+                                    val pubIds =
+                                        newList
+                                            .publicBookmarks()
+                                            .filterIsInstance<EventBookmark>()
+                                            .map { it.eventId }
+                                            .toSet()
+                                    bookmarkedEventIds = pubIds
+                                },
                             )
                         }
                     }
@@ -242,16 +421,38 @@ fun ThreadScreen(
                                 },
                     ) {
                         NoteCard(
-                            note = event.toNoteDisplayData(),
+                            note = event.toNoteDisplayData(localCache),
                             onAuthorClick = onNavigateToProfile,
                         )
                         if (account != null) {
+                            val eventZaps = zapsByEvent[event.id] ?: emptyList()
                             NoteActionsRow(
                                 event = event,
                                 relayManager = relayManager,
+                                localCache = localCache,
                                 account = account,
-                                onReplyClick = { /* TODO: Open reply dialog */ },
+                                nwcConnection = nwcConnection,
+                                onReplyClick = { onReply(event) },
+                                onZapFeedback = onZapFeedback,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                zapCount = eventZaps.size,
+                                zapAmountSats = eventZaps.sumOf { it.amountSats },
+                                zapReceipts = eventZaps,
+                                reactionCount = reactionsByEvent[event.id] ?: 0,
+                                replyCount = repliesByEvent[event.id] ?: 0,
+                                repostCount = repostsByEvent[event.id] ?: 0,
+                                bookmarkList = bookmarkList,
+                                isBookmarked = bookmarkedEventIds.contains(event.id),
+                                onBookmarkChanged = { newList ->
+                                    bookmarkList = newList
+                                    val pubIds =
+                                        newList
+                                            .publicBookmarks()
+                                            .filterIsInstance<EventBookmark>()
+                                            .map { it.eventId }
+                                            .toSet()
+                                    bookmarkedEventIds = pubIds
+                                },
                             )
                         }
                     }

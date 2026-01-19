@@ -18,34 +18,52 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.util
+package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.ui.note.NoteDisplayData
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
 /**
- * Extension to convert Event to NoteDisplayData for the shared NoteCard.
+ * Represents a parsed search result from Bech32/hex input.
+ * Shared between Android and Desktop for consistent search behavior.
  */
-fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
-    val npub =
-        try {
-            pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
-        } catch (e: Exception) {
-            pubKey.take(16) + "..."
-        }
+sealed class SearchResult {
+    /**
+     * Direct user lookup from npub, nprofile, nsec, or hex pubkey.
+     */
+    data class UserResult(
+        val pubKeyHex: String,
+        val displayId: String,
+    ) : SearchResult()
 
-    val pictureUrl = (cache?.getUserIfExists(pubKey) as? User)?.profilePicture()
+    /**
+     * User from local cache with full metadata.
+     */
+    data class CachedUserResult(
+        val user: User,
+    ) : SearchResult()
 
-    return NoteDisplayData(
-        id = id,
-        pubKeyHex = pubKey,
-        pubKeyDisplay = npub,
-        profilePictureUrl = pictureUrl,
-        content = content,
-        createdAt = createdAt,
-    )
+    /**
+     * Note lookup from note1 or nevent.
+     */
+    data class NoteResult(
+        val noteIdHex: String,
+        val displayId: String,
+    ) : SearchResult()
+
+    /**
+     * Addressable event lookup from naddr.
+     */
+    data class AddressResult(
+        val kind: Int,
+        val pubKeyHex: String,
+        val dTag: String,
+        val displayId: String,
+    ) : SearchResult()
+
+    /**
+     * Hashtag search.
+     */
+    data class HashtagResult(
+        val hashtag: String,
+    ) : SearchResult()
 }

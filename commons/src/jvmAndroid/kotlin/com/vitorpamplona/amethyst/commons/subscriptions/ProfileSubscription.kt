@@ -26,20 +26,50 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * Creates a subscription config for user metadata (kind 0).
+ * Returns null if the pubKeyHex is invalid (not 64 characters).
  */
 fun createMetadataSubscription(
     relays: Set<NormalizedRelayUrl>,
     pubKeyHex: String,
     onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
     onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
-): SubscriptionConfig =
-    SubscriptionConfig(
+): SubscriptionConfig? {
+    // Validate pubkey length
+    if (pubKeyHex.length != 64) {
+        return null
+    }
+    return SubscriptionConfig(
         subId = generateSubId("meta-${pubKeyHex.take(8)}"),
         filters = listOf(FilterBuilders.userMetadata(pubKeyHex)),
         relays = relays,
         onEvent = onEvent,
         onEose = onEose,
     )
+}
+
+/**
+ * Creates a subscription config for metadata of multiple users (kind 0).
+ * Useful for batch-fetching author profiles.
+ * Filters out any invalid pubkeys (not 64 characters).
+ */
+fun createBatchMetadataSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    pubKeyHexList: List<String>,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    // Filter out invalid pubkeys
+    val validPubkeys = pubKeyHexList.filter { it.length == 64 }
+    if (validPubkeys.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("meta-batch-${validPubkeys.size}"),
+        filters = listOf(FilterBuilders.userMetadataBatch(validPubkeys)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
 
 /**
  * Creates a subscription config for user posts (kind 1).
