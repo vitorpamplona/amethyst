@@ -172,6 +172,12 @@
     <string name="upload_error_voice_message_unexpected_state">未知的上传状态</string>
     <string name="upload_error_voice_message_nip95_not_supported">语音消息尚不支持 NIP-95</string>
     <string name="upload_error_voice_message_exception">语音上传失败：%1$s</string>
+    <string name="voice_preset_none">无</string>
+    <string name="voice_preset_deep">深沉</string>
+    <string name="voice_preset_high">高音</string>
+    <string name="voice_preset_neutral">中性</string>
+    <string name="voice_anonymize_title">匿名化</string>
+    <string name="voice_anonymize_description">更改您的音高。注意：听众如果下定决定也许能逆转基础音高更改。</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">用户尚未设置闪电地址以接收聪</string>
     <string name="reply_here">"🔏在此回复… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">复制笔记ID到剪贴板，供分享</string>
@@ -1232,4 +1238,5 @@
     <string name="follow_pack_broadcast">广播包</string>
     <string name="follow_set_delete">删除列表</string>
     <string name="follow_pack_delete">删除包</string>
+    <string name="kinds">类型</string>
 </resources>
