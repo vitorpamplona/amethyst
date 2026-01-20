@@ -124,6 +124,10 @@ import java.io.File
 import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
 
+// Delay before cleaning up shared video temp files.
+// Allows time for receiving app to copy the file after user confirms share.
+private const val SHARED_VIDEO_CLEANUP_DELAY_MS = 120_000L
+
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
@@ -931,10 +935,10 @@ private suspend fun shareVideoFile(
             }
         }
 
-        // Schedule cleanup after 60 seconds to allow the receiving app time to copy the file
-        // Launch in separate coroutine so we don't block the completion callback
+        // Schedule cleanup to allow the receiving app time to copy the file.
+        // GlobalScope is intentional: cleanup must survive after share UI is dismissed.
         GlobalScope.launch(Dispatchers.IO) {
-            delay(60_000)
+            delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
             sharedFile?.delete()
         }
 
