@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerSta
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
-import com.vitorpamplona.amethyst.ui.components.ShareImageAction
+import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size110dp
@@ -71,11 +71,11 @@ fun RenderControlButtons(
         }
 
         AnimatedShareButton(controllerVisible, buttonPositionModifier.padding(end = Size165dp)) { popupExpanded, toggle ->
-            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
+            ShareMediaAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
         }
     } else {
         AnimatedShareButton(controllerVisible, buttonPositionModifier.padding(end = Size110dp)) { popupExpanded, toggle ->
-            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
+            ShareMediaAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
         }
     }
 }

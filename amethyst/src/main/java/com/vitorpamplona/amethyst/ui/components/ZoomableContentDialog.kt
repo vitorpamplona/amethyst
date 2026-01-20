@@ -234,7 +234,7 @@ private fun DialogContent(
                         contentDescription = stringRes(R.string.quick_action_share),
                     )
 
-                    ShareImageAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
+                    ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
                 if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {

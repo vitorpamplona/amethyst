@@ -684,14 +684,14 @@ fun DisplayBlurHash(
 }
 
 @Composable
-fun ShareImageAction(
+fun ShareMediaAction(
     accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
 ) {
     if (content is MediaUrlContent) {
-        ShareImageAction(
+        ShareMediaAction(
             accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.url,
@@ -704,7 +704,7 @@ fun ShareImageAction(
             content = content,
         )
     } else if (content is MediaPreloadedContent) {
-        ShareImageAction(
+        ShareMediaAction(
             accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
@@ -721,7 +721,7 @@ fun ShareImageAction(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ShareImageAction(
+fun ShareMediaAction(
     accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
