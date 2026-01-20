@@ -735,9 +735,12 @@ fun ShareImageAction(
 ) {
     val scope = rememberCoroutineScope()
 
+    // Track if video is downloading - hoisted here to block menu dismiss during download
+    val isDownloadingVideo = remember { mutableStateOf(false) }
+
     DropdownMenu(
         expanded = popupExpanded.value,
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isDownloadingVideo.value) onDismiss() },
     ) {
         val clipboardManager = LocalClipboardManager.current
 
@@ -798,22 +801,19 @@ fun ShareImageAction(
                 is MediaUrlVideo -> {
                     videoUri?.let {
                         if (videoUri.isNotEmpty()) {
-                            // State is read via Compose recomposition in text{} and enabled parameter
-                            val isDownloading = remember { mutableStateOf(false) }
-
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(stringRes(R.string.share_video))
-                                        if (isDownloading.value) {
+                                        if (isDownloadingVideo.value) {
                                             Spacer(modifier = Modifier.width(8.dp))
                                             LoadingAnimation(indicatorSize = 16.dp, circleWidth = 2.dp)
                                         }
                                     }
                                 },
-                                enabled = !isDownloading.value,
+                                enabled = !isDownloadingVideo.value,
                                 onClick = {
-                                    isDownloading.value = true
+                                    isDownloadingVideo.value = true
                                     scope.launch {
                                         shareVideoFile(
                                             context = context,
@@ -823,11 +823,11 @@ fun ShareImageAction(
                                                 accountViewModel.httpClientBuilder.okHttpClientForVideo(url)
                                             },
                                             onComplete = {
-                                                isDownloading.value = false
+                                                isDownloadingVideo.value = false
                                                 onDismiss()
                                             },
                                             onError = {
-                                                isDownloading.value = false
+                                                isDownloadingVideo.value = false
                                             },
                                         )
                                     }
