@@ -61,6 +61,7 @@ class VoiceAnonymizationController(
         preset: VoicePreset,
         originalFile: File?,
     ) {
+        Log.d(logTag, "selectPreset called with: ${preset.name}, pitchFactor: ${preset.pitchFactor}")
         if (processingPreset != null || preset == selectedPreset) return
 
         if (preset == VoicePreset.NONE) {
@@ -76,9 +77,9 @@ class VoiceAnonymizationController(
         val file = originalFile ?: return
 
         processingJob?.cancel()
+        processingPreset = preset
         processingJob =
             scope.launch {
-                processingPreset = preset
                 try {
                     val anonymizer = VoiceAnonymizer()
                     val result = anonymizer.anonymize(file, preset)
@@ -108,8 +109,11 @@ class VoiceAnonymizationController(
         distortedFiles.values.forEach { result ->
             try {
                 if (result.file.exists()) {
-                    result.file.delete()
-                    Log.d(logTag, "Deleted distorted file: ${result.file.absolutePath}")
+                    if (result.file.delete()) {
+                        Log.d(logTag, "Deleted distorted file: ${result.file.absolutePath}")
+                    } else {
+                        Log.w(logTag, "Failed to delete distorted file: ${result.file.absolutePath}")
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(logTag, "Failed to delete distorted file: ${result.file.absolutePath}", e)
