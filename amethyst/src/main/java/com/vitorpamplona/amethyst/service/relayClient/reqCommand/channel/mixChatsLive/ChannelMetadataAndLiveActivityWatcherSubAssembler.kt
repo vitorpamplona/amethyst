@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.filterChannelMetadataUpdatesById
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities.filterLiveStreamUpdatesByAddress

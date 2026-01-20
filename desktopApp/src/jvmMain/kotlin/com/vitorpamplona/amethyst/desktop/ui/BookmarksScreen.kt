@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCard
 import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
@@ -71,6 +72,7 @@ fun BookmarksScreen(
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn,
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
@@ -108,6 +110,16 @@ fun BookmarksScreen(
             )
         }
     val privateEvents by privateEventState.items.collectAsState()
+
+    // Load metadata for bookmark authors via coordinator
+    LaunchedEffect(publicEvents, privateEvents, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null) {
+            val pubkeys = (publicEvents + privateEvents).map { it.pubKey }.distinct()
+            if (pubkeys.isNotEmpty()) {
+                subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys)
+            }
+        }
+    }
 
     // Subscribe to user's bookmark list (kind 30001)
     rememberSubscription(relayStatuses, account.pubKeyHex, relayManager = relayManager) {

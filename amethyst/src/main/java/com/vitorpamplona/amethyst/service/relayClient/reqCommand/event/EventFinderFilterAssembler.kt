@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.NoteEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers.EventWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
@@ -251,6 +252,17 @@ fun App(
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
+    // Subscriptions coordinator for metadata/reactions loading
+    val subscriptionsCoordinator =
+        remember(relayManager, localCache) {
+            DesktopRelaySubscriptionsCoordinator(
+                client = relayManager.client,
+                scope = scope,
+                indexRelays = relayManager.availableRelays.value,
+                localCache = localCache,
+            )
+        }
+
     // Try to load saved account on startup
     DisposableEffect(Unit) {
         scope.launch(Dispatchers.IO) {
@@ -260,7 +272,12 @@ fun App(
 
         relayManager.addDefaultRelays()
         relayManager.connect()
+
+        // Start subscriptions coordinator
+        subscriptionsCoordinator.start()
+
         onDispose {
+            subscriptionsCoordinator.clear()
             relayManager.disconnect()
         }
     }
@@ -296,6 +313,7 @@ fun App(
                         accountManager = accountManager,
                         account = account,
                         nwcConnection = nwcConnection,
+                        subscriptionsCoordinator = subscriptionsCoordinator,
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
                     )
@@ -324,6 +342,7 @@ fun MainContent(
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
 ) {
@@ -429,6 +448,7 @@ fun MainContent(
                             localCache = localCache,
                             account = account,
                             nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
                             onCompose = onShowComposeDialog,
                             onNavigateToProfile = { pubKeyHex ->
                                 onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
@@ -454,6 +474,7 @@ fun MainContent(
                         SearchScreen(
                             localCache = localCache,
                             relayManager = relayManager,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
                             onNavigateToProfile = { pubKeyHex ->
                                 onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
                             },
@@ -467,6 +488,7 @@ fun MainContent(
                             localCache = localCache,
                             account = account,
                             nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
                             onNavigateToProfile = { pubKeyHex ->
                                 onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
                             },
@@ -476,7 +498,7 @@ fun MainContent(
                             onZapFeedback = onZapFeedback,
                         )
                     DesktopScreen.Messages -> MessagesPlaceholder()
-                    DesktopScreen.Notifications -> NotificationsScreen(relayManager, account)
+                    DesktopScreen.Notifications -> NotificationsScreen(relayManager, account, subscriptionsCoordinator)
                     DesktopScreen.MyProfile ->
                         UserProfileScreen(
                             pubKeyHex = account.pubKeyHex,
@@ -484,6 +506,7 @@ fun MainContent(
                             localCache = localCache,
                             account = account,
                             nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
                             onBack = { onScreenChange(DesktopScreen.Feed) },
                             onCompose = onShowComposeDialog,
                             onNavigateToProfile = { pubKeyHex ->
@@ -498,6 +521,7 @@ fun MainContent(
                             localCache = localCache,
                             account = account,
                             nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
                             onBack = { onScreenChange(DesktopScreen.Feed) },
                             onCompose = onShowComposeDialog,
                             onNavigateToProfile = { pubKeyHex ->
@@ -512,6 +536,7 @@ fun MainContent(
                             localCache = localCache,
                             account = account,
                             nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
                             onBack = { onScreenChange(DesktopScreen.Feed) },
                             onNavigateToProfile = { pubKeyHex ->
                                 onScreenChange(DesktopScreen.UserProfile(pubKeyHex))

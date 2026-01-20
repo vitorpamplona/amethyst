@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feed.FeedHeader
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -108,6 +110,7 @@ sealed class NotificationItem(
 fun NotificationsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -122,6 +125,14 @@ fun NotificationsScreen(
             )
         }
     val notifications by notificationState.items.collectAsState()
+
+    // Load metadata for notification authors via coordinator
+    LaunchedEffect(notifications, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && notifications.isNotEmpty()) {
+            val pubkeys = notifications.map { it.event.pubKey }.distinct()
+            subscriptionsCoordinator.loadMetadataForPubkeys(pubkeys)
+        }
+    }
 
     // Track EOSE to know when initial load is complete
     var eoseReceivedCount by remember { mutableStateOf(0) }

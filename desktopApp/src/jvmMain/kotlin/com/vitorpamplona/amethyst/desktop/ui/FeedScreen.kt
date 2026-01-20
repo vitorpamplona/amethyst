@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.util.toNoteDisplayData
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -146,6 +148,7 @@ fun FeedScreen(
     localCache: DesktopLocalCache,
     account: AccountState.LoggedIn? = null,
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -168,9 +171,14 @@ fun FeedScreen(
     var feedMode by remember { mutableStateOf(DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
-    var reactionsByEvent by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-    var repliesByEvent by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-    var repostsByEvent by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    // Track reaction event IDs per target event to deduplicate
+    var reactionIdsByEvent by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
+    val reactionsByEvent = reactionIdsByEvent.mapValues { it.value.size }
+    // Track reply/repost event IDs per target event to deduplicate
+    var replyIdsByEvent by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
+    val repliesByEvent = replyIdsByEvent.mapValues { it.value.size }
+    var repostIdsByEvent by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
+    val repostsByEvent = repostIdsByEvent.mapValues { it.value.size }
     var bookmarkList by remember { mutableStateOf<BookmarkListEvent?>(null) }
     var bookmarkedEventIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
@@ -355,9 +363,10 @@ fun FeedScreen(
             onEvent = { event, _, _, _ ->
                 if (event is ReactionEvent) {
                     val targetEventId = event.originalPost().firstOrNull() ?: return@createReactionsSubscription
-                    reactionsByEvent =
-                        reactionsByEvent.toMutableMap().apply {
-                            this[targetEventId] = (this[targetEventId] ?: 0) + 1
+                    reactionIdsByEvent =
+                        reactionIdsByEvent.toMutableMap().apply {
+                            val existing = this[targetEventId] ?: emptySet()
+                            this[targetEventId] = existing + event.id
                         }
                 }
             },
@@ -382,9 +391,10 @@ fun FeedScreen(
                         .lastOrNull()
                         ?.get(1) ?: return@createRepliesSubscription
                 if (replyToId in eventIds) {
-                    repliesByEvent =
-                        repliesByEvent.toMutableMap().apply {
-                            this[replyToId] = (this[replyToId] ?: 0) + 1
+                    replyIdsByEvent =
+                        replyIdsByEvent.toMutableMap().apply {
+                            val existing = this[replyToId] ?: emptySet()
+                            this[replyToId] = existing + event.id
                         }
                 }
             },
@@ -404,9 +414,10 @@ fun FeedScreen(
             onEvent = { event, _, _, _ ->
                 if (event is RepostEvent) {
                     val targetEventId = event.boostedEventId() ?: return@createRepostsSubscription
-                    repostsByEvent =
-                        repostsByEvent.toMutableMap().apply {
-                            this[targetEventId] = (this[targetEventId] ?: 0) + 1
+                    repostIdsByEvent =
+                        repostIdsByEvent.toMutableMap().apply {
+                            val existing = this[targetEventId] ?: emptySet()
+                            this[targetEventId] = existing + event.id
                         }
                 }
             },
@@ -415,7 +426,21 @@ fun FeedScreen(
 
     // Subscribe to metadata for note authors (to enable zaps and populate search cache)
     val authorPubkeys = events.map { it.pubKey }.distinct()
-    rememberSubscription(relayStatuses, authorPubkeys, relayManager = relayManager) {
+
+    // Use coordinator for rate-limited metadata loading (preferred)
+    LaunchedEffect(authorPubkeys, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && authorPubkeys.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForPubkeys(authorPubkeys)
+        }
+    }
+
+    // Fallback subscription if coordinator not available
+    rememberSubscription(relayStatuses, authorPubkeys, subscriptionsCoordinator, relayManager = relayManager) {
+        // Skip if using coordinator
+        if (subscriptionsCoordinator != null) {
+            return@rememberSubscription null
+        }
+
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isEmpty() || authorPubkeys.isEmpty()) {
             return@rememberSubscription null

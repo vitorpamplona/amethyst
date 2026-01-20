@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableQueryState
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope

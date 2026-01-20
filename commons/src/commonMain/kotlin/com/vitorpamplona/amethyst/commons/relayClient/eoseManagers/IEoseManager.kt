@@ -18,35 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers
+package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
-import java.util.concurrent.ConcurrentHashMap
+interface IEoseManager {
+    fun invalidateFilters(ignoreIfDoing: Boolean = false)
 
-/**
- *  This allows composables to directly register their queries
- *  to relays. There may be multiple duplications in these
- *  subscriptions since we do not control when screens are removed.
- */
-abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControls {
-    private var composeSubscriptions: ConcurrentHashMap<T, T> = ConcurrentHashMap()
-
-    // This is called by main. Keep it really fast.
-    fun subscribe(query: T?) {
-        if (query == null) return
-
-        composeSubscriptions.put(query, query)
-
-        invalidateKeys()
-    }
-
-    // This is called by main. Keep it really fast.
-    fun unsubscribe(query: T?) {
-        if (query == null) return
-
-        composeSubscriptions.remove(query)
-
-        invalidateKeys()
-    }
-
-    fun allKeys() = composeSubscriptions.keys
+    fun destroy()
 }

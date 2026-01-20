@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledUpdate
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.IEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event

@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.viewmodels.SearchBarState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
@@ -76,6 +77,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 fun SearchScreen(
     localCache: DesktopLocalCache,
     relayManager: DesktopRelayConnectionManager,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToHashtag: (String) -> Unit = {},

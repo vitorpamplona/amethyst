@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.AccountFollowsLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
