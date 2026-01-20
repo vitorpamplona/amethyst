@@ -42,7 +42,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-const val MAX_VOICE_RECORD_SECONDS = 180
+const val MAX_VOICE_RECORD_SECONDS = 600
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
