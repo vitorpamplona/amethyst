@@ -106,12 +106,11 @@ class AntiSpamFilter {
             recentAddressables.put(hash, address)
         } else {
             // normal event
+            val existingEvent = recentEventIds[hash]
             if (
-                (recentEventIds[hash] != null && recentEventIds[hash] != event.id) ||
+                (existingEvent != null && existingEvent != event.id) ||
                 (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventIds.contains(event.id))
             ) {
-                val existingEvent = recentEventIds[hash]
-
                 val link1 = njumpLink(NEvent.create(existingEvent, null, null, relay))
                 val link2 = njumpLink(NEvent.create(event.id, null, null, relay))
 

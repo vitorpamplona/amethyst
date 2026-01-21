@@ -25,17 +25,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -249,15 +250,12 @@ fun observeUserFollowCount(
         remember(user) {
             user
                 .flow()
-                .followers.stateFlow
-                .sample(200)
-                .mapLatest { userState ->
-                    userState.user.transientFollowCount() ?: 0
-                }.distinctUntilChanged()
+                .follows.stateFlow
+                .mapLatest { it.user.transientFollowCount() ?: 0 }
                 .flowOn(Dispatchers.IO)
         }
 
-    return flow.collectAsStateWithLifecycle(0)
+    return flow.collectAsStateWithLifecycle(user.transientFollowCount() ?: 0)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -395,7 +393,9 @@ fun observeUserFollowerCount(
                 .followers.stateFlow
                 .sample(200)
                 .mapLatest { userState ->
-                    userState.user.transientFollowerCount()
+                    LocalCache.countUsers { _, user ->
+                        user.latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
+                    }
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
         }

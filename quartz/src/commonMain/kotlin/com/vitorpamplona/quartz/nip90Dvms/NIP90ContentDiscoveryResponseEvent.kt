@@ -28,8 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class NIP90ContentDiscoveryResponseEvent(
@@ -43,10 +41,6 @@ class NIP90ContentDiscoveryResponseEvent(
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var events: List<HexKey>? = null
-
-    override fun countMemory(): Int =
-        super.countMemory() +
-            pointerSizeInBytes + (events?.sumOf { it.bytesUsedInMemory() } ?: 0)
 
     fun innerTags(): List<HexKey> {
         if (content.isEmpty()) {

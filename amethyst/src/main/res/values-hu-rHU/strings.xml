@@ -135,6 +135,8 @@
     <string name="add_a_user">Felhasználó ozzáadása</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
     <string name="profile_name">Név</string>
+    <string name="profile_name_with_explainer">Név (az @említéshez)</string>
+    <string name="my_name">Saját @említési név</string>
     <string name="display_name">Megjelenítendő név</string>
     <string name="my_display_name">Saját megjelenítendő név</string>
     <string name="my_awesome_name">Strucc McNagyszerű</string>
@@ -170,6 +172,12 @@
     <string name="upload_error_voice_message_unexpected_state">Váratlan feltöltési állapot</string>
     <string name="upload_error_voice_message_nip95_not_supported">A NIP-95 még nem támogatja a hangüzeneteket</string>
     <string name="upload_error_voice_message_exception">Nem sikerült feltölteni a hangüzenetet: %1$s</string>
+    <string name="voice_preset_none">Semmi</string>
+    <string name="voice_preset_deep">Mély</string>
+    <string name="voice_preset_high">Magas</string>
+    <string name="voice_preset_neutral">Semleges</string>
+    <string name="voice_anonymize_title">Névtelenítés</string>
+    <string name="voice_anonymize_description">Módosítja az Ön hangmagasságát. Megjegyzés: az alapvető hangmagasság-változásokat a figyelmes hallgatók visszafordíthatják.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>
     <string name="reply_here">"Válasz írása… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">A bejegyzés azonosítóját a vágólapra másolja a Nostr-ban való megosztáshoz</string>
@@ -1230,4 +1238,5 @@
     <string name="follow_pack_broadcast">Közvetítési csomag</string>
     <string name="follow_set_delete">Lista törlése</string>
     <string name="follow_pack_delete">Csomag törlése</string>
+    <string name="kinds">Változatok</string>
 </resources>

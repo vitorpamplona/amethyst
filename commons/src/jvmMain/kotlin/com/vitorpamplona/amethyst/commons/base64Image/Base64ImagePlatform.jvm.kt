@@ -22,24 +22,18 @@ package com.vitorpamplona.amethyst.commons.base64Image
 
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
+import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 import java.io.ByteArrayInputStream
-import java.util.Base64
 import javax.imageio.ImageIO
 
 /**
  * Converts a base64 image data URI to a PlatformImage (BufferedImage wrapper).
  */
 fun Base64Image.toPlatformImage(content: String): PlatformImage {
-    val matcher = pattern.matcher(content)
+    val byteArray = parse(content)
 
-    if (matcher.find()) {
-        val base64String = matcher.group(2)
-        val byteArray = Base64.getDecoder().decode(base64String)
-        val bufferedImage =
-            ImageIO.read(ByteArrayInputStream(byteArray))
-                ?: throw Exception("Unable to decode base64 image: $content")
-        return bufferedImage.toPlatformImage()
-    }
-
-    throw Exception("Unable to convert base64 to image $content")
+    val bufferedImage =
+        ImageIO.read(ByteArrayInputStream(byteArray))
+            ?: throw Exception("Unable to decode base64 image: $content")
+    return bufferedImage.toPlatformImage()
 }

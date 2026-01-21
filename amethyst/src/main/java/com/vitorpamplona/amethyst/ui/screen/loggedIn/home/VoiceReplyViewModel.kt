@@ -35,8 +35,15 @@ import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
+import com.vitorpamplona.quartz.nip10Notes.tags.notify
+import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
@@ -61,6 +68,32 @@ class VoiceReplyViewModel : ViewModel() {
     var voiceSelectedServer: ServerName? by mutableStateOf(null)
     var voiceOrchestrator: UploadOrchestrator? by mutableStateOf(null)
     var isUploading: Boolean by mutableStateOf(false)
+
+    private val voiceAnonymization =
+        VoiceAnonymizationController(
+            scope = viewModelScope,
+            logTag = "VoiceReplyViewModel",
+            onError = { error ->
+                if (::accountViewModel.isInitialized) {
+                    accountViewModel.toastManager.toast(
+                        stringRes(Amethyst.instance.appContext, R.string.error),
+                        error.message ?: "Voice anonymization failed",
+                    )
+                }
+            },
+        )
+
+    val activeFile: File?
+        get() = voiceAnonymization.activeFile(voiceLocalFile)
+
+    val activeWaveform: List<Float>?
+        get() = voiceAnonymization.activeWaveform(voiceRecording?.amplitudes)
+
+    val selectedPreset: VoicePreset
+        get() = voiceAnonymization.selectedPreset
+
+    val processingPreset: VoicePreset?
+        get() = voiceAnonymization.processingPreset
 
     private var uploadJob: Job? = null
 
@@ -108,6 +141,7 @@ class VoiceReplyViewModel : ViewModel() {
 
     fun selectRecording(recording: RecordingResult) {
         cancelUpload()
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
@@ -132,11 +166,16 @@ class VoiceReplyViewModel : ViewModel() {
         }
     }
 
-    fun canSend(): Boolean = voiceRecording != null && !isUploading
+    fun canSend(): Boolean = voiceRecording != null && !isUploading && processingPreset == null
+
+    fun selectPreset(preset: VoicePreset) {
+        voiceAnonymization.selectPreset(preset, voiceLocalFile)
+    }
 
     fun sendVoiceReply(onSuccess: () -> Unit) {
         val note = replyToNote ?: return
         val recording = voiceRecording ?: return
+        val fileToUpload = activeFile ?: recording.file
         val serverToUse = voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer
 
         cancelUpload()
@@ -149,7 +188,7 @@ class VoiceReplyViewModel : ViewModel() {
                 try {
                     val result =
                         withContext(Dispatchers.IO) {
-                            val uri = android.net.Uri.fromFile(recording.file)
+                            val uri = android.net.Uri.fromFile(fileToUpload)
                             orchestrator.upload(
                                 uri = uri,
                                 mimeType = recording.mimeType,
@@ -163,7 +202,7 @@ class VoiceReplyViewModel : ViewModel() {
                             )
                         }
 
-                    handleUploadResult(note, recording, serverToUse, result, onSuccess)
+                    handleUploadResult(note, recording, activeWaveform ?: recording.amplitudes, serverToUse, result, onSuccess)
                 } catch (e: CancellationException) {
                     Log.w("VoiceReplyViewModel", "User canceled, or ViewModel cleared", e)
                 } catch (e: Exception) {
@@ -187,6 +226,7 @@ class VoiceReplyViewModel : ViewModel() {
     private suspend fun handleUploadResult(
         note: Note,
         recording: RecordingResult,
+        waveform: List<Float>,
         server: ServerName,
         result: UploadingState,
         onSuccess: () -> Unit,
@@ -200,28 +240,46 @@ class VoiceReplyViewModel : ViewModel() {
             is UploadingState.Finished -> {
                 when (val orchestratorResult = result.result) {
                     is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                        val hint = note.toEventHint<BaseVoiceEvent>()
-                        if (hint == null) {
-                            accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
-                            return
-                        }
-
                         val audioMeta =
                             AudioMeta(
                                 url = orchestratorResult.url,
                                 mimeType = recording.mimeType,
                                 hash = orchestratorResult.fileHeader.hash,
                                 duration = recording.duration,
-                                waveform = recording.amplitudes,
+                                waveform = waveform,
                             )
 
-                        accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, hint))
+                        // Check if replying to a voice event
+                        val voiceHint = note.toEventHint<BaseVoiceEvent>()
+                        if (voiceHint != null) {
+                            // Create VoiceReplyEvent (KIND 1244) for voice-to-voice replies
+                            accountViewModel.account.signAndComputeBroadcast(VoiceReplyEvent.build(audioMeta, voiceHint))
+                        } else {
+                            // Create TextNoteEvent (KIND 1) with audio IMeta for voice replies to regular notes
+                            val textHint = note.toEventHint<TextNoteEvent>()
+                            if (textHint == null) {
+                                accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
+                                return
+                            }
+
+                            val template =
+                                TextNoteEvent.build(audioMeta.url) {
+                                    val tags = prepareETagsAsReplyTo(textHint, null)
+                                    accountViewModel.fixReplyTagHints(tags)
+                                    markedETags(tags)
+                                    notify(textHint.toPTag())
+                                    // Add audio as IMeta attachment
+                                    add(audioMeta.toIMetaArray())
+                                }
+                            accountViewModel.account.signAndComputeBroadcast(template)
+                        }
 
                         if (server.type != ServerType.NIP95) {
                             accountViewModel.account.settings.changeDefaultFileServer(server)
                         }
 
                         deleteVoiceLocalFile()
+                        voiceAnonymization.deleteDistortedFiles()
                         voiceLocalFile = null
                         voiceRecording = null
                         voiceMetadata = audioMeta
@@ -244,6 +302,7 @@ class VoiceReplyViewModel : ViewModel() {
 
     fun cancel() {
         cancelUpload()
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null

@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter

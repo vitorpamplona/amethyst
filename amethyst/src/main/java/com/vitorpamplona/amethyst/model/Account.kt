@@ -24,15 +24,21 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListState
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
+import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListDecryptionCache
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountHomeRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
@@ -46,11 +52,6 @@ import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListDecryptionCache
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListState
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListD
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
-import com.vitorpamplona.amethyst.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
@@ -571,7 +571,8 @@ class Account(
     suspend fun report(
         user: User,
         type: ReportType,
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, userProfile(), signer))
+        content: String = "",
+    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, content, userProfile(), signer))
 
     suspend fun delete(note: Note) = delete(listOf(note))
 
@@ -1658,7 +1659,7 @@ class Account(
 
     fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
-    fun isHidden(user: User) = isHidden(user.pubkeyHex)
+    override fun isHidden(user: User) = isHidden(user.pubkeyHex)
 
     fun isHidden(userHex: String): Boolean = hiddenUsers.flow.value.isUserHidden(userHex)
 

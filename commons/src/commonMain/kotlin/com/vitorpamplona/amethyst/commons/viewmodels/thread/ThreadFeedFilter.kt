@@ -64,9 +64,8 @@ class ThreadFeedFilter(
         val eventsInHex = filteredThreadInfo.allNotes.map { it.idHex }.toSet()
         val now = TimeUtils.now()
 
-        // Currently orders by date of each event, descending, at each level of the reply stack
-        val order =
-            compareByDescending<Note> {
+        val signatures =
+            filteredThreadInfo.allNotes.associateWith {
                 ThreadLevelCalculator
                     .replyLevelSignature(
                         it,
@@ -77,6 +76,11 @@ class ThreadFeedFilter(
                         now,
                     ).signature
             }
+
+        // Currently orders by date of each event, descending, at each level of the reply stack
+        val order =
+            compareByDescending<Note> { signatures[it] }
+                .thenBy { it.idHex }
 
         return filteredThreadInfo.allNotes.sortedWith(order)
     }

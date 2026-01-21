@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
@@ -43,10 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -57,7 +55,6 @@ fun ShowEmojiSuggestionList(
     emojiSuggestions: EmojiSuggestionState,
     onSelect: (EmojiPackState.EmojiMedia) -> Unit,
     onFullSize: (EmojiPackState.EmojiMedia) -> Unit,
-    accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
 ) {
     val suggestions by emojiSuggestions.results.collectAsStateWithLifecycle(emptyList())
@@ -79,22 +76,23 @@ fun ShowEmojiSuggestionList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = spacedBy(Size10dp),
                 ) {
-                    Box(Size40Modifier) {
-                        UrlImageView(it.link, accountViewModel)
-                    }
+                    AsyncImage(
+                        it.link,
+                        contentDescription = it.code,
+                        modifier = Size40Modifier,
+                    )
                     Text(it.code, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    Box(Size40Modifier, contentAlignment = Alignment.Center) {
-                        IconButton(
-                            onClick = {
-                                onFullSize(it)
-                            },
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.OpenInFull,
-                                contentDescription = stringRes(R.string.use_direct_url),
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
+                    IconButton(
+                        modifier = Size40Modifier,
+                        onClick = {
+                            onFullSize(it)
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.OpenInFull,
+                            contentDescription = stringRes(R.string.use_direct_url),
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
                 HorizontalDivider(

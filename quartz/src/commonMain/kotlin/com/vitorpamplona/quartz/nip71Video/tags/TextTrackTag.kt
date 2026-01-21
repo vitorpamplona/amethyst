@@ -23,19 +23,12 @@ package com.vitorpamplona.quartz.nip71Video.tags
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 data class TextTrackTag(
     val eventId: HexKey,
     var relay: String? = null,
 ) {
-    fun countMemory(): Int =
-        2 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
-            eventId.bytesUsedInMemory() +
-            (relay?.bytesUsedInMemory() ?: 0)
-
     fun toTagArray() = arrayOfNotNull(TAG_NAME, eventId, relay)
 
     companion object {

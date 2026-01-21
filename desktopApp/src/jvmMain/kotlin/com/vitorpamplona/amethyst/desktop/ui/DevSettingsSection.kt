@@ -51,7 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.desktop.account.AccountState
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 

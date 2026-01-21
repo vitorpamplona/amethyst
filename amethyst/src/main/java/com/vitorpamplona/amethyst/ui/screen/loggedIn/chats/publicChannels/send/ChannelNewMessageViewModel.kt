@@ -33,16 +33,16 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -484,7 +484,7 @@ open class ChannelNewMessageViewModel :
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
         }
     }
 
@@ -575,11 +575,11 @@ open class ChannelNewMessageViewModel :
     }
 
     open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
-        val wordToInsert = item.link.url + " "
+        val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link.url) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link.url)
+            iMetaAttachments.downloadAndPrepare(item.link) {
+                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 

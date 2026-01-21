@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Commu
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -41,6 +42,7 @@ val HomePostsFromCommunityKinds =
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
         WikiNoteEvent.KIND,
+        NipTextEvent.KIND,
         CommunityPostApprovalEvent.KIND,
         CommentEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
@@ -53,6 +55,7 @@ val HomePostsFromCommunityKindsStr =
         ClassifiedsEvent.KIND.toString(),
         HighlightEvent.KIND.toString(),
         WikiNoteEvent.KIND.toString(),
+        NipTextEvent.KIND.toString(),
         CommunityPostApprovalEvent.KIND.toString(),
         CommentEvent.KIND.toString(),
         InteractiveStoryPrologueEvent.KIND.toString(),

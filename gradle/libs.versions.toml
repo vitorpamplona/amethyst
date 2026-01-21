@@ -23,7 +23,7 @@ firebaseBom = "34.7.0"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
 jacksonModuleKotlin = "2.20.1"
-javaKeyring = "1.0.1"
+javaKeyring = "1.0.4"
 jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
@@ -49,11 +49,12 @@ rfc3986 = "0.1.2"
 secp256k1KmpJniAndroid = "0.22.0"
 securityCryptoKtx = "1.1.0"
 spotless = "8.1.0"
+tarsosdsp = "2.5"
 torAndroid = "0.4.8.21.1"
 translate = "17.0.3"
 unifiedpush = "3.0.10"
 urlDetector = "0.1.23"
-vico-charts = "2.4.0"
+vico-charts = "2.4.1"
 zelory = "3.0.1"
 zoomable = "2.9.0"
 zxing = "3.5.4"
@@ -145,6 +146,7 @@ rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc
 secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
+tarsosdsp = { group = "be.tarsos.dsp", name = "core", version.ref = "tarsosdsp" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
 url-detector = { group = "io.github.url-detector", name = "url-detector", version.ref = "urlDetector" }

@@ -32,13 +32,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable

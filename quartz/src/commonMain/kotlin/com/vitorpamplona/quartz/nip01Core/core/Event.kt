@@ -24,8 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 open class Event(
@@ -43,15 +41,6 @@ open class Event(
      * way that it should not be indexed for local search.
      */
     open fun isContentEncoded() = false
-
-    open fun countMemory(): Int =
-        7 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
-            12 + // createdAt + kind
-            id.bytesUsedInMemory() +
-            pubKey.bytesUsedInMemory() +
-            tags.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } +
-            content.bytesUsedInMemory() +
-            sig.bytesUsedInMemory()
 
     fun toJson(): String = OptimizedJsonMapper.toJson(this)
 

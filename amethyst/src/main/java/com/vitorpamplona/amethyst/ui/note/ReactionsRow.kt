@@ -113,6 +113,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
+import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -159,6 +160,7 @@ import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -634,6 +636,7 @@ fun ReplyViaVoiceReaction(
                 )
             }
         },
+        maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
     ) { isRecording, elapsedSeconds ->
         if (voiceRecordingState != null) {
             SideEffect {
@@ -1394,16 +1397,20 @@ private fun BoostTypeChoicePopup(
                     Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
                 }
 
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = onFork,
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                // removes the option to fork for now because we do not have screens for
+                // LongForm, Wiki and NIP posting.
+                if (baseNote.event is TextNoteEvent) {
+                    Button(
+                        modifier = Modifier.padding(horizontal = 3.dp),
+                        onClick = onFork,
+                        shape = ButtonBorder,
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                            ),
+                    ) {
+                        Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                    }
                 }
             }
         }

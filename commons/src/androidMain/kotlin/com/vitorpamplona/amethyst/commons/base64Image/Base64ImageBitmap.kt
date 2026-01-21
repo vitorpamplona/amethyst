@@ -24,18 +24,11 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.util.Base64
+import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 
 fun Base64Image.toBitmap(content: String): Bitmap {
-    val matcher = pattern.matcher(content)
-
-    if (matcher.find()) {
-        val base64String = matcher.group(2)
-        val byteArray = Base64.getDecoder().decode(base64String)
-        return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-    }
-
-    throw Exception("Unable to convert base64 to image $content")
+    val byteArray = parse(content)
+    return BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
 }
 
 /**

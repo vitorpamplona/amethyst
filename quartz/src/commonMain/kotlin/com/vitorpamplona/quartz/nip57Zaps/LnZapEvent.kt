@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class LnZapEvent(
@@ -73,11 +72,6 @@ class LnZapEvent(
             null
         }
     }
-
-    override fun countMemory(): Int =
-        super.countMemory() +
-            pointerSizeInBytes + (zapRequest?.countMemory() ?: 0) + // rough calculation
-            pointerSizeInBytes + 36 // bigdecimal size
 
     override fun containedPost(): LnZapRequestEvent? =
         try {

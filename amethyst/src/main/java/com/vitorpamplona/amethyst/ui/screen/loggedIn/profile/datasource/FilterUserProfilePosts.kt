@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -58,6 +59,7 @@ val UserProfilePostKinds2 =
     listOf(
         TorrentEvent.KIND,
         TorrentCommentEvent.KIND,
+        NipTextEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
         CommentEvent.KIND,
         VoiceReplyEvent.KIND,

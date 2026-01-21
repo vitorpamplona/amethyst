@@ -30,8 +30,8 @@ import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
-import com.vitorpamplona.amethyst.commons.base64Image.Base64Image
 import com.vitorpamplona.amethyst.commons.base64Image.toBitmap
+import com.vitorpamplona.amethyst.commons.richtext.Base64Image
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 

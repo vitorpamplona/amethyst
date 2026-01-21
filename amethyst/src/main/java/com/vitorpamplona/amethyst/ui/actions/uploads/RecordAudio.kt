@@ -37,30 +37,34 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.ClickAndHoldBoxComposable
+import com.vitorpamplona.amethyst.ui.components.ToggleableBox
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+
+const val MAX_VOICE_RECORD_SECONDS = 600
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RecordAudioBox(
     modifier: Modifier,
     onRecordTaken: (RecordingResult) -> Unit,
+    maxDurationSeconds: Int? = null,
     content: @Composable (Boolean, Int) -> Unit,
 ) {
     val mediaRecorder = remember { mutableStateOf<VoiceMessageRecorder?>(null) }
     val context = LocalContext.current
     var elapsedSeconds by remember { mutableIntStateOf(0) }
-    var wantsToRecord by remember { mutableStateOf(false) }
+    var pendingPermissionStart by remember { mutableStateOf(false) }
 
     // Must be called at Composable scope, not in callback
     val recordPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
     val scope = rememberCoroutineScope()
 
+    val isRecording = mediaRecorder.value != null
+
     DisposableEffect(Unit) {
         onDispose {
-            wantsToRecord = false
             mediaRecorder.value?.stop()
             mediaRecorder.value = null
         }
@@ -74,8 +78,25 @@ fun RecordAudioBox(
         }
     }
 
-    LaunchedEffect(recordPermissionState.status.isGranted, wantsToRecord) {
-        if (recordPermissionState.status.isGranted && wantsToRecord) {
+    fun stopRecording() {
+        val result = mediaRecorder.value?.stop()
+        mediaRecorder.value = null
+        if (result != null) {
+            onRecordTaken(result)
+        } else {
+            Toast
+                .makeText(
+                    context,
+                    stringRes(context, R.string.record_a_message_description),
+                    Toast.LENGTH_SHORT,
+                ).show()
+        }
+    }
+
+    // Start recording after permission is granted
+    LaunchedEffect(recordPermissionState.status.isGranted) {
+        if (recordPermissionState.status.isGranted && pendingPermissionStart) {
+            pendingPermissionStart = false
             startRecording()
         }
     }
@@ -89,6 +110,10 @@ fun RecordAudioBox(
             while (isActive) {
                 delay(1000)
                 elapsedSeconds++
+                if (maxDurationSeconds != null && elapsedSeconds >= maxDurationSeconds) {
+                    stopRecording()
+                    break
+                }
             }
         } else {
             // Reset elapsed time when not recording
@@ -96,38 +121,21 @@ fun RecordAudioBox(
         }
     }
 
-    ClickAndHoldBoxComposable(
+    ToggleableBox(
         modifier = modifier,
-        onPress = {
-            wantsToRecord = true
-            if (!recordPermissionState.status.isGranted) {
-                recordPermissionState.launchPermissionRequest()
+        isActive = isRecording,
+        onClick = {
+            if (isRecording) {
+                stopRecording()
             } else {
-                // Start immediately for responsive UX when permission already granted
-                startRecording()
+                if (!recordPermissionState.status.isGranted) {
+                    pendingPermissionStart = true
+                    recordPermissionState.launchPermissionRequest()
+                } else {
+                    startRecording()
+                }
             }
         },
-        onRelease = {
-            wantsToRecord = false
-            val result = mediaRecorder.value?.stop()
-            mediaRecorder.value = null
-            if (result != null) {
-                onRecordTaken(result)
-            } else {
-                // less disruptive than error messages
-                Toast
-                    .makeText(
-                        context,
-                        stringRes(context, R.string.record_a_message_description),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-            }
-        },
-        onCancel = {
-            wantsToRecord = false
-            mediaRecorder.value?.stop()
-            mediaRecorder.value = null
-        },
-        content = @Composable { isRecording -> content(isRecording, elapsedSeconds) },
+        content = { active -> content(active, elapsedSeconds) },
     )
 }

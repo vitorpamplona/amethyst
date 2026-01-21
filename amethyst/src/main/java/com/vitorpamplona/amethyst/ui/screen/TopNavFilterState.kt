@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -392,6 +393,7 @@ val DEFAULT_FEED_KINDS =
         LiveActivitiesChatMessageEvent.KIND,
         LiveActivitiesEvent.KIND,
         WikiNoteEvent.KIND,
+        NipTextEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
     )
 
@@ -406,6 +408,7 @@ val DEFAULT_COMMUNITY_FEEDS =
         AudioTrackEvent.KIND,
         PinListEvent.KIND,
         WikiNoteEvent.KIND,
+        NipTextEvent.KIND,
         CommunityPostApprovalEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
     )

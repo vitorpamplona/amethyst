@@ -36,11 +36,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -53,6 +53,8 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -83,6 +85,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -192,6 +195,31 @@ open class ShortNotePostViewModel :
     var voiceMetadata by mutableStateOf<AudioMeta?>(null)
     var voiceSelectedServer by mutableStateOf<ServerName?>(null)
     var voiceOrchestrator by mutableStateOf<UploadOrchestrator?>(null)
+
+    // Voice Anonymization
+    private val voiceAnonymization =
+        VoiceAnonymizationController(
+            scope = viewModelScope,
+            logTag = "ShortNotePostViewModel",
+            onError = { error ->
+                accountViewModel.toastManager.toast(
+                    stringRes(Amethyst.instance.appContext, R.string.error),
+                    error.message ?: "Voice anonymization failed",
+                )
+            },
+        )
+
+    val activeFile: java.io.File?
+        get() = voiceAnonymization.activeFile(voiceLocalFile)
+
+    val activeWaveform: List<Float>?
+        get() = voiceAnonymization.activeWaveform(voiceRecording?.amplitudes)
+
+    val selectedPreset: VoicePreset
+        get() = voiceAnonymization.selectedPreset
+
+    val processingPreset: VoicePreset?
+        get() = voiceAnonymization.processingPreset
 
     // Polls
     var canUsePoll by mutableStateOf(false)
@@ -542,17 +570,43 @@ open class ShortNotePostViewModel :
         voiceMetadata?.let { audioMeta ->
             // Only create voice reply if original note is also a voice message
             val originalVoiceHint = originalNote?.toEventHint<BaseVoiceEvent>()
-            return if (originalVoiceHint != null) {
-                // Create voice reply event
-                VoiceReplyEvent.build(
+            if (originalVoiceHint != null) {
+                // Create voice reply event (KIND 1244)
+                return VoiceReplyEvent.build(
                     voiceMessage = audioMeta,
                     replyingTo = originalVoiceHint,
                 )
-            } else {
-                // Create root voice event (no reply or original is not a voice message)
-                VoiceEvent.build(
+            }
+            // If no original note, create a standalone voice event (KIND 1222)
+            if (originalNote == null) {
+                return VoiceEvent.build(
                     voiceMessage = audioMeta,
                 )
+            }
+            // Otherwise, original note exists but is not a voice message
+            // Create a TextNoteEvent (KIND 1) with audio as IMeta attachment
+            return TextNoteEvent.build(audioMeta.url) {
+                val replyingTo = originalNote?.toEventHint<TextNoteEvent>()
+                if (replyingTo != null) {
+                    val tags = prepareETagsAsReplyTo(replyingTo, null)
+                    accountViewModel.fixReplyTagHints(tags)
+                    markedETags(tags)
+                    notify(replyingTo.toPTag())
+                }
+                pTags?.let { userList ->
+                    val tags =
+                        userList.map {
+                            val tag = it.toPTag()
+                            if (tag.relayHint == null) {
+                                tag.copy(relayHint = LocalCache.relayHints.hintsForKey(it.pubkeyHex).firstOrNull())
+                            } else {
+                                tag
+                            }
+                        }
+                    notify(tags)
+                }
+                // Add audio as IMeta attachment
+                add(audioMeta.toIMetaArray())
             }
         }
 
@@ -665,7 +719,7 @@ open class ShortNotePostViewModel :
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link) }
         }
     }
 
@@ -767,6 +821,7 @@ open class ShortNotePostViewModel :
 
         multiOrchestrator = null
         isUploadingImage = false
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -874,11 +929,11 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmojiUrl(item: EmojiMedia) {
-        val wordToInsert = item.link.url + " "
+        val wordToInsert = item.link + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(item.link.url) {
-                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link.url)
+            iMetaAttachments.downloadAndPrepare(item.link) {
+                Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForImage(item.link)
             }
         }
 
@@ -895,7 +950,7 @@ open class ShortNotePostViewModel :
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
-            return !isUploadingVoice && !isUploadingImage
+            return !isUploadingVoice && !isUploadingImage && processingPreset == null
         }
 
         // Regular text/media posts require text
@@ -924,10 +979,12 @@ open class ShortNotePostViewModel :
     }
 
     fun selectVoiceRecording(recording: RecordingResult) {
-        // Delete any existing temp file before replacing
+        // Cancel any ongoing processing and delete existing files
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = recording
         voiceLocalFile = recording.file
+        voiceMetadata = null
     }
 
     fun getVoicePreviewMetadata(): AudioMeta? =
@@ -940,7 +997,12 @@ open class ShortNotePostViewModel :
             )
         }
 
+    fun selectPreset(preset: VoicePreset) {
+        voiceAnonymization.selectPreset(preset, voiceLocalFile)
+    }
+
     fun removeVoiceMessage() {
+        voiceAnonymization.clear()
         deleteVoiceLocalFile()
         voiceRecording = null
         voiceLocalFile = null
@@ -968,6 +1030,8 @@ open class ShortNotePostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         val recording = voiceRecording ?: return
+        val fileToUpload = activeFile ?: recording.file
+        val waveform = activeWaveform ?: recording.amplitudes
         val appContext = Amethyst.instance.appContext
         val uploadErrorTitle = stringRes(appContext, R.string.upload_error_title)
         val uploadVoiceNip95NotSupported = stringRes(appContext, R.string.upload_error_voice_message_nip95_not_supported)
@@ -979,7 +1043,7 @@ open class ShortNotePostViewModel :
         isUploadingVoice = true
 
         try {
-            val uri = android.net.Uri.fromFile(recording.file)
+            val uri = android.net.Uri.fromFile(fileToUpload)
             val orchestrator = UploadOrchestrator()
             voiceOrchestrator = orchestrator
 
@@ -1006,10 +1070,11 @@ open class ShortNotePostViewModel :
                                     mimeType = recording.mimeType,
                                     hash = orchestratorResult.fileHeader.hash,
                                     duration = recording.duration,
-                                    waveform = recording.amplitudes,
+                                    waveform = waveform,
                                 )
                             // Delete the local file after successful upload
                             deleteVoiceLocalFile()
+                            voiceAnonymization.deleteDistortedFiles()
                             voiceLocalFile = null
                             voiceRecording = null
                         }

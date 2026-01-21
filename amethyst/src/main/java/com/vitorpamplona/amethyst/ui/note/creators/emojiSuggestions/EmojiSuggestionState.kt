@@ -20,14 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 
+@Stable
 class EmojiSuggestionState(
     val account: Account,
 ) {

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.vitorpamplona.amethyst.model.ListChange
+import com.vitorpamplona.amethyst.commons.model.ListChange
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 interface ChangesFlowFilter<T> : IAdditiveFeedFilter<T> {

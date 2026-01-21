@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
@@ -42,7 +48,7 @@ interface ICacheProvider {
      * @param note The note to look up channel for
      * @return The channel if found, null otherwise
      */
-    fun getAnyChannel(note: Any?): IChannel?
+    fun getAnyChannel(note: Note): Channel?
 
     /**
      * Gets a User by public key hex.
@@ -60,7 +66,7 @@ interface ICacheProvider {
      * @param predicate Filter function for counting users
      * @return Count of users matching the predicate
      */
-    fun countUsers(predicate: (String, Any) -> Boolean): Int
+    fun countUsers(predicate: (String, User) -> Boolean): Int
 
     /**
      * Gets a Note if it exists in cache.
@@ -78,7 +84,16 @@ interface ICacheProvider {
      * @param hexKey The note's ID in hex format
      * @return The Note (existing or newly created)
      */
-    fun checkGetOrCreateNote(hexKey: HexKey): Any?
+    fun checkGetOrCreateNote(hexKey: HexKey): Note?
+
+    /**
+     * Gets an existing AddressableNote or creates a new one if it doesn't exist.
+     * Used by ThreadAssembler for building thread structures.
+     *
+     * @param address The note's ID in address format
+     * @return The AddressableNote (existing or newly created)
+     */
+    fun getOrCreateAddressableNote(key: Address): AddressableNote
 
     /**
      * Gets the event stream for cache updates.
@@ -118,17 +133,6 @@ interface ICacheProvider {
      * @return The User (existing or newly created)
      */
     fun getOrCreateUser(pubkey: HexKey): Any?
-}
 
-/**
- * Minimal channel interface for relay resolution.
- * Full channel implementations (PublicChatChannel, LiveActivitiesChannel)
- * implement this interface.
- */
-interface IChannel {
-    /**
-     * Gets the relay URLs for this channel.
-     * @return List of relay URLs or null if none configured
-     */
-    fun relays(): List<Any>?
+    fun justConsumeMyOwnEvent(event: Event): Boolean
 }

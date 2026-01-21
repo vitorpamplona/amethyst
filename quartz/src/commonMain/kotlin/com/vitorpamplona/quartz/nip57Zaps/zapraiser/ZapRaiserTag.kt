@@ -20,14 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.zapraiser
 
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-
 class ZapRaiserTag(
     val amountInSats: Long,
 ) {
-    fun countMemory(): Int = 1 * pointerSizeInBytes + amountInSats.bytesUsedInMemory()
-
     fun toTagArray() = assemble(amountInSats)
 
     companion object {

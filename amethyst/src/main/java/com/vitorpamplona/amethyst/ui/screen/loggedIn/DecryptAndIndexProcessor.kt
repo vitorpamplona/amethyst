@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.privateChats.ChatroomList
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent

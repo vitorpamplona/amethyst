@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
@@ -79,7 +80,7 @@ open class BaseThreadedEvent(
         val tagAddresses =
             taggedATags()
                 .filter { aTag ->
-                    aTag.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || aTag.kind != WikiNoteEvent.KIND)
+                    aTag.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || aTag.kind != WikiNoteEvent.KIND) && (kind != NipTextEvent.KIND || aTag.kind != NipTextEvent.KIND)
                     // removes forks from itself.
                 }.map {
                     it.toTag()

@@ -21,15 +21,11 @@
 package com.vitorpamplona.quartz.nip47WalletConnect
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 // RESPONSE OBJECTS
 abstract class Response(
     val resultType: String,
-) : OptimizedSerializable {
-    abstract fun countMemory(): Int
-}
+) : OptimizedSerializable
 
 // PayInvoice Call
 
@@ -38,11 +34,7 @@ class PayInvoiceSuccessResponse(
 ) : Response("pay_invoice") {
     class PayInvoiceResultParams(
         val preimage: String? = null,
-    ) {
-        fun countMemory(): Int = pointerSizeInBytes + (preimage?.bytesUsedInMemory() ?: 0)
-    }
-
-    override fun countMemory(): Int = pointerSizeInBytes + (result?.countMemory() ?: 0)
+    )
 }
 
 class PayInvoiceErrorResponse(
@@ -51,11 +43,7 @@ class PayInvoiceErrorResponse(
     class PayInvoiceErrorParams(
         val code: ErrorType? = null,
         val message: String? = null,
-    ) {
-        fun countMemory(): Int = pointerSizeInBytes + pointerSizeInBytes + (message?.bytesUsedInMemory() ?: 0)
-    }
-
-    override fun countMemory(): Int = pointerSizeInBytes + (error?.countMemory() ?: 0)
+    )
 
     enum class ErrorType {
         RATE_LIMITED,

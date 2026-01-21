@@ -21,9 +21,6 @@
 package com.vitorpamplona.amethyst.model
 
 // Re-export from commons for backwards compatibility
-typealias UserDependencies = com.vitorpamplona.amethyst.commons.model.UserDependencies
 typealias User = com.vitorpamplona.amethyst.commons.model.User
-typealias UserFlowSet = com.vitorpamplona.amethyst.commons.model.UserFlowSet
 typealias RelayInfo = com.vitorpamplona.amethyst.commons.model.RelayInfo
-typealias UserBundledRefresherFlow = com.vitorpamplona.amethyst.commons.model.UserBundledRefresherFlow
 typealias UserState = com.vitorpamplona.amethyst.commons.model.UserState

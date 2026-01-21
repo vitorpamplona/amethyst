@@ -23,17 +23,16 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.model.cache.IChannel
-import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
-import com.vitorpamplona.amethyst.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
@@ -49,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
@@ -324,23 +324,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         return users.get(key)
     }
 
-    override fun countUsers(predicate: (String, Any) -> Boolean): Int {
+    override fun countUsers(predicate: (String, User) -> Boolean): Int {
         var count = 0
         users.forEach { key, user ->
             if (predicate(key, user)) count++
         }
         return count
-    }
-
-    override fun getAnyChannel(note: Any?): IChannel? {
-        val channelNote = note as? Note ?: return null
-        val channel = getAnyChannel(channelNote)
-        // Wrap Channel to implement IChannel interface
-        return channel?.let {
-            object : IChannel {
-                override fun relays(): List<Any>? = it.relays().toList()
-            }
-        }
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
@@ -470,7 +459,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getOrCreateAddressableNoteInternal(key: Address): AddressableNote = addressables.getOrCreate(key) { AddressableNote(key) }
 
-    fun getOrCreateAddressableNote(key: Address): AddressableNote {
+    override fun getOrCreateAddressableNote(key: Address): AddressableNote {
         val note = getOrCreateAddressableNoteInternal(key)
         // Loads the user outside a Syncronized block to avoid blocking
         if (note.author == null) {
@@ -531,8 +520,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         // avoids processing empty contact lists.
         if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty() && (wasVerified || justVerify(event))) {
-            user.updateContactList(event)
+            val needsToUpdateFollowers = user.updateContactList(event)
             // Log.d("CL", "Consumed contact list ${user.toNostrUri()} ${event.relays()?.size}")
+
+            needsToUpdateFollowers.forEach {
+                getUserIfExists(it)?.flowSet?.followers?.invalidateData()
+            }
 
             updateObservables(event)
 
@@ -701,6 +694,51 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
+        event: NipTextEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        val isVerified =
+            if (version.event == null && (wasVerified || justVerify(event))) {
+                version.loadEvent(event, author, emptyList())
+                version.moveAllReferencesTo(note)
+                true
+            } else {
+                wasVerified
+            }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event?.id == event.id) return wasVerified
+
+        if (antiSpam.isSpam(event, relay)) {
+            return false
+        }
+
+        if (isVerified || justVerify(event)) {
+            val replyTo = computeReplyTo(event)
+
+            if (event.createdAt > (note.createdAt() ?: 0L)) {
+                note.loadEvent(event, author, replyTo)
+
+                refreshNewNoteObservers(note)
+
+                return true
+            }
+        }
+
+        return false
+    }
+
+    fun consume(
         event: LongTextNoteEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -794,7 +832,6 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
             is PollNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is WikiNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
             is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
@@ -1361,7 +1398,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun getAnyChannel(note: Note): Channel? = note.event?.let { getAnyChannel(it) }
+    override fun getAnyChannel(note: Note): Channel? = note.event?.let { getAnyChannel(it) }
 
     fun getAnyChannel(noteEvent: Event): Channel? =
         when (noteEvent) {
@@ -2091,6 +2128,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         return notes.filter { _, note ->
+            if (note.event is AddressableEvent) {
+                return@filter false
+            }
+
             if (excludeNoteEventFromSearchResults(note)) {
                 return@filter false
             }
@@ -2677,7 +2718,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun justConsumeMyOwnEvent(event: Event) = justConsumeAndUpdateIndexes(event, null, true)
+    override fun justConsumeMyOwnEvent(event: Event) = justConsumeAndUpdateIndexes(event, null, true)
 
     fun justConsume(
         event: Event,
@@ -2888,6 +2929,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is MetadataEvent -> consume(event, relay, wasVerified)
                 is MuteListEvent -> consume(event, relay, wasVerified)
                 is NNSEvent -> consume(event, relay, wasVerified)
+                is NipTextEvent -> consume(event, relay, wasVerified)
                 is OtsEvent -> consume(event, relay, wasVerified)
                 is PictureEvent -> consume(event, relay, wasVerified)
                 is PrivateDmEvent -> consume(event, relay, wasVerified)

@@ -33,8 +33,6 @@ expect class Address(
 
     fun toValue(): String
 
-    fun countMemory(): Int
-
     companion object {
         fun assemble(
             kind: Int,

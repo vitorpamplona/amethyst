@@ -23,8 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.core
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Stable
 actual data class Address actual constructor(
@@ -34,12 +32,6 @@ actual data class Address actual constructor(
 ) : Comparable<Address>,
     Parcelable {
     actual fun toValue() = assemble(kind, pubKeyHex, dTag)
-
-    actual fun countMemory(): Int =
-        3 * pointerSizeInBytes +
-            8 + // kind
-            pubKeyHex.bytesUsedInMemory() +
-            dTag.bytesUsedInMemory()
 
     actual override fun compareTo(other: Address): Int {
         val kindComparison = kind.compareTo(other.kind)

@@ -22,16 +22,12 @@ package com.vitorpamplona.quartz.nip13Pow.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 class PoWTag(
     val nonce: String,
     val commitment: Int?,
 ) {
-    fun countMemory(): Int = 2 * pointerSizeInBytes + nonce.bytesUsedInMemory() + (commitment?.bytesUsedInMemory() ?: 0)
-
     fun toTagArray() = assemble(nonce, commitment)
 
     companion object {

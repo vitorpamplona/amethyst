@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities
 
-import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

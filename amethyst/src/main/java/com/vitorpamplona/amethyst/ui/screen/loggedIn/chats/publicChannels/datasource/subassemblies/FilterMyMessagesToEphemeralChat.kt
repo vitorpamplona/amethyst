@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

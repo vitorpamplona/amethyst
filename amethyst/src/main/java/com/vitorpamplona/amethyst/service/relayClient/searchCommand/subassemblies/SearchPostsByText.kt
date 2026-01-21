@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
@@ -81,6 +82,7 @@ val SearchPostsByTextKinds3 =
         InteractiveStoryPrologueEvent.KIND,
         InteractiveStorySceneEvent.KIND,
         FollowListEvent.KIND,
+        NipTextEvent.KIND,
     )
 
 fun searchPostsByText(

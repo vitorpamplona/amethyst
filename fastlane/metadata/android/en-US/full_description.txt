@@ -1,1 +1,7 @@
-<p><i>Amethyst</i> brings the best social network to your Android phone. Just insert your Nostr private key and start posting.</p><p><a href='https://github.com/nostr-protocol/nostr' target='_blank' rel='nofollow noopener'>Nostr</a> is an open protocol that is able to create a censorship-resistant global "social" network, transferring notes and other stuff using relays. It doesn't rely on any trusted central server, hence it is resilient; it is based on cryptographic keys and signatures, so it is tamperproof; it does not rely on P2P techniques, therefore it works.
+<p><i>Amethyst</i> brings the best social network to your Android phone. Just insert your Nostr
+private key and start posting.</p>
+<p><a href='https://nostr.com/' target='_blank' rel='nofollow noopener'>Nostr</a>
+is an open protocol that is able to create a censorship-resistant global "social" network, transferring
+notes and other stuff using relays. It doesn't rely on any trusted central server, hence it is resilient;
+it is based on cryptographic keys and signatures, so it is tamperproof; it does not rely on P2P techniques,
+therefore it works.</p>

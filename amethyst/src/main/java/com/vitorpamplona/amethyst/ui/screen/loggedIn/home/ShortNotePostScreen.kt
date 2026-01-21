@@ -59,12 +59,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -366,11 +368,26 @@ private fun NewPostScreenBody(
                         postViewModel.voiceOrchestrator?.let { orchestrator ->
                             UploadProgressIndicator(orchestrator)
                         } ?: run {
+                            val displayMetadata =
+                                metadata.copy(
+                                    waveform = postViewModel.activeWaveform ?: metadata.waveform,
+                                )
                             VoiceMessagePreview(
-                                voiceMetadata = metadata,
-                                localFile = postViewModel.voiceLocalFile,
+                                voiceMetadata = displayMetadata,
+                                localFile = postViewModel.activeFile,
+                                onReRecord = { recording -> postViewModel.selectVoiceRecording(recording) },
+                                isUploading = postViewModel.isUploadingVoice,
                                 onRemove = { postViewModel.removeVoiceMessage() },
                             )
+
+                            // Voice anonymization section (only show when not uploading and voice is pending)
+                            if (postViewModel.voiceRecording != null) {
+                                VoiceAnonymizationSection(
+                                    selectedPreset = postViewModel.selectedPreset,
+                                    processingPreset = postViewModel.processingPreset,
+                                    onPresetSelected = { postViewModel.selectPreset(it) },
+                                )
+                            }
                         }
 
                         FileServerSelectionRow(
@@ -440,7 +457,6 @@ private fun NewPostScreenBody(
                 it,
                 postViewModel::autocompleteWithEmoji,
                 postViewModel::autocompleteWithEmojiUrl,
-                accountViewModel,
                 modifier = Modifier.heightIn(0.dp, 300.dp),
             )
         }
@@ -484,6 +500,7 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
             onVoiceTaken = { recording ->
                 postViewModel.selectVoiceRecording(recording)
             },
+            maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
 
         if (postViewModel.canUsePoll) {

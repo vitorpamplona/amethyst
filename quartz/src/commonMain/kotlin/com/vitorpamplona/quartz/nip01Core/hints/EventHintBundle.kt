@@ -24,8 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class EventHintBundle<T : Event>(
@@ -38,11 +36,6 @@ data class EventHintBundle<T : Event>(
         this.relay = relayHint
         this.authorHomeRelay = authorHomeRelay
     }
-
-    fun countMemory(): Int =
-        2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
-            event.countMemory() +
-            (relay?.url?.bytesUsedInMemory() ?: 0)
 
     fun toNEvent(): String = NEvent.create(event.id, event.pubKey, event.kind, relay)
 }

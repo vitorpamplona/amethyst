@@ -24,10 +24,10 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.ListChange
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter

@@ -31,9 +31,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class ContactTag(
@@ -50,12 +48,6 @@ data class ContactTag(
         this.relayUri = relayHint
         this.petname = petname
     }
-
-    fun countMemory(): Int =
-        3 * pointerSizeInBytes +
-            pubKey.bytesUsedInMemory() +
-            (relayUri?.url?.bytesUsedInMemory() ?: 0) +
-            (petname?.bytesUsedInMemory() ?: 0)
 
     fun toTagArray() = assemble(pubKey, relayUri, petname)
 

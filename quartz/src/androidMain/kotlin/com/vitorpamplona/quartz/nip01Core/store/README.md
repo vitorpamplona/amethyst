@@ -5,47 +5,61 @@ This module implements an **Event Store** with nostr-native queries.
 The goal was not to make the fastest database, since there could be multiple optimizations made if
 consistency can be sacrificed, but a database that will never crash and never go corrupt.
 
-## Responsibilities
+## Features
 
 - **Storage & Retrieval**:
-  Stores Nostr events and enables retrieval using Nostr filters
+  Stores Nostr events and retrieves using Nostr filters
 
 - **Replaceable Events**:
+  - Forces unique constraint by kind, pubkey
   - Old versions are removed when newer versions arrive.
   - Old versions are blocked if newer versions exist.
+
+- **Addressable Events**:
+    - Forces unique constraint by kind, pubkey, d-tag
+    - Old versions are removed when newer versions arrive.
+    - Old versions are blocked if newer versions exist.
 
 - **Ephemeral Events**
   - Ephemeral events never stored.
 
 - **NIP-40 Expirations**
-  - Manages expiration timestamps and prunes expired events.
+  - Deletes expired events.
   - Blocks expired events from being reinserted
 
 - **NIP-09 Deletion Events**
   - Deletes by event id
   - Deletes by address until the `created_at`
   - Blocks deleted events from being re-inserted.
+  - GiftWraps are deleted by p-tag
 
 - **NIP-62 Right to Vanish**
-  - Supports deleting an entire user until the `created_at` for enhanced privacy
+  - Deletes all user events until the `created_at`
+  - Blocks vanished events from being re-inserted.
+  - GiftWraps are deleted by p-tag
+
+- **NIP-45 Counts**:
+  - Counts records matching Nostr filters
 
 - **NIP-50 Full Text Search**:
-  - Implements content indexing and full text search supporting rich queries over event content.
+  - Custom content/tag indexing
+  - Rich queries over event content and tags
+  - Indexes updated on replaceables, deletions, vanish and expirations.
+
+- **NIP-91: AND operator for tags**:
+  - Allows queries matching two or more tags at the same time
 
 - **Immutable Tables**
-  Triggers ensure event immutability.
+  - Tables cannot be updated, only inserted and deleted.
 
 ## Indexing Strategy
 
 The store indexes events using five dedicated tables:
 - `event_headers`: stores the canonical event fields.
-- `event_tags`: indexes tag values for fast filtering on tag-based queries.
+- `event_tags`: indexes tag values as a hash for fast filtering on tag-based queries.
 - `event_fts`: for the content of full text search
 - `event_expirations`: to control when expired events must be deleted.
 - `event_vanish`: to control up to when vanished accounts must be blocked.
-
-SQL triggers ensure the **immutability of stored events**, preventing accidental or intentional
-modifications.
 
 ## Querying
 
@@ -62,43 +76,6 @@ store.query(
   )
 )
 ```
-
-Becomes
-
-```sql
-SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers
-INNER JOIN (
-	SELECT event_headers.row_id AS row_id
-	FROM event_headers
-	ORDER BY created_at DESC,id ASC
-	LIMIT 10
-
-	UNION
-
-	SELECT event_headers.row_id AS row_id
-	FROM event_headers
-	INNER JOIN event_fts ON event_fts.event_header_row_id = event_headers.row_id
-	WHERE event_headers.kind IN (1, 1111)
-      AND event_headers.pubkey = hexkey
-      AND event_fts MATCH "keywords"
-	ORDER BY created_at DESC, id ASC
-	LIMIT 100
-
-	UNION
-
-	SELECT event_headers.row_id AS row_id
-	FROM event_headers
-	INNER JOIN event_fts ON event_fts.event_header_row_id = event_headers.row_id
-	WHERE event_headers.kind = 20
-	  AND event_fts MATCH "cats"
-	ORDER BY created_at DESC,id ASC
-	LIMIT 30
-) AS filtered ON event_headers.row_id = filtered.row_id
-ORDER BY created_at DESC,id
-```
-
-The union operations support complex filter lists while avoiding redundant data fetching and
-duplicated outstreams.
 
 ## How to Use
 

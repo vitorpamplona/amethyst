@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -150,7 +149,7 @@ class Nip30Test {
                 "#ioメシヨソイゲーム\n" +
                 "https://misskey.io/play/9g3qza4jow"
 
-        val result = CustomEmoji.assembleAnnotatedList(input, ImmutableListOfLists(tags))
+        val result = CustomEmoji.assembleAnnotatedList(input, tags)
 
         assertEquals(9, result!!.size)
 

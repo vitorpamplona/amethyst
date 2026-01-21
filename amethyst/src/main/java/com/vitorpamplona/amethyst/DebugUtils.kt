@@ -26,8 +26,11 @@ import android.content.pm.ApplicationInfo
 import android.os.Debug
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizedUrls
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 
@@ -228,3 +231,12 @@ inline fun debug(
         Log.d(tag, debugMessage())
     }
 }
+
+fun Event.countMemory(): Int =
+    7 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
+        12 + // createdAt + kind
+        id.bytesUsedInMemory() +
+        pubKey.bytesUsedInMemory() +
+        tags.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } +
+        content.bytesUsedInMemory() +
+        sig.bytesUsedInMemory()
