@@ -402,109 +402,158 @@ class VoiceAnonymizer {
         return waveform
     }
 
+    private class EncoderInputFeeder(
+        private val encoder: MediaCodec,
+        private val pcmData: FloatArray,
+        private val sampleRate: Int,
+        private val onProgress: (Float) -> Unit,
+    ) {
+        private var inputOffset = 0
+        var isDone = false
+            private set
+
+        fun feedInput() {
+            if (isDone) return
+
+            val inputBufferIndex = encoder.dequeueInputBuffer(10000)
+            if (inputBufferIndex < 0) return
+
+            val inputBuffer = encoder.getInputBuffer(inputBufferIndex)!!
+            inputBuffer.clear()
+
+            val samplesToWrite = minOf((inputBuffer.capacity() / 2), pcmData.size - inputOffset)
+            if (samplesToWrite <= 0) {
+                queueEndOfStream(inputBufferIndex)
+            } else {
+                queueSampleData(inputBufferIndex, inputBuffer, samplesToWrite)
+            }
+        }
+
+        private fun queueEndOfStream(inputBufferIndex: Int) {
+            encoder.queueInputBuffer(
+                inputBufferIndex,
+                0,
+                0,
+                0,
+                MediaCodec.BUFFER_FLAG_END_OF_STREAM,
+            )
+            isDone = true
+        }
+
+        private fun queueSampleData(
+            inputBufferIndex: Int,
+            inputBuffer: java.nio.ByteBuffer,
+            samplesToWrite: Int,
+        ) {
+            writePcmSamplesToBuffer(inputBuffer, samplesToWrite)
+            val presentationTimeUs = (inputOffset * 1_000_000L) / sampleRate
+            encoder.queueInputBuffer(inputBufferIndex, 0, inputBuffer.position(), presentationTimeUs, 0)
+            inputOffset += samplesToWrite
+            onProgress(inputOffset.toFloat() / pcmData.size)
+        }
+
+        private fun writePcmSamplesToBuffer(
+            inputBuffer: java.nio.ByteBuffer,
+            samplesToWrite: Int,
+        ) {
+            for (i in 0 until samplesToWrite) {
+                val sample =
+                    (pcmData[inputOffset + i] * 32767)
+                        .toInt()
+                        .coerceIn(-32768, 32767)
+                        .toShort()
+                inputBuffer.putShort(sample)
+            }
+        }
+    }
+
+    private class EncoderOutputDrainer(
+        private val encoder: MediaCodec,
+        private val muxer: MediaMuxer,
+    ) {
+        private val bufferInfo = MediaCodec.BufferInfo()
+        private var audioTrackIndex = -1
+        var isMuxerStarted = false
+            private set
+        var isDone = false
+            private set
+
+        fun drainOutput() {
+            val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10000)
+
+            when {
+                outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> startMuxer()
+                outputBufferIndex >= 0 -> processOutputBuffer(outputBufferIndex)
+            }
+        }
+
+        private fun startMuxer() {
+            audioTrackIndex = muxer.addTrack(encoder.outputFormat)
+            muxer.start()
+            isMuxerStarted = true
+        }
+
+        private fun processOutputBuffer(outputBufferIndex: Int) {
+            val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)!!
+            writeToMuxerIfReady(outputBuffer)
+            encoder.releaseOutputBuffer(outputBufferIndex, false)
+            checkForEndOfStream()
+        }
+
+        private fun writeToMuxerIfReady(outputBuffer: java.nio.ByteBuffer) {
+            if (isMuxerStarted && bufferInfo.size > 0) {
+                outputBuffer.position(bufferInfo.offset)
+                outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
+                muxer.writeSampleData(audioTrackIndex, outputBuffer, bufferInfo)
+            }
+        }
+
+        private fun checkForEndOfStream() {
+            if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                isDone = true
+            }
+        }
+    }
+
+    private fun createAacFormat(sampleRate: Int): MediaFormat =
+        MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, CHANNELS).apply {
+            setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
+            setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
+        }
+
     private fun encodePcmToAac(
         pcmData: FloatArray,
         sampleRate: Int,
         outputFile: File,
         onProgress: (Float) -> Unit,
     ) {
-        val format =
-            MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, CHANNELS)
-        format.setInteger(
-            MediaFormat.KEY_AAC_PROFILE,
-            MediaCodecInfo.CodecProfileLevel.AACObjectLC,
-        )
-        format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
-
         val encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
         val muxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         var muxerStarted = false
 
         try {
-            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            encoder.configure(createAacFormat(sampleRate), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             encoder.start()
 
-            var audioTrackIndex = -1
-            val bufferInfo = MediaCodec.BufferInfo()
-            var inputOffset = 0
-            var inputDone = false
-            var outputDone = false
-            val totalSamples = pcmData.size
+            val inputFeeder = EncoderInputFeeder(encoder, pcmData, sampleRate, onProgress)
+            val outputDrainer = EncoderOutputDrainer(encoder, muxer)
 
-            while (!outputDone) {
-                if (!inputDone) {
-                    val inputBufferIndex = encoder.dequeueInputBuffer(10000)
-                    if (inputBufferIndex >= 0) {
-                        val inputBuffer = encoder.getInputBuffer(inputBufferIndex)!!
-                        inputBuffer.clear()
-
-                        val samplesToWrite = minOf((inputBuffer.capacity() / 2), pcmData.size - inputOffset)
-                        if (samplesToWrite <= 0) {
-                            encoder.queueInputBuffer(
-                                inputBufferIndex,
-                                0,
-                                0,
-                                0,
-                                MediaCodec.BUFFER_FLAG_END_OF_STREAM,
-                            )
-                            inputDone = true
-                        } else {
-                            for (i in 0 until samplesToWrite) {
-                                val sample =
-                                    (pcmData[inputOffset + i] * 32767)
-                                        .toInt()
-                                        .coerceIn(-32768, 32767)
-                                        .toShort()
-                                inputBuffer.putShort(sample)
-                            }
-                            val presentationTimeUs = (inputOffset * 1_000_000L) / sampleRate
-                            encoder.queueInputBuffer(
-                                inputBufferIndex,
-                                0,
-                                inputBuffer.position(),
-                                presentationTimeUs,
-                                0,
-                            )
-                            inputOffset += samplesToWrite
-                            onProgress(inputOffset.toFloat() / totalSamples)
-                        }
-                    }
-                }
-
-                val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10000)
-                when {
-                    outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                        audioTrackIndex = muxer.addTrack(encoder.outputFormat)
-                        muxer.start()
-                        muxerStarted = true
-                    }
-
-                    outputBufferIndex >= 0 -> {
-                        val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)!!
-                        if (muxerStarted && bufferInfo.size > 0) {
-                            outputBuffer.position(bufferInfo.offset)
-                            outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
-                            muxer.writeSampleData(audioTrackIndex, outputBuffer, bufferInfo)
-                        }
-                        encoder.releaseOutputBuffer(outputBufferIndex, false)
-                        if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                            outputDone = true
-                        }
-                    }
-                }
+            while (!outputDrainer.isDone) {
+                inputFeeder.feedInput()
+                outputDrainer.drainOutput()
             }
+            muxerStarted = outputDrainer.isMuxerStarted
         } finally {
-            try {
-                encoder.stop()
-            } catch (_: IllegalStateException) {
-                // Encoder was never started
-            }
-            encoder.release()
-            if (muxerStarted) {
-                muxer.stop()
-            }
-            muxer.release()
+            encoder.safeStopAndRelease()
+            muxer.safeStopAndRelease(muxerStarted)
         }
+    }
+
+    private fun MediaMuxer.safeStopAndRelease(wasStarted: Boolean) {
+        if (wasStarted) {
+            stop()
+        }
+        release()
     }
 }
 
