@@ -136,6 +136,116 @@ class VoiceAnonymizer {
         val duration: Int,
     )
 
+    private data class AudioTrackInfo(
+        val trackIndex: Int,
+        val format: MediaFormat,
+        val mime: String,
+        val sampleRate: Int,
+        val durationUs: Long,
+    )
+
+    private fun findAudioTrack(extractor: MediaExtractor): AudioTrackInfo {
+        for (i in 0 until extractor.trackCount) {
+            val trackFormat = extractor.getTrackFormat(i)
+            val mime = trackFormat.getString(MediaFormat.KEY_MIME)
+            if (mime?.startsWith("audio/") == true) {
+                return AudioTrackInfo(
+                    trackIndex = i,
+                    format = trackFormat,
+                    mime = mime,
+                    sampleRate = trackFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE),
+                    durationUs = trackFormat.getLong(MediaFormat.KEY_DURATION),
+                )
+            }
+        }
+        throw IllegalStateException("No audio track found in file")
+    }
+
+    private class DecoderInputFeeder(
+        private val decoder: MediaCodec,
+        private val extractor: MediaExtractor,
+        private val durationUs: Long,
+        private val onProgress: (Float) -> Unit,
+    ) {
+        var isDone = false
+            private set
+
+        fun feedInput() {
+            if (isDone) return
+
+            val inputBufferIndex = decoder.dequeueInputBuffer(10000)
+            if (inputBufferIndex < 0) return
+
+            val inputBuffer = decoder.getInputBuffer(inputBufferIndex)!!
+            val sampleSize = extractor.readSampleData(inputBuffer, 0)
+
+            if (sampleSize < 0) {
+                queueEndOfStream(inputBufferIndex)
+            } else {
+                queueSampleData(inputBufferIndex, sampleSize)
+            }
+        }
+
+        private fun queueEndOfStream(inputBufferIndex: Int) {
+            decoder.queueInputBuffer(
+                inputBufferIndex,
+                0,
+                0,
+                0,
+                MediaCodec.BUFFER_FLAG_END_OF_STREAM,
+            )
+            isDone = true
+        }
+
+        private fun queueSampleData(
+            inputBufferIndex: Int,
+            sampleSize: Int,
+        ) {
+            val presentationTimeUs = extractor.sampleTime
+            decoder.queueInputBuffer(inputBufferIndex, 0, sampleSize, presentationTimeUs, 0)
+            extractor.advance()
+            reportProgress(presentationTimeUs)
+        }
+
+        private fun reportProgress(presentationTimeUs: Long) {
+            if (durationUs > 0) {
+                onProgress((presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
+            }
+        }
+    }
+
+    private class DecoderOutputDrainer(
+        private val decoder: MediaCodec,
+        private val pcmSamples: MutableList<Float>,
+    ) {
+        private val bufferInfo = MediaCodec.BufferInfo()
+        var isDone = false
+            private set
+
+        fun drainOutput() {
+            val outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 10000)
+            if (outputBufferIndex < 0) return
+
+            extractPcmSamples(outputBufferIndex)
+            decoder.releaseOutputBuffer(outputBufferIndex, false)
+            checkForEndOfStream()
+        }
+
+        private fun extractPcmSamples(outputBufferIndex: Int) {
+            val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)!!
+            val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
+            while (shortBuffer.hasRemaining()) {
+                pcmSamples.add(shortBuffer.get() / 32768f)
+            }
+        }
+
+        private fun checkForEndOfStream() {
+            if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                isDone = true
+            }
+        }
+    }
+
     private suspend fun decodeAudioToPcm(
         inputFile: File,
         onProgress: (Float) -> Unit,
@@ -145,93 +255,41 @@ class VoiceAnonymizer {
 
         try {
             extractor.setDataSource(inputFile.absolutePath)
+            val trackInfo = findAudioTrack(extractor)
+            extractor.selectTrack(trackInfo.trackIndex)
 
-            var audioTrackIndex = -1
-            var format: MediaFormat? = null
-            for (i in 0 until extractor.trackCount) {
-                val trackFormat = extractor.getTrackFormat(i)
-                val mime = trackFormat.getString(MediaFormat.KEY_MIME)
-                if (mime?.startsWith("audio/") == true) {
-                    audioTrackIndex = i
-                    format = trackFormat
-                    break
+            decoder =
+                MediaCodec.createDecoderByType(trackInfo.mime).apply {
+                    configure(trackInfo.format, null, null, 0)
+                    start()
                 }
-            }
 
-            check(audioTrackIndex != -1 && format != null) { "No audio track found in file" }
-
-            extractor.selectTrack(audioTrackIndex)
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: "audio/mp4a-latm"
-            val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-            val durationUs = format.getLong(MediaFormat.KEY_DURATION)
-            val duration = (durationUs / 1_000_000).toInt()
-
-            decoder = MediaCodec.createDecoderByType(mime)
-            decoder.configure(format, null, null, 0)
-            decoder.start()
-
-            val estimatedSamples = (sampleRate.toLong() * durationUs / 1_000_000).toInt()
+            val estimatedSamples = (trackInfo.sampleRate.toLong() * trackInfo.durationUs / 1_000_000).toInt()
             val pcmSamples = ArrayList<Float>(estimatedSamples)
-            val bufferInfo = MediaCodec.BufferInfo()
-            var inputDone = false
-            var outputDone = false
 
-            while (!outputDone && currentCoroutineContext().isActive) {
-                if (!inputDone) {
-                    val inputBufferIndex = decoder.dequeueInputBuffer(10000)
-                    if (inputBufferIndex >= 0) {
-                        val inputBuffer = decoder.getInputBuffer(inputBufferIndex)!!
-                        val sampleSize = extractor.readSampleData(inputBuffer, 0)
-                        if (sampleSize < 0) {
-                            decoder.queueInputBuffer(
-                                inputBufferIndex,
-                                0,
-                                0,
-                                0,
-                                MediaCodec.BUFFER_FLAG_END_OF_STREAM,
-                            )
-                            inputDone = true
-                        } else {
-                            val presentationTimeUs = extractor.sampleTime
-                            decoder.queueInputBuffer(
-                                inputBufferIndex,
-                                0,
-                                sampleSize,
-                                presentationTimeUs,
-                                0,
-                            )
-                            extractor.advance()
-                            if (durationUs > 0) {
-                                onProgress((presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
-                            }
-                        }
-                    }
-                }
+            val inputFeeder = DecoderInputFeeder(decoder, extractor, trackInfo.durationUs, onProgress)
+            val outputDrainer = DecoderOutputDrainer(decoder, pcmSamples)
 
-                val outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 10000)
-                if (outputBufferIndex >= 0) {
-                    val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)!!
-                    val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-                    while (shortBuffer.hasRemaining()) {
-                        pcmSamples.add(shortBuffer.get() / 32768f)
-                    }
-                    decoder.releaseOutputBuffer(outputBufferIndex, false)
-                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                        outputDone = true
-                    }
-                }
+            while (!outputDrainer.isDone && currentCoroutineContext().isActive) {
+                inputFeeder.feedInput()
+                outputDrainer.drainOutput()
             }
 
-            return DecodedAudio(pcmSamples.toFloatArray(), sampleRate, duration)
+            val duration = (trackInfo.durationUs / 1_000_000).toInt()
+            return DecodedAudio(pcmSamples.toFloatArray(), trackInfo.sampleRate, duration)
         } finally {
-            try {
-                decoder?.stop()
-            } catch (_: IllegalStateException) {
-                // Decoder was never started
-            }
-            decoder?.release()
+            decoder?.safeStopAndRelease()
             extractor.release()
         }
+    }
+
+    private fun MediaCodec.safeStopAndRelease() {
+        try {
+            stop()
+        } catch (_: IllegalStateException) {
+            // Decoder was never started
+        }
+        release()
     }
 
     private fun processPcmWithTarsos(
