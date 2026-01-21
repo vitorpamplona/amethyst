@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.desktop.cache
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.model.cache.IChannel
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -48,6 +51,7 @@ import java.util.concurrent.ConcurrentHashMap
 class DesktopLocalCache : ICacheProvider {
     private val users = ConcurrentHashMap<HexKey, User>()
     private val notes = ConcurrentHashMap<HexKey, Note>()
+    private val addressableNotes = ConcurrentHashMap<String, AddressableNote>()
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
 
     private val eventStream = DesktopCacheEventStream()
@@ -63,10 +67,10 @@ class DesktopLocalCache : ICacheProvider {
             // Create placeholder notes for relay lists
             val nip65Note = getOrCreateNote("nip65:$pubkey")
             val dmNote = getOrCreateNote("dm:$pubkey")
-            User(pubkey, nip65Note, dmNote, this)
+            User(pubkey, nip65Note, dmNote)
         }
 
-    override fun countUsers(predicate: (String, Any) -> Boolean): Int = users.count { (key, user) -> predicate(key, user) }
+    override fun countUsers(predicate: (String, User) -> Boolean): Int = users.count { (key, user) -> predicate(key, user) }
 
     override fun findUsersStartingWith(
         prefix: String,
@@ -188,12 +192,17 @@ class DesktopLocalCache : ICacheProvider {
 
     fun getOrCreateNote(hexKey: HexKey): Note =
         notes.getOrPut(hexKey) {
-            Note(hexKey, this)
+            Note(hexKey)
+        }
+
+    override fun getOrCreateAddressableNote(key: Address): AddressableNote =
+        addressableNotes.getOrPut(key.toValue()) {
+            AddressableNote(key)
         }
 
     // ----- Channel operations -----
 
-    override fun getAnyChannel(note: Any?): IChannel? {
+    override fun getAnyChannel(note: Note): Channel? {
         // Desktop doesn't support channels yet
         return null
     }
@@ -203,12 +212,19 @@ class DesktopLocalCache : ICacheProvider {
     override fun hasBeenDeleted(event: Any): Boolean =
         when (event) {
             is Note -> deletedEvents.contains(event.idHex)
-            is com.vitorpamplona.quartz.nip01Core.core.Event -> deletedEvents.contains(event.id)
+            is Event -> deletedEvents.contains(event.id)
             else -> false
         }
 
     fun markAsDeleted(eventId: HexKey) {
         deletedEvents.add(eventId)
+    }
+
+    // ----- Own event consumption -----
+
+    override fun justConsumeMyOwnEvent(event: Event): Boolean {
+        // Desktop doesn't track own events separately
+        return false
     }
 
     // ----- Event stream -----
@@ -238,6 +254,7 @@ class DesktopLocalCache : ICacheProvider {
     fun clear() {
         users.clear()
         notes.clear()
+        addressableNotes.clear()
         deletedEvents.clear()
     }
 }

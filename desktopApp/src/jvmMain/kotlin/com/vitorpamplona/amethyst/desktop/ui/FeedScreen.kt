@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createBatchMetadataSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
@@ -207,7 +208,7 @@ fun FeedScreen(
     rememberSubscription(relayStatuses, account, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty() && account != null) {
-            com.vitorpamplona.amethyst.commons.subscriptions.SubscriptionConfig(
+            SubscriptionConfig(
                 subId = "bookmarks-${account.pubKeyHex.take(8)}",
                 filters =
                     listOf(

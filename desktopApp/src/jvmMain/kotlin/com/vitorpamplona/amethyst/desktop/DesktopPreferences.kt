@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop
 
-import com.vitorpamplona.amethyst.commons.subscriptions.FeedMode
+import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import java.util.prefs.Preferences
 
 /**

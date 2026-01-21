@@ -62,14 +62,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.search.SearchResult
-import com.vitorpamplona.amethyst.commons.subscriptions.createMetadataSubscription
-import com.vitorpamplona.amethyst.commons.subscriptions.createSearchPeopleSubscription
-import com.vitorpamplona.amethyst.commons.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.viewmodels.SearchBarState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
