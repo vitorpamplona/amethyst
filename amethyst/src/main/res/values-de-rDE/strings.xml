@@ -177,6 +177,7 @@ erie gespeichert</string>
     <string name="voice_preset_none">Keine</string>
     <string name="voice_preset_deep">Tief</string>
     <string name="voice_preset_high">Hoch</string>
+    <string name="voice_preset_neutral">Neutral</string>
     <string name="voice_anonymize_title">Anonymisieren</string>
     <string name="voice_anonymize_description">Verändert die Tonhöhe deiner Stimme. Hinweis: einfache Tonhöhenänderungen können von entschlossenen Zuhörern möglicherweise rückgängig gemacht werden.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
