@@ -415,7 +415,9 @@ private fun WatchReactionsZapsBoostsAndDisplayIfExists(
 ) {
     val hasReactions by observeNoteReferences(baseNote, accountViewModel)
 
-    if (hasReactions) {
+    val hasZapraiser = (baseNote.event?.zapraiserAmount() ?: 0) > 0
+
+    if (hasReactions || hasZapraiser) {
         content()
     }
 }
