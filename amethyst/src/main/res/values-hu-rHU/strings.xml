@@ -703,7 +703,7 @@
     <string name="content_size">Tartalom mérete</string>
     <string name="connectivity">Kapcsolat</string>
     <string name="access_control">Hozzáférés-vezérlés</string>
-    <string name="minimum_pow">Spam-szűrés erőssége</string>
+    <string name="minimum_pow">Kéretlen tartalmak szűrésének erőssége</string>
     <string name="auth">Hitelesítés</string>
     <string name="auth_required">Hitelesítés szükséges</string>
     <string name="payment">Fizetés</string>

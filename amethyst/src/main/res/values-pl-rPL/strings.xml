@@ -721,7 +721,7 @@
     <string name="copied_token_to_clipboard">Skopiowano token do schowka</string>
     <string name="live_stream_live_tag">NA ŻYWO</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
-    <string name="live_stream_ended_tag">Zakończony</string>
+    <string name="live_stream_ended_tag">Zakończono</string>
     <string name="live_stream_planned_tag">ZAPLANOWANE</string>
     <string name="live_stream_is_offline">Transmisja wyłączona</string>
     <string name="live_stream_has_ended">Transmisja na żywo zakończona</string>
