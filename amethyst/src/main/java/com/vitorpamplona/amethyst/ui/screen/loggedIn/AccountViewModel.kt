@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -168,6 +169,7 @@ class AccountViewModel(
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
+    val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     val tempManualPaymentCache = LruCache<String, List<ZapPaymentHandler.Payable>>(5)
