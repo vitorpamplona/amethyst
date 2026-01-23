@@ -43,6 +43,9 @@ sealed class RelayResult {
 
     /** Waiting for relay response */
     data object Pending : RelayResult()
+
+    /** Retry in progress for this relay */
+    data object Retrying : RelayResult()
 }
 
 /**
@@ -100,9 +103,19 @@ data class BroadcastEvent(
     val isComplete: Boolean
         get() = results.size >= targetRelays.size
 
-    /** List of relays that failed (for retry) */
+    /** List of relays that failed and are not currently retrying */
     val failedRelays: List<NormalizedRelayUrl>
-        get() = results.filter { it.value is RelayResult.Error || it.value is RelayResult.Timeout }.keys.toList()
+        get() =
+            results
+                .filter {
+                    (it.value is RelayResult.Error || it.value is RelayResult.Timeout) &&
+                        it.value !is RelayResult.Retrying
+                }.keys
+                .toList()
+
+    /** List of relays currently being retried */
+    val retryingRelays: List<NormalizedRelayUrl>
+        get() = results.filter { it.value is RelayResult.Retrying }.keys.toList()
 
     /** Creates a copy with an updated relay result */
     fun withResult(
