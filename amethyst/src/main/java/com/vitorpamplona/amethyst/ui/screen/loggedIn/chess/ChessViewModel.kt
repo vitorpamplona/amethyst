@@ -20,18 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
-import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip64Chess.ChessAction
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.GameResult
-import com.vitorpamplona.quartz.nip64Chess.GameTermination
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
-import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,78 +41,68 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
- * ViewModel for managing live chess games
- *
- * Coordinates between:
- * - LiveChessGameState (game logic)
- * - Nostr relay (event publishing/subscriptions)
- * - UI (game state updates)
+ * ViewModel for managing chess game state, challenges, and event publishing
  */
-@Stable
 class ChessViewModel(
     private val account: Account,
 ) : ViewModel() {
+    // Active games being played
     private val _activeGames = MutableStateFlow<Map<String, LiveChessGameState>>(emptyMap())
     val activeGames: StateFlow<Map<String, LiveChessGameState>> = _activeGames.asStateFlow()
 
+    // Pending challenges (incoming and outgoing)
+    private val _challenges = MutableStateFlow<List<Note>>(emptyList())
+    val challenges: StateFlow<List<Note>> = _challenges.asStateFlow()
+
+    // Badge count for notifications (incoming challenges + your turn games)
     private val _badgeCount = MutableStateFlow(0)
     val badgeCount: StateFlow<Int> = _badgeCount.asStateFlow()
 
+    // Currently selected game (for navigation)
+    private val _selectedGameId = MutableStateFlow<String?>(null)
+    val selectedGameId: StateFlow<String?> = _selectedGameId.asStateFlow()
+
+    // Error state
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     init {
-        Log.d("Init", "Starting new ChessViewModel")
+        refreshChallenges()
     }
 
     /**
-     * Get a specific game by ID
-     */
-    fun getGame(gameId: String): LiveChessGameState? = _activeGames.value[gameId]
-
-    /**
-     * Create a new chess game challenge
-     *
-     * @param opponentPubkey Opponent's pubkey (null for open challenge)
-     * @param playerColor Color the player wants to play
-     * @param timeControl Optional time control
+     * Create a new chess challenge (open or directed)
      */
     fun createChallenge(
-        opponentPubkey: String?,
-        playerColor: Color,
+        opponentPubkey: String? = null,
+        playerColor: Color = Color.WHITE,
         timeControl: String? = null,
     ) {
+        val acc = account
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val gameId = UUID.randomUUID().toString()
+                val gameId = generateGameId()
 
-                // Create and sign challenge event
-                val challengeEvent =
-                    ChessAction.createChallenge(
+                val template =
+                    LiveChessGameChallengeEvent.build(
                         gameId = gameId,
                         playerColor = playerColor,
                         opponentPubkey = opponentPubkey,
                         timeControl = timeControl,
-                        signer = account.signer,
                     )
 
-                // Send to relays
-                account.client.send(challengeEvent, account.outboxRelays.flow.value)
+                acc.signAndComputeBroadcast(template)
 
-                // Cache locally - this adds event to LocalCache and should trigger feed updates
-                account.cache.justConsumeMyOwnEvent(challengeEvent)
-
-                Log.d("Chess", "Challenge created: gameId=$gameId, eventId=${challengeEvent.id}, kind=${challengeEvent.kind}, pubkey=${challengeEvent.pubKey}")
+                _error.value = null
             } catch (e: Exception) {
-                Log.e("Chess", "Failed to create challenge", e)
+                _error.value = "Failed to create challenge: ${e.message}"
             }
         }
     }
 
     /**
-     * Accept an incoming challenge and create game state
-     *
-     * @param challengeEventId Event ID of the challenge
-     * @param gameId Game identifier from challenge
-     * @param challengerPubkey Challenger's pubkey
-     * @param playerColor Color the accepting player will be
+     * Accept a chess challenge (simple version for UI callbacks)
      */
     fun acceptChallenge(
         challengeEventId: String,
@@ -121,320 +112,259 @@ class ChessViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Create and sign acceptance event
-                val acceptEvent =
-                    ChessAction.acceptChallenge(
+                val template =
+                    LiveChessGameAcceptEvent.build(
                         gameId = gameId,
                         challengeEventId = challengeEventId,
                         challengerPubkey = challengerPubkey,
-                        signer = account.signer,
                     )
 
-                // Send to relays
-                account.client.send(acceptEvent, account.outboxRelays.flow.value)
-
-                // Cache locally
-                account.cache.justConsumeMyOwnEvent(acceptEvent)
+                account.signAndComputeBroadcast(template)
 
                 // Create game state
-                createGameState(gameId, challengerPubkey, playerColor)
+                val engine = ChessEngine()
+                engine.reset()
 
-                Log.d("Chess", "Challenge accepted: $gameId")
+                val gameState =
+                    LiveChessGameState(
+                        gameId = gameId,
+                        playerPubkey = account.signer.pubKey,
+                        opponentPubkey = challengerPubkey,
+                        playerColor = playerColor,
+                        engine = engine,
+                    )
+
+                _activeGames.value = _activeGames.value + (gameId to gameState)
+                _selectedGameId.value = gameId
+                _error.value = null
             } catch (e: Exception) {
-                Log.e("Chess", "Failed to accept challenge", e)
+                _error.value = "Failed to accept challenge: ${e.message}"
             }
         }
     }
 
     /**
-     * Create a new game state (called when challenge is accepted)
+     * Accept a chess challenge (from Note)
      */
-    private fun createGameState(
-        gameId: String,
-        opponentPubkey: String,
-        playerColor: Color,
-    ) {
-        val engine = ChessEngine()
-        engine.reset()
+    fun acceptChallenge(challengeNote: Note) {
+        val challengeEvent = challengeNote.event as? LiveChessGameChallengeEvent ?: return
 
-        val gameState =
-            LiveChessGameState(
-                gameId = gameId,
-                playerPubkey = account.signer.pubKey,
-                opponentPubkey = opponentPubkey,
-                playerColor = playerColor,
-                engine = engine,
-            )
+        val gameId = challengeEvent.gameId() ?: return
+        val challengerPubkey = challengeEvent.pubKey
+        val challengerColor = challengeEvent.playerColor() ?: Color.WHITE
+        val playerColor = challengerColor.opposite()
 
-        _activeGames.value = _activeGames.value + (gameId to gameState)
-
-        // Subscribe to moves for this game
-        // TODO: Implement relay subscription for Kind 30066 with d tag = gameId
-        // This would listen for opponent's moves
-
-        updateBadgeCount()
+        acceptChallenge(challengeEvent.id, gameId, challengerPubkey, playerColor)
     }
 
     /**
-     * Publish a move in an active game
-     *
-     * @param gameId Game identifier
-     * @param from Source square (e.g., "e2")
-     * @param to Destination square (e.g., "e4")
-     * @param promotion Optional promotion piece type
+     * Start a game after your challenge was accepted
+     */
+    fun startGameFromAcceptance(acceptEvent: LiveChessGameAcceptEvent) {
+        val acc = account
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val gameId = acceptEvent.gameId() ?: return@launch
+            val opponentPubkey = acceptEvent.pubKey
+
+            // Find our challenge to get player color
+            val challengeNote =
+                _challenges.value.find { note ->
+                    (note.event as? LiveChessGameChallengeEvent)?.gameId() == gameId
+                }
+            val challengeEvent = challengeNote?.event as? LiveChessGameChallengeEvent
+            val playerColor = challengeEvent?.playerColor() ?: Color.WHITE
+
+            val engine = ChessEngine()
+            engine.reset()
+
+            val gameState =
+                LiveChessGameState(
+                    gameId = gameId,
+                    playerPubkey = acc.signer.pubKey,
+                    opponentPubkey = opponentPubkey,
+                    playerColor = playerColor,
+                    engine = engine,
+                )
+
+            _activeGames.value = _activeGames.value + (gameId to gameState)
+            _selectedGameId.value = gameId
+        }
+    }
+
+    /**
+     * Publish a move for the current game (simple version for UI callbacks)
      */
     fun publishMove(
         gameId: String,
         from: String,
         to: String,
-        promotion: com.vitorpamplona.quartz.nip64Chess.PieceType? = null,
+    ) {
+        val gameState = _activeGames.value[gameId] ?: return
+        val moveResult = gameState.makeMove(from, to)
+        if (moveResult != null) {
+            publishMove(gameId, moveResult)
+        }
+    }
+
+    /**
+     * Publish a move for the current game (full version with ChessMoveEvent)
+     */
+    fun publishMove(
+        gameId: String,
+        moveEvent: ChessMoveEvent,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val gameState = _activeGames.value[gameId] ?: return@launch
-
-                // Make move and get event to publish
-                val moveEvent = gameState.makeMove(from, to, promotion) ?: return@launch
-
-                // Sign and send move event
-                val signedMoveEvent =
-                    ChessAction.publishMove(
+                val template =
+                    LiveChessMoveEvent.build(
                         gameId = moveEvent.gameId,
                         moveNumber = moveEvent.moveNumber,
                         san = moveEvent.san,
                         fen = moveEvent.fen,
                         opponentPubkey = moveEvent.opponentPubkey,
-                        comment = moveEvent.comment ?: "",
-                        signer = account.signer,
                     )
 
-                account.client.send(signedMoveEvent, account.outboxRelays.flow.value)
-                account.cache.justConsumeMyOwnEvent(signedMoveEvent)
-
-                // Check if game ended
-                checkAndPublishGameEnd(gameId)
-
-                Log.d("Chess", "Move published: ${moveEvent.san}")
+                account.signAndComputeBroadcast(template)
+                _error.value = null
             } catch (e: Exception) {
-                Log.e("Chess", "Failed to publish move", e)
+                _error.value = "Failed to publish move: ${e.message}"
             }
         }
     }
 
     /**
-     * Handle incoming opponent move
+     * Handle incoming move from opponent
      */
     fun handleOpponentMove(moveEvent: LiveChessMoveEvent) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val gameId = moveEvent.gameId() ?: return@launch
-                val gameState = _activeGames.value[gameId] ?: return@launch
+        val gameId = moveEvent.gameId() ?: return
+        val gameState = _activeGames.value[gameId] ?: return
 
-                val san = moveEvent.san() ?: return@launch
-                val fen = moveEvent.fen() ?: return@launch
+        val san = moveEvent.san() ?: return
+        val fen = moveEvent.fen() ?: return
 
-                gameState.applyOpponentMove(san, fen)
-
-                // Update badge count (it's now your turn)
-                updateBadgeCount()
-
-                Log.d("Chess", "Opponent move applied: $san")
-            } catch (e: Exception) {
-                Log.e("Chess", "Failed to apply opponent move", e)
-            }
-        }
+        gameState.applyOpponentMove(san, fen)
+        updateBadgeCount()
     }
 
     /**
      * Resign from a game
      */
     fun resign(gameId: String) {
+        val acc = account
+        val gameState = _activeGames.value[gameId] ?: return
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val gameState = _activeGames.value[gameId] ?: return@launch
+                val endData = gameState.resign()
 
-                val endEvent = gameState.resign()
-
-                val signedEndEvent =
-                    ChessAction.endGame(
-                        gameId = endEvent.gameId,
-                        result = endEvent.result,
-                        termination = endEvent.termination,
-                        winnerPubkey = endEvent.winnerPubkey,
-                        opponentPubkey = endEvent.opponentPubkey,
-                        pgn = endEvent.pgn ?: "",
-                        signer = account.signer,
+                val template =
+                    LiveChessGameEndEvent.build(
+                        gameId = endData.gameId,
+                        result = endData.result,
+                        termination = endData.termination,
+                        winnerPubkey = endData.winnerPubkey,
+                        opponentPubkey = endData.opponentPubkey,
+                        pgn = endData.pgn ?: "",
                     )
 
-                account.client.send(signedEndEvent, account.outboxRelays.flow.value)
-                account.cache.justConsumeMyOwnEvent(signedEndEvent)
+                acc.signAndComputeBroadcast(template)
 
                 // Remove from active games
                 _activeGames.value = _activeGames.value - gameId
-
-                updateBadgeCount()
-
-                Log.d("Chess", "Game resigned: $gameId")
+                _error.value = null
             } catch (e: Exception) {
-                Log.e("Chess", "Failed to resign", e)
+                _error.value = "Failed to resign: ${e.message}"
             }
         }
     }
 
     /**
-     * Offer or accept a draw
+     * Offer/accept draw
      */
     fun offerDraw(gameId: String) {
+        val acc = account
+        val gameState = _activeGames.value[gameId] ?: return
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val gameState = _activeGames.value[gameId] ?: return@launch
+                val endData = gameState.offerDraw()
 
-                val endEvent = gameState.offerDraw()
-
-                val signedEndEvent =
-                    ChessAction.endGame(
-                        gameId = endEvent.gameId,
-                        result = endEvent.result,
-                        termination = endEvent.termination,
-                        winnerPubkey = null,
-                        opponentPubkey = endEvent.opponentPubkey,
-                        pgn = endEvent.pgn ?: "",
-                        signer = account.signer,
+                val template =
+                    LiveChessGameEndEvent.build(
+                        gameId = endData.gameId,
+                        result = endData.result,
+                        termination = endData.termination,
+                        winnerPubkey = endData.winnerPubkey,
+                        opponentPubkey = endData.opponentPubkey,
+                        pgn = endData.pgn ?: "",
                     )
 
-                account.client.send(signedEndEvent, account.outboxRelays.flow.value)
-                account.cache.justConsumeMyOwnEvent(signedEndEvent)
+                acc.signAndComputeBroadcast(template)
 
                 // Remove from active games
                 _activeGames.value = _activeGames.value - gameId
-
-                updateBadgeCount()
-
-                Log.d("Chess", "Draw offered/accepted: $gameId")
+                _error.value = null
             } catch (e: Exception) {
-                Log.e("Chess", "Failed to offer draw", e)
+                _error.value = "Failed to offer draw: ${e.message}"
             }
         }
     }
 
     /**
-     * Check if game ended (checkmate/stalemate) and publish result
+     * Select a game to view/play
      */
-    private fun checkAndPublishGameEnd(gameId: String) {
+    fun selectGame(gameId: String?) {
+        _selectedGameId.value = gameId
+    }
+
+    /**
+     * Get game state for a specific game
+     */
+    fun getGameState(gameId: String): LiveChessGameState? = _activeGames.value[gameId]
+
+    /**
+     * Refresh challenges from local cache
+     */
+    private fun refreshChallenges() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val gameState = _activeGames.value[gameId] ?: return@launch
-
-                if (gameState.gameStatus.value !is com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished) {
-                    return@launch
-                }
-
-                val finishedStatus =
-                    gameState.gameStatus.value as com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished
-
-                val termination =
-                    when {
-                        gameState.engine.isCheckmate() -> GameTermination.CHECKMATE
-                        gameState.engine.isStalemate() -> GameTermination.STALEMATE
-                        else -> GameTermination.DRAW_AGREEMENT
-                    }
-
-                val winnerPubkey =
-                    when (finishedStatus.result) {
-                        GameResult.WHITE_WINS ->
-                            if (gameState.playerColor == Color.WHITE) {
-                                gameState.playerPubkey
-                            } else {
-                                gameState.opponentPubkey
-                            }
-                        GameResult.BLACK_WINS ->
-                            if (gameState.playerColor == Color.BLACK) {
-                                gameState.playerPubkey
-                            } else {
-                                gameState.opponentPubkey
-                            }
-                        GameResult.DRAW -> null
-                        GameResult.IN_PROGRESS -> null
-                    }
-
-                // Generate PGN from move history
-                val pgn = buildPGN(gameState, finishedStatus.result)
-
-                val signedEndEvent =
-                    ChessAction.endGame(
-                        gameId = gameId,
-                        result = finishedStatus.result,
-                        termination = termination,
-                        winnerPubkey = winnerPubkey,
-                        opponentPubkey = gameState.opponentPubkey,
-                        pgn = pgn,
-                        signer = account.signer,
-                    )
-
-                account.client.send(signedEndEvent, account.outboxRelays.flow.value)
-                account.cache.justConsumeMyOwnEvent(signedEndEvent)
-
-                // Remove from active games
-                _activeGames.value = _activeGames.value - gameId
-
-                updateBadgeCount()
-
-                Log.d("Chess", "Game ended automatically: $gameId")
-            } catch (e: Exception) {
-                Log.e("Chess", "Failed to publish game end", e)
-            }
+            // TODO: Subscribe to challenge events via relay filter
+            // For now, this is a placeholder
+            updateBadgeCount()
         }
     }
 
     /**
-     * Update badge count (incoming challenges + your turn games)
+     * Update badge count based on incoming challenges and games where it's your turn
      */
     private fun updateBadgeCount() {
-        val yourTurnCount =
-            _activeGames.value.values.count { gameState ->
-                gameState.isPlayerTurn()
+        val acc = account
+        val userPubkey = acc.signer.pubKey
+
+        val incomingChallenges =
+            _challenges.value.count { note ->
+                val event = note.event as? LiveChessGameChallengeEvent
+                event?.opponentPubkey() == userPubkey
             }
 
-        // TODO: Add incoming challenges count
-        // For now, just count "your turn" games
+        val yourTurnGames = _activeGames.value.values.count { it.isPlayerTurn() }
 
-        _badgeCount.value = yourTurnCount
+        _badgeCount.value = incomingChallenges + yourTurnGames
     }
 
     /**
-     * Build PGN from game state
+     * Clear error state
      */
-    private fun buildPGN(
-        gameState: LiveChessGameState,
-        result: GameResult,
-    ): String {
-        val moves = gameState.moveHistory.value
-        val movePairs = moves.chunked(2)
-
-        val moveText =
-            movePairs
-                .mapIndexed { index, pair ->
-                    val moveNum = index + 1
-                    when (pair.size) {
-                        2 -> "$moveNum. ${pair[0]} ${pair[1]}"
-                        1 -> "$moveNum. ${pair[0]}"
-                        else -> ""
-                    }
-                }.joinToString(" ")
-
-        return """
-            [Event "Live Chess Game"]
-            [Site "Nostr"]
-            [White "${if (gameState.playerColor == Color.WHITE) gameState.playerPubkey else gameState.opponentPubkey}"]
-            [Black "${if (gameState.playerColor == Color.BLACK) gameState.playerPubkey else gameState.opponentPubkey}"]
-            [Result "${result.notation}"]
-
-            $moveText ${result.notation}
-            """.trimIndent()
+    fun clearError() {
+        _error.value = null
     }
 
-    override fun onCleared() {
-        Log.d("Init", "OnCleared: ChessViewModel")
-        super.onCleared()
+    /**
+     * Generate unique game ID
+     */
+    private fun generateGameId(): String {
+        val timestamp = TimeUtils.now()
+        val random = UUID.randomUUID().toString().take(8)
+        return "chess-$timestamp-$random"
     }
 }
