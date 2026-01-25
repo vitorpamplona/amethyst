@@ -25,6 +25,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
+    implementation(compose.components.resources)
 
     // Quartz Nostr library (will use JVM target)
     implementation(project(":quartz"))

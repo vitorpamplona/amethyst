@@ -44,8 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.SharedRes
-import dev.icerock.moko.resources.compose.stringResource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_button
+import com.vitorpamplona.amethyst.commons.resources.login_card_subtitle
+import com.vitorpamplona.amethyst.commons.resources.login_card_title
+import com.vitorpamplona.amethyst.commons.resources.login_generate_button
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Login card with Nostr key input field and action buttons.
@@ -63,8 +67,8 @@ fun LoginCard(
     onGenerateNew: () -> Unit,
     modifier: Modifier = Modifier,
     cardWidth: Dp = 400.dp,
-    title: String = stringResource(SharedRes.strings.login_card_title),
-    subtitle: String = stringResource(SharedRes.strings.login_card_subtitle),
+    title: String = stringResource(Res.string.login_card_title),
+    subtitle: String = stringResource(Res.string.login_card_subtitle),
 ) {
     var keyInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -121,14 +125,14 @@ fun LoginCard(
                     modifier = Modifier.weight(1f),
                     enabled = keyInput.isNotBlank(),
                 ) {
-                    Text(stringResource(SharedRes.strings.login_button))
+                    Text(stringResource(Res.string.login_button))
                 }
 
                 OutlinedButton(
                     onClick = onGenerateNew,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(SharedRes.strings.login_generate_button))
+                    Text(stringResource(Res.string.login_generate_button))
                 }
             }
         }

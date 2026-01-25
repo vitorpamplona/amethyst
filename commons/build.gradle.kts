@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.mokoResources)
 }
 
 android {
@@ -81,9 +80,8 @@ kotlin {
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 
-                // Moko Resources for KMP string resources
-                api(libs.moko.resources)
-                api(libs.moko.resources.compose)
+                // Compose Multiplatform Resources
+                implementation(compose.components.resources)
             }
         }
 
@@ -141,7 +139,8 @@ kotlin {
     }
 }
 
-multiplatformResources {
-    resourcesPackage.set("com.vitorpamplona.amethyst.commons")
-    resourcesClassName.set("SharedRes")
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
+    generateResClass = always
 }

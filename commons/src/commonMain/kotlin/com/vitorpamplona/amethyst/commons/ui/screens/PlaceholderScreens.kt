@@ -28,8 +28,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.SharedRes
-import dev.icerock.moko.resources.compose.stringResource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.screen_messages_description
+import com.vitorpamplona.amethyst.commons.resources.screen_messages_title
+import com.vitorpamplona.amethyst.commons.resources.screen_notifications_description
+import com.vitorpamplona.amethyst.commons.resources.screen_notifications_title
+import com.vitorpamplona.amethyst.commons.resources.screen_search_description
+import com.vitorpamplona.amethyst.commons.resources.screen_search_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Generic placeholder screen with title and description.
@@ -60,8 +66,8 @@ fun PlaceholderScreen(
 @Composable
 fun SearchPlaceholder(modifier: Modifier = Modifier) {
     PlaceholderScreen(
-        title = stringResource(SharedRes.strings.screen_search_title),
-        description = stringResource(SharedRes.strings.screen_search_description),
+        title = stringResource(Res.string.screen_search_title),
+        description = stringResource(Res.string.screen_search_description),
         modifier = modifier,
     )
 }
@@ -72,8 +78,8 @@ fun SearchPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 fun MessagesPlaceholder(modifier: Modifier = Modifier) {
     PlaceholderScreen(
-        title = stringResource(SharedRes.strings.screen_messages_title),
-        description = stringResource(SharedRes.strings.screen_messages_description),
+        title = stringResource(Res.string.screen_messages_title),
+        description = stringResource(Res.string.screen_messages_description),
         modifier = modifier,
     )
 }
@@ -84,8 +90,8 @@ fun MessagesPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 fun NotificationsPlaceholder(modifier: Modifier = Modifier) {
     PlaceholderScreen(
-        title = stringResource(SharedRes.strings.screen_notifications_title),
-        description = stringResource(SharedRes.strings.screen_notifications_description),
+        title = stringResource(Res.string.screen_notifications_title),
+        description = stringResource(Res.string.screen_notifications_description),
         modifier = modifier,
     )
 }
