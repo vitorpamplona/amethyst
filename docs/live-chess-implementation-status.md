@@ -45,7 +45,22 @@
   - PGN generation
   - Position mismatch recovery
 
-### 5. Feed Integration
+### 5. ChessViewModel (amethyst/ui/screen/loggedIn/chess/)
+- **ChessViewModel.kt**: Full game state management & event publishing
+  - `activeGames: StateFlow<Map<String, LiveChessGameState>>` - Active games by ID
+  - `challenges: StateFlow<List<Note>>` - Incoming/outgoing challenges
+  - `badgeCount: StateFlow<Int>` - Notification count
+  - `createChallenge()` - Create open or directed challenges
+  - `acceptChallenge()` - Accept challenge and start game
+  - `publishMove()` - Send moves to relays
+  - `resign()` / `offerDraw()` - End game actions
+  - **Relay subscriptions** via `LocalCache.live.newEventBundles`
+  - Auto-handles incoming moves, acceptances, endings, challenges
+
+- **ChessViewModelFactory.kt**: ViewModel factory with Account injection
+- **ChessGameScreen.kt**: Wrapper connecting ViewModel to LiveChessGameScreen UI
+
+### 6. Feed Integration
 **Chess Feed Filter** (TopNavFilterState.kt:130-142):
 - Shows Kind 64 (completed games)
 - Shows Kind 30064 (challenges - open & directed)
@@ -62,57 +77,7 @@
 
 ## 🚧 Remaining Work
 
-### Priority 1: Navigation & Game Flow
-**Files to create:**
-1. **ChessViewModel.kt** (amethyst/ui/screen/loggedIn/chess/)
-   ```kotlin
-   class ChessViewModel(account: Account) {
-       val activeGames: StateFlow<List<LiveChessGameState>>
-       val challenges: StateFlow<List<LiveChessGameChallengeEvent>>
-       val badgeCount: StateFlow<Int> // For in-app notifications
-
-       fun createChallenge(opponentPubkey: String?, color: Color)
-       fun acceptChallenge(challengeEventId: String)
-       fun publishMove(gameId: String, move: ChessMoveEvent)
-   }
-   ```
-
-2. **Navigation Routes** (ui/navigation/routes/)
-   - Add `LiveChessGame(gameId: String)` route
-   - Wire up from challenge card click
-   - Pass LiveChessGameState to screen
-
-3. **ChessGameScreen.kt** (amethyst/ui/screen/loggedIn/chess/)
-   - Wrapper around `LiveChessGameScreen` composable
-   - Connects ViewModel to UI
-   - Handles move publishing callback
-
-### Priority 2: Event Publishing & Subscriptions
-**Files to modify:**
-1. **ChessViewModel.kt** - Add relay operations:
-   ```kotlin
-   // Subscribe to game events
-   fun subscribeToGame(gameId: String) {
-       // Listen for Kind 30066 (moves) with d tag = gameId
-       // Listen for Kind 30067 (game end) with d tag = gameId
-   }
-
-   // Publish events
-   suspend fun publishChallenge(challenge: ChessGameChallenge) {
-       val event = LiveChessGameChallengeEvent.build(...)
-       account.sendEvent(event)
-   }
-   ```
-
-2. **Event Handlers** - Process incoming events:
-   ```kotlin
-   fun handleOpponentMove(moveEvent: LiveChessMoveEvent) {
-       val game = activeGames.find { it.gameId == moveEvent.gameId() }
-       game?.applyOpponentMove(moveEvent.san(), moveEvent.fen())
-   }
-   ```
-
-### Priority 3: FAB & Challenge Creation
+### Priority 1: FAB & Challenge Creation
 **Files to modify:**
 1. **HomeScreen.kt** or chess-specific screen
    ```kotlin
@@ -169,25 +134,25 @@
 
 ## 📋 Implementation Checklist
 
-### Phase 1: Basic Playability
-- [ ] Create ChessViewModel
-- [ ] Add navigation route for LiveChessGameScreen
-- [ ] Create ChessGameScreen wrapper
-- [ ] Wire up NewGameDialog → ViewModel.createChallenge()
-- [ ] Implement event publishing (challenges, moves, game end)
+### Phase 1: Basic Playability ✅ COMPLETE
+- [x] Create ChessViewModel
+- [x] Add navigation route for LiveChessGameScreen (Route.ChessGame exists)
+- [x] Create ChessGameScreen wrapper
+- [x] Wire up NewGameDialog → ViewModel.createChallenge()
+- [x] Implement event publishing (challenges, moves, game end)
 - [ ] Test: Create challenge, see it in feed
 
-### Phase 2: Two-Player Functionality
-- [ ] Implement relay subscriptions for game events
-- [ ] Wire up move synchronization (publish/receive)
-- [ ] Handle challenge acceptance flow
+### Phase 2: Two-Player Functionality ✅ COMPLETE
+- [x] Implement relay subscriptions for game events
+- [x] Wire up move synchronization (publish/receive)
+- [x] Handle challenge acceptance flow
 - [ ] Test: Play complete game between two accounts
 
-### Phase 3: Polish
+### Phase 3: Polish (IN PROGRESS)
 - [ ] Add FAB to chess feed
-- [ ] Implement badge counts
-- [ ] Add "Accept Challenge" button to incoming challenge cards
-- [ ] Add "View Game" navigation from challenge/game-end cards
+- [ ] Implement badge counts display in nav
+- [x] Add "Accept Challenge" button to incoming challenge cards
+- [x] Add "View Game" navigation from challenge/game-end cards
 - [ ] Handle edge cases (network errors, position desync, abandoned games)
 
 ### Phase 4: Persistence (Optional)
@@ -256,8 +221,8 @@ AmethystMultiplatform/
 │   └── src/jvmAndroid/kotlin/.../nip64Chess/
 │       └── ChessEngine.jvmAndroid.kt ✅ kchesslib impl
 │
-├── commons/                          # Shared UI (Android/Desktop)
-│   └── src/main/java/.../commons/chess/
+├── commons/                          # Shared UI (Android/Desktop) - KMP
+│   └── src/commonMain/kotlin/.../commons/chess/
 │       ├── ChessBoard.kt            ✅ Static board
 │       ├── InteractiveChessBoard.kt ✅ Click-to-move
 │       ├── ChessGameViewer.kt       ✅ PGN playback
@@ -273,8 +238,13 @@ AmethystMultiplatform/
 │       │   └── NoteCompose.kt       ✅ Event dispatching
 │       ├── ui/screen/
 │       │   ├── TopNavFilterState.kt ✅ Chess filter (3 kinds)
-│       │   └── loggedIn/chess/       ⏳ TODO: ViewModels, screens
-│       └── ui/navigation/routes/     ⏳ TODO: Navigation
+│       │   └── loggedIn/chess/
+│       │       ├── ChessViewModel.kt         ✅ State & event publishing
+│       │       ├── ChessViewModelFactory.kt  ✅ ViewModel factory
+│       │       ├── ChessGameScreen.kt        ✅ Game screen wrapper
+│       │       └── dal/ChessFeedFilter.kt    ✅ Feed filter
+│       └── ui/navigation/routes/
+│           └── Route.ChessGame              ✅ Navigation route
 │
 └── docs/
     └── live-chess-implementation-status.md  ✅ This file
@@ -282,16 +252,15 @@ AmethystMultiplatform/
 
 ## 🚀 Next Steps
 
-**To make chess fully playable**, implement in this order:
+**To complete the chess feature**, implement:
 
-1. **ChessViewModel** - Game state management & event publishing
-2. **Navigation** - Route to LiveChessGameScreen
-3. **Event Subscriptions** - Listen for opponent moves
+1. ~~**ChessViewModel**~~ ✅ - Game state management & event publishing
+2. ~~**Navigation**~~ ✅ - Route to LiveChessGameScreen
+3. ~~**Event Subscriptions**~~ ✅ - Listen for opponent moves
 4. **FAB** - Add "New Game" button to chess feed
-5. **Test** - Play a complete game between two test accounts
-
-The foundation is complete and tested. The remaining work is "wiring" - connecting the chess engine and UI to Amethyst's existing relay/ViewModel infrastructure.
+5. **Badge Display** - Show badge count in navigation
+6. **Test** - Play a complete game between two test accounts
 
 ---
 
-**Status**: Core chess functionality fully implemented. Integration layer partially complete. Estimated 4-6 hours of focused work to reach playable state.
+**Status**: Core chess functionality fully implemented. ViewModel and relay subscriptions complete. Ready for FAB/badge polish and end-to-end testing.
