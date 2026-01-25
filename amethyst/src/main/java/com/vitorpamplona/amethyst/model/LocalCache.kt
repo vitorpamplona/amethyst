@@ -604,6 +604,36 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
+    fun consume(
+        event: ChessGameEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessGameChallengeEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessGameAcceptEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessMoveEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessGameEndEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
     fun consumeRegularEvent(
         event: Event,
         relay: NormalizedRelayUrl?,
