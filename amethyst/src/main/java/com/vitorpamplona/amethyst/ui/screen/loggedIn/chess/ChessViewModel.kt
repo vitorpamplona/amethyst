@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
@@ -68,6 +69,87 @@ class ChessViewModel(
 
     init {
         refreshChallenges()
+        subscribeToChessEvents()
+    }
+
+    /**
+     * Subscribe to incoming chess events from LocalCache
+     */
+    private fun subscribeToChessEvents() {
+        viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                for (note in newNotes) {
+                    when (val event = note.event) {
+                        is LiveChessMoveEvent -> handleIncomingMove(event)
+                        is LiveChessGameAcceptEvent -> handleGameAccepted(event)
+                        is LiveChessGameEndEvent -> handleGameEnded(event)
+                        is LiveChessGameChallengeEvent -> handleNewChallenge(note, event)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle incoming move event from opponent
+     */
+    private fun handleIncomingMove(event: LiveChessMoveEvent) {
+        // Only process moves from opponents (not our own)
+        if (event.pubKey == account.signer.pubKey) return
+
+        val gameId = event.gameId() ?: return
+        val gameState = _activeGames.value[gameId] ?: return
+
+        // Verify this move is from our opponent
+        if (event.pubKey != gameState.opponentPubkey) return
+
+        val san = event.san() ?: return
+        val fen = event.fen() ?: return
+
+        gameState.applyOpponentMove(san, fen)
+        updateBadgeCount()
+    }
+
+    /**
+     * Handle game acceptance event
+     */
+    private fun handleGameAccepted(event: LiveChessGameAcceptEvent) {
+        // Check if this is acceptance of our challenge
+        if (event.challengerPubkey() == account.signer.pubKey) {
+            startGameFromAcceptance(event)
+        }
+    }
+
+    /**
+     * Handle game end event
+     */
+    private fun handleGameEnded(event: LiveChessGameEndEvent) {
+        val gameId = event.gameId() ?: return
+
+        // Remove from active games if present
+        if (_activeGames.value.containsKey(gameId)) {
+            _activeGames.value = _activeGames.value - gameId
+            updateBadgeCount()
+        }
+    }
+
+    /**
+     * Handle new challenge event (for feed display)
+     */
+    private fun handleNewChallenge(
+        note: Note,
+        event: LiveChessGameChallengeEvent,
+    ) {
+        // Add to challenges if directed at us or is open
+        val opponentPubkey = event.opponentPubkey()
+        if (opponentPubkey == null || opponentPubkey == account.signer.pubKey) {
+            val currentChallenges = _challenges.value.toMutableList()
+            if (currentChallenges.none { it.idHex == note.idHex }) {
+                currentChallenges.add(note)
+                _challenges.value = currentChallenges
+                updateBadgeCount()
+            }
+        }
     }
 
     /**
