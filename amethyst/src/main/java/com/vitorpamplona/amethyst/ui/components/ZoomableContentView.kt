@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -108,11 +109,24 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.coroutines.executeAsync
+import okio.sink
+import java.io.File
+import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
+
+// Delay before cleaning up shared video temp files.
+// Allows time for receiving app to copy the file after user confirms share.
+private const val SHARED_VIDEO_CLEANUP_DELAY_MS = 120_000L
 
 @Composable
 fun ZoomableContentView(
@@ -670,14 +684,14 @@ fun DisplayBlurHash(
 }
 
 @Composable
-fun ShareImageAction(
+fun ShareMediaAction(
     accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     content: BaseMediaContent,
     onDismiss: () -> Unit,
 ) {
     if (content is MediaUrlContent) {
-        ShareImageAction(
+        ShareMediaAction(
             accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.url,
@@ -690,7 +704,7 @@ fun ShareImageAction(
             content = content,
         )
     } else if (content is MediaPreloadedContent) {
-        ShareImageAction(
+        ShareMediaAction(
             accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
@@ -707,7 +721,7 @@ fun ShareImageAction(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ShareImageAction(
+fun ShareMediaAction(
     accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
@@ -721,9 +735,12 @@ fun ShareImageAction(
 ) {
     val scope = rememberCoroutineScope()
 
+    // Track if video is downloading - hoisted here to block menu dismiss during download
+    val isDownloadingVideo = remember { mutableStateOf(false) }
+
     DropdownMenu(
         expanded = popupExpanded.value,
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isDownloadingVideo.value) onDismiss() },
     ) {
         val clipboardManager = LocalClipboardManager.current
 
@@ -765,19 +782,72 @@ fun ShareImageAction(
         }
 
         content?.let {
-            if (content is MediaUrlImage) {
-                val context = LocalContext.current
-                videoUri?.let {
-                    if (videoUri.isNotEmpty()) {
+            val context = LocalContext.current
+
+            when (content) {
+                is MediaUrlImage -> {
+                    videoUri?.let {
+                        if (videoUri.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(R.string.share_image)) },
+                                onClick = {
+                                    scope.launch { shareImageFile(context, videoUri, mimeType) }
+                                    onDismiss()
+                                },
+                            )
+                        }
+                    }
+                }
+                is MediaUrlVideo -> {
+                    videoUri?.let {
+                        if (videoUri.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(stringRes(R.string.share_video))
+                                        if (isDownloadingVideo.value) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            LoadingAnimation(indicatorSize = 16.dp, circleWidth = 2.dp)
+                                        }
+                                    }
+                                },
+                                enabled = !isDownloadingVideo.value,
+                                onClick = {
+                                    isDownloadingVideo.value = true
+                                    scope.launch {
+                                        shareVideoFile(
+                                            context = context,
+                                            videoUrl = videoUri,
+                                            mimeType = mimeType,
+                                            okHttpClient = { url ->
+                                                accountViewModel.httpClientBuilder.okHttpClientForVideo(url)
+                                            },
+                                            onComplete = {
+                                                isDownloadingVideo.value = false
+                                                onDismiss()
+                                            },
+                                            onError = {
+                                                isDownloadingVideo.value = false
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+                is MediaLocalVideo -> {
+                    content.localFile?.let { localFile ->
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.share_image)) },
+                            text = { Text(stringRes(R.string.share_video)) },
                             onClick = {
-                                scope.launch { shareImageFile(context, videoUri, mimeType) }
+                                scope.launch { shareLocalVideoFile(context, localFile, mimeType) }
                                 onDismiss()
                             },
                         )
                     }
                 }
+                else -> { /* No share option for other types */ }
             }
         }
     }
@@ -807,6 +877,128 @@ private suspend fun shareImageFile(
     } catch (e: Exception) {
         Log.w("ZoomableContentView", "Failed to share image: $videoUri", e)
         Toast.makeText(context, context.getString(R.string.unable_to_share_image), Toast.LENGTH_SHORT).show()
+    }
+}
+
+@OptIn(DelicateCoroutinesApi::class)
+private suspend fun shareVideoFile(
+    context: Context,
+    videoUrl: String,
+    mimeType: String?,
+    okHttpClient: (String) -> OkHttpClient,
+    onComplete: () -> Unit,
+    onError: () -> Unit,
+) {
+    val tempFile = ShareHelper.createTempVideoFile(context)
+    var sharedFile: File? = null
+    try {
+        withContext(Dispatchers.IO) {
+            // Download video using streaming
+            val client = okHttpClient(videoUrl)
+            val request =
+                Request
+                    .Builder()
+                    .get()
+                    .url(videoUrl)
+                    .build()
+
+            client.newCall(request).executeAsync().use { response ->
+                check(response.isSuccessful) { "Download failed: ${response.code}" }
+                val responseBody = response.body
+
+                // Stream the response to the temp file
+                tempFile.outputStream().use { outputStream ->
+                    val bytesCopied = responseBody.source().readAll(outputStream.sink())
+                    if (bytesCopied == 0L) {
+                        throw IOException("Download failed: empty response body")
+                    }
+                }
+            }
+
+            // Prepare the temp file for sharing (determines extension and creates sharable URI)
+            val (uri, extension, sharableFile) = ShareHelper.prepareTempVideoForSharing(context, tempFile)
+            sharedFile = sharableFile
+
+            // Determine mime type
+            val determinedMimeType = mimeType ?: "video/$extension"
+
+            // Create share intent
+            val shareIntent =
+                Intent(Intent.ACTION_SEND).apply {
+                    type = determinedMimeType
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+            withContext(Dispatchers.Main) {
+                context.startActivity(Intent.createChooser(shareIntent, null))
+            }
+        }
+
+        // Schedule cleanup to allow the receiving app time to copy the file.
+        // GlobalScope is intentional: cleanup must survive after share UI is dismissed.
+        GlobalScope.launch(Dispatchers.IO) {
+            delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
+            sharedFile?.delete()
+        }
+
+        withContext(Dispatchers.Main) {
+            onComplete()
+        }
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        Log.w("ZoomableContentView", "Failed to share video: $videoUrl", e)
+
+        // Clean up temp file on error
+        tempFile.delete()
+        sharedFile?.delete()
+
+        withContext(Dispatchers.Main) {
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.unable_to_share_video),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            onError()
+        }
+    }
+}
+
+private suspend fun shareLocalVideoFile(
+    context: Context,
+    localFile: File,
+    mimeType: String?,
+) {
+    try {
+        withContext(Dispatchers.IO) {
+            // Get sharable URI for the local file
+            val (uri, extension) = ShareHelper.getSharableUriForLocalVideo(context, localFile)
+
+            // Determine mime type
+            val determinedMimeType = mimeType ?: "video/$extension"
+
+            // Create share intent
+            val shareIntent =
+                Intent(Intent.ACTION_SEND).apply {
+                    type = determinedMimeType
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+            withContext(Dispatchers.Main) {
+                context.startActivity(Intent.createChooser(shareIntent, null))
+            }
+        }
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        Log.w("ZoomableContentView", "Failed to share local video: ${localFile.path}", e)
+        Toast
+            .makeText(
+                context,
+                context.getString(R.string.unable_to_share_video),
+                Toast.LENGTH_SHORT,
+            ).show()
     }
 }
 

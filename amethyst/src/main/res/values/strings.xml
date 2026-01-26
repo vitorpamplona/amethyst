@@ -1426,6 +1426,9 @@
     <string name="group_relay_explanation">The relay that all users of this chat connect to</string>
     <string name="share_image">Share image…</string>
     <string name="unable_to_share_image">Unable to share image, please try again later…</string>
+    <string name="share_video">Share video…</string>
+    <string name="unable_to_share_video">Unable to share video, please try again later…</string>
+    <string name="downloading_video_for_sharing">Downloading video…</string>
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
 
