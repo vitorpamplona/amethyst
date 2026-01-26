@@ -1239,7 +1239,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="follow_set_delete">Liste löschen</string>
     <string name="follow_pack_delete">Empfehlungspaket löschen</string>
     <string name="kinds">Typen</string>
-    <string name="share_video">Video teilen…</string>
-    <string name="unable_to_share_video">Video kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
-    <string name="downloading_video_for_sharing">Video wird heruntergeladen…</string>
 </resources>
