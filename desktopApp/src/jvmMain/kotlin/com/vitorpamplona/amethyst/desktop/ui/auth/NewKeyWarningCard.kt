@@ -37,8 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.SharedRes
-import dev.icerock.moko.resources.compose.stringResource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_key_continue_button
+import com.vitorpamplona.amethyst.commons.resources.new_key_public_label
+import com.vitorpamplona.amethyst.commons.resources.new_key_secret_label
+import com.vitorpamplona.amethyst.commons.resources.new_key_warning_message
+import com.vitorpamplona.amethyst.commons.resources.new_key_warning_title
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Warning card displayed after generating a new Nostr key pair.
@@ -69,7 +74,7 @@ fun NewKeyWarningCard(
             modifier = Modifier.padding(24.dp),
         ) {
             Text(
-                stringResource(SharedRes.strings.new_key_warning_title),
+                stringResource(Res.string.new_key_warning_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.Red,
             )
@@ -77,7 +82,7 @@ fun NewKeyWarningCard(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                stringResource(SharedRes.strings.new_key_warning_message),
+                stringResource(Res.string.new_key_warning_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -85,7 +90,7 @@ fun NewKeyWarningCard(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                stringResource(SharedRes.strings.new_key_public_label),
+                stringResource(Res.string.new_key_public_label),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -95,7 +100,7 @@ fun NewKeyWarningCard(
 
             nsec?.let { secretKey ->
                 Text(
-                    stringResource(SharedRes.strings.new_key_secret_label),
+                    stringResource(Res.string.new_key_secret_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.Red,
                 )
@@ -108,7 +113,7 @@ fun NewKeyWarningCard(
                 onClick = onContinue,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(SharedRes.strings.new_key_continue_button))
+                Text(stringResource(Res.string.new_key_continue_button))
             }
         }
     }

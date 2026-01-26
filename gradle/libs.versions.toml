@@ -40,7 +40,6 @@ lightcompressor-enhanced = "1.6.0"
 markdown = "f92ef49c9d"
 media3 = "1.9.0"
 mockk = "1.14.7"
-mokoResources = "0.25.2"
 kotlinx-coroutines-test = "1.10.2"
 navigationCompose = "2.9.6"
 okhttp = "5.3.2"
@@ -137,8 +136,6 @@ markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "ric
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
-moko-resources = { group = "dev.icerock.moko", name = "resources", version.ref = "mokoResources" }
-moko-resources-compose = { group = "dev.icerock.moko", name = "resources-compose", version.ref = "mokoResources" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
@@ -178,4 +175,3 @@ androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.lib
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.6.6" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
-mokoResources = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "mokoResources" }

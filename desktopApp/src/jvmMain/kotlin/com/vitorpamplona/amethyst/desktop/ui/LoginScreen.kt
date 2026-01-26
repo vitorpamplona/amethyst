@@ -37,14 +37,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.SharedRes
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_subtitle_desktop
+import com.vitorpamplona.amethyst.commons.resources.login_title
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.ui.auth.LoginCard
 import com.vitorpamplona.amethyst.desktop.ui.auth.NewKeyWarningCard
-import dev.icerock.moko.resources.compose.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LoginScreen(
@@ -61,7 +63,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            stringResource(SharedRes.strings.login_title),
+            stringResource(Res.string.login_title),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -69,7 +71,7 @@ fun LoginScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            stringResource(SharedRes.strings.login_subtitle_desktop),
+            stringResource(Res.string.login_subtitle_desktop),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
