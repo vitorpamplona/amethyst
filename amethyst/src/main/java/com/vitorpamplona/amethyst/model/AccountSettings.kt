@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -145,6 +146,7 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
+    var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,
     PublicChatListRepository {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
@@ -338,6 +340,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
             backupNIP65RelayList = newNIP65RelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {
+        if (newNIPA3PaymentTargets == null || newNIPA3PaymentTargets.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupNipA3PaymentTargets?.id != newNIPA3PaymentTargets.id) {
+            backupNipA3PaymentTargets = newNIPA3PaymentTargets
             saveAccountSettings()
         }
     }

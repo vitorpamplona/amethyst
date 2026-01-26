@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadat
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.paymentTargets.AccountPaymentTargetsEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -61,6 +62,7 @@ class AccountFilterAssembler(
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
+            AccountPaymentTargetsEoseManager(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()
