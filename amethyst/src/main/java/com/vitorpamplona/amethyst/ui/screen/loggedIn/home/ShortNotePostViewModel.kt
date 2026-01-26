@@ -97,6 +97,7 @@ import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
@@ -544,11 +545,47 @@ open class ShortNotePostViewModel :
         val version = draftTag.current
         cancel()
 
-        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        if (accountViewModel.settings.isCompleteUIMode()) {
+            // Tracked broadcasting with progress feedback (non-blocking)
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+            val eventName = getEventName(event)
+
+            // Launch broadcast in background - don't wait for completion
+            accountViewModel.viewModelScope.launch {
+                val result =
+                    accountViewModel.broadcastTracker.trackBroadcast(
+                        event = event,
+                        eventName = eventName,
+                        relays = relays,
+                        client = accountViewModel.account.client,
+                    )
+
+                // Only consume event if at least one relay succeeded
+                if (result.isSuccess) {
+                    accountViewModel.account.consumePostEvent(event, relays, extras)
+                }
+            }
+        } else {
+            // Fire-and-forget (original behavior)
+            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        }
+
         accountViewModel.launchSigner {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
         }
     }
+
+    private fun getEventName(event: Event): String =
+        when (event) {
+            is TextNoteEvent -> {
+                val quotes = event.taggedQuotes()
+                if (quotes.isNotEmpty()) "Quote" else "Post"
+            }
+            is PollNoteEvent -> "Poll"
+            is VoiceEvent -> "Voice"
+            is VoiceReplyEvent -> "Voice Reply"
+            else -> "Post"
+        }
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
