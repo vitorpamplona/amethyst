@@ -1234,7 +1234,4 @@
     <string name="follow_set_delete">Excluir lista</string>
     <string name="follow_pack_delete">Excluir pacote de recomendações</string>
     <string name="kinds">Tipos</string>
-    <string name="share_video">Compartilhar vídeo…</string>
-    <string name="unable_to_share_video">Não foi possível compartilhar o vídeo, tente novamente mais tarde…</string>
-    <string name="downloading_video_for_sharing">Baixando vídeo…</string>
 </resources>
