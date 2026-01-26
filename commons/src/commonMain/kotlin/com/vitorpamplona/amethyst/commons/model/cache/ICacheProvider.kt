@@ -112,5 +112,27 @@ interface ICacheProvider {
      */
     fun hasBeenDeleted(event: Any): Boolean
 
+    /**
+     * Finds users whose name, displayName, nip05, or lud16 starts with the given prefix.
+     * Used by search functionality to find users by name.
+     *
+     * @param prefix The search prefix to match against user names
+     * @param limit Maximum number of results to return
+     * @return List of Users matching the prefix
+     */
+    fun findUsersStartingWith(
+        prefix: String,
+        limit: Int = 50,
+    ): List<Any> = emptyList()
+
+    /**
+     * Gets or creates a User by public key hex.
+     * Used when processing events that reference users.
+     *
+     * @param pubkey The user's public key in hex format
+     * @return The User (existing or newly created)
+     */
+    fun getOrCreateUser(pubkey: HexKey): Any?
+
     fun justConsumeMyOwnEvent(event: Event): Boolean
 }

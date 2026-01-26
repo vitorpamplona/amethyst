@@ -131,3 +131,187 @@ fun createThreadRepliesSubscription(
         onEvent = onEvent,
         onEose = onEose,
     )
+
+/**
+ * Creates a NIP-50 search subscription for user profiles.
+ * Requires NIP-50 compatible relays (e.g., relay.nostr.band, nostr.wine).
+ *
+ * @param searchQuery Text to search for in user profiles
+ * @param limit Maximum results to return
+ */
+fun createSearchPeopleSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    searchQuery: String,
+    limit: Int = 50,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (searchQuery.isBlank()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("search-people-${searchQuery.take(8)}"),
+        filters = listOf(FilterBuilders.searchPeople(searchQuery, limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
+ * Creates a NIP-50 search subscription for text notes.
+ * Requires NIP-50 compatible relays.
+ *
+ * @param searchQuery Text to search for in notes
+ * @param limit Maximum results to return
+ */
+fun createSearchNotesSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    searchQuery: String,
+    limit: Int = 50,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (searchQuery.isBlank()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("search-notes-${searchQuery.take(8)}"),
+        filters = listOf(FilterBuilders.searchNotes(searchQuery, limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
+ * Creates a subscription for zap receipts (kind 9735) for specific events.
+ *
+ * @param eventIds Event IDs to get zaps for
+ * @param limit Maximum zaps per event
+ */
+fun createZapsSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    eventIds: List<String>,
+    limit: Int = 100,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (eventIds.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("zaps-${eventIds.first().take(8)}"),
+        filters = listOf(FilterBuilders.zapsForEvents(eventIds, limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
+ * Creates a subscription for reactions (kind 7) for specific events.
+ *
+ * @param eventIds Event IDs to get reactions for
+ * @param limit Maximum reactions per event
+ */
+fun createReactionsSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    eventIds: List<String>,
+    limit: Int = 100,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (eventIds.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("reactions-${eventIds.first().take(8)}"),
+        filters = listOf(FilterBuilders.reactionsForEvents(eventIds, limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
+ * Creates a subscription for replies (kind 1) to specific events.
+ *
+ * @param eventIds Event IDs to get replies for
+ * @param limit Maximum replies per event
+ */
+fun createRepliesSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    eventIds: List<String>,
+    limit: Int = 100,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (eventIds.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("replies-${eventIds.first().take(8)}"),
+        filters = listOf(FilterBuilders.repliesForEvents(eventIds, limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
+ * Creates a subscription for reposts (kind 6) of specific events.
+ *
+ * @param eventIds Event IDs to get reposts for
+ * @param limit Maximum reposts per event
+ */
+fun createRepostsSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    eventIds: List<String>,
+    limit: Int = 100,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (eventIds.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("reposts-${eventIds.first().take(8)}"),
+        filters = listOf(FilterBuilders.repostsForEvents(eventIds, limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
+ * Creates a subscription config for global long-form content (kind 30023, NIP-23).
+ */
+fun createLongFormFeedSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    limit: Int = 30,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig =
+    SubscriptionConfig(
+        subId = generateSubId("longform-feed"),
+        filters = listOf(FilterBuilders.longFormGlobal(limit = limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+
+/**
+ * Creates a subscription config for long-form content from followed users.
+ */
+fun createFollowingLongFormFeedSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    followedUsers: List<String>,
+    limit: Int = 30,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (followedUsers.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("longform-following"),
+        filters = listOf(FilterBuilders.longFormFromAuthors(followedUsers, limit = limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}

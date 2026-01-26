@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 

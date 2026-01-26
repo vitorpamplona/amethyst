@@ -18,13 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 
 @Composable
 fun <T> KeyDataSourceSubscription(

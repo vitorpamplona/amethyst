@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomeOutboxEventsEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

@@ -35,6 +35,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.Button
@@ -46,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +65,11 @@ import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createUserPostsSubscription
@@ -72,8 +79,11 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 
 /**
  * User profile screen showing user info, follow button, and their posts.
@@ -82,10 +92,14 @@ import kotlinx.coroutines.withContext
 fun UserProfileScreen(
     pubKeyHex: String,
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     account: AccountState.LoggedIn?,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onBack: () -> Unit,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val relayStatuses by relayManager.relayStatuses.collectAsState()
@@ -182,6 +196,61 @@ fun UserProfileScreen(
                         // Ignore parse errors
                     }
                 },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to profile user's contact list (for following count)
+    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isNotEmpty()) {
+            createContactListSubscription(
+                relays = configuredRelays,
+                pubKeyHex = pubKeyHex,
+                onEvent = { event, _, _, _ ->
+                    if (event is ContactListEvent) {
+                        // Count the number of people this user follows
+                        followingCount = event.verifiedFollowKeySet().size
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Track unique followers (authors of contact lists that tag this pubkey)
+    val followerAuthors = remember(pubKeyHex) { mutableSetOf<String>() }
+
+    // Subscribe to followers (contact lists that tag this user)
+    rememberSubscription(relayStatuses, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isNotEmpty()) {
+            // Clear previous followers when subscription restarts
+            followerAuthors.clear()
+            followersCount = 0
+
+            SubscriptionConfig(
+                subId = "followers-${pubKeyHex.take(8)}-${System.currentTimeMillis()}",
+                filters =
+                    listOf(
+                        FilterBuilders.byPTags(
+                            pubKeys = listOf(pubKeyHex),
+                            kinds = listOf(3), // ContactListEvent
+                            limit = 500,
+                        ),
+                    ),
+                relays = configuredRelays,
+                onEvent = { event, _, _, _ ->
+                    // Count unique authors who follow this user
+                    if (followerAuthors.add(event.pubKey)) {
+                        followersCount = followerAuthors.size
+                    }
+                },
+                onEose = { _, _ -> },
             )
         } else {
             null
@@ -339,11 +408,49 @@ fun UserProfileScreen(
                                 fontWeight = FontWeight.Bold,
                             )
                             Spacer(Modifier.height(4.dp))
-                            Text(
-                                (pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.take(32) ?: pubKeyHex.take(32)) + "...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            val npub = pubKeyHex.hexToByteArrayOrNull()?.toNpub()
+                            var copied by remember { mutableStateOf(false) }
+
+                            // Reset copied state after delay
+                            LaunchedEffect(copied) {
+                                if (copied) {
+                                    delay(2000)
+                                    copied = false
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(
+                                    (npub?.take(32) ?: pubKeyHex.take(32)) + "...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (npub != null) {
+                                    IconButton(
+                                        onClick = {
+                                            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                            clipboard.setContents(StringSelection(npub), null)
+                                            copied = true
+                                        },
+                                        modifier = Modifier.size(20.dp),
+                                    ) {
+                                        Icon(
+                                            if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                                            contentDescription = if (copied) "Copied" else "Copy npub",
+                                            modifier = Modifier.size(14.dp),
+                                            tint =
+                                                if (copied) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                },
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -461,8 +568,11 @@ fun UserProfileScreen(
                             FeedNoteCard(
                                 event = event,
                                 relayManager = relayManager,
+                                localCache = localCache,
                                 account = account,
+                                nwcConnection = nwcConnection,
                                 onReply = onCompose,
+                                onZapFeedback = onZapFeedback,
                                 onNavigateToProfile = onNavigateToProfile,
                             )
                         }

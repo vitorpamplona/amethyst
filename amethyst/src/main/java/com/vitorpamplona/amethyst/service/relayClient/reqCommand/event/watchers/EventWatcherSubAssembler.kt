@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.service.relays.MutableTime

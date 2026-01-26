@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 
 @Composable
 fun CommunityFilterAssemblerSubscription(

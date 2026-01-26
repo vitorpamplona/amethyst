@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow

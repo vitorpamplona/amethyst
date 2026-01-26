@@ -44,24 +44,27 @@ import kotlinx.coroutines.flow.asStateFlow
 open class RelayConnectionManager(
     websocketBuilder: WebsocketBuilder,
 ) : IRelayClientListener {
-    private val client = NostrClient(websocketBuilder)
+    private val _client = NostrClient(websocketBuilder)
+
+    /** Exposes the underlying INostrClient for subscription coordinators */
+    val client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient get() = _client
 
     private val _relayStatuses = MutableStateFlow<Map<NormalizedRelayUrl, RelayStatus>>(emptyMap())
     val relayStatuses: StateFlow<Map<NormalizedRelayUrl, RelayStatus>> = _relayStatuses.asStateFlow()
 
-    val connectedRelays: StateFlow<Set<NormalizedRelayUrl>> = client.connectedRelaysFlow()
-    val availableRelays: StateFlow<Set<NormalizedRelayUrl>> = client.availableRelaysFlow()
+    val connectedRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.connectedRelaysFlow()
+    val availableRelays: StateFlow<Set<NormalizedRelayUrl>> = _client.availableRelaysFlow()
 
     init {
-        client.subscribe(this)
+        _client.subscribe(this)
     }
 
     fun connect() {
-        client.connect()
+        _client.connect()
     }
 
     fun disconnect() {
-        client.disconnect()
+        _client.disconnect()
     }
 
     fun addRelay(url: String): NormalizedRelayUrl? {
@@ -85,18 +88,18 @@ open class RelayConnectionManager(
         listener: IRequestListener? = null,
     ) {
         val filterMap = relays.associateWith { filters }
-        client.openReqSubscription(subId, filterMap, listener)
+        _client.openReqSubscription(subId, filterMap, listener)
     }
 
     fun unsubscribe(subId: String) {
-        client.close(subId)
+        _client.close(subId)
     }
 
     fun send(
         event: Event,
         relays: Set<NormalizedRelayUrl> = connectedRelays.value,
     ) {
-        client.send(event, relays)
+        _client.send(event, relays)
     }
 
     /**
@@ -105,6 +108,61 @@ open class RelayConnectionManager(
     fun broadcastToAll(event: Event) {
         val connected = connectedRelays.value
         send(event, connected)
+    }
+
+    /**
+     * Sends an event to a specific relay (for NWC).
+     * Adds the relay if not already in the list.
+     */
+    fun sendToRelay(
+        relay: NormalizedRelayUrl,
+        event: Event,
+    ) {
+        if (relay !in availableRelays.value) {
+            updateRelayStatus(relay) { it.copy(connected = false, error = null) }
+        }
+        _client.send(event, setOf(relay))
+    }
+
+    /**
+     * Subscribes on a specific relay (for NWC).
+     * Adds the relay if not already in the list.
+     */
+    fun subscribeOnRelay(
+        relay: NormalizedRelayUrl,
+        subId: String,
+        filters: List<Filter>,
+        onEvent: (Event, NormalizedRelayUrl) -> Unit,
+    ) {
+        if (relay !in availableRelays.value) {
+            updateRelayStatus(relay) { it.copy(connected = false, error = null) }
+        }
+        val filterMap = mapOf(relay to filters)
+        _client.openReqSubscription(
+            subId = subId,
+            filters = filterMap,
+            listener =
+                object : IRequestListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        onEvent(event, relay)
+                    }
+                },
+        )
+    }
+
+    /**
+     * Closes a subscription on a specific relay.
+     */
+    fun closeSubscription(
+        relay: NormalizedRelayUrl,
+        subId: String,
+    ) {
+        _client.close(subId)
     }
 
     private fun updateRelayStatus(

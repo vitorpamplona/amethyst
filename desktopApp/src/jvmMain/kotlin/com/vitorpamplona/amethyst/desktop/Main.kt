@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,12 +52,15 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,18 +79,24 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
-import com.vitorpamplona.amethyst.commons.ui.screens.SearchPlaceholder
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
+import com.vitorpamplona.amethyst.desktop.ui.ReadsScreen
+import com.vitorpamplona.amethyst.desktop.ui.SearchScreen
 import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
+import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -99,7 +110,11 @@ private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 sealed class DesktopScreen {
     object Feed : DesktopScreen()
 
+    object Reads : DesktopScreen()
+
     object Search : DesktopScreen()
+
+    object Bookmarks : DesktopScreen()
 
     object Messages : DesktopScreen()
 
@@ -127,6 +142,8 @@ fun main() =
                 position = WindowPosition.Aligned(Alignment.Center),
             )
         var showComposeDialog by remember { mutableStateOf(false) }
+        var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
+        var currentScreen by remember { mutableStateOf<DesktopScreen>(DesktopScreen.Feed) }
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -154,7 +171,7 @@ fun main() =
                             } else {
                                 KeyShortcut(Key.Comma, ctrl = true)
                             },
-                        onClick = { /* TODO: Open settings */ },
+                        onClick = { currentScreen = DesktopScreen.Settings },
                     )
                     Separator()
                     Item(
@@ -202,24 +219,49 @@ fun main() =
             }
 
             App(
+                currentScreen = currentScreen,
+                onScreenChange = { currentScreen = it },
                 showComposeDialog = showComposeDialog,
                 onShowComposeDialog = { showComposeDialog = true },
-                onDismissComposeDialog = { showComposeDialog = false },
+                onShowReplyDialog = { event ->
+                    replyToNote = event
+                    showComposeDialog = true
+                },
+                onDismissComposeDialog = {
+                    showComposeDialog = false
+                    replyToNote = null
+                },
+                replyToNote = replyToNote,
             )
         }
     }
 
 @Composable
 fun App(
+    currentScreen: DesktopScreen,
+    onScreenChange: (DesktopScreen) -> Unit,
     showComposeDialog: Boolean,
     onShowComposeDialog: () -> Unit,
+    onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onDismissComposeDialog: () -> Unit,
+    replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
 ) {
-    var currentScreen by remember { mutableStateOf<DesktopScreen>(DesktopScreen.Feed) }
     val relayManager = remember { DesktopRelayConnectionManager() }
+    val localCache = remember { DesktopLocalCache() }
     val accountManager = remember { AccountManager.create() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
+
+    // Subscriptions coordinator for metadata/reactions loading
+    val subscriptionsCoordinator =
+        remember(relayManager, localCache) {
+            DesktopRelaySubscriptionsCoordinator(
+                client = relayManager.client,
+                scope = scope,
+                indexRelays = relayManager.availableRelays.value,
+                localCache = localCache,
+            )
+        }
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
@@ -230,7 +272,12 @@ fun App(
 
         relayManager.addDefaultRelays()
         relayManager.connect()
+
+        // Start subscriptions coordinator
+        subscriptionsCoordinator.start()
+
         onDispose {
+            subscriptionsCoordinator.clear()
             relayManager.disconnect()
         }
     }
@@ -246,19 +293,29 @@ fun App(
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { currentScreen = DesktopScreen.Feed },
+                        onLoginSuccess = { onScreenChange(DesktopScreen.Feed) },
                     )
                 }
                 is AccountState.LoggedIn -> {
                     val account = accountState as AccountState.LoggedIn
+                    val nwcConnection by accountManager.nwcConnection.collectAsState()
+
+                    // Load NWC connection on first composition
+                    LaunchedEffect(Unit) {
+                        accountManager.loadNwcConnection()
+                    }
 
                     MainContent(
                         currentScreen = currentScreen,
-                        onScreenChange = { currentScreen = it },
+                        onScreenChange = onScreenChange,
                         relayManager = relayManager,
+                        localCache = localCache,
                         accountManager = accountManager,
                         account = account,
+                        nwcConnection = nwcConnection,
+                        subscriptionsCoordinator = subscriptionsCoordinator,
                         onShowComposeDialog = onShowComposeDialog,
+                        onShowReplyDialog = onShowReplyDialog,
                     )
 
                     // Compose dialog
@@ -267,6 +324,7 @@ fun App(
                             onDismiss = onDismissComposeDialog,
                             relayManager = relayManager,
                             account = account,
+                            replyTo = replyToNote,
                         )
                     }
                 }
@@ -280,127 +338,225 @@ fun MainContent(
     currentScreen: DesktopScreen,
     onScreenChange: (DesktopScreen) -> Unit,
     relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
+    nwcConnection: Nip47WalletConnect.Nip47URINorm?,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     onShowComposeDialog: () -> Unit,
+    onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
 ) {
-    Row(Modifier.fillMaxSize()) {
-        // Sidebar Navigation
-        NavigationRail(
-            modifier = Modifier.width(80.dp).fillMaxHeight(),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            Spacer(Modifier.height(16.dp))
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Home, contentDescription = "Feed") },
-                label = { Text("Feed") },
-                selected = currentScreen == DesktopScreen.Feed,
-                onClick = { onScreenChange(DesktopScreen.Feed) },
-            )
-
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                label = { Text("Search") },
-                selected = currentScreen == DesktopScreen.Search,
-                onClick = { onScreenChange(DesktopScreen.Search) },
-            )
-
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
-                label = { Text("DMs") },
-                selected = currentScreen == DesktopScreen.Messages,
-                onClick = { onScreenChange(DesktopScreen.Messages) },
-            )
-
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
-                label = { Text("Alerts") },
-                selected = currentScreen == DesktopScreen.Notifications,
-                onClick = { onScreenChange(DesktopScreen.Notifications) },
-            )
-
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                label = { Text("Profile") },
-                selected = currentScreen == DesktopScreen.MyProfile || currentScreen is DesktopScreen.UserProfile,
-                onClick = { onScreenChange(DesktopScreen.MyProfile) },
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-
-            NavigationRailItem(
-                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                label = { Text("Settings") },
-                selected = currentScreen == DesktopScreen.Settings,
-                onClick = { onScreenChange(DesktopScreen.Settings) },
-            )
-
-            Spacer(Modifier.height(16.dp))
+    val onZapFeedback: (ZapFeedback) -> Unit = { feedback ->
+        scope.launch {
+            val message =
+                when (feedback) {
+                    is ZapFeedback.Success -> "Zapped ${feedback.amountSats} sats"
+                    is ZapFeedback.ExternalWallet -> "Invoice sent to wallet (${feedback.amountSats} sats)"
+                    is ZapFeedback.Error -> "Zap failed: ${feedback.message}"
+                    is ZapFeedback.Timeout -> "Zap timed out"
+                    is ZapFeedback.NoLightningAddress -> "User has no lightning address"
+                }
+            snackbarHostState.showSnackbar(message)
         }
+    }
 
-        VerticalDivider()
+    Box(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxSize()) {
+            // Sidebar Navigation
+            NavigationRail(
+                modifier = Modifier.width(80.dp).fillMaxHeight(),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Spacer(Modifier.height(16.dp))
 
-        // Main Content
-        Box(
-            modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
-        ) {
-            when (currentScreen) {
-                DesktopScreen.Feed ->
-                    FeedScreen(
-                        relayManager = relayManager,
-                        account = account,
-                        onCompose = onShowComposeDialog,
-                        onNavigateToProfile = { pubKeyHex ->
-                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                        },
-                        onNavigateToThread = { noteId ->
-                            onScreenChange(DesktopScreen.Thread(noteId))
-                        },
-                    )
-                DesktopScreen.Search -> SearchPlaceholder()
-                DesktopScreen.Messages -> MessagesPlaceholder()
-                DesktopScreen.Notifications -> NotificationsScreen(relayManager, account)
-                DesktopScreen.MyProfile ->
-                    UserProfileScreen(
-                        pubKeyHex = account.pubKeyHex,
-                        relayManager = relayManager,
-                        account = account,
-                        onBack = { onScreenChange(DesktopScreen.Feed) },
-                        onCompose = onShowComposeDialog,
-                        onNavigateToProfile = { pubKeyHex ->
-                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                        },
-                    )
-                is DesktopScreen.UserProfile ->
-                    UserProfileScreen(
-                        pubKeyHex = currentScreen.pubKeyHex,
-                        relayManager = relayManager,
-                        account = account,
-                        onBack = { onScreenChange(DesktopScreen.Feed) },
-                        onCompose = onShowComposeDialog,
-                        onNavigateToProfile = { pubKeyHex ->
-                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                        },
-                    )
-                is DesktopScreen.Thread ->
-                    ThreadScreen(
-                        noteId = currentScreen.noteId,
-                        relayManager = relayManager,
-                        account = account,
-                        onBack = { onScreenChange(DesktopScreen.Feed) },
-                        onNavigateToProfile = { pubKeyHex ->
-                            onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                        },
-                        onNavigateToThread = { noteId ->
-                            onScreenChange(DesktopScreen.Thread(noteId))
-                        },
-                    )
-                DesktopScreen.Settings -> RelaySettingsScreen(relayManager, account)
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Feed") },
+                    label = { Text("Feed") },
+                    selected = currentScreen == DesktopScreen.Feed,
+                    onClick = { onScreenChange(DesktopScreen.Feed) },
+                )
+
+                NavigationRailItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.Article, contentDescription = "Reads") },
+                    label = { Text("Reads") },
+                    selected = currentScreen == DesktopScreen.Reads,
+                    onClick = { onScreenChange(DesktopScreen.Reads) },
+                )
+
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    label = { Text("Search") },
+                    selected = currentScreen == DesktopScreen.Search,
+                    onClick = { onScreenChange(DesktopScreen.Search) },
+                )
+
+                NavigationRailItem(
+                    icon = { Icon(com.vitorpamplona.amethyst.commons.icons.Bookmark, contentDescription = "Bookmarks") },
+                    label = { Text("Bookmarks") },
+                    selected = currentScreen == DesktopScreen.Bookmarks,
+                    onClick = { onScreenChange(DesktopScreen.Bookmarks) },
+                )
+
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
+                    label = { Text("DMs") },
+                    selected = currentScreen == DesktopScreen.Messages,
+                    onClick = { onScreenChange(DesktopScreen.Messages) },
+                )
+
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
+                    label = { Text("Alerts") },
+                    selected = currentScreen == DesktopScreen.Notifications,
+                    onClick = { onScreenChange(DesktopScreen.Notifications) },
+                )
+
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
+                    selected = currentScreen == DesktopScreen.MyProfile || currentScreen is DesktopScreen.UserProfile,
+                    onClick = { onScreenChange(DesktopScreen.MyProfile) },
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+
+                NavigationRailItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                    label = { Text("Settings") },
+                    selected = currentScreen == DesktopScreen.Settings,
+                    onClick = { onScreenChange(DesktopScreen.Settings) },
+                )
+
+                Spacer(Modifier.height(16.dp))
+            }
+
+            VerticalDivider()
+
+            // Main Content
+            Box(
+                modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
+            ) {
+                when (currentScreen) {
+                    DesktopScreen.Feed ->
+                        FeedScreen(
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onCompose = onShowComposeDialog,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onNavigateToThread = { noteId ->
+                                onScreenChange(DesktopScreen.Thread(noteId))
+                            },
+                            onZapFeedback = onZapFeedback,
+                        )
+                    DesktopScreen.Reads ->
+                        ReadsScreen(
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onNavigateToArticle = { noteId ->
+                                onScreenChange(DesktopScreen.Thread(noteId))
+                            },
+                        )
+                    DesktopScreen.Search ->
+                        SearchScreen(
+                            localCache = localCache,
+                            relayManager = relayManager,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onNavigateToThread = { noteId ->
+                                onScreenChange(DesktopScreen.Thread(noteId))
+                            },
+                        )
+                    DesktopScreen.Bookmarks ->
+                        BookmarksScreen(
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onNavigateToThread = { noteId ->
+                                onScreenChange(DesktopScreen.Thread(noteId))
+                            },
+                            onZapFeedback = onZapFeedback,
+                        )
+                    DesktopScreen.Messages -> MessagesPlaceholder()
+                    DesktopScreen.Notifications -> NotificationsScreen(relayManager, account, subscriptionsCoordinator)
+                    DesktopScreen.MyProfile ->
+                        UserProfileScreen(
+                            pubKeyHex = account.pubKeyHex,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onBack = { onScreenChange(DesktopScreen.Feed) },
+                            onCompose = onShowComposeDialog,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onZapFeedback = onZapFeedback,
+                        )
+                    is DesktopScreen.UserProfile ->
+                        UserProfileScreen(
+                            pubKeyHex = currentScreen.pubKeyHex,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onBack = { onScreenChange(DesktopScreen.Feed) },
+                            onCompose = onShowComposeDialog,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onZapFeedback = onZapFeedback,
+                        )
+                    is DesktopScreen.Thread ->
+                        ThreadScreen(
+                            noteId = currentScreen.noteId,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            onBack = { onScreenChange(DesktopScreen.Feed) },
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                            onNavigateToThread = { noteId ->
+                                onScreenChange(DesktopScreen.Thread(noteId))
+                            },
+                            onZapFeedback = onZapFeedback,
+                            onReply = onShowReplyDialog,
+                        )
+                    DesktopScreen.Settings -> RelaySettingsScreen(relayManager, account, accountManager)
+                }
             }
         }
+
+        // Snackbar for zap feedback
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+        )
     }
 }
 
@@ -443,10 +599,19 @@ fun ProfileScreen(
 fun RelaySettingsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
+    accountManager: AccountManager,
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val nwcConnection by accountManager.nwcConnection.collectAsState()
     var newRelayUrl by remember { mutableStateOf("") }
+    var nwcInput by remember { mutableStateOf("") }
+    var nwcError by remember { mutableStateOf<String?>(null) }
+
+    // Load NWC on first composition
+    LaunchedEffect(Unit) {
+        accountManager.loadNwcConnection()
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -455,6 +620,88 @@ fun RelaySettingsScreen(
             color = MaterialTheme.colorScheme.onBackground,
         )
 
+        Spacer(Modifier.height(24.dp))
+
+        // Wallet Connect Section
+        Text(
+            "Wallet Connect (NWC)",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        if (nwcConnection != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        "Wallet Connected",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        "Relay: ${nwcConnection!!.relayUri.url}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedButton(
+                    onClick = { accountManager.clearNwcConnection() },
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                ) {
+                    Text("Disconnect")
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = nwcInput,
+                    onValueChange = {
+                        nwcInput = it
+                        nwcError = null
+                    },
+                    label = { Text("NWC Connection String") },
+                    placeholder = { Text("nostr+walletconnect://...") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    isError = nwcError != null,
+                    supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                )
+                Button(
+                    onClick = {
+                        val result = accountManager.setNwcConnection(nwcInput)
+                        result.fold(
+                            onSuccess = { nwcInput = "" },
+                            onFailure = { nwcError = it.message ?: "Invalid connection string" },
+                        )
+                    },
+                    enabled = nwcInput.isNotBlank(),
+                ) {
+                    Text("Connect")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider()
         Spacer(Modifier.height(24.dp))
 
         // Developer Settings Section (only in debug mode)

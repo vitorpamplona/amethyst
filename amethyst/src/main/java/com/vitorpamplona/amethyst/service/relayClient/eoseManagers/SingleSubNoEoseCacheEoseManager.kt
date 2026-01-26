@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

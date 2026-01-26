@@ -90,6 +90,7 @@ class EventCollectionState<T : Any>(
             mutex.withLock {
                 val itemId = getId(item)
                 if (itemId !in seenIds) {
+                    seenIds.add(itemId)
                     pendingItems.add(item)
                     scheduleBatchUpdate()
                 }
@@ -108,6 +109,7 @@ class EventCollectionState<T : Any>(
             mutex.withLock {
                 val newItems = items.filter { getId(it) !in seenIds }
                 if (newItems.isNotEmpty()) {
+                    newItems.forEach { seenIds.add(getId(it)) }
                     pendingItems.addAll(newItems)
                     scheduleBatchUpdate()
                 }
@@ -191,8 +193,7 @@ class EventCollectionState<T : Any>(
         mutex.withLock {
             if (pendingItems.isEmpty()) return
 
-            // Add pending IDs to seenIds
-            pendingItems.forEach { seenIds.add(getId(it)) }
+            // seenIds already updated in addItem/addItems
 
             // Merge with existing items
             val merged = _items.value + pendingItems

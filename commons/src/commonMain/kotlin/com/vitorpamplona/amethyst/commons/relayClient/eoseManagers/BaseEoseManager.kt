@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
+package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.amethyst.service.BundledUpdate
+import com.vitorpamplona.amethyst.commons.service.BundledUpdate
+import com.vitorpamplona.amethyst.commons.utils.isDebug
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -29,18 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscriptio
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 
-interface IEoseManager {
-    fun invalidateFilters(ignoreIfDoing: Boolean = false)
-
-    fun destroy()
-}
-
 abstract class BaseEoseManager<T>(
     val client: INostrClient,
     val allKeys: () -> Set<T>,
     val sampleTime: Long = 500,
 ) : IEoseManager {
-    protected val logTag: String = this.javaClass.simpleName
+    protected val logTag: String = this::class.simpleName ?: "BaseEoseManager"
 
     private val orchestrator = SubscriptionController(client)
 
