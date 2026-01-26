@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -126,6 +127,7 @@ private object PrefKeys {
 
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
+    const val LATEST_PAYMENT_TARGETS = "latestPaymentTargets"
 }
 
 object LocalPreferences {
@@ -357,6 +359,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_GEOHASH_LIST, settings.backupGeohashList)
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
                     putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
+                    putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
 
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
@@ -486,6 +489,7 @@ object LocalPreferences {
                     val latestGeohashList = parseEventOrNull<GeohashListEvent>(PrefKeys.LATEST_GEOHASH_LIST)
                     val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
                     val latestTrustProviderList = parseEventOrNull<TrustProviderListEvent>(PrefKeys.LATEST_TRUST_PROVIDER_LIST)
+                    val latestPaymentTargets = parseEventOrNull<PaymentTargetsEvent>(PrefKeys.LATEST_PAYMENT_TARGETS)
 
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
@@ -533,6 +537,7 @@ object LocalPreferences {
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         pendingAttestations = MutableStateFlow(pendingAttestations),
+                        backupNipA3PaymentTargets = latestPaymentTargets,
                     )
                 }
             }

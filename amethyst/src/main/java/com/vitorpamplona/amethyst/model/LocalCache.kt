@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
@@ -772,6 +773,51 @@ object LocalCache : ILocalCache, ICacheProvider {
             val replyTo = computeReplyTo(event)
 
             if (event.createdAt > (note.createdAt() ?: 0L)) {
+                note.loadEvent(event, author, replyTo)
+
+                refreshNewNoteObservers(note)
+
+                return true
+            }
+        }
+
+        return false
+    }
+
+    fun consume(
+        event: PaymentTargetsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        val isVerified =
+            if (version.event == null && (wasVerified || justVerify(event))) {
+                version.loadEvent(event, author, emptyList())
+                version.moveAllReferencesTo(note)
+                true
+            } else {
+                wasVerified
+            }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event?.id == event.id) return wasVerified
+
+        if (antiSpam.isSpam(event, relay)) {
+            return false
+        }
+
+        if (isVerified || justVerify(event)) {
+            if (event.createdAt > (note.createdAt() ?: 0L)) {
+                val replyTo = computeReplyTo(event)
+
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -2959,6 +3005,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VoiceEvent -> consume(event, relay, wasVerified)
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
+                is PaymentTargetsEvent -> consume(event, relay, wasVerified)
                 else -> {
                     Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}")
                     false

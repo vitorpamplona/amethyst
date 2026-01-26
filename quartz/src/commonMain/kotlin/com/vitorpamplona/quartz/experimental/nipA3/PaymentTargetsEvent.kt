@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.nipA3
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -35,6 +36,8 @@ class PaymentTargetsEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 10133
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         suspend fun updatePaymentTargets(
             earlierVersion: PaymentTargetsEvent,

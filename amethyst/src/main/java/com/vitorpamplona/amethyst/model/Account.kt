@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryption
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
+import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
@@ -352,6 +353,8 @@ class Account(
     val newNotesPreProcessor = EventProcessor(this, cache)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
+
+    val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
