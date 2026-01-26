@@ -1197,6 +1197,9 @@
     <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
     <string name="share_image">Sdílet obrázek…</string>
     <string name="unable_to_share_image">Nelze sdílet obrázek, zkuste to prosím později…</string>
+    <string name="share_video">Sdílet video…</string>
+    <string name="unable_to_share_video">Video nelze sdílet, zkuste to prosím později…</string>
+    <string name="downloading_video_for_sharing">Stahování videa…</string>
     <string name="search_by_hashtag">Vyhledávání hashtag: #%1$s</string>
     <string name="dont_translate_from">Nepřekládat z</string>
     <string name="dont_translate_from_description">Zde zobrazené jazyky nebudou přeloženy. Vyberte jazyk, který chcete odstranit a nechat je znovu přeložit.</string>
@@ -1234,7 +1237,4 @@
     <string name="follow_set_delete">Smazat seznam</string>
     <string name="follow_pack_delete">Smazat sadu doporučení</string>
     <string name="kinds">Typy</string>
-    <string name="share_video">Sdílet video…</string>
-    <string name="unable_to_share_video">Video nelze sdílet, zkuste to prosím později…</string>
-    <string name="downloading_video_for_sharing">Stahování videa…</string>
 </resources>
