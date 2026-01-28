@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,12 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.quartz.nip64Chess.ChessPiece
 import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
@@ -55,31 +57,47 @@ import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
  * @param engine Chess engine for move validation and legal moves
  * @param modifier Modifier for the board
  * @param boardSize Total size of the board in dp
+ * @param flipped If true, renders from black's perspective (rank 1 at top)
+ * @param playerColor The color the player is playing as (only allows moving these pieces)
  * @param onMoveMade Callback when a valid move is made, receives (from, to, san)
+ *                   NOTE: This callback should make the actual move - this component only validates
  */
 @Composable
 fun InteractiveChessBoard(
     engine: ChessEngine,
     modifier: Modifier = Modifier,
     boardSize: Dp = 400.dp,
+    flipped: Boolean = false,
+    playerColor: ChessColor? = null, // null = allow both (for local play)
     onMoveMade: (from: String, to: String, san: String) -> Unit = { _, _, _ -> },
 ) {
-    val position = remember(engine) { engine.getPosition() }
+    // Track move count to trigger recomposition when board changes
+    var moveCount by remember { mutableStateOf(0) }
+    val position = remember(engine, moveCount) { engine.getPosition() }
+    val sideToMove = remember(engine, moveCount) { engine.getSideToMove() }
     var selectedSquare by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var legalMoves by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    // Can only interact if it's your turn (or playerColor is null for local play)
+    val canInteract = playerColor == null || sideToMove == playerColor
+
     val squareSize = boardSize / 8
 
+    // Rank iteration order based on perspective
+    val rankRange = if (flipped) (0..7) else (7 downTo 0)
+    val fileRange = if (flipped) (7 downTo 0) else (0..7)
+
     Column(modifier = modifier.size(boardSize)) {
-        // Render ranks 8 down to 1 (from white's perspective)
-        for (rank in 7 downTo 0) {
+        for (rank in rankRange) {
             Row {
-                for (file in 0..7) {
+                for (file in fileRange) {
                     val piece = position.pieceAt(file, rank)
                     val isLightSquare = (rank + file) % 2 == 0
                     val square = fileRankToSquare(file, rank)
                     val isSelected = selectedSquare == (file to rank)
                     val isLegalMove = legalMoves.contains(square)
+
+                    val showCoord = if (flipped) rank == 7 else rank == 0
 
                     InteractiveChessSquare(
                         piece = piece,
@@ -87,23 +105,28 @@ fun InteractiveChessBoard(
                         size = squareSize,
                         isSelected = isSelected,
                         isLegalMove = isLegalMove,
-                        showCoordinate = rank == 0,
+                        showCoordinate = showCoord,
                         file = file,
                         rank = rank,
                         onClick = {
+                            if (!canInteract) return@InteractiveChessSquare
+
                             if (selectedSquare != null) {
-                                // Attempt to make move
+                                // Attempt to make move - validate first, don't actually make it
                                 val from = fileRankToSquare(selectedSquare!!.first, selectedSquare!!.second)
                                 val to = square
-                                val result = engine.makeMove(from, to)
 
-                                if (result.success) {
-                                    onMoveMade(from, to, result.san ?: "$from$to")
+                                if (legalMoves.contains(to)) {
+                                    // Valid move - callback will make the actual move
                                     selectedSquare = null
                                     legalMoves = emptyList()
+                                    // Pass empty san - callback will get it from makeMove result
+                                    onMoveMade(from, to, "")
+                                    moveCount++ // Trigger recomposition after move is made
                                 } else {
-                                    // If move failed, try selecting this square instead
-                                    if (piece != null && piece.color == engine.getSideToMove()) {
+                                    // Not a legal move target - try selecting this square instead
+                                    val validColor = playerColor ?: sideToMove
+                                    if (piece != null && piece.color == validColor) {
                                         selectedSquare = file to rank
                                         legalMoves = engine.getLegalMovesFrom(square)
                                     } else {
@@ -112,8 +135,9 @@ fun InteractiveChessBoard(
                                     }
                                 }
                             } else {
-                                // Select piece
-                                if (piece != null && piece.color == engine.getSideToMove()) {
+                                // Select piece - only allow selecting player's pieces
+                                val validColor = playerColor ?: sideToMove
+                                if (piece != null && piece.color == validColor) {
                                     selectedSquare = file to rank
                                     legalMoves = engine.getLegalMovesFrom(square)
                                 }
@@ -164,13 +188,12 @@ private fun InteractiveChessSquare(
                 },
         contentAlignment = Alignment.Center,
     ) {
-        // Display piece using Unicode chess symbols
+        // Display piece using CBurnett ImageVector icons
         piece?.let {
-            Text(
-                text = it.toUnicode(),
-                fontSize = (size.value * 0.6).sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
+            Image(
+                imageVector = it.toImageVector(),
+                contentDescription = "${it.color} ${it.type}",
+                modifier = Modifier.fillMaxSize().padding(2.dp),
             )
         }
 
@@ -218,16 +241,16 @@ private fun fileRankToSquare(
 ): String = "${('a' + file)}${rank + 1}"
 
 /**
- * Extension function to convert ChessPiece to Unicode chess symbol
+ * Extension function to convert ChessPiece to CBurnett ImageVector
  */
-private fun com.vitorpamplona.quartz.nip64Chess.ChessPiece.toUnicode(): String {
+private fun ChessPiece.toImageVector(): ImageVector {
     val white = color == ChessColor.WHITE
     return when (type) {
-        PieceType.KING -> if (white) "♔" else "♚"
-        PieceType.QUEEN -> if (white) "♕" else "♛"
-        PieceType.ROOK -> if (white) "♖" else "♜"
-        PieceType.BISHOP -> if (white) "♗" else "♝"
-        PieceType.KNIGHT -> if (white) "♘" else "♞"
-        PieceType.PAWN -> if (white) "♙" else "♟"
+        PieceType.KING -> if (white) ChessPieceVectors.WhiteKing else ChessPieceVectors.BlackKing
+        PieceType.QUEEN -> if (white) ChessPieceVectors.WhiteQueen else ChessPieceVectors.BlackQueen
+        PieceType.ROOK -> if (white) ChessPieceVectors.WhiteRook else ChessPieceVectors.BlackRook
+        PieceType.BISHOP -> if (white) ChessPieceVectors.WhiteBishop else ChessPieceVectors.BlackBishop
+        PieceType.KNIGHT -> if (white) ChessPieceVectors.WhiteKnight else ChessPieceVectors.BlackKnight
+        PieceType.PAWN -> if (white) ChessPieceVectors.WhitePawn else ChessPieceVectors.BlackPawn
     }
 }

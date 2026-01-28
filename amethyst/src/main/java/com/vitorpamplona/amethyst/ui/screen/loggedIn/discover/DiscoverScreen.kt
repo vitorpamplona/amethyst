@@ -123,7 +123,7 @@ fun DiscoverScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val tabs by
+    val feedTabs by
         remember(accountViewModel) {
             mutableStateOf(
                 listOf(
@@ -181,7 +181,7 @@ fun DiscoverScreen(
             )
         }
 
-    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
+    val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { feedTabs.size }
 
     WatchAccountForDiscoveryScreen(
         discoveryFollowSetsFeedContentState = discoveryFollowSetsFeedContentState,
@@ -204,13 +204,13 @@ fun DiscoverScreen(
 
     DiscoveryFilterAssemblerSubscription(accountViewModel.dataSources().discovery, accountViewModel)
 
-    DiscoverPages(pagerState, tabs, accountViewModel, nav)
+    DiscoverPages(pagerState, feedTabs, accountViewModel, nav)
 }
 
 @Composable
 private fun DiscoverPages(
     pagerState: PagerState,
-    tabs: ImmutableList<TabItem>,
+    feedTabs: ImmutableList<TabItem>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -228,7 +228,7 @@ private fun DiscoverPages(
                 ) {
                     val coroutineScope = rememberCoroutineScope()
 
-                    tabs.forEachIndexed { index, tab ->
+                    feedTabs.forEachIndexed { index, tab ->
                         Tab(
                             selected = pagerState.currentPage == index,
                             text = { Text(text = stringRes(tab.resource)) },
@@ -241,42 +241,49 @@ private fun DiscoverPages(
         bottomBar = {
             AppBottomBar(Route.Discover, accountViewModel) { route ->
                 if (route == Route.Discover) {
-                    tabs[pagerState.currentPage].feedState.sendToTop()
+                    val currentPage = pagerState.currentPage
+                    if (currentPage >= 0 && currentPage < feedTabs.size) {
+                        feedTabs[currentPage].feedState.sendToTop()
+                    }
                 } else {
                     nav.newStack(route)
                 }
             }
         },
         floatingButton = {
-            if (tabs[pagerState.currentPage].resource == R.string.discover_marketplace) {
+            val currentPage = pagerState.currentPage
+            if (currentPage >= 0 && currentPage < feedTabs.size && feedTabs[currentPage].resource == R.string.discover_marketplace) {
                 NewProductButton(accountViewModel, nav)
             }
         },
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(state = pagerState, contentPadding = it) { page ->
-            RefresheableBox(tabs[page].feedState, true) {
-                if (tabs[page].useGridLayout) {
-                    SaveableGridFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
-                        RenderDiscoverFeed(
-                            feedContentState = tabs[page].feedState,
-                            routeForLastRead = tabs[page].routeForLastRead,
-                            forceEventKind = tabs[page].forceEventKind,
-                            listState = listState,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
-                } else {
-                    SaveableFeedContentState(tabs[page].feedState, scrollStateKey = tabs[page].scrollStateKey) { listState ->
-                        RenderDiscoverFeed(
-                            feedContentState = tabs[page].feedState,
-                            routeForLastRead = tabs[page].routeForLastRead,
-                            forceEventKind = tabs[page].forceEventKind,
-                            listState = listState,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
+            if (page >= 0 && page < feedTabs.size) {
+                val tab = feedTabs[page]
+                RefresheableBox(tab.feedState, true) {
+                    if (tab.useGridLayout) {
+                        SaveableGridFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
+                            RenderDiscoverFeed(
+                                feedContentState = tab.feedState,
+                                routeForLastRead = tab.routeForLastRead,
+                                forceEventKind = tab.forceEventKind,
+                                listState = listState,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
+                    } else {
+                        SaveableFeedContentState(tab.feedState, scrollStateKey = tab.scrollStateKey) { listState ->
+                            RenderDiscoverFeed(
+                                feedContentState = tab.feedState,
+                                routeForLastRead = tab.routeForLastRead,
+                                forceEventKind = tab.forceEventKind,
+                                listState = listState,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
                     }
                 }
             }

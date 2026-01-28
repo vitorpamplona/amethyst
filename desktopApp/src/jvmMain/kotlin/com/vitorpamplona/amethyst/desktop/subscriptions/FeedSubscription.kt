@@ -315,3 +315,36 @@ fun createFollowingLongFormFeedSubscription(
         onEose = onEose,
     )
 }
+
+/**
+ * Creates a subscription config for chess events (challenges, moves, etc.).
+ * Subscribes to:
+ * - Open challenges (kind 30064)
+ * - Challenges directed at the user
+ * - Events in games the user is playing
+ *
+ * @param userPubkey The user's public key to filter relevant games
+ * @param limit Maximum number of events to request
+ */
+fun createChessSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    userPubkey: String,
+    limit: Int = 100,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig =
+    SubscriptionConfig(
+        subId = generateSubId("chess-${userPubkey.take(8)}"),
+        filters =
+            listOf(
+                // Open challenges and challenges to user
+                FilterBuilders.chessOpenChallenges(limit = limit),
+                // Events where user is tagged (challenges to them, moves in their games)
+                FilterBuilders.chessEventsForUser(userPubkey, limit = limit),
+                // User's own events (their challenges, moves)
+                FilterBuilders.chessEventsByUser(userPubkey, limit = limit),
+            ),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )

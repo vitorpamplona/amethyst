@@ -144,7 +144,7 @@ class TopNavFilterState(
                 ),
         )
 
-    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, chessFollow, muteListFollow)
+    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -258,7 +258,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, chessFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
                     myLivePeopleListsFlow,
                     myLiveKind3FollowsFlow,
                     listOf(muteListFollow),
@@ -274,7 +274,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, chessFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
                     myLivePeopleListsFlow,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
@@ -413,9 +413,6 @@ val DEFAULT_FEED_KINDS =
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
-        ChessGameEvent.KIND,
-        LiveChessGameChallengeEvent.KIND,
-        LiveChessGameEndEvent.KIND,
     )
 
 val DEFAULT_COMMUNITY_FEEDS =

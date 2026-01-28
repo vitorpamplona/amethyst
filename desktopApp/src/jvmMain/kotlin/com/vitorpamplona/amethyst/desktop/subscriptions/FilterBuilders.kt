@@ -201,6 +201,103 @@ object FilterBuilders {
         )
 
     /**
+     * Creates a filter for chess game challenges (kind 30064).
+     * Includes open challenges (no opponent) and challenges directed at a specific user.
+     *
+     * @param userPubkey The user's public key to filter challenges for
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for chess challenges
+     */
+    fun chessChallengesToUser(
+        userPubkey: String,
+        limit: Int? = 50,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064), // LiveChessGameChallengeEvent.KIND
+            tags = mapOf("p" to listOf(userPubkey)),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for open chess challenges (kind 30064, no specific opponent).
+     *
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for open chess challenges
+     */
+    fun chessOpenChallenges(
+        limit: Int? = 50,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064), // LiveChessGameChallengeEvent.KIND
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for all chess events (challenges, accepts, moves, ends, draw offers).
+     * Useful for loading the chess lobby.
+     *
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for all chess events
+     */
+    fun chessAllEvents(
+        limit: Int? = 100,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064, 30065, 30066, 30067, 30068),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for chess events involving a specific user.
+     * Includes challenges to/from user, moves in their games, draw offers, etc.
+     *
+     * @param userPubkey The user's public key
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for chess events involving the user
+     */
+    fun chessEventsForUser(
+        userPubkey: String,
+        limit: Int? = 100,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064, 30065, 30066, 30067, 30068),
+            tags = mapOf("p" to listOf(userPubkey)),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for chess events by the user (their own events).
+     *
+     * @param userPubkey The user's public key
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for chess events by the user
+     */
+    fun chessEventsByUser(
+        userPubkey: String,
+        limit: Int? = 100,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064, 30065, 30066, 30067, 30068),
+            authors = listOf(userPubkey),
+            limit = limit,
+            since = since,
+        )
+
+    /**
      * Creates a filter for events tagged with specific p-tags (mentioning users).
      *
      * @param pubKeys List of public keys (hex-encoded, 64 chars each) to filter by

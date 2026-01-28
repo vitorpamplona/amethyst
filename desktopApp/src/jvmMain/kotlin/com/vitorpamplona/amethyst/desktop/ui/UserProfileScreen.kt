@@ -569,7 +569,7 @@ fun UserProfileScreen(
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(events, key = { it.id }) { event ->
+                        items(events.distinctBy { it.id }, key = { it.id }) { event ->
                             FeedNoteCard(
                                 event = event,
                                 relayManager = relayManager,

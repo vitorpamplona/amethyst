@@ -1191,6 +1191,7 @@
     <string name="route_notifications">Notifications</string>
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
+    <string name="route_chess">Chess</string>
     <string name="route_security_filters">Security Filters</string>
 
     <string name="new_post">New Post</string>

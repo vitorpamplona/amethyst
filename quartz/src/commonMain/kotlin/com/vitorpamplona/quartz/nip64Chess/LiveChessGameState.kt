@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip64Chess
 
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,18 +39,56 @@ class LiveChessGameState(
     val opponentPubkey: String,
     val playerColor: Color,
     val engine: ChessEngine,
+    val createdAt: Long = TimeUtils.now(),
 ) {
+    companion object {
+        // Abandon timeout: 24 hours without a move
+        const val ABANDON_TIMEOUT_SECONDS = 24 * 60 * 60L
+
+        // Inactivity warning: 1 hour without a move
+        const val INACTIVITY_WARNING_SECONDS = 60 * 60L
+    }
+
     private val _gameStatus = MutableStateFlow<GameStatus>(GameStatus.InProgress)
     val gameStatus: StateFlow<GameStatus> = _gameStatus.asStateFlow()
 
     private val _currentPosition = MutableStateFlow(engine.getPosition())
     val currentPosition: StateFlow<ChessPosition> = _currentPosition.asStateFlow()
 
-    private val _moveHistory = MutableStateFlow<List<String>>(emptyList())
+    // Initialize from engine's history so freshly loaded games show all moves
+    private val _moveHistory = MutableStateFlow(engine.getMoveHistory())
     val moveHistory: StateFlow<List<String>> = _moveHistory.asStateFlow()
 
     private val _lastError = MutableStateFlow<String?>(null)
     val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
+    // Track when last activity occurred (move made or received)
+    private val _lastActivityAt = MutableStateFlow(createdAt)
+    val lastActivityAt: StateFlow<Long> = _lastActivityAt.asStateFlow()
+
+    // Track received move numbers to detect duplicates and out-of-order
+    private val receivedMoveNumbers = mutableSetOf<Int>()
+
+    // Pending moves waiting for earlier moves (move number -> move data)
+    private val pendingMoves = mutableMapOf<Int, Pair<String, String>>()
+
+    // Desync detection
+    private val _isDesynced = MutableStateFlow(false)
+    val isDesynced: StateFlow<Boolean> = _isDesynced.asStateFlow()
+
+    // Draw offer tracking - pubkey of who offered the draw (null = no pending offer)
+    private val _pendingDrawOffer = MutableStateFlow<String?>(null)
+    val pendingDrawOffer: StateFlow<String?> = _pendingDrawOffer.asStateFlow()
+
+    /**
+     * Check if there's a pending draw offer from opponent
+     */
+    fun hasOpponentDrawOffer(): Boolean = _pendingDrawOffer.value == opponentPubkey
+
+    /**
+     * Check if we have an outgoing draw offer
+     */
+    fun hasOurDrawOffer(): Boolean = _pendingDrawOffer.value == playerPubkey
 
     /**
      * Check if it's the player's turn
@@ -80,7 +119,11 @@ class LiveChessGameState(
         if (result.success && result.san != null && result.position != null) {
             _currentPosition.value = result.position
             _moveHistory.value = engine.getMoveHistory()
+            _lastActivityAt.value = TimeUtils.now()
             _lastError.value = null
+
+            // Making a move implicitly declines any pending draw offer
+            _pendingDrawOffer.value = null
 
             // Check for game end conditions
             checkGameEnd()
@@ -105,7 +148,22 @@ class LiveChessGameState(
     fun applyOpponentMove(
         san: String,
         fen: String,
+        moveNumber: Int? = null,
     ): Boolean {
+        // Check for duplicate move
+        if (moveNumber != null && receivedMoveNumbers.contains(moveNumber)) {
+            // Already processed this move, ignore
+            return true
+        }
+
+        // Check for out-of-order move
+        val expectedMoveNumber = _moveHistory.value.size + 1
+        if (moveNumber != null && moveNumber > expectedMoveNumber) {
+            // Store for later processing
+            pendingMoves[moveNumber] = san to fen
+            return true
+        }
+
         if (isPlayerTurn()) {
             _lastError.value = "Received move but it's not opponent's turn"
             return false
@@ -115,27 +173,115 @@ class LiveChessGameState(
         val result = engine.makeMove(san)
 
         if (result.success) {
+            // Mark as received
+            if (moveNumber != null) {
+                receivedMoveNumbers.add(moveNumber)
+            }
+
             // Verify the resulting FEN matches what opponent sent
             val currentFen = engine.getFen()
             if (currentFen != fen) {
-                // Positions don't match - possible desync
-                _lastError.value = "Position mismatch after opponent move"
+                // Positions don't match - desync detected
+                _isDesynced.value = true
+                _lastError.value = "Position mismatch - syncing to opponent's position"
                 // Load the opponent's FEN to stay in sync
                 engine.loadFen(fen)
+            } else {
+                _isDesynced.value = false
             }
 
             _currentPosition.value = engine.getPosition()
             _moveHistory.value = engine.getMoveHistory()
+            _lastActivityAt.value = TimeUtils.now()
             _lastError.value = null
+
+            // Opponent making a move declines any pending draw offer
+            _pendingDrawOffer.value = null
 
             // Check for game end conditions
             checkGameEnd()
+
+            // Process any pending moves that are now valid
+            processPendingMoves()
 
             return true
         } else {
             _lastError.value = "Invalid opponent move: $san"
             return false
         }
+    }
+
+    /**
+     * Process any pending out-of-order moves
+     */
+    private fun processPendingMoves() {
+        val nextMoveNumber = _moveHistory.value.size + 1
+        val pendingMove = pendingMoves.remove(nextMoveNumber)
+        if (pendingMove != null) {
+            val (san, fen) = pendingMove
+            applyOpponentMove(san, fen, nextMoveNumber)
+        }
+    }
+
+    /**
+     * Force resync to a specific FEN (manual recovery)
+     */
+    fun forceResync(fen: String) {
+        engine.loadFen(fen)
+        _currentPosition.value = engine.getPosition()
+        _moveHistory.value = engine.getMoveHistory()
+        _isDesynced.value = false
+        _lastError.value = null
+    }
+
+    /**
+     * Mark move numbers as already received.
+     * Used when loading a game from cache to prevent duplicate move application during refresh.
+     *
+     * @param moveNumbers Set of move numbers that have been loaded
+     */
+    fun markMovesAsReceived(moveNumbers: Set<Int>) {
+        receivedMoveNumbers.addAll(moveNumbers)
+    }
+
+    /**
+     * Check if game appears abandoned (opponent hasn't moved in a long time)
+     */
+    fun isAbandoned(): Boolean {
+        if (_gameStatus.value != GameStatus.InProgress) return false
+        if (isPlayerTurn()) return false // Only check when waiting for opponent
+
+        val elapsed = TimeUtils.now() - _lastActivityAt.value
+        return elapsed > ABANDON_TIMEOUT_SECONDS
+    }
+
+    /**
+     * Check if opponent is inactive (warning threshold)
+     */
+    fun isOpponentInactive(): Boolean {
+        if (_gameStatus.value != GameStatus.InProgress) return false
+        if (isPlayerTurn()) return false
+
+        val elapsed = TimeUtils.now() - _lastActivityAt.value
+        return elapsed > INACTIVITY_WARNING_SECONDS
+    }
+
+    /**
+     * Claim victory due to abandonment
+     */
+    fun claimAbandonmentVictory(): ChessGameEnd? {
+        if (!isAbandoned()) return null
+
+        _gameStatus.value = GameStatus.Finished(GameResult.getResultForWinner(playerColor))
+
+        return ChessGameEnd(
+            gameId = gameId,
+            result = GameResult.getResultForWinner(playerColor),
+            termination = GameTermination.ABANDONMENT,
+            winnerPubkey = playerPubkey,
+            opponentPubkey = opponentPubkey,
+            pgn = generatePGN(),
+        )
     }
 
     /**
@@ -155,9 +301,37 @@ class LiveChessGameState(
     }
 
     /**
-     * Offer or accept draw
+     * Offer a draw to opponent.
+     * Returns the draw offer data to be published to Nostr.
      */
-    fun offerDraw(): ChessGameEnd {
+    fun offerDraw(): ChessDrawOffer {
+        _pendingDrawOffer.value = playerPubkey
+        return ChessDrawOffer(
+            gameId = gameId,
+            opponentPubkey = opponentPubkey,
+        )
+    }
+
+    /**
+     * Handle receiving a draw offer from opponent (via Nostr event)
+     */
+    fun receiveDrawOffer(fromPubkey: String): Boolean {
+        if (fromPubkey != opponentPubkey) return false
+        _pendingDrawOffer.value = opponentPubkey
+        return true
+    }
+
+    /**
+     * Accept opponent's draw offer.
+     * Returns game end data to be published to Nostr.
+     */
+    fun acceptDraw(): ChessGameEnd? {
+        if (_pendingDrawOffer.value != opponentPubkey) {
+            _lastError.value = "No draw offer to accept"
+            return null
+        }
+
+        _pendingDrawOffer.value = null
         _gameStatus.value = GameStatus.Finished(GameResult.DRAW)
 
         return ChessGameEnd(
@@ -168,6 +342,13 @@ class LiveChessGameState(
             opponentPubkey = opponentPubkey,
             pgn = generatePGN(),
         )
+    }
+
+    /**
+     * Decline a draw offer (explicit decline, also happens implicitly on move)
+     */
+    fun declineDraw() {
+        _pendingDrawOffer.value = null
     }
 
     /**

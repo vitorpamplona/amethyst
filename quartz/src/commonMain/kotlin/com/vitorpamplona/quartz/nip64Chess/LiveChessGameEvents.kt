@@ -247,3 +247,48 @@ class LiveChessGameEndEvent(
 
     fun pgn(): String = content
 }
+
+/**
+ * Live Chess Draw Offer Event (Kind 30068)
+ *
+ * Offer a draw to opponent. Opponent can accept by sending a game end event
+ * with DRAW_AGREEMENT termination, or decline/ignore by making their next move.
+ *
+ * Tags:
+ * - d: game_id
+ * - p: opponent pubkey
+ *
+ * Content: Optional message
+ */
+@Immutable
+class LiveChessDrawOfferEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    companion object {
+        const val KIND = 30068
+
+        fun build(
+            gameId: String,
+            opponentPubkey: String,
+            message: String = "",
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<LiveChessDrawOfferEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, message, createdAt) {
+            add(arrayOf("d", gameId))
+            add(arrayOf("p", opponentPubkey))
+            alt("Chess draw offer")
+            initializer()
+        }
+    }
+
+    fun gameId(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "d" }?.get(1)
+
+    fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
+
+    fun message(): String = content
+}

@@ -113,6 +113,27 @@ data class ChessGameEnd(
 )
 
 /**
+ * Draw offer event - offer a draw to opponent
+ * Kind: 30068
+ *
+ * Tags:
+ * - d: game_id
+ * - p: opponent pubkey
+ *
+ * Content: Optional message
+ *
+ * Opponent can:
+ * - Accept by sending a GameEnd event with DRAW_AGREEMENT
+ * - Decline implicitly by making their next move
+ * - Decline explicitly (optional, no event needed)
+ */
+data class ChessDrawOffer(
+    val gameId: String,
+    val opponentPubkey: String,
+    val message: String? = null,
+)
+
+/**
  * Game termination reason
  */
 enum class GameTermination {
@@ -132,4 +153,5 @@ object LiveChessEventKinds {
     const val GAME_ACCEPT = 30065
     const val CHESS_MOVE = 30066
     const val GAME_END = 30067
+    const val DRAW_OFFER = 30068
 }

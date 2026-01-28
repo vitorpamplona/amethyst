@@ -112,6 +112,7 @@ actual class ChessEngine {
         val sq = Square.fromValue(square.uppercase())
         return board
             .legalMoves()
+            .filterNotNull()
             .filter { it.from == sq }
             .map { it.to.toString().lowercase() }
     }
@@ -173,7 +174,7 @@ actual class ChessEngine {
 
     actual fun getMoveHistory(): List<String> {
         // kchesslib stores move history
-        return board.backup.map { it.move.toString() }
+        return board.backup.mapNotNull { it?.move?.toString() }
     }
 
     /**

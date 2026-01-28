@@ -471,6 +471,15 @@ fun ListContent(
             route = Route.Drafts,
         )
 
+        NavigationRow(
+            title = R.string.route_chess,
+            icon = R.drawable.ic_chess,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Chess,
+        )
+
         IconRowRelays(
             accountViewModel = accountViewModel,
             onClick = {

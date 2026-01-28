@@ -20,14 +20,21 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +42,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,9 +51,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 
 /**
  * Dialog for creating a new chess game challenge
@@ -156,6 +166,81 @@ fun NewChessGameDialog(
 /**
  * Complete live chess game UI with board, controls, and game info
  *
+ * This version observes LiveChessGameState flows for automatic UI updates
+ * when polling refreshes the game state.
+ *
+ * @param modifier Modifier for the root layout
+ * @param gameState Live chess game state (observed for updates)
+ * @param opponentName Opponent's display name
+ * @param onMoveMade Callback when player makes a move (from, to, san)
+ * @param onResign Callback when player resigns
+ * @param onOfferDraw Callback when player offers draw
+ */
+@Composable
+fun LiveChessGameScreen(
+    modifier: Modifier = Modifier,
+    gameState: LiveChessGameState,
+    opponentName: String,
+    onMoveMade: (from: String, to: String, san: String) -> Unit,
+    onResign: () -> Unit,
+    onOfferDraw: () -> Unit,
+) {
+    // Observe state flows for automatic recomposition on updates
+    val currentPosition by gameState.currentPosition.collectAsState()
+    val moveHistory by gameState.moveHistory.collectAsState()
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        // Calculate board size based on available space
+        // Leave room for header (~100dp), history (~60dp), controls (~60dp), and padding
+        val availableWidth = maxWidth - 32.dp // Account for horizontal padding
+        val availableHeight = maxHeight - 250.dp // Account for other UI elements
+        val boardSize = min(availableWidth, availableHeight).coerceAtLeast(200.dp)
+
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Game info - use currentPosition.activeColor for turn display
+            GameInfoHeader(
+                gameId = gameState.gameId,
+                opponentName = opponentName,
+                playerColor = gameState.playerColor,
+                currentTurn = currentPosition.activeColor,
+            )
+
+            // Interactive chess board - flip when playing black
+            // Auto-sized to fit available space
+            InteractiveChessBoard(
+                engine = gameState.engine,
+                boardSize = boardSize,
+                flipped = gameState.playerColor == Color.BLACK,
+                onMoveMade = onMoveMade,
+            )
+
+            // Move history (scrollable) - observed from state flow
+            MoveHistoryDisplay(
+                moves = moveHistory,
+            )
+
+            // Game controls
+            GameControls(
+                onResign = onResign,
+                onOfferDraw = onOfferDraw,
+            )
+        }
+    }
+}
+
+/**
+ * Legacy version that takes engine directly (for backwards compatibility)
+ *
+ * @param modifier Modifier for the root layout
  * @param engine Chess engine instance
  * @param playerColor Color the player is playing as
  * @param gameId Unique game identifier
@@ -166,6 +251,7 @@ fun NewChessGameDialog(
  */
 @Composable
 fun LiveChessGameScreen(
+    modifier: Modifier = Modifier,
     engine: ChessEngine,
     playerColor: Color,
     gameId: String,
@@ -174,39 +260,51 @@ fun LiveChessGameScreen(
     onResign: () -> Unit,
     onOfferDraw: () -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
     ) {
-        // Game info
-        GameInfoHeader(
-            gameId = gameId,
-            opponentName = opponentName,
-            playerColor = playerColor,
-            currentTurn = engine.getSideToMove(),
-        )
+        // Calculate board size based on available space
+        // Leave room for header (~100dp), history (~60dp), controls (~60dp), and padding
+        val availableWidth = maxWidth - 32.dp // Account for horizontal padding
+        val availableHeight = maxHeight - 250.dp // Account for other UI elements
+        val boardSize = min(availableWidth, availableHeight).coerceAtLeast(200.dp)
 
-        // Interactive chess board
-        InteractiveChessBoard(
-            engine = engine,
-            boardSize = 400.dp,
-            onMoveMade = onMoveMade,
-        )
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Game info
+            GameInfoHeader(
+                gameId = gameId,
+                opponentName = opponentName,
+                playerColor = playerColor,
+                currentTurn = engine.getSideToMove(),
+            )
 
-        // Move history
-        MoveHistoryDisplay(
-            moves = engine.getMoveHistory(),
-        )
+            // Interactive chess board - flip when playing black
+            // Auto-sized to fit available space
+            InteractiveChessBoard(
+                engine = engine,
+                boardSize = boardSize,
+                flipped = playerColor == Color.BLACK,
+                onMoveMade = onMoveMade,
+            )
 
-        // Game controls
-        GameControls(
-            onResign = onResign,
-            onOfferDraw = onOfferDraw,
-        )
+            // Move history (scrollable)
+            MoveHistoryDisplay(
+                moves = engine.getMoveHistory(),
+            )
+
+            // Game controls
+            GameControls(
+                onResign = onResign,
+                onOfferDraw = onOfferDraw,
+            )
+        }
     }
 }
 
@@ -263,25 +361,91 @@ private fun GameInfoHeader(
 }
 
 /**
- * Display move history in SAN notation
+ * Display move history in SAN notation with move numbers
+ * Shows in a horizontally scrollable container
  */
 @Composable
 private fun MoveHistoryDisplay(moves: List<String>) {
-    if (moves.isNotEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = "Moves:",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-            )
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = "Move History",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
 
-            Text(
-                text = moves.joinToString(" "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp),
+                    ).padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            if (moves.isEmpty()) {
+                Text(
+                    text = "No moves yet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterStart),
+                )
+            } else {
+                val scrollState = rememberScrollState()
+
+                Row(
+                    modifier =
+                        Modifier
+                            .horizontalScroll(scrollState)
+                            .align(Alignment.CenterStart),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Group moves into pairs (white, black)
+                    moves.chunked(2).forEachIndexed { index, movePair ->
+                        // Move number
+                        Text(
+                            text = "${index + 1}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        // White's move
+                        Text(
+                            text = movePair[0],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier =
+                                Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        RoundedCornerShape(4.dp),
+                                    ).padding(horizontal = 4.dp, vertical = 2.dp),
+                        )
+
+                        // Black's move (if exists)
+                        if (movePair.size > 1) {
+                            Text(
+                                text = movePair[1],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier =
+                                    Modifier
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            RoundedCornerShape(4.dp),
+                                        ).padding(horizontal = 4.dp, vertical = 2.dp),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                }
+            }
         }
     }
 }

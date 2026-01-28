@@ -20,23 +20,25 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.quartz.nip64Chess.ChessPiece
 import com.vitorpamplona.quartz.nip64Chess.ChessPosition
 import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
@@ -103,13 +105,12 @@ private fun ChessSquare(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        // Display piece using Unicode chess symbols
+        // Display piece using CBurnett ImageVector icons
         piece?.let {
-            Text(
-                text = it.toUnicode(),
-                fontSize = (size.value * 0.6).sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
+            Image(
+                imageVector = it.toImageVector(),
+                contentDescription = "${it.color} ${it.type}",
+                modifier = Modifier.fillMaxSize().padding(2.dp),
             )
         }
 
@@ -130,16 +131,16 @@ private fun ChessSquare(
 }
 
 /**
- * Extension function to convert ChessPiece to Unicode chess symbol
+ * Extension function to convert ChessPiece to CBurnett ImageVector
  */
-private fun com.vitorpamplona.quartz.nip64Chess.ChessPiece.toUnicode(): String {
+private fun ChessPiece.toImageVector(): ImageVector {
     val white = color == ChessColor.WHITE
     return when (type) {
-        PieceType.KING -> if (white) "♔" else "♚"
-        PieceType.QUEEN -> if (white) "♕" else "♛"
-        PieceType.ROOK -> if (white) "♖" else "♜"
-        PieceType.BISHOP -> if (white) "♗" else "♝"
-        PieceType.KNIGHT -> if (white) "♘" else "♞"
-        PieceType.PAWN -> if (white) "♙" else "♟"
+        PieceType.KING -> if (white) ChessPieceVectors.WhiteKing else ChessPieceVectors.BlackKing
+        PieceType.QUEEN -> if (white) ChessPieceVectors.WhiteQueen else ChessPieceVectors.BlackQueen
+        PieceType.ROOK -> if (white) ChessPieceVectors.WhiteRook else ChessPieceVectors.BlackRook
+        PieceType.BISHOP -> if (white) ChessPieceVectors.WhiteBishop else ChessPieceVectors.BlackBishop
+        PieceType.KNIGHT -> if (white) ChessPieceVectors.WhiteKnight else ChessPieceVectors.BlackKnight
+        PieceType.PAWN -> if (white) ChessPieceVectors.WhitePawn else ChessPieceVectors.BlackPawn
     }
 }
