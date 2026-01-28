@@ -6,7 +6,6 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # preserve the line number information for debugging stack traces.
--dontobfuscate
 -keepattributes LocalVariableTable
 -keepattributes LocalVariableTypeTable
 -keepattributes *Annotation*

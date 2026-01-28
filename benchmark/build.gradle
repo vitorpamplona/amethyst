@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.androidBenchmark)
 }
 
@@ -12,7 +11,6 @@ android {
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInteger()
-        targetSdk = libs.versions.android.targetSdk.get().toInteger()
 
         // Enable measuring on an emulator, or devices with low battery
         testInstrumentationRunner 'androidx.benchmark.junit4.AndroidBenchmarkRunner'
