@@ -246,8 +246,8 @@ fun LocalImageView(
             }
 
         val ratio = remember(content) { content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
-        CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
-            if (it) {
+        CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) { imageVisible ->
+            if (imageVisible) {
                 SubcomposeAsyncImage(
                     model = content.localFile,
                     contentDescription = content.description,
@@ -552,11 +552,7 @@ fun ShowHash(content: MediaUrlContent) {
 }
 
 @Composable
-fun WaitAndDisplay(
-    content:
-        @Composable()
-        (AnimatedVisibilityScope.() -> Unit),
-) {
+fun WaitAndDisplay(content: @Composable (AnimatedVisibilityScope.() -> Unit)) {
     val visible = remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -939,7 +935,11 @@ private suspend fun shareVideoFile(
         // GlobalScope is intentional: cleanup must survive after share UI is dismissed.
         GlobalScope.launch(Dispatchers.IO) {
             delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
-            sharedFile?.delete()
+            sharedFile?.let { file ->
+                if (!file.delete()) {
+                    Log.w("ZoomableContentView", "Failed to delete shared file: ${file.path}")
+                }
+            }
         }
 
         withContext(Dispatchers.Main) {
@@ -950,8 +950,14 @@ private suspend fun shareVideoFile(
         Log.w("ZoomableContentView", "Failed to share video: $videoUrl", e)
 
         // Clean up temp file on error
-        tempFile.delete()
-        sharedFile?.delete()
+        if (!tempFile.delete()) {
+            Log.w("ZoomableContentView", "Failed to delete temp file: ${tempFile.path}")
+        }
+        sharedFile?.let { file ->
+            if (!file.delete()) {
+                Log.w("ZoomableContentView", "Failed to delete shared file: ${file.path}")
+            }
+        }
 
         withContext(Dispatchers.Main) {
             Toast
