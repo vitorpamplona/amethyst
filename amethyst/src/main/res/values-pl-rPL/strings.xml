@@ -1199,6 +1199,9 @@
     <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
     <string name="unable_to_share_image">Nie można udostępnić obrazu, spróbuj ponownie później…</string>
+    <string name="share_video">Udostępnij film…</string>
+    <string name="unable_to_share_video">Nie można udostępnić filmu, spróbuj ponownie później…</string>
+    <string name="downloading_video_for_sharing">Pobieranie filmu…</string>
     <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
     <string name="dont_translate_from">Nie tłumacz z</string>
     <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>
