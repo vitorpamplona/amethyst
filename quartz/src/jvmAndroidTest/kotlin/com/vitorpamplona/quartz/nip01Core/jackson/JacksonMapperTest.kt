@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
@@ -151,5 +152,13 @@ class JacksonMapperTest {
         tags.forEachIndexed { index, tag ->
             assertContentEquals(tag, deserialized.tags[index])
         }
+    }
+
+    @Test
+    fun shouldNotThrowExceptionWhenDeserializingEmptyFilter() {
+        val json = Filter().toJson()
+        val deserialized = JacksonMapper.fromJsonTo<Filter>(json)
+
+        assertEquals(deserialized.ids, null)
     }
 }
