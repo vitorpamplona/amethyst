@@ -1202,6 +1202,9 @@
     <string name="group_relay_explanation">此聊天所有用户都连接到的中继</string>
     <string name="share_image">分享图片…</string>
     <string name="unable_to_share_image">无法分享图片，请稍后重试…</string>
+    <string name="share_video">分享视频…</string>
+    <string name="unable_to_share_video">无法分享视频，请稍后重试…</string>
+    <string name="downloading_video_for_sharing">正下载视频…</string>
     <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
     <string name="dont_translate_from">不要翻译</string>
     <string name="dont_translate_from_description">此处显示的语言不会被翻译，请选择一种目标语言重新翻译并去除这个提示。</string>

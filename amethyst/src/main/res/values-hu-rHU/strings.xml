@@ -1202,6 +1202,9 @@
     <string name="group_relay_explanation">Az átjátszó, amelyhez a csevegés összes felhasználója csatlakozik</string>
     <string name="share_image">Kép megosztása…</string>
     <string name="unable_to_share_image">Nem lehetett megosztani a képet, próbálja meg újra később…</string>
+    <string name="share_video">Videó megosztása…</string>
+    <string name="unable_to_share_video">Nem sikerült megosztani a videót, próbálja meg újra később…</string>
+    <string name="downloading_video_for_sharing">Videó letöltése…</string>
     <string name="search_by_hashtag">Hashtag keresése: #%1$s</string>
     <string name="dont_translate_from">Innentől NE fordítsa le</string>
     <string name="dont_translate_from_description">Az itt látható nyelvek nem lesznek lefordítva. Az eltávolításához és az újbóli fordításhoz válasszon ki egy nyelvet.</string>
