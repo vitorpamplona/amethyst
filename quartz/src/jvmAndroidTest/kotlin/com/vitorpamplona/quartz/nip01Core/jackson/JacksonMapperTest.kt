@@ -164,14 +164,17 @@ class JacksonMapperTest {
 
     @Test
     fun shouldNotThrowExceptionWhenDeserializingFilterTags() {
+        val expectedTagValue = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da"
         val json =
             Filter(
-                tags = mapOf("p" to listOf("123")),
-                tagsAll = mapOf("p" to listOf("123")),
+                tags = mapOf("p" to listOf(expectedTagValue)),
+                tagsAll = mapOf("p" to listOf(expectedTagValue)),
             ).toJson()
         val deserialized = JacksonMapper.fromJsonTo<Filter>(json)
 
         assertEquals(true, deserialized.tags?.keys?.contains("p"))
+        assertEquals(listOf(expectedTagValue), deserialized.tags?.get("p"))
         assertEquals(true, deserialized.tagsAll?.keys?.contains("p"))
+        assertEquals(listOf(expectedTagValue), deserialized.tagsAll?.get("p"))
     }
 }
