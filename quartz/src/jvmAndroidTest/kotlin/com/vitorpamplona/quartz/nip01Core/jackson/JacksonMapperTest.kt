@@ -161,4 +161,17 @@ class JacksonMapperTest {
 
         assertEquals(null, deserialized.ids)
     }
+
+    @Test
+    fun shouldNotThrowExceptionWhenDeserializingFilterTags() {
+        val json =
+            Filter(
+                tags = mapOf("p" to listOf("123")),
+                tagsAll = mapOf("p" to listOf("123")),
+            ).toJson()
+        val deserialized = JacksonMapper.fromJsonTo<Filter>(json)
+
+        assertEquals(true, deserialized.tags?.keys?.contains("p"))
+        assertEquals(true, deserialized.tagsAll?.keys?.contains("p"))
+    }
 }
