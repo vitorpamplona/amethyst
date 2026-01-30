@@ -159,6 +159,6 @@ class JacksonMapperTest {
         val json = Filter().toJson()
         val deserialized = JacksonMapper.fromJsonTo<Filter>(json)
 
-        assertEquals(deserialized.ids, null)
+        assertEquals(null, deserialized.ids)
     }
 }
