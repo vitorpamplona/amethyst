@@ -52,15 +52,15 @@ class ManualFilterDeserializer {
             }
 
             return Filter(
-                ids = jsonObject.get("ids").mapNotNull { it.asTextOrNull() },
-                authors = jsonObject.get("authors").mapNotNull { it.asTextOrNull() },
-                kinds = jsonObject.get("kinds").mapNotNull { it.asIntOrNull() },
-                tags = tagsIn.associateWith { jsonObject.get(it).mapNotNull { it.asTextOrNull() } },
-                tagsAll = tagsAll.associateWith { jsonObject.get(it).mapNotNull { it.asTextOrNull() } },
-                since = jsonObject.get("since").asLongOrNull(),
-                until = jsonObject.get("until").asLongOrNull(),
-                limit = jsonObject.get("limit").asIntOrNull(),
-                search = jsonObject.get("search").asTextOrNull(),
+                ids = jsonObject.get("ids")?.mapNotNull { it.asTextOrNull() },
+                authors = jsonObject.get("authors")?.mapNotNull { it.asTextOrNull() },
+                kinds = jsonObject.get("kinds")?.mapNotNull { it.asIntOrNull() },
+                tags = tagsIn.associateWith { jsonObject.get("#$it").mapNotNull { it.asTextOrNull() } },
+                tagsAll = tagsAll.associateWith { jsonObject.get("&$it").mapNotNull { it.asTextOrNull() } },
+                since = jsonObject.get("since")?.asLongOrNull(),
+                until = jsonObject.get("until")?.asLongOrNull(),
+                limit = jsonObject.get("limit")?.asIntOrNull(),
+                search = jsonObject.get("search")?.asTextOrNull(),
             )
         }
     }

@@ -128,6 +128,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
+private const val HTTPS_PREFIX = "https://"
+
 @Composable
 fun RelayInformationScreen(
     relayUrl: String,
@@ -434,7 +436,7 @@ fun FeesCard(
             }
             payUrl?.let {
                 val uri = LocalUriHandler.current
-                ClickableInfoRow(Icons.Default.Payment, stringRes(R.string.payments_url), it.removePrefix("https://")) {
+                ClickableInfoRow(Icons.Default.Payment, stringRes(R.string.payments_url), it.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(it)
                     }
@@ -583,8 +585,8 @@ fun SoftwareCard(relayInfo: Nip11RelayInformation) {
         Column(modifier = Modifier.padding(16.dp)) {
             val uri = LocalUriHandler.current
             relayInfo.software?.let {
-                if (it.contains("https://")) {
-                    ClickableInfoRow(Icons.Default.Code, stringRes(R.string.software), it.removePrefix("git+https://").removePrefix("https://")) {
+                if (it.contains(HTTPS_PREFIX)) {
+                    ClickableInfoRow(Icons.Default.Code, stringRes(R.string.software), it.removePrefix("git+https://").removePrefix(HTTPS_PREFIX)) {
                         runCatching {
                             uri.openUri(it.removePrefix("git+"))
                         }
@@ -809,7 +811,7 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
             val pp = relay.privacy_policy
 
             if (pp != null) {
-                ClickableInfoRow(Icons.Default.PrivacyTip, stringRes(R.string.privacy_policy), pp.removePrefix("https://")) {
+                ClickableInfoRow(Icons.Default.PrivacyTip, stringRes(R.string.privacy_policy), pp.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(pp)
                     }
@@ -820,7 +822,7 @@ fun PoliciesCard(relay: Nip11RelayInformation) {
 
             val ts = relay.terms_of_service
             if (ts != null) {
-                ClickableInfoRow(Icons.Default.Gavel, stringRes(R.string.terms_and_conditions), ts.removePrefix("https://")) {
+                ClickableInfoRow(Icons.Default.Gavel, stringRes(R.string.terms_and_conditions), ts.removePrefix(HTTPS_PREFIX)) {
                     runCatching {
                         uri.openUri(ts)
                     }

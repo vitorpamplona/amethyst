@@ -1202,6 +1202,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
     <string name="share_image">Bild teilen…</string>
     <string name="unable_to_share_image">Bild kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
+    <string name="share_video">Video teilen…</string>
+    <string name="unable_to_share_video">Video kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
+    <string name="downloading_video_for_sharing">Video wird heruntergeladen…</string>
     <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
     <string name="dont_translate_from">Nicht übersetzen von</string>
     <string name="dont_translate_from_description">Die hier angezeigten Sprachen werden nicht übersetzt. Wählen Sie eine Sprache, um sie zu entfernen und lassen Sie sie erneut übersetzen.</string>
