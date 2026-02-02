@@ -22,15 +22,19 @@ package com.vitorpamplona.myapplication
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
-import kotlin.math.roundToInt
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun DisappearingFloatingButton(
     scrollBehavior: BottomAppBarScrollBehavior,
@@ -39,11 +43,14 @@ fun DisappearingFloatingButton(
     Box(
         modifier =
             Modifier
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(constraints)
-                    val height = placeable.height * (1 - scrollBehavior.state.collapsedFraction)
-                    layout(placeable.width, height.roundToInt().coerceAtLeast(0)) {
-                        placeable.place(0, 0)
+                .zIndex(1f)
+                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            event.changes.forEach { it.consume() }
+                        }
                     }
                 }.graphicsLayer {
                     val percentage = 1 - scrollBehavior.state.collapsedFraction
