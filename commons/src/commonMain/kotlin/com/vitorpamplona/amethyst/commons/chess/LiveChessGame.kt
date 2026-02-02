@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 
@@ -189,6 +190,9 @@ fun LiveChessGameScreen(
     val currentPosition by gameState.currentPosition.collectAsState()
     val moveHistory by gameState.moveHistory.collectAsState()
 
+    // Pending challenges and spectators cannot make moves
+    val canMakeMoves = !gameState.isSpectator && !gameState.isPendingChallenge
+
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -212,15 +216,23 @@ fun LiveChessGameScreen(
                 opponentName = opponentName,
                 playerColor = gameState.playerColor,
                 currentTurn = currentPosition.activeColor,
+                isSpectator = gameState.isSpectator,
+                isPendingChallenge = gameState.isPendingChallenge,
             )
 
-            // Interactive chess board - flip when playing black
+            // Interactive chess board - flip when playing black (spectators see from white's view)
             // Auto-sized to fit available space
             InteractiveChessBoard(
                 engine = gameState.engine,
                 boardSize = boardSize,
-                flipped = gameState.playerColor == Color.BLACK,
-                onMoveMade = onMoveMade,
+                flipped = !gameState.isSpectator && gameState.playerColor == Color.BLACK,
+                positionVersion = moveHistory.size,
+                onMoveMade =
+                    if (canMakeMoves) {
+                        onMoveMade
+                    } else {
+                        { _, _, _ -> } // No-op for spectators and pending challenges
+                    },
             )
 
             // Move history (scrollable) - observed from state flow
@@ -228,11 +240,12 @@ fun LiveChessGameScreen(
                 moves = moveHistory,
             )
 
-            // Game controls
-            GameControls(
-                onResign = onResign,
-                onOfferDraw = onOfferDraw,
-            )
+            // Show appropriate controls based on game state
+            when {
+                gameState.isPendingChallenge -> PendingChallengeInfo()
+                gameState.isSpectator -> SpectatorInfo()
+                else -> GameControls(onResign = onResign, onOfferDraw = onOfferDraw)
+            }
         }
     }
 }
@@ -291,6 +304,7 @@ fun LiveChessGameScreen(
                 engine = engine,
                 boardSize = boardSize,
                 flipped = playerColor == Color.BLACK,
+                positionVersion = engine.getMoveHistory().size,
                 onMoveMade = onMoveMade,
             )
 
@@ -317,45 +331,147 @@ private fun GameInfoHeader(
     opponentName: String,
     playerColor: Color,
     currentTurn: Color,
+    isSpectator: Boolean = false,
+    isPendingChallenge: Boolean = false,
 ) {
+    // Extract human-readable game name if available
+    val gameName =
+        remember(gameId) {
+            ChessGameNameGenerator.extractDisplayName(gameId)
+        }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // Show readable name prominently if available
+        if (gameName != null) {
+            Text(
+                text = gameName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+
         Text(
-            text = "Game: ${gameId.take(8)}...",
+            text = if (gameName != null) gameId.take(16) else "Game: ${gameId.take(8)}...",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Text(
-            text = "vs $opponentName",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        when {
+            isPendingChallenge -> {
+                Text(
+                    text = "Challenge Pending",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
 
-        Text(
-            text = "You are playing ${if (playerColor == Color.WHITE) "White" else "Black"}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
+                Text(
+                    text = "You are playing ${if (playerColor == Color.WHITE) "White" else "Black"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
 
-        val turnText =
-            if (currentTurn == playerColor) {
-                "Your turn"
-            } else {
-                "Opponent's turn"
+                Text(
+                    text = if (opponentName.isNotEmpty()) "Waiting for $opponentName" else "Open challenge",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            isSpectator -> {
+                Text(
+                    text = "Spectating",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
 
+                val turnText = "${if (currentTurn == Color.WHITE) "White" else "Black"}'s turn"
+                Text(
+                    text = turnText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            else -> {
+                Text(
+                    text = "vs $opponentName",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                Text(
+                    text = "You are playing ${if (playerColor == Color.WHITE) "White" else "Black"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+
+                val turnText =
+                    if (currentTurn == playerColor) {
+                        "Your turn"
+                    } else {
+                        "Opponent's turn"
+                    }
+
+                Text(
+                    text = turnText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color =
+                        if (currentTurn == playerColor) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    fontWeight = if (currentTurn == playerColor) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Info banner shown when spectating a game
+ */
+@Composable
+private fun SpectatorInfo() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                    RoundedCornerShape(8.dp),
+                ).padding(12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
-            text = turnText,
+            text = "Watching game - spectator mode",
             style = MaterialTheme.typography.bodyMedium,
-            color =
-                if (currentTurn == playerColor) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            fontWeight = if (currentTurn == playerColor) FontWeight.Bold else FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+    }
+}
+
+/**
+ * Info banner shown when viewing a pending challenge
+ */
+@Composable
+private fun PendingChallengeInfo() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                    RoundedCornerShape(8.dp),
+                ).padding(12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "Waiting for opponent to accept challenge",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
 }

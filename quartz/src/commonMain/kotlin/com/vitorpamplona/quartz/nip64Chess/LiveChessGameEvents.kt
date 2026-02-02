@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip64Chess
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -48,7 +48,7 @@ class LiveChessGameChallengeEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 30064
 
@@ -100,7 +100,7 @@ class LiveChessGameAcceptEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 30065
 
@@ -148,7 +148,7 @@ class LiveChessMoveEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 30066
 
@@ -162,7 +162,8 @@ class LiveChessMoveEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LiveChessMoveEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, comment, createdAt) {
-            add(arrayOf("d", gameId))
+            add(arrayOf("d", "$gameId-$moveNumber"))
+            add(arrayOf("game_id", gameId))
             add(arrayOf("move_number", moveNumber.toString()))
             add(arrayOf("san", san))
             add(arrayOf("fen", fen))
@@ -172,7 +173,7 @@ class LiveChessMoveEvent(
         }
     }
 
-    fun gameId(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "d" }?.get(1)
+    fun gameId(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "game_id" }?.get(1)
 
     fun moveNumber(): Int? =
         tags
@@ -211,7 +212,7 @@ class LiveChessGameEndEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 30067
 
@@ -268,7 +269,7 @@ class LiveChessDrawOfferEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 30068
 

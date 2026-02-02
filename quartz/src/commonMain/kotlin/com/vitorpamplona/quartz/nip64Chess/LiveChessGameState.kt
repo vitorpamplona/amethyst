@@ -40,6 +40,8 @@ class LiveChessGameState(
     val playerColor: Color,
     val engine: ChessEngine,
     val createdAt: Long = TimeUtils.now(),
+    val isSpectator: Boolean = false,
+    val isPendingChallenge: Boolean = false,
 ) {
     companion object {
         // Abandon timeout: 24 hours without a move
@@ -92,8 +94,9 @@ class LiveChessGameState(
 
     /**
      * Check if it's the player's turn
+     * Spectators never have a turn
      */
-    fun isPlayerTurn(): Boolean = engine.getSideToMove() == playerColor
+    fun isPlayerTurn(): Boolean = !isSpectator && engine.getSideToMove() == playerColor
 
     /**
      * Make a move (called when player makes a move on the board)
@@ -129,9 +132,12 @@ class LiveChessGameState(
             checkGameEnd()
 
             // Return move event to publish
+            // Use ply count (half-move count) for moveNumber so each move gets a unique
+            // d-tag in the Nostr addressable event. The full-move counter from chesslib
+            // repeats for White/Black in the same move pair, causing d-tag collisions.
             return ChessMoveEvent(
                 gameId = gameId,
-                moveNumber = result.position.moveNumber,
+                moveNumber = _moveHistory.value.size,
                 san = result.san,
                 fen = engine.getFen(),
                 opponentPubkey = opponentPubkey,
@@ -401,6 +407,14 @@ class LiveChessGameState(
 
             $moveText $result
             """.trimIndent()
+    }
+
+    /**
+     * Mark game as finished with the given result.
+     * Used when loading a game from cache that already has an end event.
+     */
+    fun markAsFinished(result: GameResult) {
+        _gameStatus.value = GameStatus.Finished(result)
     }
 
     /**

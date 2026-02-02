@@ -69,9 +69,10 @@ import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
-import com.vitorpamplona.amethyst.desktop.subscriptions.createChessSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createChessSubscriptionWithGames
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
 
 /**
@@ -91,14 +92,26 @@ fun ChessScreen(
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val refreshKey by viewModel.refreshKey.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val activeGames by viewModel.activeGames.collectAsState()
 
-    // Subscribe to chess events from relays (re-subscribes when refreshKey changes)
-    rememberSubscription(relayStatuses, account, refreshKey, relayManager = relayManager) {
+    // Extract opponent pubkeys from active games for move filtering
+    val opponentPubkeys =
+        remember(activeGames) {
+            val pubkeys = activeGames.values.map { it.opponentPubkey }.toSet()
+            println("[ChessScreen] Active games: ${activeGames.keys}, Opponent pubkeys: $pubkeys")
+            pubkeys
+        }
+
+    // Subscribe to chess events from relays
+    // Re-subscribes when relays, refreshKey, or active games change
+    rememberSubscription(relayStatuses, account, refreshKey, activeGames.keys, opponentPubkeys, relayManager = relayManager) {
         val configuredRelays = relayStatuses.keys
         if (configuredRelays.isNotEmpty()) {
-            createChessSubscription(
+            createChessSubscriptionWithGames(
                 relays = configuredRelays,
                 userPubkey = account.pubKeyHex,
+                activeGameIds = activeGames.keys,
+                opponentPubkeys = opponentPubkeys,
                 onEvent = { event, _, _, _ ->
                     viewModel.handleIncomingEvent(event)
                 },
@@ -128,7 +141,6 @@ fun ChessScreen(
         }
     }
 
-    val activeGames by viewModel.activeGames.collectAsState()
     val challenges by viewModel.challenges.collectAsState()
     val completedGames by viewModel.completedGames.collectAsState()
     // Observe metadata changes to trigger recomposition
@@ -280,7 +292,7 @@ private fun ChessLobby(
                 )
             }
 
-            items(activeGames.entries.toList(), key = { it.key }) { (gameId, state) ->
+            items(activeGames.entries.toList(), key = { "active-${it.key}" }) { (gameId, state) ->
                 ActiveGameCard(
                     gameId = gameId,
                     opponentPubkey = state.opponentPubkey,
@@ -375,7 +387,10 @@ private fun ChessLobby(
                 )
             }
 
-            items(completedGames.take(10), key = { it.gameId }) { game ->
+            items(
+                completedGames.distinctBy { it.gameId }.take(10),
+                key = { "completed-${it.gameId}-${it.completedAt}" },
+            ) { game ->
                 CompletedGameCard(
                     game = game,
                     userPubkey = userPubkey,
@@ -428,6 +443,12 @@ private fun ActiveGameCard(
     isYourTurn: Boolean,
     onClick: () -> Unit,
 ) {
+    // Extract human-readable game name if available
+    val gameName =
+        remember(gameId) {
+            ChessGameNameGenerator.extractDisplayName(gameId) ?: gameId.take(12)
+        }
+
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         border =
@@ -453,14 +474,14 @@ private fun ActiveGameCard(
                 )
                 Column {
                     Text(
-                        "vs $opponentName",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
+                        gameName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        "Game: ${gameId.take(12)}...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        "vs $opponentName",
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -685,6 +706,7 @@ private fun DesktopChessGameLayout(
                 boardSize = 520.dp,
                 flipped = playerColor == com.vitorpamplona.quartz.nip64Chess.Color.BLACK,
                 playerColor = playerColor,
+                positionVersion = moveHistory.size,
                 onMoveMade = onMoveMade,
             )
         }
@@ -698,6 +720,12 @@ private fun DesktopChessGameLayout(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // Extract human-readable game name
+            val gameName =
+                remember(gameId) {
+                    ChessGameNameGenerator.extractDisplayName(gameId)
+                }
+
             // Game info card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -706,11 +734,21 @@ private fun DesktopChessGameLayout(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        "Game Info",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    // Show readable game name if available
+                    if (gameName != null) {
+                        Text(
+                            gameName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    } else {
+                        Text(
+                            "Game Info",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

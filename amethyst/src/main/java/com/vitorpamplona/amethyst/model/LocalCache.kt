@@ -168,11 +168,6 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -603,36 +598,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
-
-    fun consume(
-        event: ChessGameEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ) = consumeRegularEvent(event, relay, wasVerified)
-
-    fun consume(
-        event: LiveChessGameChallengeEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ) = consumeRegularEvent(event, relay, wasVerified)
-
-    fun consume(
-        event: LiveChessGameAcceptEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ) = consumeRegularEvent(event, relay, wasVerified)
-
-    fun consume(
-        event: LiveChessMoveEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ) = consumeRegularEvent(event, relay, wasVerified)
-
-    fun consume(
-        event: LiveChessGameEndEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consumeRegularEvent(
         event: Event,
@@ -2965,11 +2930,6 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is CalendarDateSlotEvent -> consume(event, relay, wasVerified)
                 is CalendarTimeSlotEvent -> consume(event, relay, wasVerified)
                 is CalendarRSVPEvent -> consume(event, relay, wasVerified)
-                is ChessGameEvent -> consume(event, relay, wasVerified)
-                is LiveChessGameChallengeEvent -> consume(event, relay, wasVerified)
-                is LiveChessGameAcceptEvent -> consume(event, relay, wasVerified)
-                is LiveChessMoveEvent -> consume(event, relay, wasVerified)
-                is LiveChessGameEndEvent -> consume(event, relay, wasVerified)
                 is ChannelCreateEvent -> consume(event, relay, wasVerified)
                 is ChannelListEvent -> consume(event, relay, wasVerified)
                 is ChannelHideMessageEvent -> consume(event, relay, wasVerified)

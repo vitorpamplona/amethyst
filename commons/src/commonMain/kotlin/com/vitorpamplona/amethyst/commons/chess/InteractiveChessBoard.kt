@@ -24,6 +24,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,8 +32,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,14 +73,26 @@ fun InteractiveChessBoard(
     boardSize: Dp = 400.dp,
     flipped: Boolean = false,
     playerColor: ChessColor? = null, // null = allow both (for local play)
+    positionVersion: Int = 0, // External trigger for position refresh (e.g. moveHistory.size)
     onMoveMade: (from: String, to: String, san: String) -> Unit = { _, _, _ -> },
 ) {
-    // Track move count to trigger recomposition when board changes
-    var moveCount by remember { mutableStateOf(0) }
-    val position = remember(engine, moveCount) { engine.getPosition() }
-    val sideToMove = remember(engine, moveCount) { engine.getSideToMove() }
+    // Track local move count + external version to trigger recomposition when board changes
+    var localMoveCount by remember { mutableStateOf(0) }
+    val effectiveVersion = localMoveCount + positionVersion
+    val position = remember(engine, effectiveVersion) { engine.getPosition() }
+    val sideToMove = remember(engine, effectiveVersion) { engine.getSideToMove() }
     var selectedSquare by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var legalMoves by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // Pawn promotion state
+    var pendingPromotion by remember { mutableStateOf<PendingPromotion?>(null) }
+
+    // Clear stale selection when position changes externally (e.g. opponent move)
+    LaunchedEffect(positionVersion) {
+        selectedSquare = null
+        legalMoves = emptyList()
+        pendingPromotion = null
+    }
 
     // Can only interact if it's your turn (or playerColor is null for local play)
     val canInteract = playerColor == null || sideToMove == playerColor
@@ -87,65 +103,117 @@ fun InteractiveChessBoard(
     val rankRange = if (flipped) (0..7) else (7 downTo 0)
     val fileRange = if (flipped) (7 downTo 0) else (0..7)
 
-    Column(modifier = modifier.size(boardSize)) {
-        for (rank in rankRange) {
-            Row {
-                for (file in fileRange) {
-                    val piece = position.pieceAt(file, rank)
-                    val isLightSquare = (rank + file) % 2 == 0
-                    val square = fileRankToSquare(file, rank)
-                    val isSelected = selectedSquare == (file to rank)
-                    val isLegalMove = legalMoves.contains(square)
+    Box(modifier = modifier.size(boardSize)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            for (rank in rankRange) {
+                Row {
+                    for (file in fileRange) {
+                        val piece = position.pieceAt(file, rank)
+                        val isLightSquare = (rank + file) % 2 == 0
+                        val square = fileRankToSquare(file, rank)
+                        val isSelected = selectedSquare == (file to rank)
+                        val isLegalMove = legalMoves.contains(square)
 
-                    val showCoord = if (flipped) rank == 7 else rank == 0
+                        val showCoord = if (flipped) rank == 7 else rank == 0
 
-                    InteractiveChessSquare(
-                        piece = piece,
-                        isLight = isLightSquare,
-                        size = squareSize,
-                        isSelected = isSelected,
-                        isLegalMove = isLegalMove,
-                        showCoordinate = showCoord,
-                        file = file,
-                        rank = rank,
-                        onClick = {
-                            if (!canInteract) return@InteractiveChessSquare
+                        InteractiveChessSquare(
+                            piece = piece,
+                            isLight = isLightSquare,
+                            size = squareSize,
+                            isSelected = isSelected,
+                            isLegalMove = isLegalMove,
+                            showCoordinate = showCoord,
+                            file = file,
+                            rank = rank,
+                            onClick = {
+                                if (!canInteract || pendingPromotion != null) return@InteractiveChessSquare
 
-                            if (selectedSquare != null) {
-                                // Attempt to make move - validate first, don't actually make it
-                                val from = fileRankToSquare(selectedSquare!!.first, selectedSquare!!.second)
-                                val to = square
+                                if (selectedSquare != null) {
+                                    // Attempt to make move - validate first, don't actually make it
+                                    val from = fileRankToSquare(selectedSquare!!.first, selectedSquare!!.second)
+                                    val to = square
 
-                                if (legalMoves.contains(to)) {
-                                    // Valid move - callback will make the actual move
-                                    selectedSquare = null
-                                    legalMoves = emptyList()
-                                    // Pass empty san - callback will get it from makeMove result
-                                    onMoveMade(from, to, "")
-                                    moveCount++ // Trigger recomposition after move is made
+                                    if (legalMoves.contains(to)) {
+                                        // Check if this is a pawn promotion move
+                                        val fromRank = selectedSquare!!.second
+                                        val toRank = rank
+                                        val movingPiece = position.pieceAt(selectedSquare!!.first, fromRank)
+                                        val isPromotion =
+                                            movingPiece?.type == PieceType.PAWN &&
+                                                (toRank == 7 || toRank == 0)
+
+                                        if (isPromotion) {
+                                            // Show promotion dialog
+                                            pendingPromotion =
+                                                PendingPromotion(
+                                                    from = from,
+                                                    to = to,
+                                                    file = file,
+                                                    rank = toRank,
+                                                    color = sideToMove,
+                                                )
+                                        } else {
+                                            // Valid move - callback will make the actual move
+                                            selectedSquare = null
+                                            legalMoves = emptyList()
+                                            // Pass empty san - callback will get it from makeMove result
+                                            onMoveMade(from, to, "")
+                                            localMoveCount++ // Trigger recomposition after move is made
+                                        }
+                                    } else {
+                                        // Not a legal move target - try selecting this square instead
+                                        val validColor = playerColor ?: sideToMove
+                                        if (piece != null && piece.color == validColor) {
+                                            selectedSquare = file to rank
+                                            legalMoves = engine.getLegalMovesFrom(square)
+                                        } else {
+                                            selectedSquare = null
+                                            legalMoves = emptyList()
+                                        }
+                                    }
                                 } else {
-                                    // Not a legal move target - try selecting this square instead
+                                    // Select piece - only allow selecting player's pieces
                                     val validColor = playerColor ?: sideToMove
                                     if (piece != null && piece.color == validColor) {
                                         selectedSquare = file to rank
                                         legalMoves = engine.getLegalMovesFrom(square)
-                                    } else {
-                                        selectedSquare = null
-                                        legalMoves = emptyList()
                                     }
                                 }
-                            } else {
-                                // Select piece - only allow selecting player's pieces
-                                val validColor = playerColor ?: sideToMove
-                                if (piece != null && piece.color == validColor) {
-                                    selectedSquare = file to rank
-                                    legalMoves = engine.getLegalMovesFrom(square)
-                                }
-                            }
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
             }
+        }
+
+        // Promotion dialog overlay
+        pendingPromotion?.let { promo ->
+            PromotionPicker(
+                color = promo.color,
+                squareSize = squareSize,
+                onPieceSelected = { pieceType ->
+                    // Make the move with promotion
+                    val promotionSuffix =
+                        when (pieceType) {
+                            PieceType.QUEEN -> "q"
+                            PieceType.ROOK -> "r"
+                            PieceType.BISHOP -> "b"
+                            PieceType.KNIGHT -> "n"
+                            else -> "q"
+                        }
+                    selectedSquare = null
+                    legalMoves = emptyList()
+                    pendingPromotion = null
+                    // Include promotion in the 'to' square for the callback
+                    onMoveMade(promo.from, promo.to + promotionSuffix, "")
+                    localMoveCount++
+                },
+                onDismiss = {
+                    pendingPromotion = null
+                    selectedSquare = null
+                    legalMoves = emptyList()
+                },
+            )
         }
     }
 }
@@ -252,5 +320,73 @@ private fun ChessPiece.toImageVector(): ImageVector {
         PieceType.BISHOP -> if (white) ChessPieceVectors.WhiteBishop else ChessPieceVectors.BlackBishop
         PieceType.KNIGHT -> if (white) ChessPieceVectors.WhiteKnight else ChessPieceVectors.BlackKnight
         PieceType.PAWN -> if (white) ChessPieceVectors.WhitePawn else ChessPieceVectors.BlackPawn
+    }
+}
+
+/**
+ * Data class for pending pawn promotion
+ */
+private data class PendingPromotion(
+    val from: String,
+    val to: String,
+    val file: Int,
+    val rank: Int,
+    val color: ChessColor,
+)
+
+/**
+ * Promotion piece picker overlay
+ */
+@Composable
+private fun PromotionPicker(
+    color: ChessColor,
+    squareSize: Dp,
+    onPieceSelected: (PieceType) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val isWhite = color == ChessColor.WHITE
+    val promotionPieces =
+        listOf(
+            PieceType.QUEEN to if (isWhite) ChessPieceVectors.WhiteQueen else ChessPieceVectors.BlackQueen,
+            PieceType.ROOK to if (isWhite) ChessPieceVectors.WhiteRook else ChessPieceVectors.BlackRook,
+            PieceType.BISHOP to if (isWhite) ChessPieceVectors.WhiteBishop else ChessPieceVectors.BlackBishop,
+            PieceType.KNIGHT to if (isWhite) ChessPieceVectors.WhiteKnight else ChessPieceVectors.BlackKnight,
+        )
+
+    // Semi-transparent overlay
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.clickable { /* prevent dismiss */ },
+        ) {
+            Row(
+                modifier = Modifier.padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                promotionPieces.forEach { (pieceType, icon) ->
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(squareSize)
+                                .background(Color(0xFFF0D9B5), RoundedCornerShape(4.dp))
+                                .clickable { onPieceSelected(pieceType) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            imageVector = icon,
+                            contentDescription = pieceType.name,
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }

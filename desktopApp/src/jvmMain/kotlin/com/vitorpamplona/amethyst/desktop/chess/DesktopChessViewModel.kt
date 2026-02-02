@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.amethyst.desktop.chess
 
+import com.vitorpamplona.amethyst.commons.chess.ChessPollingDefaults
+import com.vitorpamplona.amethyst.commons.chess.ChessPollingDelegate
+import com.vitorpamplona.amethyst.commons.chess.subscription.ChessSubscriptionController
 import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
@@ -36,6 +40,7 @@ import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +49,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /**
  * Desktop ViewModel for managing chess game state and event publishing.
@@ -106,18 +110,59 @@ class DesktopChessViewModel(
     private val pendingAccepts = mutableMapOf<String, LiveChessGameAcceptEvent>()
 
     // Track event IDs we've already processed to avoid duplicates
-    private val processedEventIds = mutableSetOf<String>()
+    // Uses ConcurrentHashMap for thread-safe check-and-add
+    private val processedEventIds =
+        java.util.concurrent.ConcurrentHashMap
+            .newKeySet<String>()
 
     // Track games currently being created to prevent race conditions
     private val gamesBeingCreated = mutableSetOf<String>()
+
+    // Subscription controller for dynamic filter updates
+    private var subscriptionController: ChessSubscriptionController? = null
+
+    // Polling delegate for periodic refresh (fallback when relay events are missed)
+    private val pollingDelegate =
+        ChessPollingDelegate(
+            config = ChessPollingDefaults.desktop,
+            scope = scope,
+            onRefreshGames = { gameIds -> refreshGamesFromRelay(gameIds) },
+            onRefreshChallenges = { /* Subscriptions handle challenges */ },
+            onCleanup = { cleanupExpiredChallenges() },
+        )
+
+    init {
+        // Start polling for move updates
+        pollingDelegate.start()
+    }
+
+    /**
+     * Set the subscription controller for dynamic filter updates.
+     * Should be called after creating the ViewModel.
+     */
+    fun setSubscriptionController(controller: ChessSubscriptionController) {
+        subscriptionController = controller
+    }
+
+    /**
+     * Notify subscription controller and polling delegate of active game changes.
+     * Call this whenever _activeGames is modified.
+     */
+    private fun notifyActiveGamesChanged() {
+        val gameIds = _activeGames.value.keys
+        subscriptionController?.updateActiveGames(
+            activeGameIds = gameIds,
+            spectatingGameIds = emptySet(),
+        )
+        pollingDelegate.setActiveGameIds(gameIds)
+    }
 
     /**
      * Process incoming chess event from relay subscription
      */
     fun handleIncomingEvent(event: Event) {
-        // Skip already processed events
-        if (processedEventIds.contains(event.id)) return
-        processedEventIds.add(event.id)
+        // Skip already processed events (atomic check-and-add)
+        if (!processedEventIds.add(event.id)) return
 
         // Check by kind since events may not be cast to specific types
         when (event.kind) {
@@ -230,8 +275,7 @@ class DesktopChessViewModel(
     }
 
     private fun handleIncomingMove(event: LiveChessMoveEvent) {
-        // Don't process our own moves
-        if (event.pubKey == account.pubKeyHex) return
+        println("[Chess] Received move event: gameId=${event.gameId()}, san=${event.san()}, moveNum=${event.moveNumber()}, from=${event.pubKey.take(8)}")
 
         val gameId = event.gameId() ?: return
         val san = event.san() ?: return
@@ -241,14 +285,25 @@ class DesktopChessViewModel(
         val gameState = _activeGames.value[gameId]
 
         if (gameState == null) {
-            // Game doesn't exist yet - buffer the move for later
+            // Game doesn't exist yet - buffer the move for later (including our own for FEN sync)
+            println("[Chess] Game $gameId not found, buffering move $san (fen for sync)")
             val moveList = pendingMoves.getOrPut(gameId) { mutableListOf() }
             moveList.add(Triple(san, fen, moveNumber))
             return
         }
 
-        if (event.pubKey != gameState.opponentPubkey) return
+        // Don't process our own moves for active games (already applied locally)
+        if (event.pubKey == account.pubKeyHex) {
+            println("[Chess] Skipping own move (already applied locally)")
+            return
+        }
 
+        if (event.pubKey != gameState.opponentPubkey) {
+            println("[Chess] Move not from opponent (expected ${gameState.opponentPubkey.take(8)}, got ${event.pubKey.take(8)})")
+            return
+        }
+
+        println("[Chess] Applying opponent move: $san (move #$moveNumber)")
         gameState.applyOpponentMove(san, fen, moveNumber)
         updateBadgeCount()
     }
@@ -283,9 +338,10 @@ class DesktopChessViewModel(
     private fun handleGameEnded(event: LiveChessGameEndEvent) {
         val gameId = event.gameId() ?: return
 
-        // Store game in history before removing
+        // Store game in history before removing (skip if already in completed list)
+        val alreadyCompleted = _completedGames.value.any { it.gameId == gameId }
         val gameState = _activeGames.value[gameId]
-        if (gameState != null) {
+        if (gameState != null && !alreadyCompleted) {
             val completedGame =
                 CompletedGame(
                     gameId = gameId,
@@ -303,6 +359,7 @@ class DesktopChessViewModel(
         // Remove from active games
         if (_activeGames.value.containsKey(gameId)) {
             _activeGames.value = _activeGames.value - gameId
+            notifyActiveGamesChanged()
         }
 
         // Clean up challenge references
@@ -460,6 +517,7 @@ class DesktopChessViewModel(
                     )
 
                 _activeGames.value = _activeGames.value + (gameId to gameState)
+                notifyActiveGamesChanged()
                 gamesBeingCreated.remove(gameId)
                 _selectedGameId.value = gameId
                 _challenges.value = _challenges.value.filter { it.id != challengeEvent.id }
@@ -480,9 +538,18 @@ class DesktopChessViewModel(
             val challengerPubkey = acceptEvent.challengerPubkey() ?: return@launch
             val accepterPubkey = acceptEvent.pubKey
 
+            println("[Chess] startGameFromAcceptance: gameId=$gameId, isChallenger=$isChallenger")
+            println("[Chess] Pending moves in buffer: ${pendingMoves.keys}")
+
             // Skip if game already exists or is being created
-            if (_activeGames.value.containsKey(gameId)) return@launch
-            if (!gamesBeingCreated.add(gameId)) return@launch // Returns false if already present
+            if (_activeGames.value.containsKey(gameId)) {
+                println("[Chess] Game $gameId already exists, skipping")
+                return@launch
+            }
+            if (!gamesBeingCreated.add(gameId)) {
+                println("[Chess] Game $gameId already being created, skipping")
+                return@launch // Returns false if already present
+            }
 
             val opponentPubkey: String
             val playerColor: Color
@@ -514,11 +581,14 @@ class DesktopChessViewModel(
                     engine = engine,
                 )
 
+            println("[Chess] Adding game $gameId to active games, opponent=$opponentPubkey")
             _activeGames.value = _activeGames.value + (gameId to gameState)
+            notifyActiveGamesChanged()
             _challenges.value = _challenges.value.filter { it.gameId() != gameId }
             gamesBeingCreated.remove(gameId)
 
             // Apply any pending moves that arrived before the game was created
+            println("[Chess] About to apply pending moves for $gameId, buffer has: ${pendingMoves[gameId]?.size ?: 0} moves")
             applyPendingMoves(gameId, gameState)
         }
     }
@@ -527,13 +597,37 @@ class DesktopChessViewModel(
         gameId: String,
         gameState: LiveChessGameState,
     ) {
-        val moves = pendingMoves.remove(gameId) ?: return
+        val moves = pendingMoves.remove(gameId)
+        if (moves == null) {
+            println("[Chess] No pending moves for game $gameId")
+            return
+        }
 
-        // Sort by move number if available, then apply in order
+        println("[Chess] Processing ${moves.size} pending moves for game $gameId")
+
+        // Sort by move number to find the latest move
         val sortedMoves = moves.sortedBy { it.third ?: Int.MAX_VALUE }
 
-        for ((san, fen, moveNumber) in sortedMoves) {
-            gameState.applyOpponentMove(san, fen, moveNumber)
+        if (sortedMoves.isEmpty()) return
+
+        // Find the move with highest move number - its FEN has the current board state
+        val latestMove = sortedMoves.maxByOrNull { it.third ?: 0 }
+        if (latestMove != null) {
+            val (san, fen, moveNumber) = latestMove
+            println("[Chess] Syncing to latest position from move #$moveNumber: $san")
+            println("[Chess] FEN: $fen")
+
+            // Use forceResync to set the board to the correct position
+            gameState.forceResync(fen)
+
+            // Mark all received move numbers as processed to avoid duplicates
+            sortedMoves.forEach { (_, _, num) ->
+                if (num != null) {
+                    gameState.markMovesAsReceived(setOf(num))
+                }
+            }
+
+            println("[Chess] Board synced to position after ${sortedMoves.size} moves")
         }
 
         updateBadgeCount()
@@ -548,10 +642,34 @@ class DesktopChessViewModel(
         to: String,
     ) {
         val gameState = _activeGames.value[gameId] ?: return
-        val moveResult = gameState.makeMove(from, to)
+
+        // Parse promotion from 'to' if present (e.g., "e8q" -> square="e8", promotion=QUEEN)
+        val (targetSquare, promotion) = parsePromotionFromTarget(to)
+
+        val moveResult = gameState.makeMove(from, targetSquare, promotion)
         if (moveResult != null) {
             publishMoveEvent(gameId, moveResult)
         }
+    }
+
+    /**
+     * Parse promotion piece from target square string.
+     * e.g., "e8q" -> ("e8", QUEEN), "e4" -> ("e4", null)
+     */
+    private fun parsePromotionFromTarget(to: String): Pair<String, PieceType?> {
+        if (to.length == 3) {
+            val square = to.substring(0, 2)
+            val promotion =
+                when (to[2].lowercaseChar()) {
+                    'q' -> PieceType.QUEEN
+                    'r' -> PieceType.ROOK
+                    'b' -> PieceType.BISHOP
+                    'n' -> PieceType.KNIGHT
+                    else -> null
+                }
+            return square to promotion
+        }
+        return to to null
     }
 
     private fun publishMoveEvent(
@@ -606,20 +724,24 @@ class DesktopChessViewModel(
                 }
 
             if (success) {
-                // Store in history
-                val completedGame =
-                    CompletedGame(
-                        gameId = gameId,
-                        opponentPubkey = gameState.opponentPubkey,
-                        playerColor = gameState.playerColor,
-                        result = endData.result.notation,
-                        termination = endData.termination.name.lowercase(),
-                        winnerPubkey = endData.winnerPubkey,
-                        completedAt = TimeUtils.now(),
-                        moveCount = gameState.moveHistory.value.size,
-                    )
-                _completedGames.value = listOf(completedGame) + _completedGames.value
+                // Store in history (skip if already completed)
+                val alreadyCompleted = _completedGames.value.any { it.gameId == gameId }
+                if (!alreadyCompleted) {
+                    val completedGame =
+                        CompletedGame(
+                            gameId = gameId,
+                            opponentPubkey = gameState.opponentPubkey,
+                            playerColor = gameState.playerColor,
+                            result = endData.result.notation,
+                            termination = endData.termination.name.lowercase(),
+                            winnerPubkey = endData.winnerPubkey,
+                            completedAt = TimeUtils.now(),
+                            moveCount = gameState.moveHistory.value.size,
+                        )
+                    _completedGames.value = listOf(completedGame) + _completedGames.value
+                }
                 _activeGames.value = _activeGames.value - gameId
+                notifyActiveGamesChanged()
                 _error.value = null
             } else {
                 _error.value = "Failed to resign"
@@ -685,20 +807,24 @@ class DesktopChessViewModel(
                 }
 
             if (success) {
-                // Store in history and remove from active
-                val completedGame =
-                    CompletedGame(
-                        gameId = gameId,
-                        opponentPubkey = gameState.opponentPubkey,
-                        playerColor = gameState.playerColor,
-                        result = GameResult.DRAW.notation,
-                        termination = GameTermination.DRAW_AGREEMENT.name.lowercase(),
-                        winnerPubkey = null,
-                        completedAt = TimeUtils.now(),
-                        moveCount = gameState.moveHistory.value.size,
-                    )
-                _completedGames.value = listOf(completedGame) + _completedGames.value
+                // Store in history and remove from active (skip if already completed)
+                val alreadyCompleted = _completedGames.value.any { it.gameId == gameId }
+                if (!alreadyCompleted) {
+                    val completedGame =
+                        CompletedGame(
+                            gameId = gameId,
+                            opponentPubkey = gameState.opponentPubkey,
+                            playerColor = gameState.playerColor,
+                            result = GameResult.DRAW.notation,
+                            termination = GameTermination.DRAW_AGREEMENT.name.lowercase(),
+                            winnerPubkey = null,
+                            completedAt = TimeUtils.now(),
+                            moveCount = gameState.moveHistory.value.size,
+                        )
+                    _completedGames.value = listOf(completedGame) + _completedGames.value
+                }
                 _activeGames.value = _activeGames.value - gameId
+                notifyActiveGamesChanged()
                 _error.value = null
             } else {
                 _error.value = "Failed to accept draw"
@@ -754,6 +880,30 @@ class DesktopChessViewModel(
         _isLoading.value = false
     }
 
+    /**
+     * Refresh game states - polling callback.
+     * Triggers a subscription refresh to catch any missed events.
+     * The fixed filter (with opponent authors) will fetch opponent moves.
+     */
+    private suspend fun refreshGamesFromRelay(gameIds: Set<String>) {
+        if (gameIds.isEmpty()) return
+
+        // Trigger subscription controller refresh to re-fetch with current filters
+        // The filter now includes opponent pubkeys as authors, so it will catch their moves
+        subscriptionController?.forceRefresh()
+    }
+
+    /**
+     * Clean up expired challenges (older than 24 hours)
+     */
+    private fun cleanupExpiredChallenges() {
+        val now = TimeUtils.now()
+        _challenges.value =
+            _challenges.value.filter { challenge ->
+                (now - challenge.createdAt) < CHALLENGE_EXPIRY_SECONDS
+            }
+    }
+
     private fun updateBadgeCount() {
         val incomingChallenges = _challenges.value.count { it.opponentPubkey() == account.pubKeyHex }
         val yourTurnGames = _activeGames.value.values.count { it.isPlayerTurn() }
@@ -776,11 +926,7 @@ class DesktopChessViewModel(
         return false
     }
 
-    private fun generateGameId(): String {
-        val timestamp = TimeUtils.now()
-        val random = UUID.randomUUID().toString().take(8)
-        return "chess-$timestamp-$random"
-    }
+    private fun generateGameId(): String = ChessGameNameGenerator.generateGameId(TimeUtils.now())
 }
 
 /**

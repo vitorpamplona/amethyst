@@ -29,14 +29,17 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -44,7 +47,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /**
  * ViewModel for managing chess game state, challenges, and event publishing
@@ -64,11 +66,19 @@ class ChessViewModel(
         const val CLEANUP_INTERVAL_MS = 5 * 60 * 1000L
     }
 
-    // Active games being played
+    // Active games being played (user is a participant)
     private val _activeGames = MutableStateFlow<Map<String, LiveChessGameState>>(emptyMap())
     val activeGames: StateFlow<Map<String, LiveChessGameState>> = _activeGames.asStateFlow()
 
-    // Pending challenges (incoming and outgoing)
+    // Public games we can spectate (user is NOT a participant)
+    private val _publicGames = MutableStateFlow<List<PublicGameInfo>>(emptyList())
+    val publicGames: StateFlow<List<PublicGameInfo>> = _publicGames.asStateFlow()
+
+    // Spectating games (user is watching but not playing)
+    private val _spectatingGames = MutableStateFlow<Map<String, LiveChessGameState>>(emptyMap())
+    val spectatingGames: StateFlow<Map<String, LiveChessGameState>> = _spectatingGames.asStateFlow()
+
+    // Pending challenges (ALL non-expired challenges)
     private val _challenges = MutableStateFlow<List<Note>>(emptyList())
     val challenges: StateFlow<List<Note>> = _challenges.asStateFlow()
 
@@ -88,6 +98,14 @@ class ChessViewModel(
     private val _pendingRetries = MutableStateFlow<Map<String, RetryOperation>>(emptyMap())
     val pendingRetries: StateFlow<Map<String, RetryOperation>> = _pendingRetries.asStateFlow()
 
+    // Chess status for UI feedback (broadcasting, syncing, etc.)
+    private val _chessStatus = MutableStateFlow<ChessStatus>(ChessStatus.Idle)
+    val chessStatus: StateFlow<ChessStatus> = _chessStatus.asStateFlow()
+
+    // Connected relays for display
+    private val _connectedRelays = MutableStateFlow<List<String>>(emptyList())
+    val connectedRelays: StateFlow<List<String>> = _connectedRelays.asStateFlow()
+
     // Polling delegate for periodic refresh
     private val pollingDelegate =
         ChessPollingDelegate(
@@ -100,6 +118,9 @@ class ChessViewModel(
                 checkAbandonedGames()
             },
         )
+
+    // Track games currently being created to prevent race conditions (like Desktop)
+    private val gamesBeingCreated = mutableSetOf<String>()
 
     init {
         subscribeToChessEvents()
@@ -201,6 +222,11 @@ class ChessViewModel(
      * Handle game acceptance event
      */
     private fun handleGameAccepted(event: LiveChessGameAcceptEvent) {
+        val gameId = event.gameId() ?: return
+
+        // Skip if game already exists (prevents overwrite)
+        if (_activeGames.value.containsKey(gameId)) return
+
         // Check if this is acceptance of our challenge
         if (event.challengerPubkey() == account.signer.pubKey) {
             startGameFromAcceptance(event)
@@ -267,6 +293,14 @@ class ChessViewModel(
         val gameId = generateGameId()
 
         viewModelScope.launch(Dispatchers.IO) {
+            val relayCount = acc.outboxRelays.flow.value.size
+            _chessStatus.value =
+                ChessStatus.BroadcastingMove(
+                    san = "Challenge",
+                    successCount = 0,
+                    totalRelays = relayCount,
+                )
+
             val success =
                 retryWithBackoff("challenge-$gameId") {
                     val template =
@@ -281,8 +315,23 @@ class ChessViewModel(
                 }
 
             if (success) {
+                _chessStatus.value =
+                    ChessStatus.MoveSuccess(
+                        san = "Challenge",
+                        relayCount = relayCount,
+                    )
                 _error.value = null
+                refreshChallenges()
+                delay(3000)
+                if (_chessStatus.value is ChessStatus.MoveSuccess) {
+                    _chessStatus.value = ChessStatus.Idle
+                }
             } else {
+                _chessStatus.value =
+                    ChessStatus.MoveFailed(
+                        san = "Challenge",
+                        error = "Failed after $MAX_RETRIES attempts",
+                    )
                 _error.value = "Failed to create challenge after $MAX_RETRIES attempts"
             }
         }
@@ -297,6 +346,11 @@ class ChessViewModel(
         challengerPubkey: String,
         playerColor: Color,
     ) {
+        // Mark as being created to prevent duplicate from relay echo
+        synchronized(gamesBeingCreated) {
+            if (!gamesBeingCreated.add(gameId)) return // Already being created
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val template =
@@ -307,6 +361,16 @@ class ChessViewModel(
                     )
 
                 account.signAndComputeBroadcast(template)
+
+                // Check if game was already created by relay echo while we were broadcasting
+                if (_activeGames.value.containsKey(gameId)) {
+                    synchronized(gamesBeingCreated) {
+                        gamesBeingCreated.remove(gameId)
+                    }
+                    _selectedGameId.value = gameId
+                    _error.value = null
+                    return@launch
+                }
 
                 // Create game state
                 val engine = ChessEngine()
@@ -322,10 +386,16 @@ class ChessViewModel(
                     )
 
                 _activeGames.value = _activeGames.value + (gameId to gameState)
+                synchronized(gamesBeingCreated) {
+                    gamesBeingCreated.remove(gameId)
+                }
                 pollingDelegate.addGameId(gameId)
                 _selectedGameId.value = gameId
                 _error.value = null
             } catch (e: Exception) {
+                synchronized(gamesBeingCreated) {
+                    gamesBeingCreated.remove(gameId)
+                }
                 _error.value = "Failed to accept challenge: ${e.message}"
             }
         }
@@ -338,6 +408,13 @@ class ChessViewModel(
         val challengeEvent = challengeNote.event as? LiveChessGameChallengeEvent ?: return
 
         val gameId = challengeEvent.gameId() ?: return
+
+        // Skip if game already exists (prevents overwrite)
+        if (_activeGames.value.containsKey(gameId)) {
+            _selectedGameId.value = gameId
+            return
+        }
+
         val challengerPubkey = challengeEvent.pubKey
         val challengerColor = challengeEvent.playerColor() ?: Color.WHITE
         val playerColor = challengerColor.opposite()
@@ -353,6 +430,13 @@ class ChessViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             val gameId = acceptEvent.gameId() ?: return@launch
+
+            // Skip if game already exists or is being created (prevents overwrite)
+            if (_activeGames.value.containsKey(gameId)) return@launch
+            synchronized(gamesBeingCreated) {
+                if (!gamesBeingCreated.add(gameId)) return@launch // Already being created
+            }
+
             val opponentPubkey = acceptEvent.pubKey
 
             // Find our challenge to get player color
@@ -376,6 +460,9 @@ class ChessViewModel(
                 )
 
             _activeGames.value = _activeGames.value + (gameId to gameState)
+            synchronized(gamesBeingCreated) {
+                gamesBeingCreated.remove(gameId)
+            }
             pollingDelegate.addGameId(gameId)
             _selectedGameId.value = gameId
         }
@@ -390,10 +477,34 @@ class ChessViewModel(
         to: String,
     ) {
         val gameState = _activeGames.value[gameId] ?: return
-        val moveResult = gameState.makeMove(from, to)
+
+        // Parse promotion from 'to' if present (e.g., "e8q" -> square="e8", promotion=QUEEN)
+        val (targetSquare, promotion) = parsePromotionFromTarget(to)
+
+        val moveResult = gameState.makeMove(from, targetSquare, promotion)
         if (moveResult != null) {
             publishMove(gameId, moveResult)
         }
+    }
+
+    /**
+     * Parse promotion piece from target square string.
+     * e.g., "e8q" -> ("e8", QUEEN), "e4" -> ("e4", null)
+     */
+    private fun parsePromotionFromTarget(to: String): Pair<String, PieceType?> {
+        if (to.length == 3) {
+            val square = to.substring(0, 2)
+            val promotion =
+                when (to[2].lowercaseChar()) {
+                    'q' -> PieceType.QUEEN
+                    'r' -> PieceType.ROOK
+                    'b' -> PieceType.BISHOP
+                    'n' -> PieceType.KNIGHT
+                    else -> null
+                }
+            return square to promotion
+        }
+        return to to null
     }
 
     /**
@@ -405,6 +516,15 @@ class ChessViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Update status to broadcasting
+                val relayCount = account.outboxRelays.flow.value.size
+                _chessStatus.value =
+                    ChessStatus.BroadcastingMove(
+                        san = moveEvent.san,
+                        successCount = 0,
+                        totalRelays = relayCount,
+                    )
+
                 val template =
                     LiveChessMoveEvent.build(
                         gameId = moveEvent.gameId,
@@ -415,8 +535,33 @@ class ChessViewModel(
                     )
 
                 account.signAndComputeBroadcast(template)
+
+                // Update status to success
+                _chessStatus.value =
+                    ChessStatus.MoveSuccess(
+                        san = moveEvent.san,
+                        relayCount = relayCount,
+                    )
+
+                // Clear status after delay
+                delay(3000)
+                if (_chessStatus.value is ChessStatus.MoveSuccess) {
+                    val gameState = _activeGames.value[gameId]
+                    _chessStatus.value =
+                        if (gameState?.isPlayerTurn() == false) {
+                            ChessStatus.WaitingForOpponent
+                        } else {
+                            ChessStatus.Idle
+                        }
+                }
+
                 _error.value = null
             } catch (e: Exception) {
+                _chessStatus.value =
+                    ChessStatus.MoveFailed(
+                        san = moveEvent.san,
+                        error = e.message ?: "Unknown error",
+                    )
                 _error.value = "Failed to publish move: ${e.message}"
             }
         }
@@ -508,28 +653,241 @@ class ChessViewModel(
 
     /**
      * Refresh challenges from local cache
+     *
+     * Following jesterui pattern: fetch ALL non-expired challenges,
+     * let UI filter by category (incoming, outgoing, open)
+     *
+     * NOTE: Chess events are addressable (kinds 30064+), so we query LocalCache.addressables
      */
     fun refreshChallenges() {
         viewModelScope.launch(Dispatchers.IO) {
             val userPubkey = account.signer.pubKey
             val now = TimeUtils.now()
 
-            // Query LocalCache for chess challenge events
+            // Query LocalCache.addressables for chess challenge events (kind 30064)
+            // Chess events are addressable events, not regular notes!
             val challengeNotes =
-                LocalCache.notes.filterIntoSet { _, note ->
+                LocalCache.addressables.filterIntoSet(LiveChessGameChallengeEvent.KIND) { _, note ->
                     val event = note.event as? LiveChessGameChallengeEvent ?: return@filterIntoSet false
 
-                    // Check if challenge is not expired
+                    // Check if challenge is not expired (24h)
                     val createdAt = event.createdAt
                     if ((now - createdAt) >= CHALLENGE_EXPIRY_SECONDS) return@filterIntoSet false
 
-                    // Include challenges directed at us, or open challenges (not from us)
+                    // Check if game isn't already active (accepted)
+                    val gameId = event.gameId() ?: return@filterIntoSet false
+                    if (_activeGames.value.containsKey(gameId)) return@filterIntoSet false
+
+                    // Include all challenges:
+                    // - Directed at us
+                    // - Open challenges (no specific opponent)
+                    // - Our own challenges (waiting for accept)
                     val opponentPubkey = event.opponentPubkey()
-                    opponentPubkey == userPubkey || (opponentPubkey == null && event.pubKey != userPubkey) || event.pubKey == userPubkey
+                    val isDirectedAtUs = opponentPubkey == userPubkey
+                    val isOpenChallenge = opponentPubkey == null
+                    val isFromUs = event.pubKey == userPubkey
+
+                    isDirectedAtUs || isOpenChallenge || isFromUs
                 }
 
             _challenges.value = challengeNotes.toList()
             updateBadgeCount()
+
+            // Also refresh public games
+            refreshPublicGames()
+        }
+    }
+
+    /**
+     * Refresh list of public games that can be spectated
+     *
+     * NOTE: Chess events are addressable (kinds 30064+), so we query LocalCache.addressables
+     */
+    private fun refreshPublicGames() {
+        val userPubkey = account.signer.pubKey
+        val now = TimeUtils.now()
+
+        // Find all games where both challenge and accept exist
+        // Game ID -> (ChallengeEvent, AcceptEvent)
+        val gameData = mutableMapOf<String, Pair<LiveChessGameChallengeEvent?, LiveChessGameAcceptEvent?>>()
+
+        // Collect challenges from addressables (kind 30064)
+        LocalCache.addressables.filterIntoSet(LiveChessGameChallengeEvent.KIND) { _, note ->
+            val event = note.event as? LiveChessGameChallengeEvent ?: return@filterIntoSet false
+            val gameId = event.gameId() ?: return@filterIntoSet false
+            gameData[gameId] = (event to gameData[gameId]?.second)
+            false // Don't need to collect, just iterate
+        }
+
+        // Collect accepts from addressables (kind 30065)
+        LocalCache.addressables.filterIntoSet(LiveChessGameAcceptEvent.KIND) { _, note ->
+            val event = note.event as? LiveChessGameAcceptEvent ?: return@filterIntoSet false
+            val gameId = event.gameId() ?: return@filterIntoSet false
+            gameData[gameId] = (gameData[gameId]?.first to event)
+            false
+        }
+
+        // Filter to games that are active and user is NOT a participant
+        val publicGames = mutableListOf<PublicGameInfo>()
+
+        for ((gameId, data) in gameData) {
+            val (challenge, accept) = data
+            if (challenge == null || accept == null) continue
+
+            // Skip if user is a participant
+            val challengerPubkey = challenge.pubKey
+            val acceptorPubkey = accept.pubKey
+            if (challengerPubkey == userPubkey || acceptorPubkey == userPubkey) continue
+
+            // Skip if already in our active/spectating games
+            if (_activeGames.value.containsKey(gameId) || _spectatingGames.value.containsKey(gameId)) continue
+
+            // Determine white/black based on challenger color
+            val challengerColor = challenge.playerColor() ?: Color.WHITE
+            val (whitePubkey, blackPubkey) =
+                if (challengerColor == Color.WHITE) {
+                    challengerPubkey to acceptorPubkey
+                } else {
+                    acceptorPubkey to challengerPubkey
+                }
+
+            // Count moves and get last move time from addressables (kind 30066)
+            var moveCount = 0
+            var lastMoveTime = accept.createdAt
+
+            LocalCache.addressables.filterIntoSet(LiveChessMoveEvent.KIND) { _, note ->
+                val moveEvent = note.event as? LiveChessMoveEvent ?: return@filterIntoSet false
+                if (moveEvent.gameId() != gameId) return@filterIntoSet false
+                moveCount++
+                if (moveEvent.createdAt > lastMoveTime) {
+                    lastMoveTime = moveEvent.createdAt
+                }
+                false
+            }
+
+            // Skip inactive games (no moves in 24 hours)
+            if ((now - lastMoveTime) > CHALLENGE_EXPIRY_SECONDS) continue
+
+            publicGames.add(
+                PublicGameInfo(
+                    gameId = gameId,
+                    whitePubkey = whitePubkey,
+                    blackPubkey = blackPubkey,
+                    moveCount = moveCount,
+                    lastMoveTime = lastMoveTime,
+                ),
+            )
+        }
+
+        // Sort by most recent activity
+        _publicGames.value = publicGames.sortedByDescending { it.lastMoveTime }
+    }
+
+    /**
+     * Load a game as spectator (watch-only mode)
+     * Returns the game state or null if loading failed
+     *
+     * NOTE: Chess events are addressable (kinds 30064+), so we query LocalCache.addressables
+     */
+    fun loadGameAsSpectator(gameId: String): LiveChessGameState? {
+        // Check if already spectating
+        _spectatingGames.value[gameId]?.let { return it }
+
+        // Check if we're actually a participant (shouldn't load as spectator)
+        _activeGames.value[gameId]?.let {
+            _error.value = "You are a participant in this game"
+            return null
+        }
+
+        val userPubkey = account.signer.pubKey
+
+        // Find challenge and accept events from addressables
+        val challengeNotes =
+            LocalCache.addressables.filterIntoSet(LiveChessGameChallengeEvent.KIND) { _, note ->
+                val event = note.event as? LiveChessGameChallengeEvent ?: return@filterIntoSet false
+                event.gameId() == gameId
+            }
+        val acceptNotes =
+            LocalCache.addressables.filterIntoSet(LiveChessGameAcceptEvent.KIND) { _, note ->
+                val event = note.event as? LiveChessGameAcceptEvent ?: return@filterIntoSet false
+                event.gameId() == gameId
+            }
+
+        val challengeEvent = challengeNotes.firstOrNull()?.event as? LiveChessGameChallengeEvent
+        val acceptEvent = acceptNotes.firstOrNull()?.event as? LiveChessGameAcceptEvent
+
+        if (challengeEvent == null) {
+            _error.value = "Challenge not found for game"
+            return null
+        }
+
+        if (acceptEvent == null) {
+            _error.value = "Game not started yet - waiting for opponent"
+            return null
+        }
+
+        // Determine white/black
+        val challengerPubkey = challengeEvent.pubKey
+        val acceptorPubkey = acceptEvent.pubKey
+        val challengerColor = challengeEvent.playerColor() ?: Color.WHITE
+
+        val (whitePubkey, blackPubkey) =
+            if (challengerColor == Color.WHITE) {
+                challengerPubkey to acceptorPubkey
+            } else {
+                acceptorPubkey to challengerPubkey
+            }
+
+        // Build engine state by replaying moves from addressables
+        val engine = ChessEngine()
+        engine.reset()
+
+        val moveNotes =
+            LocalCache.addressables.filterIntoSet(LiveChessMoveEvent.KIND) { _, note ->
+                val event = note.event as? LiveChessMoveEvent ?: return@filterIntoSet false
+                event.gameId() == gameId
+            }
+
+        val sortedMoves =
+            moveNotes
+                .mapNotNull { it.event as? LiveChessMoveEvent }
+                .sortedBy { it.moveNumber() ?: Int.MAX_VALUE }
+
+        for (moveEvent in sortedMoves) {
+            val san = moveEvent.san() ?: continue
+            try {
+                engine.makeMove(san)
+            } catch (e: Exception) {
+                _error.value = "Error loading move $san: ${e.message}"
+            }
+        }
+
+        // Create spectator game state - always view from white's perspective
+        val gameState =
+            LiveChessGameState(
+                gameId = gameId,
+                playerPubkey = userPubkey,
+                opponentPubkey = blackPubkey, // Opponent relative to spectator view (white)
+                playerColor = Color.WHITE, // Spectators see from white's perspective
+                engine = engine,
+                isSpectator = true,
+            )
+
+        // Add to spectating games
+        _spectatingGames.value = _spectatingGames.value + (gameId to gameState)
+        pollingDelegate.addGameId(gameId)
+
+        _error.value = null
+        return gameState
+    }
+
+    /**
+     * Stop spectating a game
+     */
+    fun stopSpectating(gameId: String) {
+        if (_spectatingGames.value.containsKey(gameId)) {
+            _spectatingGames.value = _spectatingGames.value - gameId
+            pollingDelegate.removeGameId(gameId)
         }
     }
 
@@ -629,32 +987,31 @@ class ChessViewModel(
     }
 
     /**
-     * Generate unique game ID
+     * Generate unique game ID with human-readable component
      */
-    private fun generateGameId(): String {
-        val timestamp = TimeUtils.now()
-        val random = UUID.randomUUID().toString().take(8)
-        return "chess-$timestamp-$random"
-    }
+    private fun generateGameId(): String = ChessGameNameGenerator.generateGameId(TimeUtils.now())
 
     /**
      * Refresh game state from LocalCache for specific game IDs
      * Called periodically by polling delegate
+     *
+     * NOTE: Chess events are addressable (kinds 30064+), so we query LocalCache.addressables
      */
     private suspend fun refreshGamesFromCache(gameIds: Set<String>) {
         val userPubkey = account.signer.pubKey
 
         for (gameId in gameIds) {
-            // Find moves for this game
+            // Find moves for this game from addressables (kind 30066)
             val moveNotes =
-                LocalCache.notes.filterIntoSet { _, note ->
+                LocalCache.addressables.filterIntoSet(LiveChessMoveEvent.KIND) { _, note ->
                     val event = note.event as? LiveChessMoveEvent ?: return@filterIntoSet false
                     event.gameId() == gameId
                 }
 
-            val gameState = _activeGames.value[gameId]
-            if (gameState != null) {
-                // Apply any new moves
+            // Check active games first
+            val activeGameState = _activeGames.value[gameId]
+            if (activeGameState != null) {
+                // Apply any new moves from opponent
                 moveNotes
                     .mapNotNull { it.event as? LiveChessMoveEvent }
                     .filter { it.pubKey != userPubkey } // Only opponent moves
@@ -663,8 +1020,28 @@ class ChessViewModel(
                         val san = moveEvent.san() ?: return@forEach
                         val fen = moveEvent.fen() ?: return@forEach
                         val moveNumber = moveEvent.moveNumber()
-                        gameState.applyOpponentMove(san, fen, moveNumber)
+                        activeGameState.applyOpponentMove(san, fen, moveNumber)
                     }
+            }
+
+            // Check spectating games - apply ALL moves (from both players)
+            val spectatingGameState = _spectatingGames.value[gameId]
+            if (spectatingGameState != null) {
+                moveNotes
+                    .mapNotNull { it.event as? LiveChessMoveEvent }
+                    .sortedBy { it.moveNumber() }
+                    .forEach { moveEvent ->
+                        val san = moveEvent.san() ?: return@forEach
+                        val fen = moveEvent.fen() ?: return@forEach
+                        val moveNumber = moveEvent.moveNumber()
+                        spectatingGameState.applyOpponentMove(san, fen, moveNumber)
+                    }
+            }
+
+            // Game is being polled but not yet active — accept event may have arrived since
+            // initial load. Retry loading from cache to pick up late-arriving accept events.
+            if (activeGameState == null && spectatingGameState == null) {
+                loadGameFromCache(gameId)
             }
         }
 
@@ -675,6 +1052,8 @@ class ChessViewModel(
      * Load or rebuild game state from LocalCache for a specific gameId
      * Used when navigating to a game screen
      *
+     * NOTE: Chess events are addressable (kinds 30064+), so we query LocalCache.addressables
+     *
      * @return GameLoadResult with either the game state or an error reason
      */
     fun loadGameFromCache(gameId: String): LiveChessGameState? {
@@ -683,17 +1062,17 @@ class ChessViewModel(
 
         val userPubkey = account.signer.pubKey
 
-        // Find the challenge event for this game
+        // Find the challenge event for this game from addressables (kind 30064)
         val challengeNotes =
-            LocalCache.notes.filterIntoSet { _, note ->
+            LocalCache.addressables.filterIntoSet(LiveChessGameChallengeEvent.KIND) { _, note ->
                 val event = note.event as? LiveChessGameChallengeEvent ?: return@filterIntoSet false
                 event.gameId() == gameId
             }
         val challengeNote = challengeNotes.firstOrNull()
 
-        // Find accept event for this game
+        // Find accept event for this game from addressables (kind 30065)
         val acceptNotes =
-            LocalCache.notes.filterIntoSet { _, note ->
+            LocalCache.addressables.filterIntoSet(LiveChessGameAcceptEvent.KIND) { _, note ->
                 val event = note.event as? LiveChessGameAcceptEvent ?: return@filterIntoSet false
                 event.gameId() == gameId
             }
@@ -724,9 +1103,10 @@ class ChessViewModel(
                     challengerColor.opposite() to challengerPubkey
                 }
                 challengerPubkey == userPubkey && acceptorPubkey == null -> {
-                    // We created challenge but no one accepted yet
-                    _error.value = "Waiting for opponent to accept challenge"
-                    return null
+                    // We created challenge but no one accepted yet - show it anyway
+                    // Use targeted opponent or empty string for open challenges
+                    val targetedOpponent = challengeEvent.opponentPubkey() ?: ""
+                    challengerColor to targetedOpponent
                 }
                 else -> {
                     _error.value = "You are not a participant in this game"
@@ -738,9 +1118,9 @@ class ChessViewModel(
         val engine = ChessEngine()
         engine.reset()
 
-        // Find and apply all moves in order
+        // Find and apply all moves in order from addressables (kind 30066)
         val moveNotes =
-            LocalCache.notes.filterIntoSet { _, note ->
+            LocalCache.addressables.filterIntoSet(LiveChessMoveEvent.KIND) { _, note ->
                 val event = note.event as? LiveChessMoveEvent ?: return@filterIntoSet false
                 event.gameId() == gameId
             }
@@ -767,6 +1147,10 @@ class ChessViewModel(
             }
         }
 
+        // Only pending if we're the challenger, no accept event found, AND no moves exist
+        // (moves prove the game was accepted even if accept event isn't in cache)
+        val isPendingChallenge = challengerPubkey == userPubkey && acceptorPubkey == null && sortedMoves.isEmpty()
+
         val gameState =
             LiveChessGameState(
                 gameId = gameId,
@@ -774,13 +1158,28 @@ class ChessViewModel(
                 opponentPubkey = opponentPubkey,
                 playerColor = playerColor,
                 engine = engine,
+                isPendingChallenge = isPendingChallenge,
             )
 
         // Mark loaded moves as received to prevent re-application during refresh
         gameState.markMovesAsReceived(loadedMoveNumbers)
 
-        // Add to active games
-        _activeGames.value = _activeGames.value + (gameId to gameState)
+        // Check for end event (kind 30067) — game may have been resigned/finished
+        val endNotes =
+            LocalCache.addressables.filterIntoSet(LiveChessGameEndEvent.KIND) { _, note ->
+                val event = note.event as? LiveChessGameEndEvent ?: return@filterIntoSet false
+                event.gameId() == gameId
+            }
+        val endEvent = endNotes.firstOrNull()?.event as? LiveChessGameEndEvent
+        if (endEvent != null) {
+            val result = GameResult.parse(endEvent.result() ?: "*")
+            gameState.markAsFinished(result)
+        }
+
+        // Only add to active games if not pending (pending challenges are view-only)
+        if (!isPendingChallenge) {
+            _activeGames.value = _activeGames.value + (gameId to gameState)
+        }
 
         // Update polling delegate with this game
         pollingDelegate.addGameId(gameId)
@@ -807,4 +1206,15 @@ data class RetryOperation(
     val id: String,
     val currentAttempt: Int,
     val maxAttempts: Int,
+)
+
+/**
+ * Info about a public game that can be spectated
+ */
+data class PublicGameInfo(
+    val gameId: String,
+    val whitePubkey: String,
+    val blackPubkey: String,
+    val moveCount: Int,
+    val lastMoveTime: Long,
 )

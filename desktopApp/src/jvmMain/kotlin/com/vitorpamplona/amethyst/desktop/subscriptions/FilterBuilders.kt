@@ -96,6 +96,19 @@ object FilterBuilders {
         )
 
     /**
+     * Creates a filter for user metadata (kind 0) from multiple authors.
+     * Alias for userMetadataBatch for API compatibility.
+     *
+     * @param pubKeys List of author public keys (hex-encoded, 64 chars each)
+     * @return Filter for user metadata
+     */
+    fun userMetadataMultiple(pubKeys: List<String>): Filter =
+        Filter(
+            kinds = listOf(0),
+            authors = pubKeys,
+        )
+
+    /**
      * Creates a filter for contact list (kind 3) from a specific author.
      *
      * @param pubKeyHex Author public key (hex-encoded, 64 chars)
