@@ -42,11 +42,14 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+const val MAX_VOICE_RECORD_SECONDS = 600
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RecordAudioBox(
     modifier: Modifier,
     onRecordTaken: (RecordingResult) -> Unit,
+    maxDurationSeconds: Int? = null,
     content: @Composable (Boolean, Int) -> Unit,
 ) {
     val mediaRecorder = remember { mutableStateOf<VoiceMessageRecorder?>(null) }
@@ -107,6 +110,10 @@ fun RecordAudioBox(
             while (isActive) {
                 delay(1000)
                 elapsedSeconds++
+                if (maxDurationSeconds != null && elapsedSeconds >= maxDurationSeconds) {
+                    stopRecording()
+                    break
+                }
             }
         } else {
             // Reset elapsed time when not recording

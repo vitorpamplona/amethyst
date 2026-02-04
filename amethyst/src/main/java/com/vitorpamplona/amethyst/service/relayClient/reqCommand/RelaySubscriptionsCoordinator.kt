@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManagerControls
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManagerControls
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssembler

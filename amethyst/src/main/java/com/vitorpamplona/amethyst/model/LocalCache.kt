@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
@@ -48,6 +49,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
@@ -226,7 +228,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
-    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, suspend (LnZapPaymentResponseEvent) -> Unit>>(10)
+    val paymentTracker = NwcPaymentTracker()
 
     val relayHints = HintIndexer()
 
@@ -309,7 +311,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    fun getOrCreateUser(key: HexKey): User {
+    override fun getOrCreateUser(key: HexKey): User {
         require(isValidHex(key = key)) { "$key is not a valid hex" }
 
         return users.getOrCreate(key) {
@@ -777,6 +779,51 @@ object LocalCache : ILocalCache, ICacheProvider {
             val replyTo = computeReplyTo(event)
 
             if (event.createdAt > (note.createdAt() ?: 0L)) {
+                note.loadEvent(event, author, replyTo)
+
+                refreshNewNoteObservers(note)
+
+                return true
+            }
+        }
+
+        return false
+    }
+
+    fun consume(
+        event: PaymentTargetsEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val version = getOrCreateNote(event.id)
+        val note = getOrCreateAddressableNote(event.address())
+        val author = getOrCreateUser(event.pubKey)
+
+        val isVerified =
+            if (version.event == null && (wasVerified || justVerify(event))) {
+                version.loadEvent(event, author, emptyList())
+                version.moveAllReferencesTo(note)
+                true
+            } else {
+                wasVerified
+            }
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event?.id == event.id) return wasVerified
+
+        if (antiSpam.isSpam(event, relay)) {
+            return false
+        }
+
+        if (isVerified || justVerify(event)) {
+            if (event.createdAt > (note.createdAt() ?: 0L)) {
+                val replyTo = computeReplyTo(event)
+
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -2019,7 +2066,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             zappedNote?.addZapPayment(note, null)
 
-            awaitingPaymentRequests.put(event.id, Pair(zappedNote, onResponse))
+            paymentTracker.registerRequest(event.id, zappedNote, onResponse)
 
             refreshNewNoteObservers(note)
 
@@ -2035,9 +2082,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
-        val pair = awaitingPaymentRequests[requestId] ?: return false
+        val pending = paymentTracker.onResponseReceived(requestId) ?: return false
 
-        val (zappedNote, responseCallback) = pair
+        val zappedNote = pending.zappedNote
+        val responseCallback = pending.onResponse
 
         val requestNote = requestId?.let { checkGetOrCreateNote(requestId) }
 
@@ -2966,6 +3014,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VoiceEvent -> consume(event, relay, wasVerified)
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
+                is PaymentTargetsEvent -> consume(event, relay, wasVerified)
                 else -> {
                     Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}")
                     false

@@ -42,8 +42,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.SharedRes
-import dev.icerock.moko.resources.compose.stringResource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.login_hide_key
+import com.vitorpamplona.amethyst.commons.resources.login_key_label
+import com.vitorpamplona.amethyst.commons.resources.login_key_placeholder
+import com.vitorpamplona.amethyst.commons.resources.login_show_key
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Text field for entering Nostr keys (nsec or npub) with visibility toggle.
@@ -53,8 +57,8 @@ fun KeyInputField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = stringResource(SharedRes.strings.login_key_label),
-    placeholder: String = stringResource(SharedRes.strings.login_key_placeholder),
+    label: String = stringResource(Res.string.login_key_label),
+    placeholder: String = stringResource(Res.string.login_key_placeholder),
     errorMessage: String? = null,
 ) {
     var showKey by remember { mutableStateOf(false) }
@@ -76,7 +80,7 @@ fun KeyInputField(
             IconButton(onClick = { showKey = !showKey }) {
                 Icon(
                     if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                    contentDescription = if (showKey) stringResource(SharedRes.strings.login_hide_key) else stringResource(SharedRes.strings.login_show_key),
+                    contentDescription = if (showKey) stringResource(Res.string.login_hide_key) else stringResource(Res.string.login_show_key),
                 )
             }
         },

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
@@ -151,5 +152,29 @@ class JacksonMapperTest {
         tags.forEachIndexed { index, tag ->
             assertContentEquals(tag, deserialized.tags[index])
         }
+    }
+
+    @Test
+    fun shouldNotThrowExceptionWhenDeserializingEmptyFilter() {
+        val json = Filter().toJson()
+        val deserialized = JacksonMapper.fromJsonTo<Filter>(json)
+
+        assertEquals(null, deserialized.ids)
+    }
+
+    @Test
+    fun shouldNotThrowExceptionWhenDeserializingFilterTags() {
+        val expectedTagValue = "3c39a7b53dec9ac85acf08b267637a9841e6df7b7b0f5e2ac56a8cf107de37da"
+        val json =
+            Filter(
+                tags = mapOf("p" to listOf(expectedTagValue)),
+                tagsAll = mapOf("p" to listOf(expectedTagValue)),
+            ).toJson()
+        val deserialized = JacksonMapper.fromJsonTo<Filter>(json)
+
+        assertEquals(true, deserialized.tags?.keys?.contains("p"))
+        assertEquals(listOf(expectedTagValue), deserialized.tags?.get("p"))
+        assertEquals(true, deserialized.tagsAll?.keys?.contains("p"))
+        assertEquals(listOf(expectedTagValue), deserialized.tagsAll?.get("p"))
     }
 }

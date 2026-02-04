@@ -29,5 +29,5 @@ enum class VoicePreset(
     NONE(1.0, R.string.voice_preset_none),
     DEEP(1.4, R.string.voice_preset_deep),
     HIGH(0.75, R.string.voice_preset_high),
-    NEUTRAL(0.9, R.string.voice_preset_neutral),
+    NEUTRAL(1.1, R.string.voice_preset_neutral),
 }

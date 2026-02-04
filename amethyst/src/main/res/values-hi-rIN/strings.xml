@@ -172,6 +172,12 @@
     <string name="upload_error_voice_message_unexpected_state">अनपेक्षित आरोहण स्थिति</string>
     <string name="upload_error_voice_message_nip95_not_supported">निप॰९५ का आलम्बन अभी नहीं है ध्वनि सन्देशों के लिए</string>
     <string name="upload_error_voice_message_exception">ध्वनि आरोहण असफल : %1$s</string>
+    <string name="voice_preset_none">कुछ भी नहीं</string>
+    <string name="voice_preset_deep">गहन</string>
+    <string name="voice_preset_high">उच्च</string>
+    <string name="voice_preset_neutral">मध्यम</string>
+    <string name="voice_anonymize_title">अनामीकरण</string>
+    <string name="voice_anonymize_description">आपके स्वर का परिवर्तन करता है। ध्यातव्य। आधारभूत स्वर परिवर्तन को पूर्ववत किया जा सकता है दृढ निश्चित श्रोताओं द्वारा।</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">उपयोगकर्ता का कोई लैटनिंग पता स्थापित नहीं जिसपर साट्स प्राप्त कर सके</string>
     <string name="reply_here">"उत्तर यहाँ दें.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">नोस्ट्र में बाँटने के लिए टीका विभेदक की अनुकृति करता है टाँकाफलक में</string>
@@ -1232,4 +1238,5 @@
     <string name="follow_pack_broadcast">पोटली प्रसारण</string>
     <string name="follow_set_delete">सूची मिटाएँ</string>
     <string name="follow_pack_delete">पोटली मिटाएँ</string>
+    <string name="kinds">प्रकार</string>
 </resources>

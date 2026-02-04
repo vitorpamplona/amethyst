@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -76,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
@@ -166,6 +167,7 @@ class AccountViewModel(
     var firstRoute: Route? = null
 
     val toastManager = ToastManager()
+    val broadcastTracker = BroadcastTracker()
     val feedStates = AccountFeedContentStates(account, viewModelScope)
 
     val tempManualPaymentCache = LruCache<String, List<ZapPaymentHandler.Payable>>(5)
@@ -313,7 +315,25 @@ class AccountViewModel(
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
-                account.reactTo(note, reaction)
+                if (settings.isCompleteUIMode()) {
+                    // Tracked broadcasting with progress feedback
+                    account.createReactionEvent(note, reaction)?.let { (event, relays) ->
+                        val result =
+                            broadcastTracker.trackBroadcast(
+                                event = event,
+                                eventName = "Reaction",
+                                relays = relays,
+                                client = account.client,
+                            )
+                        // Only consume event if at least one relay succeeded
+                        if (result.isSuccess) {
+                            account.consumeReactionEvent(event)
+                        }
+                    }
+                } else {
+                    // Fire-and-forget (original behavior)
+                    account.reactTo(note, reaction)
+                }
             }
         }
     }
@@ -707,7 +727,29 @@ class AccountViewModel(
         }
     }
 
-    fun boost(note: Note) = launchSigner { account.boost(note) }
+    fun boost(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            // Tracked broadcasting with progress feedback
+            launchSigner {
+                account.createBoostEvent(note)?.let { (event, relays) ->
+                    val result =
+                        broadcastTracker.trackBroadcast(
+                            event = event,
+                            eventName = "Boost",
+                            relays = relays,
+                            client = account.client,
+                        )
+                    // Only consume event if at least one relay succeeded
+                    if (result.isSuccess) {
+                        account.consumeBoostEvent(event)
+                    }
+                }
+            }
+        } else {
+            // Fire-and-forget (original behavior)
+            launchSigner { account.boost(note) }
+        }
+    }
 
     fun removeEmojiPack(emojiPack: Note) = launchSigner { account.removeEmojiPack(emojiPack) }
 
@@ -729,13 +771,89 @@ class AccountViewModel(
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
-    fun addPrivateBookmark(note: Note) = launchSigner { account.addBookmark(note, true) }
+    fun addPrivateBookmark(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createAddBookmarkEvent(note, true)?.let { (event, relays) ->
+                    val result =
+                        broadcastTracker.trackBroadcast(
+                            event = event,
+                            eventName = "Bookmark",
+                            relays = relays,
+                            client = account.client,
+                        )
+                    if (result.isSuccess) {
+                        account.consumeBookmarkEvent(event)
+                    }
+                }
+            }
+        } else {
+            launchSigner { account.addBookmark(note, true) }
+        }
+    }
 
-    fun addPublicBookmark(note: Note) = launchSigner { account.addBookmark(note, false) }
+    fun addPublicBookmark(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createAddBookmarkEvent(note, false)?.let { (event, relays) ->
+                    val result =
+                        broadcastTracker.trackBroadcast(
+                            event = event,
+                            eventName = "Bookmark",
+                            relays = relays,
+                            client = account.client,
+                        )
+                    if (result.isSuccess) {
+                        account.consumeBookmarkEvent(event)
+                    }
+                }
+            }
+        } else {
+            launchSigner { account.addBookmark(note, false) }
+        }
+    }
 
-    fun removePrivateBookmark(note: Note) = launchSigner { account.removeBookmark(note, true) }
+    fun removePrivateBookmark(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createRemoveBookmarkEvent(note, true)?.let { (event, relays) ->
+                    val result =
+                        broadcastTracker.trackBroadcast(
+                            event = event,
+                            eventName = "Remove Bookmark",
+                            relays = relays,
+                            client = account.client,
+                        )
+                    if (result.isSuccess) {
+                        account.consumeBookmarkEvent(event)
+                    }
+                }
+            }
+        } else {
+            launchSigner { account.removeBookmark(note, true) }
+        }
+    }
 
-    fun removePublicBookmark(note: Note) = launchSigner { account.removeBookmark(note, false) }
+    fun removePublicBookmark(note: Note) {
+        if (settings.isCompleteUIMode()) {
+            launchSigner {
+                account.createRemoveBookmarkEvent(note, false)?.let { (event, relays) ->
+                    val result =
+                        broadcastTracker.trackBroadcast(
+                            event = event,
+                            eventName = "Remove Bookmark",
+                            relays = relays,
+                            client = account.client,
+                        )
+                    if (result.isSuccess) {
+                        account.consumeBookmarkEvent(event)
+                    }
+                }
+            }
+        } else {
+            launchSigner { account.removeBookmark(note, false) }
+        }
+    }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 

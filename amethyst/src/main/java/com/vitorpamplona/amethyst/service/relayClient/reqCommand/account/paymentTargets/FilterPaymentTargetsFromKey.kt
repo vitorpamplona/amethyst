@@ -18,32 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.paymentTargets
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableQueryState
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-@Composable
-fun <T> KeyDataSourceSubscription(
-    state: T,
-    dataSource: ComposeSubscriptionManager<T>,
-) = DisposableEffect(state) {
-    dataSource.subscribe(state)
-    onDispose {
-        dataSource.unsubscribe(state)
-    }
-}
+val paymentTargetsKinds =
+    listOf(
+        PaymentTargetsEvent.KIND,
+    )
 
-@Composable
-fun <T : MutableQueryState> KeyDataSourceSubscription(
-    state: T,
-    dataSource: MutableComposeSubscriptionManager<T>,
-) = DisposableEffect(state) {
-    dataSource.subscribe(state)
-    onDispose {
-        dataSource.unsubscribe(state)
-    }
+fun filterPaymentTargetsFromKey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = paymentTargetsKinds,
+                    authors = listOf(pubkey),
+                    since = since,
+                ),
+        ),
+    )
 }

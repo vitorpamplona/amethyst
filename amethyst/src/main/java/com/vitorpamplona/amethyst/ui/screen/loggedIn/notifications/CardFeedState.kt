@@ -21,23 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
+import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
-import kotlinx.coroutines.flow.MutableStateFlow
-
-@Immutable
-interface Card {
-    fun createdAt(): Long
-
-    fun id(): String
-}
 
 @Immutable
 class BadgeCard(
@@ -112,20 +103,4 @@ class MessageSetCard(
     override fun createdAt(): Long = note.createdAt() ?: 0L
 
     override fun id() = note.idHex
-}
-
-@Immutable
-sealed class CardFeedState {
-    @Immutable object Loading : CardFeedState()
-
-    @Stable
-    class Loaded(
-        val feed: MutableStateFlow<LoadedFeedState<Card>>,
-    ) : CardFeedState()
-
-    @Immutable object Empty : CardFeedState()
-
-    @Immutable class FeedError(
-        val errorMessage: String,
-    ) : CardFeedState()
 }

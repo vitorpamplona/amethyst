@@ -18,12 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers
+package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
-interface ComposeSubscriptionManagerControls {
-    fun invalidateKeys()
-
-    fun invalidateFilters()
+interface IEoseManager {
+    fun invalidateFilters(ignoreIfDoing: Boolean = false)
 
     fun destroy()
 }

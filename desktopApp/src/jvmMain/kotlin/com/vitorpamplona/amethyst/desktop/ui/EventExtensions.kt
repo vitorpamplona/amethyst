@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
@@ -28,7 +30,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 /**
  * Extension to convert Event to NoteDisplayData for the shared NoteCard.
  */
-fun Event.toNoteDisplayData(): NoteDisplayData {
+fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
     val npub =
         try {
             pubKey.hexToByteArrayOrNull()?.toNpub() ?: pubKey.take(16) + "..."
@@ -36,10 +38,13 @@ fun Event.toNoteDisplayData(): NoteDisplayData {
             pubKey.take(16) + "..."
         }
 
+    val pictureUrl = (cache?.getUserIfExists(pubKey) as? User)?.profilePicture()
+
     return NoteDisplayData(
         id = id,
         pubKeyHex = pubKey,
         pubKeyDisplay = npub,
+        profilePictureUrl = pictureUrl,
         content = content,
         createdAt = createdAt,
     )

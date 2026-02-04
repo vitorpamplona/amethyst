@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
@@ -62,8 +63,10 @@ fun UserAvatar(
     loadRobohash: Boolean = true,
 ) {
     val avatarModifier =
-        remember(size) {
-            modifier.clip(shape = CircleShape)
+        remember(size, modifier) {
+            modifier
+                .size(size)
+                .clip(shape = CircleShape)
         }
 
     if (pictureUrl != null && loadProfilePicture) {

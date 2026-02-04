@@ -20,15 +20,16 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.AccountFollowsLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.paymentTargets.AccountPaymentTargetsEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -61,6 +62,7 @@ class AccountFilterAssembler(
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
+            AccountPaymentTargetsEoseManager(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import java.util.Base64
 
 object Base64Image {

@@ -18,35 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers
+package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 
-import java.util.concurrent.ConcurrentHashMap
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 
-/**
- *  This allows composables to directly register their queries
- *  to relays. There may be multiple duplications in these
- *  subscriptions since we do not control when screens are removed.
- */
-abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControls {
-    private var composeSubscriptions: ConcurrentHashMap<T, T> = ConcurrentHashMap()
-
-    // This is called by main. Keep it really fast.
-    fun subscribe(query: T?) {
-        if (query == null) return
-
-        composeSubscriptions.put(query, query)
-
-        invalidateKeys()
+@Composable
+fun <T> KeyDataSourceSubscription(
+    state: T,
+    dataSource: ComposeSubscriptionManager<T>,
+) = DisposableEffect(state) {
+    dataSource.subscribe(state)
+    onDispose {
+        dataSource.unsubscribe(state)
     }
+}
 
-    // This is called by main. Keep it really fast.
-    fun unsubscribe(query: T?) {
-        if (query == null) return
-
-        composeSubscriptions.remove(query)
-
-        invalidateKeys()
+@Composable
+fun <T : MutableQueryState> KeyDataSourceSubscription(
+    state: T,
+    dataSource: MutableComposeSubscriptionManager<T>,
+) = DisposableEffect(state) {
+    dataSource.subscribe(state)
+    onDispose {
+        dataSource.unsubscribe(state)
     }
-
-    fun allKeys() = composeSubscriptions.keys
 }

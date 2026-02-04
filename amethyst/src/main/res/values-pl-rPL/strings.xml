@@ -172,6 +172,12 @@
     <string name="upload_error_voice_message_unexpected_state">Nieoczekiwany status przesyłania</string>
     <string name="upload_error_voice_message_nip95_not_supported">NIP-95 nie jest jeszcze dostępny dla wiadomości głosowych</string>
     <string name="upload_error_voice_message_exception">Nie udało się przesłać głosu: %1$s</string>
+    <string name="voice_preset_none">Brak</string>
+    <string name="voice_preset_deep">Niska</string>
+    <string name="voice_preset_high">Wysoka</string>
+    <string name="voice_preset_neutral">Neutralna</string>
+    <string name="voice_anonymize_title">Anonimowy</string>
+    <string name="voice_anonymize_description">Zmienia barwę głosu. Uwaga: podstawowe zmiany barwy głosu mogą zostać wykryte przez uważnych słuchaczy.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
     <string name="reply_here">"odpowiedz tutaj.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiuje ID wpisu do schowka w celu udostępnienia w Nostr</string>
@@ -493,7 +499,7 @@
     <string name="no">Nie</string>
     <string name="follow_list_selection">Lista obserwowanych</string>
     <string name="follow_list_kind3follows">Obserwowane</string>
-    <string name="follow_list_kind3follows_users_only">Obserwujące</string>
+    <string name="follow_list_kind3follows_users_only">Obserwowane kontakty</string>
     <string name="follow_list_kind3_follows_users_only">Domyślna lista obserwowanych</string>
     <string name="follow_list_kind3follows_proxy">Obserwuje przez proxy</string>
     <string name="follow_list_aroundme">W pobliżu</string>
@@ -715,7 +721,7 @@
     <string name="copied_token_to_clipboard">Skopiowano token do schowka</string>
     <string name="live_stream_live_tag">NA ŻYWO</string>
     <string name="live_stream_offline_tag">OFFLINE</string>
-    <string name="live_stream_ended_tag">Zakończony</string>
+    <string name="live_stream_ended_tag">Zakończono</string>
     <string name="live_stream_planned_tag">ZAPLANOWANE</string>
     <string name="live_stream_is_offline">Transmisja wyłączona</string>
     <string name="live_stream_has_ended">Transmisja na żywo zakończona</string>
@@ -727,7 +733,7 @@
     <string name="discover_reads">Popularne</string>
     <string name="discover_content_v2">Wybrane przez algorytm</string>
     <string name="discover_marketplace">Market</string>
-    <string name="discover_live_v2">Transmisja na żywo</string>
+    <string name="discover_live_v2">Na żywo</string>
     <string name="discover_community_v2">Społeczności</string>
     <string name="discover_chat">Czaty</string>
     <string name="community_approved_posts">Zatwierdzone posty</string>
@@ -1193,6 +1199,9 @@
     <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
     <string name="unable_to_share_image">Nie można udostępnić obrazu, spróbuj ponownie później…</string>
+    <string name="share_video">Udostępnij film…</string>
+    <string name="unable_to_share_video">Nie można udostępnić filmu, spróbuj ponownie później…</string>
+    <string name="downloading_video_for_sharing">Pobieranie filmu…</string>
     <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
     <string name="dont_translate_from">Nie tłumacz z</string>
     <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>

@@ -34,8 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.SharedRes
-import dev.icerock.moko.resources.compose.stringResource
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_refresh
+import com.vitorpamplona.amethyst.commons.resources.action_try_again
+import com.vitorpamplona.amethyst.commons.resources.error_loading_feed
+import com.vitorpamplona.amethyst.commons.resources.feed_empty
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A centered loading state with a progress indicator and message.
@@ -71,7 +75,7 @@ fun EmptyState(
     onRefresh: (() -> Unit)? = null,
     refreshLabel: String? = null,
 ) {
-    val actualRefreshLabel = refreshLabel ?: stringResource(SharedRes.strings.action_refresh)
+    val actualRefreshLabel = refreshLabel ?: stringResource(Res.string.action_refresh)
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -110,7 +114,7 @@ fun ErrorState(
     onRetry: (() -> Unit)? = null,
     retryLabel: String? = null,
 ) {
-    val actualRetryLabel = retryLabel ?: stringResource(SharedRes.strings.action_try_again)
+    val actualRetryLabel = retryLabel ?: stringResource(Res.string.action_try_again)
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -140,7 +144,7 @@ fun FeedEmptyState(
     title: String? = null,
     onRefresh: (() -> Unit)? = null,
 ) {
-    val actualTitle = title ?: stringResource(SharedRes.strings.feed_empty)
+    val actualTitle = title ?: stringResource(Res.string.feed_empty)
 
     EmptyState(
         title = actualTitle,
@@ -158,7 +162,7 @@ fun FeedErrorState(
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
 ) {
-    val formattedMessage = stringResource(SharedRes.strings.error_loading_feed).format(errorMessage)
+    val formattedMessage = stringResource(Res.string.error_loading_feed).format(errorMessage)
 
     ErrorState(
         message = formattedMessage,

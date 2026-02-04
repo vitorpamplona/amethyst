@@ -177,6 +177,7 @@ erie gespeichert</string>
     <string name="voice_preset_none">Keine</string>
     <string name="voice_preset_deep">Tief</string>
     <string name="voice_preset_high">Hoch</string>
+    <string name="voice_preset_neutral">Neutral</string>
     <string name="voice_anonymize_title">Anonymisieren</string>
     <string name="voice_anonymize_description">Verändert die Tonhöhe deiner Stimme. Hinweis: einfache Tonhöhenänderungen können von entschlossenen Zuhörern möglicherweise rückgängig gemacht werden.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
@@ -1201,6 +1202,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
     <string name="share_image">Bild teilen…</string>
     <string name="unable_to_share_image">Bild kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
+    <string name="share_video">Video teilen…</string>
+    <string name="unable_to_share_video">Video kann nicht geteilt werden, bitte versuchen Sie es später erneut…</string>
+    <string name="downloading_video_for_sharing">Video wird heruntergeladen…</string>
     <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
     <string name="dont_translate_from">Nicht übersetzen von</string>
     <string name="dont_translate_from_description">Die hier angezeigten Sprachen werden nicht übersetzt. Wählen Sie eine Sprache, um sie zu entfernen und lassen Sie sie erneut übersetzen.</string>

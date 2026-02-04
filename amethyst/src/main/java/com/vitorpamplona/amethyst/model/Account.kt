@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryption
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
+import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
@@ -149,6 +150,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -353,6 +355,8 @@ class Account(
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
+    val paymentTargetsState = NipA3PaymentTargetsState(signer, cache, scope, settings)
+
     val feedDecryptionCaches =
         FeedDecryptionCaches(
             peopleListCache = peopleListDecryptionCache,
@@ -511,6 +515,38 @@ class Account(
         onPrivate = ::broadcastPrivately,
     )
 
+    /**
+     * Creates a reaction event without sending it.
+     * Returns the event and target relays for tracked broadcasting.
+     * Returns null if note has already been reacted to or note has no event.
+     */
+    suspend fun createReactionEvent(
+        note: Note,
+        reaction: String,
+    ): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!signer.isWriteable()) return null
+        if (note.hasReacted(userProfile(), reaction)) return null
+
+        val noteEvent = note.event ?: return null
+
+        // For NIP-17 private groups, we don't support tracked mode (too complex)
+        if (noteEvent is NIP17Group) return null
+
+        val relayHint = note.relays.firstOrNull()?.url
+        val event = ReactionAction.reactTo(noteEvent, reaction, signer, relayHint)
+        val relays = computeRelayListToBroadcast(event)
+
+        return event to relays
+    }
+
+    /**
+     * Consumes a reaction event into local cache.
+     * Called when tracked broadcasting succeeds.
+     */
+    fun consumeReactionEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
+    }
+
     suspend fun createZapRequestFor(
         event: Event,
         pollOption: Int?,
@@ -630,6 +666,35 @@ class Account(
             client.send(event, computeMyReactionToNote(note, event))
             cache.justConsumeMyOwnEvent(event)
         }
+    }
+
+    /**
+     * Creates a boost event without sending it.
+     * Returns the event and target relays for tracked broadcasting.
+     */
+    suspend fun createBoostEvent(note: Note): Pair<Event, Set<NormalizedRelayUrl>>? =
+        RepostAction.repost(note, signer)?.let { event ->
+            event to computeMyReactionToNote(note, event)
+        }
+
+    /**
+     * Sends a boost event and updates the local cache.
+     * Used after tracked broadcasting completes.
+     */
+    fun sendBoostEvent(
+        event: Event,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        client.send(event, relays)
+        cache.justConsumeMyOwnEvent(event)
+    }
+
+    /**
+     * Updates the local cache with a boost event.
+     * Called when tracked broadcasting succeeds.
+     */
+    fun consumeBoostEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
     }
 
     fun computeMyReactionToNote(
@@ -1178,6 +1243,36 @@ class Account(
         return event
     }
 
+    /**
+     * Creates a post event without sending it.
+     * Returns the event, target relays, and extra events to broadcast.
+     * For use with tracked broadcasting.
+     */
+    suspend fun <T : Event> createPostEvent(
+        template: EventTemplate<T>,
+        extraNotesToBroadcast: List<Event> = emptyList(),
+    ): Triple<T, Set<NormalizedRelayUrl>, List<Event>> {
+        val event = signer.sign(template)
+
+        // Use event-based relay computation (not note-based, since note is empty)
+        val relayList = computeRelayListToBroadcast(event)
+
+        return Triple(event, relayList, extraNotesToBroadcast)
+    }
+
+    /**
+     * Consumes a post event into local cache and sends extra events.
+     * Called when tracked broadcasting succeeds.
+     */
+    fun consumePostEvent(
+        event: Event,
+        relays: Set<NormalizedRelayUrl>,
+        extraNotesToBroadcast: List<Event>,
+    ) {
+        cache.justConsumeMyOwnEvent(event)
+        extraNotesToBroadcast.forEach { client.send(it, relays) }
+    }
+
     suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
@@ -1571,6 +1666,46 @@ class Account(
         if (event != null) {
             sendMyPublicAndPrivateOutbox(event)
         }
+    }
+
+    /**
+     * Creates a bookmark event without sending it.
+     * Returns the event and target relays for tracked broadcasting.
+     */
+    suspend fun createAddBookmarkEvent(
+        note: Note,
+        isPrivate: Boolean,
+    ): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = bookmarkState.addBookmark(note, isPrivate)
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    /**
+     * Creates a remove bookmark event without sending it.
+     * Returns the event and target relays for tracked broadcasting.
+     */
+    suspend fun createRemoveBookmarkEvent(
+        note: Note,
+        isPrivate: Boolean,
+    ): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!isWriteable() || note.isDraft()) return null
+
+        val event = bookmarkState.removeBookmark(note, isPrivate) ?: return null
+        val relays = outboxRelays.flow.value
+
+        return event to relays
+    }
+
+    /**
+     * Consumes a bookmark event into local cache.
+     * Called when tracked broadcasting succeeds.
+     */
+    fun consumeBookmarkEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
     }
 
     suspend fun createAuthEvent(

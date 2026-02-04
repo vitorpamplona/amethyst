@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.service.relays.EOSEByKey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event

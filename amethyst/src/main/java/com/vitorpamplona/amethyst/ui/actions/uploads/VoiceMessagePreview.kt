@@ -35,8 +35,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +69,8 @@ fun VoiceMessagePreview(
     voiceMetadata: AudioMeta,
     localFile: File? = null,
     onRemove: () -> Unit,
+    onReRecord: ((RecordingResult) -> Unit)? = null,
+    isUploading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -101,73 +105,155 @@ fun VoiceMessagePreview(
                     shape = RoundedCornerShape(8.dp),
                 ).padding(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            // Play/Pause Button
-            IconButton(
-                onClick = {
-                    handlePlayPauseClick(
-                        mediaPlayer = mediaPlayer,
-                        isPlaying = isPlaying,
-                        progress = progress,
-                        onProgressReset = { progress = 0f },
-                        onPlayingChanged = { isPlaying = it },
-                    )
-                },
-                modifier = Modifier.size(48.dp),
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) stringRes(context, R.string.pause) else stringRes(context, R.string.play),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Waveform and Duration
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                AudioWaveformReadOnly(
-                    amplitudes = voiceMetadata.waveform ?: emptyList(),
-                    progress = progress,
-                    waveformBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)),
-                    progressBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary)),
-                    onProgressChange = { newProgress ->
-                        handleWaveformScrub(
-                            newProgress = newProgress,
+                // Play/Pause Button
+                IconButton(
+                    onClick = {
+                        handlePlayPauseClick(
                             mediaPlayer = mediaPlayer,
-                            onProgressChanged = { progress = it },
+                            isPlaying = isPlaying,
+                            progress = progress,
+                            onProgressReset = { progress = 0f },
+                            onPlayingChanged = { isPlaying = it },
                         )
                     },
-                )
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) stringRes(context, R.string.pause) else stringRes(context, R.string.play),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
 
-                Text(
-                    text = formatSecondsToTime(voiceMetadata.duration ?: 0),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Waveform and Duration
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    AudioWaveformReadOnly(
+                        amplitudes = voiceMetadata.waveform ?: emptyList(),
+                        progress = progress,
+                        waveformBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)),
+                        progressBrush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary)),
+                        onProgressChange = { newProgress ->
+                            handleWaveformScrub(
+                                newProgress = newProgress,
+                                mediaPlayer = mediaPlayer,
+                                onProgressChanged = { progress = it },
+                            )
+                        },
+                    )
+
+                    Text(
+                        text = formatSecondsToTime(voiceMetadata.duration ?: 0),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Remove Button
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringRes(context, R.string.remove),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Remove Button
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringRes(context, R.string.remove),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (onReRecord != null) {
+                Spacer(modifier = Modifier.size(8.dp))
+                ReRecordButton(
+                    isUploading = isUploading,
+                    isPlaying = isPlaying,
+                    onRecordTaken = onReRecord,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ReRecordButton(
+    isUploading: Boolean,
+    isPlaying: Boolean,
+    onRecordTaken: (RecordingResult) -> Unit,
+) {
+    if (isUploading || isPlaying) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = stringRes(id = R.string.record_a_message),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringRes(id = R.string.re_record),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    RecordAudioBox(
+        modifier = Modifier,
+        onRecordTaken = onRecordTaken,
+        maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
+    ) { isRecording, elapsedSeconds ->
+        val contentColor =
+            if (isRecording) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        val icon =
+            if (isRecording) {
+                Icons.Default.Stop
+            } else {
+                Icons.Default.Mic
+            }
+        val label =
+            if (isRecording) {
+                formatSecondsToTime(elapsedSeconds)
+            } else {
+                stringRes(id = R.string.re_record)
+            }
+        val iconDescription =
+            if (isRecording) {
+                stringRes(id = R.string.recording_indicator_description)
+            } else {
+                stringRes(id = R.string.record_a_message)
+            }
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = iconDescription,
+                tint = contentColor,
+            )
+            Text(
+                text = label,
+                color = contentColor,
+            )
         }
     }
 }

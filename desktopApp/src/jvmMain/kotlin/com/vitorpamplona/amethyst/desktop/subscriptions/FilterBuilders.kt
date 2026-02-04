@@ -84,6 +84,18 @@ object FilterBuilders {
         )
 
     /**
+     * Creates a filter for user metadata (kind 0) from multiple authors.
+     *
+     * @param pubKeyHexList List of author public keys (hex-encoded, 64 chars each)
+     * @return Filter for user metadata
+     */
+    fun userMetadataBatch(pubKeyHexList: List<String>): Filter =
+        Filter(
+            kinds = listOf(0), // MetadataEvent.KIND
+            authors = pubKeyHexList,
+        )
+
+    /**
      * Creates a filter for contact list (kind 3) from a specific author.
      *
      * @param pubKeyHex Author public key (hex-encoded, 64 chars)
@@ -252,6 +264,155 @@ object FilterBuilders {
         Filter(
             tags = tags,
             kinds = kinds,
+            limit = limit,
+            since = since,
+            until = until,
+        )
+
+    /**
+     * Creates a NIP-50 search filter for user metadata (kind 0).
+     * Searches user profiles by name, displayName, about, nip05, etc.
+     * Requires a NIP-50 compatible relay (e.g., relay.nostr.band, nostr.wine).
+     *
+     * @param searchQuery The text to search for in user profiles
+     * @param limit Maximum number of results to return
+     * @return Filter for NIP-50 search
+     */
+    fun searchPeople(
+        searchQuery: String,
+        limit: Int = 50,
+    ): Filter =
+        Filter(
+            kinds = listOf(0), // MetadataEvent.KIND
+            search = searchQuery,
+            limit = limit,
+        )
+
+    /**
+     * Creates a NIP-50 search filter for text notes (kind 1).
+     * Searches note content.
+     * Requires a NIP-50 compatible relay.
+     *
+     * @param searchQuery The text to search for in notes
+     * @param limit Maximum number of results to return
+     * @return Filter for NIP-50 search
+     */
+    fun searchNotes(
+        searchQuery: String,
+        limit: Int = 50,
+    ): Filter =
+        Filter(
+            kinds = listOf(1), // TextNoteEvent.KIND
+            search = searchQuery,
+            limit = limit,
+        )
+
+    /**
+     * Creates a filter for zap receipts (kind 9735) for specific events.
+     *
+     * @param eventIds List of event IDs to get zaps for
+     * @param limit Maximum number of events to request
+     * @return Filter for zap receipts
+     */
+    fun zapsForEvents(
+        eventIds: List<String>,
+        limit: Int? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(9735), // LnZapEvent.KIND
+            tags = mapOf("e" to eventIds),
+            limit = limit,
+        )
+
+    /**
+     * Creates a filter for reactions (kind 7) for specific events.
+     *
+     * @param eventIds List of event IDs to get reactions for
+     * @param limit Maximum number of events to request
+     * @return Filter for reactions
+     */
+    fun reactionsForEvents(
+        eventIds: List<String>,
+        limit: Int? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(7), // ReactionEvent.KIND
+            tags = mapOf("e" to eventIds),
+            limit = limit,
+        )
+
+    /**
+     * Creates a filter for replies (kind 1) to specific events.
+     *
+     * @param eventIds List of event IDs to get replies for
+     * @param limit Maximum number of events to request
+     * @return Filter for replies
+     */
+    fun repliesForEvents(
+        eventIds: List<String>,
+        limit: Int? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(1), // TextNoteEvent.KIND
+            tags = mapOf("e" to eventIds),
+            limit = limit,
+        )
+
+    /**
+     * Creates a filter for reposts (kind 6) of specific events.
+     *
+     * @param eventIds List of event IDs to get reposts for
+     * @param limit Maximum number of events to request
+     * @return Filter for reposts
+     */
+    fun repostsForEvents(
+        eventIds: List<String>,
+        limit: Int? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(6), // RepostEvent.KIND
+            tags = mapOf("e" to eventIds),
+            limit = limit,
+        )
+
+    /**
+     * Creates a filter for long-form content (kind 30023, NIP-23).
+     *
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @param until Timestamp for events with publication time ≤ this value
+     * @return Filter for long-form content
+     */
+    fun longFormGlobal(
+        limit: Int? = null,
+        since: Long? = null,
+        until: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30023), // LongTextNoteEvent.KIND
+            limit = limit,
+            since = since,
+            until = until,
+        )
+
+    /**
+     * Creates a filter for long-form content (kind 30023) from specific authors.
+     *
+     * @param authors List of author public keys (hex-encoded, 64 chars each)
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @param until Timestamp for events with publication time ≤ this value
+     * @return Filter for long-form content from specified authors
+     */
+    fun longFormFromAuthors(
+        authors: List<String>,
+        limit: Int? = null,
+        since: Long? = null,
+        until: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30023), // LongTextNoteEvent.KIND
+            authors = authors,
             limit = limit,
             since = since,
             until = until,
