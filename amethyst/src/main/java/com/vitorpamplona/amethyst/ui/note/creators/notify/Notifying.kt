@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -86,11 +86,11 @@ private fun DisplayUserNameWithDeleteMark(
     user: User,
     accountViewModel: AccountViewModel,
 ) {
-    val innerUserState by observeUser(user, accountViewModel)
-    innerUserState?.user?.let { myUser ->
+    val innerUserState by observeUserInfo(user, accountViewModel)
+    innerUserState?.let { meta ->
         CreateTextWithEmoji(
-            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
-            tags = myUser.info?.tags,
+            text = remember(meta) { "✖ ${meta.info.bestName() ?: user.pubkeyDisplayHex()}" },
+            tags = meta.tags,
             color = Color.White,
             textAlign = TextAlign.Center,
         )

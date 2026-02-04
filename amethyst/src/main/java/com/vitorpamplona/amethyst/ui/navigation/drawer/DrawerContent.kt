@@ -91,6 +91,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -122,7 +123,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -196,9 +196,9 @@ fun ProfileContent(
 
     ProfileContentTemplate(
         profilePubHex = baseAccountUser.pubkeyHex,
-        profileBanner = userInfo?.banner,
-        profilePicture = userInfo?.profilePicture(),
-        bestDisplayName = userInfo?.bestName(),
+        profileBanner = userInfo?.info?.banner,
+        profilePicture = userInfo?.info?.profilePicture(),
+        bestDisplayName = userInfo?.info?.bestName(),
         tags = userInfo?.tags,
         modifier = modifier,
         accountViewModel = accountViewModel,

@@ -28,6 +28,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.buildAnnotatedStringWithUrlHighlighting
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import org.junit.Assert.assertEquals
@@ -77,8 +78,19 @@ class UrlUserTagTransformationTest {
                 decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
                     .toHexKey(),
             )
-        user.info = UserMetadata()
-        user.info?.displayName = "Vitor Pamplona"
+        user.metadata().newMetadata(
+            UserMetadata().also {
+                it.displayName = "Vitor Pamplona"
+            },
+            MetadataEvent(
+                id = "",
+                pubKey = "",
+                createdAt = 0,
+                tags = emptyArray(),
+                content = "",
+                sig = "",
+            ),
+        )
 
         val original = "@npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z"
 
@@ -185,8 +197,19 @@ class UrlUserTagTransformationTest {
                 decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
                     .toHexKey(),
             )
-        user.info = UserMetadata()
-        user.info?.displayName = "Vitor Pamplona"
+        user.metadata().newMetadata(
+            UserMetadata().also {
+                it.displayName = "Vitor Pamplona"
+            },
+            MetadataEvent(
+                id = "",
+                pubKey = "",
+                createdAt = 0,
+                tags = emptyArray(),
+                content = "",
+                sig = "",
+            ),
+        )
 
         val transformedText =
             buildAnnotatedStringWithUrlHighlighting(
@@ -224,8 +247,20 @@ class UrlUserTagTransformationTest {
                 decodePublicKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
                     .toHexKey(),
             )
-        user.info = UserMetadata()
-        user.info?.displayName = "Vitor Pamplona"
+
+        user.metadata().newMetadata(
+            UserMetadata().also {
+                it.displayName = "Vitor Pamplona"
+            },
+            MetadataEvent(
+                id = "",
+                pubKey = "",
+                createdAt = 0,
+                tags = emptyArray(),
+                content = "",
+                sig = "",
+            ),
+        )
 
         val transformedText =
             buildAnnotatedStringWithUrlHighlighting(

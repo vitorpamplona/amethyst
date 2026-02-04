@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.commons.model.nip28PublicChats
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
-import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHintOptional
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -99,8 +99,20 @@ class PublicChatChannel(
     fun summary(): String? = info.about
 
     fun profilePicture(): String? {
-        if (info.picture.isNullOrBlank()) return creator?.info?.banner
-        return info.picture ?: creator?.info?.banner
+        if (info.picture.isNullOrBlank()) {
+            return creator
+                ?.metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+                ?.banner
+        }
+        return info.picture ?: creator
+            ?.metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.banner
     }
 
     fun anyNameStartsWith(prefix: String): Boolean =

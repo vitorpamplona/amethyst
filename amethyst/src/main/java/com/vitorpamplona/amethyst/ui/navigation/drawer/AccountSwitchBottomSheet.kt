@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
@@ -209,11 +208,11 @@ private fun AccountPicture(
     user: User,
     accountViewModel: AccountViewModel,
 ) {
-    val profilePicture by observeUserPicture(user, accountViewModel)
+    val userInfo by observeUserInfo(user, accountViewModel)
 
     RobohashFallbackAsyncImage(
         robot = user.pubkeyHex,
-        model = profilePicture,
+        model = userInfo?.info?.profilePicture(),
         contentDescription = stringRes(R.string.profile_image),
         modifier = AccountPictureModifier,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
@@ -230,7 +229,7 @@ private fun AccountName(
     val info by observeUserInfo(user, accountViewModel)
 
     info?.let {
-        it.bestName()?.let { name ->
+        it.info.bestName()?.let { name ->
             CreateTextWithEmoji(
                 text = name,
                 tags = it.tags,

@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
-import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction

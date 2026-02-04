@@ -48,6 +48,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
@@ -66,10 +69,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
-import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent

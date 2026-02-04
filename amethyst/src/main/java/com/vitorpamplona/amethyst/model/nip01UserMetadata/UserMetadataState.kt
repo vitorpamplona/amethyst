@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model.nip01UserMetadata
 
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
@@ -30,7 +29,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class UserMetadataState(
@@ -42,11 +40,16 @@ class UserMetadataState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val user = cache.getOrCreateUser(signer.pubKey)
 
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val note = cache.getOrCreateAddressableNote(getMetadataEventAddress())
+
+    fun getMetadataEventAddress() = MetadataEvent.createAddress(signer.pubKey)
+
     // fun getEphemeralChatListAddress() = cache.getOrCreateUser(signer.pubKey)
 
-    fun getUserMetadataFlow(): StateFlow<UserState> = user.flow().metadata.stateFlow
+    fun getUserMetadataFlow() = note.flow().metadata.stateFlow
 
-    fun getUserMetadataEvent(): MetadataEvent? = user.latestMetadata
+    fun getUserMetadataEvent(): MetadataEvent? = note.event as MetadataEvent?
 
     suspend fun sendNewUserMetadata(
         name: String? = null,
@@ -116,8 +119,10 @@ class UserMetadataState(
         scope.launch(Dispatchers.IO) {
             Log.d("AccountRegisterObservers", "Kind 0 Collector Start")
             getUserMetadataFlow().collect {
-                Log.d("AccountRegisterObservers", "Updating Kind 0 ${it.user.toBestDisplayName()}")
-                settings.updateUserMetadata(it.user.latestMetadata)
+                Log.d("AccountRegisterObservers", "Updating Kind 0 ${user.toBestDisplayName()}")
+                (it.note.event as? MetadataEvent)?.let {
+                    settings.updateUserMetadata(it)
+                }
             }
         }
     }

@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.CashuToken
@@ -91,7 +90,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
@@ -929,45 +927,7 @@ class AccountViewModel(
         return note.getReactionBy(userProfile())
     }
 
-    fun verifyNip05(
-        userMetadata: UserMetadata,
-        pubkeyHex: String,
-        onResult: (Boolean) -> Unit,
-    ) {
-        val nip05 = userMetadata.nip05?.ifBlank { null } ?: return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            Nip05NostrAddressVerifier
-                .verifyNip05(
-                    nip05,
-                    okHttpClient = httpClientBuilder::okHttpClientForNip05,
-                    onSuccess = {
-                        // Marks user as verified
-                        if (it == pubkeyHex) {
-                            userMetadata.nip05Verified = true
-                            userMetadata.nip05LastVerificationTime = TimeUtils.now()
-
-                            onResult(userMetadata.nip05Verified)
-                        } else {
-                            userMetadata.nip05Verified = false
-                            userMetadata.nip05LastVerificationTime = 0
-
-                            onResult(userMetadata.nip05Verified)
-                        }
-                    },
-                    onError = {
-                        userMetadata.nip05LastVerificationTime = 0
-                        userMetadata.nip05Verified = false
-
-                        Log.d("NIP05 Error", it)
-
-                        onResult(userMetadata.nip05Verified)
-                    },
-                )
-        }
-    }
-
-    fun runOnIO(runOnIO: () -> Unit) {
+    fun runOnIO(runOnIO: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
@@ -1243,7 +1203,14 @@ class AccountViewModel(
         context: Context,
         onDone: (String, String) -> Unit,
     ) {
-        val lud16 = account.userProfile().info?.lud16
+        val lud16 =
+            account
+                .userProfile()
+                .metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+                ?.lud16
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {

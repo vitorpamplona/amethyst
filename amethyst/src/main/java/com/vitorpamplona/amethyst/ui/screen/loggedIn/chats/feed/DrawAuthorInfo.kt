@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -38,7 +39,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.UserDisplayNameLayout
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 
 @Composable
 fun DrawAuthorInfo(
@@ -63,8 +63,8 @@ private fun WatchAndDisplayUser(
         picture = {
             InnerUserPicture(
                 userHex = author.pubkeyHex,
-                userPicture = userState?.picture,
-                userName = userState?.bestName(),
+                userPicture = userState?.info?.picture,
+                userName = userState?.info?.bestName(),
                 size = Size20dp,
                 modifier = Modifier,
                 accountViewModel = accountViewModel,
@@ -81,7 +81,7 @@ private fun WatchAndDisplayUser(
         name = {
             if (userState != null) {
                 CreateTextWithEmoji(
-                    text = userState?.bestName() ?: author.pubkeyDisplayHex(),
+                    text = userState?.info?.bestName() ?: author.pubkeyDisplayHex(),
                     tags = userState?.tags ?: EmptyTagList,
                     maxLines = 1,
                     fontWeight = FontWeight.Bold,

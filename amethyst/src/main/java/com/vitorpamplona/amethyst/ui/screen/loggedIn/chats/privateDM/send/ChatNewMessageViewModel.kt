@@ -175,11 +175,11 @@ class ChatNewMessageViewModel :
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
 
-    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
-    fun user(): User? = account.userProfile()
+    fun user(): User = account.userProfile()
 
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM

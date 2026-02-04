@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

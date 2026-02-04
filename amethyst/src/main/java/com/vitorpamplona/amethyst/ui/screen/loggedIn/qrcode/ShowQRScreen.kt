@@ -48,16 +48,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.DisplayNIP05
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.components.nip05VerificationAsAState
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.note.ObserveAndDisplayNIP05
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -67,21 +69,34 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import kotlinx.coroutines.runBlocking
 
 @Preview
 @Composable
 fun ShowQRScreenPreview() {
     val accountViewModel = mockAccountViewModel()
-    accountViewModel.userProfile().info =
-        UserMetadata().apply {
-            name = "My Name"
-            picture = "Picture"
-            nip05 = null
-            banner = "http://banner.com/test"
-            website = "http://mywebsite.com/test"
-            about = "This is the about me"
-        }
+    runBlocking {
+        accountViewModel.userProfile().metadata().newMetadata(
+            UserMetadata().apply {
+                name = "My Name"
+                picture = "Picture"
+                nip05 = null
+                banner = "http://banner.com/test"
+                website = "http://mywebsite.com/test"
+                about = "This is the about me"
+            },
+            MetadataEvent(
+                id = "",
+                pubKey = "",
+                createdAt = 0,
+                tags = emptyArray(),
+                content = "",
+                sig = "",
+            ),
+        )
+    }
 
     ShowQRScreen(
         pubkey = accountViewModel.userProfile().pubkeyHex,
@@ -178,53 +193,7 @@ fun PresentQR(
     accountViewModel: AccountViewModel,
     switchToScan: () -> Unit,
 ) {
-    Column {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            RobohashFallbackAsyncImage(
-                robot = user.pubkeyHex,
-                model = user.profilePicture(),
-                contentDescription = stringRes(R.string.profile_image),
-                modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-        ) {
-            CreateTextWithEmoji(
-                text = user.info?.bestName() ?: "",
-                tags = user.info?.tags,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        ) {
-            val nip05 = user.nip05()
-            if (nip05 != null) {
-                val nip05Verified =
-                    nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
-
-                DisplayNIP05(nip05, nip05Verified, accountViewModel)
-            } else {
-                Text(
-                    text = user.pubkeyDisplayHex(),
-                    fontSize = Font14SP,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
+    RenderName(user, accountViewModel)
 
     Row(
         horizontalArrangement = Arrangement.Center,
@@ -241,5 +210,66 @@ fun PresentQR(
         ) {
             Text(text = stringRes(R.string.scan_qr))
         }
+    }
+}
+
+@Composable
+fun RenderName(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    Column {
+        val userInfo by observeUserInfo(user, accountViewModel)
+
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            RobohashFallbackAsyncImage(
+                robot = user.pubkeyHex,
+                model = userInfo?.info?.profilePicture(),
+                contentDescription = stringRes(R.string.profile_image),
+                modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        ) {
+            CreateTextWithEmoji(
+                text = userInfo?.info?.bestName() ?: "",
+                tags = userInfo?.tags,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        ) {
+            WatchAndDisplayNip05Row(user, accountViewModel)
+        }
+    }
+}
+
+@Composable
+fun WatchAndDisplayNip05Row(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
+
+    when (val nip05State = nip05StateMetadata) {
+        is Nip05State.Exists -> ObserveAndDisplayNIP05(nip05State, accountViewModel)
+        else ->
+            Text(
+                text = user.pubkeyDisplayHex(),
+                fontSize = Font14SP,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
     }
 }

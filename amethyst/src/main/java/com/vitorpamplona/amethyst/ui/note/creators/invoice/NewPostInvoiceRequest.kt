@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -30,11 +32,9 @@ fun NewPostInvoiceRequest(
     onSuccess: (String) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val lnAddress =
-        accountViewModel.account
-            .userProfile()
-            .info
-            ?.lnAddress()
+    val user = accountViewModel.account.userProfile()
+    val info by observeUserInfo(user, accountViewModel)
+    val lnAddress = info?.info?.lnAddress()
 
     if (lnAddress != null) {
         InvoiceRequest(

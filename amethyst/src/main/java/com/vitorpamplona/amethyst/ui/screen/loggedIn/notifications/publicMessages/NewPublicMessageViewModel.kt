@@ -178,11 +178,11 @@ class NewPublicMessageViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override var zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
-    fun user(): User? = account.userProfile()
+    fun user(): User = account.userProfile()
 
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM

@@ -40,7 +40,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
-import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
@@ -73,28 +72,28 @@ class NewUserMetadataViewModel : ViewModel() {
     }
 
     fun load() {
-        account.userProfile().let {
-            name.value = it.info?.name ?: ""
-            displayName.value = it.info?.displayName ?: ""
-            about.value = it.info?.about ?: ""
-            picture.value = it.info?.picture ?: ""
-            banner.value = it.info?.banner ?: ""
-            website.value = it.info?.website ?: ""
-            pronouns.value = it.info?.pronouns ?: ""
-            nip05.value = it.info?.nip05 ?: ""
-            lnAddress.value = it.info?.lud16 ?: ""
-            lnURL.value = it.info?.lud06 ?: ""
+        account.userProfile().metadataOrNull()?.flow?.value?.let {
+            name.value = it.info.name ?: ""
+            displayName.value = it.info.displayName ?: ""
+            about.value = it.info.about ?: ""
+            picture.value = it.info.picture ?: ""
+            banner.value = it.info.banner ?: ""
+            website.value = it.info.website ?: ""
+            pronouns.value = it.info.pronouns ?: ""
+            nip05.value = it.info.nip05 ?: ""
+            lnAddress.value = it.info.lud16 ?: ""
+            lnURL.value = it.info.lud06 ?: ""
 
             twitter.value = ""
             github.value = ""
             mastodon.value = ""
 
             // TODO: Validate Telegram input, somehow.
-            it.latestMetadata?.identityClaims()?.forEach {
-                when (it) {
-                    is TwitterIdentity -> twitter.value = it.toProofUrl()
-                    is GitHubIdentity -> github.value = it.toProofUrl()
-                    is MastodonIdentity -> mastodon.value = it.toProofUrl()
+            it.identities.forEach { identity ->
+                when (identity) {
+                    is TwitterIdentity -> twitter.value = identity.toProofUrl()
+                    is GitHubIdentity -> github.value = identity.toProofUrl()
+                    is MastodonIdentity -> mastodon.value = identity.toProofUrl()
                 }
             }
         }

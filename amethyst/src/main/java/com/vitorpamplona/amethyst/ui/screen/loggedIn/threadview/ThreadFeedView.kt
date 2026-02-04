@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -80,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.RenderApproveButton
@@ -784,6 +785,7 @@ private fun RenderApprovalIfNeeded(
     }
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 private fun RenderClassifiedsReaderForThread(
     noteEvent: ClassifiedsEvent,
@@ -923,7 +925,13 @@ private fun RenderClassifiedsReaderForThread(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val sellerName = note.author?.info?.bestName()
+                val sellerName =
+                    note.author
+                        ?.metadataOrNull()
+                        ?.flow
+                        ?.value
+                        ?.info
+                        ?.bestName()
 
                 val msg =
                     if (sellerName != null) {

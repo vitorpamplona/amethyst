@@ -45,6 +45,8 @@ object TimeUtils {
 
     fun fiveMinutesAgo() = now() - FIVE_MINUTES
 
+    fun fiveMinutesAhead() = now() + FIVE_MINUTES
+
     fun fifteenMinutesAgo() = now() - FIFTEEN_MINUTES
 
     fun oneHourAgo() = now() - ONE_HOUR

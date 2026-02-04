@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
@@ -107,8 +109,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -848,7 +848,7 @@ private fun DisplayUserFromTag(
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {
             CreateClickableTextWithEmoji(
-                clickablePart = remember(meta) { it?.bestName() ?: baseUser.pubkeyDisplayHex() },
+                clickablePart = remember(meta) { it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
                 route = remember(baseUser) { routeFor(baseUser) },
                 nav = nav,

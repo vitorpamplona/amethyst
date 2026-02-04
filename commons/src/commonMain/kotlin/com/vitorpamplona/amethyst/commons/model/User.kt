@@ -22,12 +22,13 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.nip01Core.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -52,15 +53,11 @@ class User(
     val nip65RelayListNote: Note,
     val dmRelayListNote: Note,
 ) {
+    private var metadata: UserMetadataCache? = null
     private var reports: UserReportCache? = null
     private var cards: UserCardsCache? = null
+    private var nip05: UserNip05Cache? = null
 
-    // private var deps = ScatterMap<KClass<out UserDependencies>, UserDependencies>()
-
-    var info: UserMetadata? = null
-
-    var latestMetadata: MetadataEvent? = null
-    var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
 
     var zaps = mapOf<Note, Note?>()
@@ -85,39 +82,45 @@ class User(
 
     fun outboxRelays() = authorRelayList()?.writeRelaysNorm()
 
-    fun relayHints() = authorRelayList()?.writeRelaysNorm()?.take(3) ?: listOfNotNull(latestMetadataRelay)
+    fun relayHints() = authorRelayList()?.writeRelaysNorm()?.take(3) ?: listOfNotNull(metadataOrNull()?.relay)
 
     fun inboxRelays() = authorRelayList()?.readRelaysNorm()
 
     fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
 
-    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: latestMetadataRelay
+    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: metadataOrNull()?.relay
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
     fun toNostrUri() = "nostr:${toNProfile()}"
 
-    fun toBestShortFirstName(): String {
-        val fullName = toBestDisplayName()
+    fun toBestDisplayName(): String =
+        metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.bestName() ?: pubkeyDisplayHex()
 
-        val names = fullName.split(' ')
+    fun nip05(): String? =
+        metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.nip05
 
-        val firstName =
-            if (names[0].length <= 3) {
-                // too short. Remove Dr.
-                "${names[0]} ${names.getOrNull(1) ?: ""}"
-            } else {
-                names[0]
-            }
+    fun profilePicture(): String? =
+        metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.picture
 
-        return firstName
-    }
-
-    fun toBestDisplayName(): String = info?.bestName() ?: pubkeyDisplayHex()
-
-    fun nip05(): String? = info?.nip05
-
-    fun profilePicture(): String? = info?.picture
+    fun lnAddress(): String? =
+        metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.lnAddress()
 
     fun updateContactList(event: ContactListEvent): Set<HexKey> {
         if (event.id == latestContactList?.id) return emptySet()
@@ -184,21 +187,30 @@ class User(
 
     fun updateUserInfo(
         newUserInfo: UserMetadata,
-        latestMetadata: MetadataEvent,
+        metaEvent: MetadataEvent,
+        relay: NormalizedRelayUrl?,
     ) {
-        info = newUserInfo
-        info?.tags = latestMetadata.tags.toImmutableListOfLists()
-        info?.cleanBlankNames()
+        newUserInfo.cleanBlankNames()
 
+        // converts lud06 to lud16
         if (newUserInfo.lud16.isNullOrBlank()) {
-            info?.lud06?.let {
+            newUserInfo.lud06?.let {
                 if (it.lowercase().startsWith("lnurl")) {
-                    info?.lud16 = Lud06().toLud16(it)
+                    newUserInfo.lud16 = Lud06().toLud16(it)
                 }
             }
         }
 
-        flowSet?.metadata?.invalidateData()
+        val metadata = metadata()
+
+        metadata.newMetadata(newUserInfo, metaEvent)
+
+        if (relay != null) {
+            metadata.relay = relay
+        }
+
+        // doesn't create Nip05 unless needed.
+        nip05StateOrNull()?.newMetadata(newUserInfo.nip05, metaEvent.pubKey)
     }
 
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
@@ -209,49 +221,73 @@ class User(
 
     fun reports(): UserReportCache = reports ?: UserReportCache().also { reports = it }
 
-    // fun reportsOrNull(): UserReports? = deps[UserReports::class] as? UserReports
-
-    // fun reports(): UserReports = deps.getOrPut(UserReports::class) { UserReports() } as UserReports
-
     fun cardsOrNull(): UserCardsCache? = cards
 
     fun cards(): UserCardsCache = cards ?: UserCardsCache().also { cards = it }
 
+    fun metadataOrNull(): UserMetadataCache? = metadata
+
+    fun metadata(): UserMetadataCache = metadata ?: UserMetadataCache().also { metadata = it }
+
+    fun nip05StateOrNull(): UserNip05Cache? = nip05
+
+    fun nip05State(): UserNip05Cache =
+        nip05 ?: UserNip05Cache().also {
+            nip05 = it
+            val meta = metadata().flow.value
+            if (meta != null) {
+                it.newMetadata(meta.info.nip05, pubkeyHex)
+            }
+        }
+
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false
 
-        if (toBestDisplayName().containsAny(hiddenWordsCase)) {
-            return true
-        }
+        metadata?.flow?.value?.let { userInfo ->
+            val info = userInfo.info
 
-        if (profilePicture()?.containsAny(hiddenWordsCase) == true) {
-            return true
-        }
+            if (info.name?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
 
-        if (info?.banner?.containsAny(hiddenWordsCase) == true) {
-            return true
-        }
+            if (info.displayName?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
 
-        if (info?.about?.containsAny(hiddenWordsCase) == true) {
-            return true
-        }
+            if (info.picture?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
 
-        if (info?.lud06?.containsAny(hiddenWordsCase) == true) {
-            return true
-        }
+            if (info.banner?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
 
-        if (info?.lud16?.containsAny(hiddenWordsCase) == true) {
-            return true
-        }
+            if (info.about?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
 
-        if (info?.nip05?.containsAny(hiddenWordsCase) == true) {
-            return true
+            if (info.lud06?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (info.lud16?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
+
+            if (info.nip05?.containsAny(hiddenWordsCase) == true) {
+                return true
+            }
         }
 
         return false
     }
 
-    fun anyNameStartsWith(username: String): Boolean = info?.anyNameStartsWith(username) ?: false
+    fun anyNameStartsWith(username: String): Boolean =
+        metadata
+            ?.flow
+            ?.value
+            ?.info
+            ?.anyNameStartsWith(username) ?: false
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {
@@ -285,7 +321,6 @@ class UserFlowSet(
     u: User,
 ) {
     // Observers line up here.
-    val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
     val followers = UserBundledRefresherFlow(u)
     val usedRelays = UserBundledRefresherFlow(u)
@@ -293,8 +328,7 @@ class UserFlowSet(
     val statuses = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
-        metadata.hasObservers() ||
-            follows.hasObservers() ||
+        follows.hasObservers() ||
             followers.hasObservers() ||
             usedRelays.hasObservers() ||
             zaps.hasObservers() ||

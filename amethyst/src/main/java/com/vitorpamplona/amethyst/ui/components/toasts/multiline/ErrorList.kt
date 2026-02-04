@@ -135,7 +135,7 @@ fun ErrorRow(
                     },
                 ) {
                     val descriptor =
-                        it.info?.bestName()?.let {
+                        it.metadataOrNull()?.flow?.value?.info?.bestName()?.let {
                             stringRes(R.string.error_dialog_talk_to_user_name, it)
                         } ?: stringRes(R.string.error_dialog_talk_to_user)
 

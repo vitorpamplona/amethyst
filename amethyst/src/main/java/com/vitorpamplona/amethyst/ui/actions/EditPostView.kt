@@ -51,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,6 +77,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
@@ -273,27 +275,30 @@ fun EditPostView(
                                     }
                                 }
 
-                                val user = postViewModel.account?.userProfile()
-                                val lud16 = user?.info?.lnAddress()
+                                if (postViewModel.wantsInvoice) {
+                                    val user = postViewModel.account.userProfile()
+                                    val info by observeUserInfo(user, accountViewModel)
+                                    val lud16 = info?.info?.lnAddress()
 
-                                if (lud16 != null && postViewModel.wantsInvoice) {
-                                    Row(
-                                        verticalAlignment = CenterVertically,
-                                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                                    ) {
-                                        InvoiceRequest(
-                                            lud16,
-                                            user,
-                                            accountViewModel,
-                                            stringRes(id = R.string.lightning_invoice),
-                                            stringRes(id = R.string.lightning_create_and_add_invoice),
-                                            onNewInvoice = {
-                                                postViewModel.message =
-                                                    TextFieldValue(postViewModel.message.text + "\n\n" + it)
-                                                postViewModel.wantsInvoice = false
-                                            },
-                                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                                        )
+                                    if (lud16 != null) {
+                                        Row(
+                                            verticalAlignment = CenterVertically,
+                                            modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                                        ) {
+                                            InvoiceRequest(
+                                                lud16,
+                                                user,
+                                                accountViewModel,
+                                                stringRes(id = R.string.lightning_invoice),
+                                                stringRes(id = R.string.lightning_create_and_add_invoice),
+                                                onNewInvoice = {
+                                                    postViewModel.message =
+                                                        TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                                    postViewModel.wantsInvoice = false
+                                                },
+                                                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                                            )
+                                        }
                                     }
                                 }
 

@@ -65,6 +65,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -136,6 +138,10 @@ class AppModules(
 
     // Offers easy methods to know when connections are happening through Tor or not
     val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
+
+    // Custom fetcher that considers tor settings and avoids forwarding.
+    val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
+    val nip05Client = Nip05Client(nip05Fetcher)
 
     // Application-wide block height request cache
     val otsBlockHeightCache by lazy { OtsBlockHeightCache() }

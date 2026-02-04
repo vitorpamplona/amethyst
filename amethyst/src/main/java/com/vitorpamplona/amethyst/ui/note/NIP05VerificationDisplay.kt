@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,10 +34,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,77 +44,44 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNip05
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
-
-@Composable
-fun nip05VerificationAsAState(
-    userMetadata: UserMetadata,
-    pubkeyHex: String,
-    accountViewModel: AccountViewModel,
-): MutableState<Boolean?> {
-    val nip05Verified =
-        remember(userMetadata.nip05) {
-            // starts with null if must verify or already filled in if verified in the last hour
-            val default =
-                if ((userMetadata.nip05LastVerificationTime ?: 0) > TimeUtils.oneHourAgo()) {
-                    userMetadata.nip05Verified
-                } else {
-                    null
-                }
-
-            mutableStateOf(default)
-        }
-
-    if (nip05Verified.value == null) {
-        LaunchedEffect(key1 = userMetadata.nip05) {
-            accountViewModel.verifyNip05(userMetadata, pubkeyHex) { newVerificationStatus ->
-                if (nip05Verified.value != newVerificationStatus) {
-                    nip05Verified.value = newVerificationStatus
-                }
-            }
-        }
-    }
-
-    return nip05Verified
-}
 
 @Composable
 fun ObserveDisplayNip05Status(
@@ -135,42 +100,42 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nip05 by observeUserNip05(baseUser, accountViewModel)
     val statuses by observeUserStatuses(baseUser, accountViewModel)
+    val nip05State by baseUser.nip05State().flow.collectAsStateWithLifecycle()
 
-    CrossfadeIfEnabled(
-        targetState = nip05,
-        accountViewModel = accountViewModel,
-    ) {
-        VerifyAndDisplayNIP05OrStatusLine(
-            it,
-            statuses,
-            baseUser,
-            accountViewModel,
-            nav,
-        )
-    }
+    VerifyAndDisplayNIP05OrStatusLine(
+        nip05State,
+        statuses,
+        baseUser,
+        accountViewModel,
+        nav,
+    )
 }
 
 @Composable
 private fun VerifyAndDisplayNIP05OrStatusLine(
-    nip05: String?,
+    nip05State: Nip05State,
     statuses: ImmutableList<AddressableNote>,
     baseUser: User,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (nip05 != null) {
-            val nip05Verified =
-                nip05VerificationAsAState(baseUser.info!!, baseUser.pubkeyHex, accountViewModel)
+        if (nip05State is Nip05State.Exists) {
+            val nip05VerifState by nip05State.verificationState.collectAsStateWithLifecycle()
 
-            if (nip05Verified.value != true) {
-                DisplayNIP05(nip05, nip05Verified, accountViewModel)
-            } else if (!statuses.isEmpty()) {
+            if (nip05VerifState.isExpired()) {
+                LaunchedEffect(key1 = nip05VerifState) {
+                    accountViewModel.runOnIO {
+                        nip05State.checkAndUpdate(Amethyst.instance.nip05Client)
+                    }
+                }
+            }
+
+            if (nip05VerifState is Nip05VerifState.Verified && !statuses.isEmpty()) {
                 ObserveRotateStatuses(statuses, accountViewModel, nav)
             } else {
-                DisplayNIP05(nip05, nip05Verified, accountViewModel)
+                DisplayNIP05(nip05State, nip05VerifState, accountViewModel)
             }
         } else {
             if (!statuses.isEmpty()) {
@@ -358,25 +323,15 @@ fun DisplayStatusInner(
 }
 
 @Composable
-fun DisplayNIP05(
-    nip05: String,
-    nip05Verified: MutableState<Boolean?>,
+fun ObserveAndDisplayNIP05(
+    nip05State: Nip05State.Exists,
     accountViewModel: AccountViewModel,
 ) {
     val uri = LocalUriHandler.current
-    val (user, domain) =
-        remember(nip05) {
-            val parts = nip05.split("@")
-            if (parts.size == 1) {
-                listOf("_", parts[0])
-            } else {
-                listOf(parts[0], parts[1])
-            }
-        }
 
-    if (user != "_") {
+    if (nip05State.nip05.name != "_") {
         Text(
-            text = remember(nip05) { AnnotatedString(user) },
+            text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
             fontSize = Font14SP,
             color = MaterialTheme.colorScheme.nip05,
             maxLines = 1,
@@ -384,95 +339,110 @@ fun DisplayNIP05(
         )
     }
 
-    NIP05VerifiedSymbol(nip05Verified, 1, NIP05IconSize, accountViewModel)
+    ObserveAndRenderNIP05VerifiedSymbol(nip05State, 1, NIP05IconSize, accountViewModel)
 
     ClickableTextPrimary(
-        text = domain,
-        onClick = { runCatching { uri.openUri("https://$domain") } },
-        style =
-            LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+        text = nip05State.nip05.domain,
+        onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
         maxLines = 1,
         overflow = TextOverflow.Visible,
     )
 }
 
 @Composable
-private fun NIP05VerifiedSymbol(
-    nip05Verified: MutableState<Boolean?>,
+fun DisplayNIP05(
+    nip05State: Nip05State.Exists,
+    nip05VerifState: Nip05VerifState,
+    accountViewModel: AccountViewModel,
+) {
+    val uri = LocalUriHandler.current
+
+    if (nip05State.nip05.name != "_") {
+        Text(
+            text = remember(nip05State) { AnnotatedString(nip05State.nip05.name) },
+            fontSize = Font14SP,
+            color = MaterialTheme.colorScheme.nip05,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+
+    RenderNIP05VerifiedSymbol(nip05VerifState, 1, NIP05IconSize, accountViewModel)
+
+    ClickableTextPrimary(
+        text = nip05State.nip05.domain,
+        onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
+        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
+        maxLines = 1,
+        overflow = TextOverflow.Visible,
+    )
+}
+
+@Composable
+fun ObserveAndRenderNIP05VerifiedSymbol(
+    nip05State: Nip05State.Exists,
     compositionSizeReference: Int,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    CrossfadeIfEnabled(targetState = nip05Verified.value, accountViewModel = accountViewModel) {
+    val state by nip05State.verificationState.collectAsStateWithLifecycle()
+
+    if (state.isExpired()) {
+        LaunchedEffect(key1 = state) {
+            accountViewModel.runOnIO {
+                nip05State.checkAndUpdate(Amethyst.instance.nip05Client)
+            }
+        }
+    }
+
+    RenderNIP05VerifiedSymbol(state, compositionSizeReference, modifier, accountViewModel)
+}
+
+@Composable
+fun RenderNIP05VerifiedSymbol(
+    state: Nip05VerifState,
+    compositionSizeReference: Int,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    CrossfadeIfEnabled(targetState = state, accountViewModel = accountViewModel) {
         when (it) {
-            null ->
+            is Nip05VerifState.Verifying ->
                 Icon(
                     imageVector = Icons.Default.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
                 )
-            true ->
+            is Nip05VerifState.NotStarted ->
+                Icon(
+                    imageVector = Icons.Default.Downloading,
+                    contentDescription = stringRes(id = R.string.nip05_checking),
+                    modifier = modifier,
+                    tint = Color.Yellow,
+                )
+            is Nip05VerifState.Verified ->
                 Icon(
                     painter = painterRes(R.drawable.nip_05, compositionSizeReference),
                     contentDescription = stringRes(id = R.string.nip05_verified),
                     modifier = modifier,
                     tint = Color.Unspecified,
                 )
-            false ->
+            is Nip05VerifState.Failed ->
                 Icon(
                     imageVector = Icons.Default.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,
                 )
-        }
-    }
-}
-
-@Composable
-fun DisplayNip05ProfileStatus(
-    user: User,
-    accountViewModel: AccountViewModel,
-) {
-    val uri = LocalUriHandler.current
-
-    user.nip05()?.let { nip05 ->
-        if (nip05.split("@").size <= 2) {
-            val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NIP05VerifiedSymbol(nip05Verified, 2, Size16Modifier, accountViewModel)
-                var domainPadStart = 5.dp
-
-                val (user, domain) =
-                    remember(nip05) {
-                        val parts = nip05.split("@")
-                        if (parts.size == 1) {
-                            listOf("_", parts[0])
-                        } else {
-                            listOf(parts[0], parts[1])
-                        }
-                    }
-
-                if (user != "_") {
-                    Text(
-                        text = "$user@",
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    domainPadStart = 0.dp
-                }
-
-                ClickableTextPrimary(
-                    text = domain,
-                    onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            is Nip05VerifState.Error ->
+                Icon(
+                    imageVector = Icons.Default.Report,
+                    contentDescription = stringRes(id = R.string.nip05_failed),
+                    modifier = modifier,
+                    tint = Color.Red,
                 )
-            }
         }
     }
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -44,7 +45,6 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdButtonSizeModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.utils.Log
 
 @Composable
@@ -105,7 +105,7 @@ fun UsernameDisplay(
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
-        val name = it?.bestName()
+        val name = it?.info?.bestName()
         if (name != null) {
             UserDisplay(name, it.tags, weight, fontWeight, textColor)
         } else {

@@ -68,7 +68,7 @@ fun filterUserMetadataForKey(
 
             users.forEach { user ->
                 val time = since.since(user)?.get(relay)?.time
-                if (time == null || user.latestMetadata == null) {
+                if (time == null || user.metadataOrNull()?.flow?.value == null) {
                     firstTimers.add(user.pubkeyHex)
                 } else {
                     updates.add(user.pubkeyHex)

@@ -102,7 +102,7 @@ open class EditPostViewModel : ViewModel() {
         edit: Note,
         versionLookingAt: Note?,
     ) {
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
 
         message = TextFieldValue(versionLookingAt?.event?.content ?: edit.event?.content ?: "")

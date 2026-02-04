@@ -26,6 +26,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -34,7 +35,6 @@ import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
@@ -46,26 +46,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import java.math.BigDecimal
-
-@Composable
-fun observeUser(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<UserState?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .flow()
-        .metadata.stateFlow
-        .collectAsStateWithLifecycle()
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
@@ -79,36 +65,15 @@ fun observeUserName(
     val flow =
         remember(user) {
             user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.toBestDisplayName() }
-                .distinctUntilChanged()
+                .metadata()
+                .flow
+                .map {
+                    it?.info?.bestName() ?: user.pubkeyDisplayHex()
+                }.distinctUntilChanged()
         }
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return flow.collectAsStateWithLifecycle(user.toBestDisplayName())
-}
-
-@OptIn(ExperimentalCoroutinesApi::class)
-@Composable
-fun observeUserNip05(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<String?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.info?.nip05 }
-                .distinctUntilChanged()
-        }
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    return flow.collectAsStateWithLifecycle(user.info?.nip05)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -123,14 +88,19 @@ fun observeUserAboutMe(
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(user) {
-            user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.info?.about ?: "" }
-                .distinctUntilChanged()
+            user.metadata().flow.map {
+                it?.info?.about ?: ""
+            }
         }
 
-    return flow.collectAsStateWithLifecycle(user.info?.about ?: "")
+    return flow.collectAsStateWithLifecycle(
+        user
+            .metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.about ?: "",
+    )
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -138,23 +108,15 @@ fun observeUserAboutMe(
 fun observeUserInfo(
     user: User,
     accountViewModel: AccountViewModel,
-): State<UserMetadata?> {
+): State<UserInfo?> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.info }
-                .distinctUntilChanged()
-        }
-
-    return flow.collectAsStateWithLifecycle(user.info)
+    return user.metadata().flow.collectAsStateWithLifecycle()
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserBanner(
@@ -168,15 +130,24 @@ fun observeUserBanner(
     val flow =
         remember(user) {
             user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.info?.banner }
-                .distinctUntilChanged()
+                .metadata()
+                .flow
+                .map {
+                    it?.info?.banner
+                }.distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(user.info?.banner)
+    return flow.collectAsStateWithLifecycle(
+        user
+            .metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.banner,
+    )
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserPicture(
@@ -190,35 +161,21 @@ fun observeUserPicture(
     val flow =
         remember(user) {
             user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.info?.picture }
-                .distinctUntilChanged()
+                .metadata()
+                .flow
+                .map {
+                    it?.info?.picture
+                }.distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(user.info?.picture)
-}
-
-@OptIn(ExperimentalCoroutinesApi::class)
-@Composable
-fun observeUserShortName(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<String> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { it.user.toBestShortFirstName() }
-                .distinctUntilChanged()
-        }
-
-    return flow.collectAsStateWithLifecycle(user.toBestShortFirstName())
+    return flow.collectAsStateWithLifecycle(
+        user
+            .metadataOrNull()
+            ?.flow
+            ?.value
+            ?.info
+            ?.picture,
+    )
 }
 
 @Composable

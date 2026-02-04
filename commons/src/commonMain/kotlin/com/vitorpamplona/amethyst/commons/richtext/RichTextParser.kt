@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag

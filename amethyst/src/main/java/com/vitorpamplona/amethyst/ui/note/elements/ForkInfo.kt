@@ -30,7 +30,7 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -79,18 +79,17 @@ fun ForkInformationRowLightColor(
 
     if (route != null) {
         Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-            val userState by observeUser(author, accountViewModel)
-            userState?.user?.toBestDisplayName()?.let {
-                CreateClickableTextWithEmoji(
-                    clickablePart = stringRes(id = R.string.forked_from) + " " + it,
-                    maxLines = 1,
-                    route = route,
-                    overrideColor = MaterialTheme.colorScheme.primary,
-                    fontSize = Font14SP,
-                    nav = nav,
-                    tags = userState?.user?.info?.tags,
-                )
-            }
+            val userState by observeUserInfo(author, accountViewModel)
+
+            CreateClickableTextWithEmoji(
+                clickablePart = stringRes(id = R.string.forked_from) + " " + (userState?.info?.bestName() ?: author.pubkeyDisplayHex()),
+                maxLines = 1,
+                route = route,
+                overrideColor = MaterialTheme.colorScheme.primary,
+                fontSize = Font14SP,
+                nav = nav,
+                tags = userState?.tags,
+            )
         }
     }
 }

@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -73,7 +74,6 @@ fun ProfileHeader(
     accountViewModel: AccountViewModel,
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
-    var zoomImageDialogOpen by remember { mutableStateOf(false) }
 
     Box {
         DrawBanner(baseUser, accountViewModel)
@@ -126,27 +126,10 @@ fun ProfileHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom,
             ) {
-                val clipboardManager = LocalClipboard.current
-                val scope = rememberCoroutineScope()
-
-                ClickableUserPicture(
+                ZoomableUserPicture(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
                     size = Size100dp,
-                    modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
-                    onClick = {
-                        if (baseUser.profilePicture() != null) {
-                            zoomImageDialogOpen = true
-                        }
-                    },
-                    onLongClick = {
-                        it.info?.picture?.let { it1 ->
-                            scope.launch {
-                                val clipData = ClipData.newPlainText("profile picture url", it1)
-                                clipboardManager.setClipEntry(ClipEntry(clipData))
-                            }
-                        }
-                    },
                 )
 
                 Row(
@@ -164,12 +147,44 @@ fun ProfileHeader(
             HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
         }
     }
+}
 
-    val profilePic = baseUser.profilePicture()
-    if (zoomImageDialogOpen && profilePic != null) {
+@Composable
+fun ZoomableUserPicture(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+    size: Dp,
+) {
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    var zoomImageUrl by remember { mutableStateOf<String?>(null) }
+
+    ClickableUserPicture(
+        baseUser = baseUser,
+        accountViewModel = accountViewModel,
+        size = size,
+        modifier = MaterialTheme.colorScheme.userProfileBorderModifier,
+        onClick = {
+            val pic = baseUser.profilePicture()
+            if (pic != null) {
+                zoomImageUrl = pic
+            }
+        },
+        onLongClick = {
+            baseUser.profilePicture()?.let { it1 ->
+                scope.launch {
+                    val clipData = ClipData.newPlainText("profile picture url", it1)
+                    clipboardManager.setClipEntry(ClipEntry(clipData))
+                }
+            }
+        },
+    )
+
+    zoomImageUrl?.let {
         ZoomableImageDialog(
-            RichTextParser.parseImageOrVideo(profilePic),
-            onDismiss = { zoomImageDialogOpen = false },
+            RichTextParser.parseImageOrVideo(it),
+            onDismiss = { zoomImageUrl = null },
             accountViewModel = accountViewModel,
         )
     }

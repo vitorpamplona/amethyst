@@ -18,15 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
-import androidx.compose.runtime.Stable
-
-@Stable
-class ImmutableListOfLists<T>(
-    val lists: Array<Array<T>>,
-)
-
-val EmptyTagList = ImmutableListOfLists<String>(emptyArray())
-
-fun Array<Array<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> = ImmutableListOfLists(this)
+interface Nip05Fetcher {
+    suspend fun fetch(url: String): String
+}

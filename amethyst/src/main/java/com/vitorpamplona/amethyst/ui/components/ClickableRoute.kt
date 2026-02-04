@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.R.attr.maxLines
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.InlineTextContent
@@ -54,6 +55,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -63,10 +66,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -284,7 +285,7 @@ fun RenderUserAsClickableText(
     val userState by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
-        clickablePart = "@" + (userState?.bestName() ?: baseUser.pubkeyDisplayHex()),
+        clickablePart = "@" + (userState?.info?.bestName() ?: baseUser.pubkeyDisplayHex()),
         suffix = additionalChars?.ifBlank { null },
         maxLines = 1,
         route = remember(baseUser) { routeFor(baseUser) },

@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -231,7 +230,7 @@ open class Note(
 
             return relays.firstOrNull()
         } else {
-            currentOutbox?.firstOrNull() ?: author?.latestMetadataRelay
+            currentOutbox?.firstOrNull() ?: author?.metadataOrNull()?.relay
         }
     }
 
@@ -973,9 +972,8 @@ class NoteFlowSet(
     fun author() =
         metadata.stateFlow.flatMapLatest {
             it.note.author
-                ?.flow()
-                ?.metadata
-                ?.stateFlow ?: MutableStateFlow(null)
+                ?.metadata()
+                ?.flow ?: MutableStateFlow(null)
         }
 
     fun isInUse(): Boolean =

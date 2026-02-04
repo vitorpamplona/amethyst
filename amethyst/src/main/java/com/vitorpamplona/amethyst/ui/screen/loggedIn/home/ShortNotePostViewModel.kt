@@ -260,9 +260,9 @@ open class ShortNotePostViewModel :
     var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     fun user(): User = account.userProfile()
 
@@ -331,8 +331,8 @@ open class ShortNotePostViewModel :
 
             val user = account.userProfile()
 
-            canAddInvoice = user.info?.lnAddress() != null
-            canAddZapRaiser = user.info?.lnAddress() != null
+            canAddInvoice = user.lnAddress() != null
+            canAddZapRaiser = user.lnAddress() != null
             canUsePoll = originalNote == null
             multiOrchestrator = null
 
@@ -417,8 +417,8 @@ open class ShortNotePostViewModel :
     }
 
     private fun loadFromDraft(draftEvent: TextNoteEvent) {
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
 
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }

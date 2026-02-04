@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet

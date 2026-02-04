@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -306,7 +306,7 @@ fun DisplayEntryForUser(
     val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
-        clickablePart = userMetadata?.bestName() ?: baseUser.pubkeyDisplayHex(),
+        clickablePart = userMetadata?.info?.bestName() ?: baseUser.pubkeyDisplayHex(),
         maxLines = 1,
         route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,

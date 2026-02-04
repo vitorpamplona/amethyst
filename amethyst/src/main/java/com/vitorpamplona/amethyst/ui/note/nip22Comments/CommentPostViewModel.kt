@@ -176,11 +176,11 @@ open class CommentPostViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
-    fun user(): User? = account.userProfile()
+    fun user(): User = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -255,8 +255,8 @@ open class CommentPostViewModel :
     private fun loadFromDraft(draftEvent: CommentEvent) {
         this.externalIdentity = draftEvent.scope()
 
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
 
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }

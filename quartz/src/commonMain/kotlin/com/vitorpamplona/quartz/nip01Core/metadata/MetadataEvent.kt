@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.metadata
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -37,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.tags.PronounsTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.WebsiteTag
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
@@ -62,6 +64,8 @@ class MetadataEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    override fun isContentEncoded() = true
+
     fun contactMetadataJson() =
         try {
             Json.parseToJsonElement(content) as JsonObject
@@ -82,6 +86,13 @@ class MetadataEvent(
 
     companion object {
         const val KIND = 0
+        const val FIXED_D_TAG = ""
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
+
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
+
+        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
         fun newUser(
             name: String?,

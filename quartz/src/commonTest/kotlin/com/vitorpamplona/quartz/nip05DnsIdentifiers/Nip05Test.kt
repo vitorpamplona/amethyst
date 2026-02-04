@@ -23,45 +23,66 @@ package com.vitorpamplona.quartz.nip05DnsIdentifiers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.fail
 
 class Nip05Test {
     companion object {
-        private val ALL_UPPER_CASE_USER_NAME = "ONETWO"
-        private val ALL_LOWER_CASE_USER_NAME = "onetwo"
+        private const val ALL_UPPER_CASE_USER_NAME = "ONETWO"
+        private const val ALL_LOWER_CASE_USER_NAME = "onetwo"
     }
 
-    var nip05Verifier = Nip05()
+    val parser = Nip05Parser()
+    val baseTestJson =
+        """
+        {
+          "names": {
+            "bob": "b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9"
+          },
+          "relays": {
+            "b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9": [ "wss://relay.example.com", "wss://relay2.example.com" ]
+          }
+        }
+        """.trimIndent()
 
     @Test
     fun `test with matching case on user name`() =
         runTest {
             // Set-up
-            val userNameToTest = ALL_UPPER_CASE_USER_NAME
+            val userNameToTest = ALL_LOWER_CASE_USER_NAME
             val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
             val nostrJson = "{\n  \"names\": {\n    \"$userNameToTest\": \"$expectedPubKey\" \n  }\n}"
             val nip05 = "$userNameToTest@domain.com"
 
-            nip05Verifier.parseHexKeyFor(nip05, nostrJson).fold(
-                onSuccess = { assertEquals(expectedPubKey, it) },
-                onFailure = { fail("Test failure") },
-            )
+            val parsedNip05 = Nip05Id.parse(nip05)
+            assertNotNull(parsedNip05)
+            assertEquals(expectedPubKey, parser.parseHexKey(parsedNip05, nostrJson))
         }
 
     @Test
-    fun `test with NOT matching case on user name`() =
+    fun `test failure of lowercase name with uppercase in the json`() =
         runTest {
             // Set-up
             val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
             val nostrJson = "{ \"names\": { \"$ALL_UPPER_CASE_USER_NAME\": \"$expectedPubKey\" }}"
 
             val nip05 = "$ALL_LOWER_CASE_USER_NAME@domain.com"
+            val parsedNip05 = Nip05Id.parse(nip05)
+            assertNotNull(parsedNip05)
+            assertEquals(null, parser.parseHexKey(parsedNip05, nostrJson))
+        }
 
-            nip05Verifier.parseHexKeyFor(nip05, nostrJson).fold(
-                onSuccess = { assertEquals(expectedPubKey, it) },
-                onFailure = { fail("Test failure") },
-            )
+    @Test
+    fun `test uppercase name with lowercase name in the json`() =
+        runTest {
+            // Set-up
+            val expectedPubKey = "ca29c211f1c72d5b6622268ff43d2288ea2b2cb5b9aa196ff9f1704fc914b71b"
+            val nostrJson = "{ \"names\": { \"$ALL_LOWER_CASE_USER_NAME\": \"$expectedPubKey\" }}"
+
+            val nip05 = "$ALL_UPPER_CASE_USER_NAME@domain.com"
+            val parsedNip05 = Nip05Id.parse(nip05)
+            assertNotNull(parsedNip05)
+            assertEquals(expectedPubKey, parser.parseHexKey(parsedNip05, nostrJson))
         }
 
     @Test
@@ -69,11 +90,8 @@ class Nip05Test {
         // given
         val nip05address = "this@that@that.com"
 
-        // when
-        val actualValue = nip05Verifier.assembleUrl(nip05address)
-
-        // then
-        assertNull(actualValue)
+        val parsedNip05 = Nip05Id.parse(nip05address)
+        assertNull(parsedNip05)
     }
 
     @Test
@@ -82,12 +100,52 @@ class Nip05Test {
         val userName = "TheUser"
         val domain = "domain.com"
         val nip05address = "$userName@$domain"
-        val expectedValue = "https://$domain/.well-known/nostr.json?name=$userName"
 
-        // when
-        val actualValue = nip05Verifier.assembleUrl(nip05address)
+        val parsedNip05 = Nip05Id.parse(nip05address)
+        assertNotNull(parsedNip05)
 
         // then
-        assertEquals(expectedValue, actualValue)
+        assertEquals("https://$domain/.well-known/nostr.json?name=${userName.lowercase()}", parsedNip05.toUserUrl())
+        assertEquals("https://$domain/.well-known/nostr.json", parsedNip05.toDomainUrl())
+    }
+
+    @Test
+    fun `test json parsing with relays`() {
+        val parsedNip05 = Nip05Id.parse("bob@test.com")
+        assertNotNull(parsedNip05)
+
+        val result = parser.parseHexKeyAndRelays(parsedNip05, baseTestJson)
+        assertNotNull(result)
+        assertEquals("b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9", result.pubkey)
+        assertEquals(
+            listOf("wss://relay.example.com", "wss://relay2.example.com"),
+            result.relays,
+        )
+    }
+
+    @Test
+    fun `test full json parsing with relays`() {
+        val result = parser.parse(baseTestJson)
+
+        assertNotNull(result)
+
+        assertEquals(1, result.names.size)
+        assertEquals(1, result.relays.size)
+
+        assertEquals("bob", result.names.keys.first())
+        assertEquals("b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9", result.names["bob"])
+        assertEquals("b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9", result.relays.keys.first())
+        assertEquals(
+            listOf("wss://relay.example.com", "wss://relay2.example.com"),
+            result.relays["b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9"],
+        )
+    }
+
+    @Test
+    fun `test full json generation with relays`() {
+        val result = parser.parse(baseTestJson)
+        val newResult = parser.parse(parser.toJson(result))
+
+        assertEquals(result, newResult)
     }
 }

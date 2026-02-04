@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Skull
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.hashtags.Weed
 import com.vitorpamplona.amethyst.commons.hashtags.Zap
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.ui.components.HashTag
@@ -52,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.components.RenderRegular
 import com.vitorpamplona.amethyst.ui.components.RenderTextParagraph
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 
 @Preview
 @Composable

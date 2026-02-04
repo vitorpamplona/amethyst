@@ -126,7 +126,7 @@ private fun ReplyInfoMention(
     val innerUserState by observeUserInfo(user, accountViewModel)
 
     CreateClickableTextWithEmoji(
-        clickablePart = "$prefix${innerUserState?.bestName()}",
+        clickablePart = "$prefix${innerUserState?.info?.bestName()}",
         tags = innerUserState?.tags,
         style =
             LocalTextStyle.current.copy(

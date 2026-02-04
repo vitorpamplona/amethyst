@@ -488,20 +488,25 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         // new event
-        val oldUser = getOrCreateUser(event.pubKey)
-        val currentMetadata = oldUser.latestMetadata
+        consumeBaseReplaceable(event, relay, wasVerified)
 
-        if (currentMetadata == null || event.createdAt > currentMetadata.createdAt) {
-            oldUser.latestMetadata = event
+        val user = getOrCreateUser(event.pubKey)
 
+        if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null && (wasVerified || justVerify(event))) {
-                oldUser.updateUserInfo(newUserMetadata, event)
-                if (relay != null) {
-                    oldUser.addRelayBeingUsed(relay, event.createdAt)
-                    if (!relay.isLocalHost()) {
-                        oldUser.latestMetadataRelay = relay
+                val fallbackRelay =
+                    relay?.isLocalHost()?.let {
+                        if (!it) {
+                            relay
+                        } else {
+                            null
+                        }
                     }
+
+                user.updateUserInfo(newUserMetadata, event, fallbackRelay)
+                if (relay != null) {
+                    user.addRelayBeingUsed(relay, event.createdAt)
                 }
 
                 return true
@@ -2106,7 +2111,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event is ReactionEvent ||
                 note.event is LnZapEvent ||
                 note.event is LnZapRequestEvent ||
-                note.event is FileHeaderEvent
+                note.event is FileHeaderEvent ||
+                note.event is MetadataEvent ||
+                note.event is ContactListEvent
         )
 
     fun findNotesStartingWith(

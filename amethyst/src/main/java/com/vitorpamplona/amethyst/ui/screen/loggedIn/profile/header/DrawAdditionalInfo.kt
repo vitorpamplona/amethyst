@@ -42,18 +42,21 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
+import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
@@ -61,16 +64,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserApp
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
+import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
-import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
@@ -81,34 +84,34 @@ fun DrawAdditionalInfo(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by observeUser(baseUser, accountViewModel)
-    val user = userState?.user ?: return
+    val userState by observeUserInfo(baseUser, accountViewModel)
+    val user = userState ?: return
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
 
-    user.toBestDisplayName().let {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
-            CreateTextWithEmoji(
-                text = it,
-                tags = user.info?.tags ?: EmptyTagList,
-                fontWeight = FontWeight.Bold,
-                fontSize = 25.sp,
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
+        CreateTextWithEmoji(
+            text = user.info.bestName() ?: baseUser.pubkeyDisplayHex(),
+            tags = user.tags,
+            fontWeight = FontWeight.Bold,
+            fontSize = 25.sp,
+        )
+        Spacer(StdHorzSpacer)
+        user.info.pronouns?.let {
+            Text(
+                text = "($it)",
             )
             Spacer(StdHorzSpacer)
-            user.info?.pronouns?.let {
-                Text(
-                    text = "($it)",
-                )
-                Spacer(StdHorzSpacer)
-            }
+        }
 
+        user.info.bestName()?.let {
             DrawPlayName(it)
         }
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = user.pubkeyDisplayHex(),
+            text = baseUser.pubkeyDisplayHex(),
             modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
             color = MaterialTheme.colorScheme.placeholderText,
         )
@@ -118,7 +121,7 @@ fun DrawAdditionalInfo(
                 Modifier
                     .size(25.dp)
                     .padding(start = 5.dp),
-            onClick = { clipboardManager.setText(AnnotatedString(user.pubkeyNpub())) },
+            onClick = { clipboardManager.setText(AnnotatedString(baseUser.pubkeyNpub())) },
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
@@ -130,7 +133,7 @@ fun DrawAdditionalInfo(
 
         IconButton(
             modifier = Size25Modifier,
-            onClick = { nav.nav(Route.QRDisplay(user.pubkeyHex)) },
+            onClick = { nav.nav(Route.QRDisplay(baseUser.pubkeyHex)) },
         ) {
             Icon(
                 painter = painterRes(R.drawable.ic_qrcode, 1),
@@ -143,9 +146,9 @@ fun DrawAdditionalInfo(
 
     DisplayBadges(baseUser, accountViewModel, nav)
 
-    DisplayNip05ProfileStatus(user, accountViewModel)
+    DisplayNip05ProfileStatus(baseUser, accountViewModel)
 
-    val website = user.info?.website
+    val website = user.info.website
     if (!website.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -175,21 +178,13 @@ fun DrawAdditionalInfo(
 
     val lud16 =
         remember(userState) {
-            userState
-                ?.user
-                ?.info
-                ?.lud16
-                ?.trim() ?: userState
-                ?.user
-                ?.info
-                ?.lud06
-                ?.trim()
+            userState?.info?.lud16?.trim()
+                ?: userState?.info?.lud06?.trim()
         }
     DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
 
-    val identities = user.latestMetadata?.identityClaims()
-    if (!identities.isNullOrEmpty()) {
-        identities.forEach { identity: IdentityClaimTag ->
+    if (user.identities.isNotEmpty()) {
+        user.identities.forEach { identity: IdentityClaimTag ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
@@ -210,7 +205,7 @@ fun DrawAdditionalInfo(
         }
     }
 
-    user.info?.about?.let {
+    user.info.about?.let {
         Row(
             modifier = Modifier.padding(top = 5.dp, bottom = 5.dp),
         ) {
@@ -221,7 +216,7 @@ fun DrawAdditionalInfo(
                 content = it,
                 canPreview = false,
                 quotesLeft = 1,
-                tags = EmptyTagList,
+                tags = user.tags,
                 backgroundColor = background,
                 id = it,
                 accountViewModel = accountViewModel,
@@ -231,6 +226,43 @@ fun DrawAdditionalInfo(
     }
 
     DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
+}
+
+@Composable
+fun DisplayNip05ProfileStatus(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
+
+    when (val nip05State = nip05StateMetadata) {
+        is Nip05State.Exists -> {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = SpacedBy5dp) {
+                ObserveAndRenderNIP05VerifiedSymbol(nip05State, 2, Size16Modifier, accountViewModel)
+
+                if (nip05State.nip05.name != "_") {
+                    Text(
+                        text = "$user@",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                val uri = LocalUriHandler.current
+
+                ClickableTextPrimary(
+                    text = nip05State.nip05.domain,
+                    onClick = { runCatching { uri.openUri("https://${nip05State.nip05.domain}") } },
+                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        else -> { }
+    }
 }
 
 fun getIdentityClaimIcon(identity: IdentityClaimTag): Int =

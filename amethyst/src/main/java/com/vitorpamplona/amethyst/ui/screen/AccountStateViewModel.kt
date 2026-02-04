@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
-import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -42,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -214,16 +214,22 @@ class AccountStateViewModel : ViewModel() {
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError)
                 }
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
-                Nip05NostrAddressVerifier.verifyNip05(
-                    key,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
-                    onSuccess = { publicKey ->
-                        loginSync(Hex.decode(publicKey).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
-                    },
-                    onError = {
-                        onError(it)
-                    },
-                )
+                val nip05 = Nip05Id.parse(key)
+                if (nip05 == null) {
+                    onError("Could not parse nip05 address: $nip05")
+                } else {
+                    try {
+                        val pubkeyInfo = Amethyst.instance.nip05Client.get(nip05)
+                        if (pubkeyInfo == null) {
+                            onError("User not found in the nip05 server: $nip05")
+                        } else {
+                            loginSync(Hex.decode(pubkeyInfo.pubkey).toNpub(), transientAccount, loginWithExternalSigner, packageName, onError)
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        onError("Could not load nip05 address from the server: $nip05. ${e.message}")
+                    }
+                }
             } else {
                 loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
             }

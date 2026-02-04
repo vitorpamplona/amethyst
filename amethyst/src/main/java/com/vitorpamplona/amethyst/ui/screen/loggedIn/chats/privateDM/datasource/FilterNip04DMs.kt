@@ -50,14 +50,18 @@ fun filterNip04DMs(
         val outbox =
             authorHomeRelayEvent?.writeRelaysNorm()
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+                ?: listOfNotNull(
+                    LocalCache.getUserIfExists(it)?.metadataOrNull()?.relay,
+                )
 
         groupOutboxRelays.addAll(outbox)
 
         val inbox =
             authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+                ?: listOfNotNull(
+                    LocalCache.getUserIfExists(it)?.metadataOrNull()?.relay,
+                )
 
         groupInboxRelays.addAll(inbox)
     }

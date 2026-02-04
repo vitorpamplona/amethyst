@@ -100,7 +100,7 @@ fun debugState(context: Context) {
         "Users: " +
             LocalCache.users.filter { _, it -> it.flowSet != null }.size +
             " / " +
-            LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
+            LocalCache.users.filter { _, it -> it.metadataOrNull() != null }.size +
             " / " +
             LocalCache.users.size(),
     )
