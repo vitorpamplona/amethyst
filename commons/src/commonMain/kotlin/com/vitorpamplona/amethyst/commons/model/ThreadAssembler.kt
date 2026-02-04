@@ -54,7 +54,7 @@ class ThreadAssembler(
             // Check to see if there is an error in the tag and the root has replies
             val rootNote = cache.getNoteIfExists(markedAsRoot) as? Note
             if (rootNote?.replyTo?.isEmpty() == true) {
-                return cache.checkGetOrCreateNote(markedAsRoot) as? Note
+                return cache.checkGetOrCreateNote(markedAsRoot)
             }
         }
 
@@ -88,7 +88,7 @@ class ThreadAssembler(
     )
 
     fun findRoot(noteId: String): Note? {
-        val note = cache.checkGetOrCreateNote(noteId) as? Note ?: return null
+        val note = cache.checkGetOrCreateNote(noteId) ?: return null
 
         return if (note.event != null) {
             val thread = OnlyLatestVersionSet()
@@ -102,7 +102,7 @@ class ThreadAssembler(
     fun findThreadFor(noteId: String): ThreadInfo? {
         checkNotInMainThread()
 
-        val note = cache.checkGetOrCreateNote(noteId) as? Note ?: return null
+        val note = cache.checkGetOrCreateNote(noteId) ?: return null
 
         return if (note.event != null) {
             val thread = OnlyLatestVersionSet()

@@ -107,11 +107,11 @@ class DesktopLocalCache : ICacheProvider {
     fun consumeMetadata(event: MetadataEvent) {
         val user = getOrCreateUser(event.pubKey)
 
-        // Only update if newer
-        val currentMetadata = user.latestMetadata
-        if (currentMetadata == null || event.createdAt > currentMetadata.createdAt) {
-            user.latestMetadata = event
-            user.info = event.contactMetaData()
+        if (user.metadata().shouldUpdateWith(event)) {
+            val newUserMetadata = event.contactMetaData()
+            if (newUserMetadata != null) {
+                user.updateUserInfo(newUserMetadata, event, null)
+            }
         }
     }
 

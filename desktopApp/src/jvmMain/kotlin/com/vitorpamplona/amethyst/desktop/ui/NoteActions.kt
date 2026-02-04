@@ -70,14 +70,12 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -149,12 +147,8 @@ fun getDisplayName(
     pubKey: String,
     localCache: DesktopLocalCache,
 ): String {
-    val user = localCache.getUserIfExists(pubKey)
-    return user?.info?.bestName()
-        ?: pubKey.hexToByteArrayOrNull()?.toNpub()?.let { npub ->
-            npub.take(12) + "..." + npub.takeLast(6)
-        }
-        ?: pubKey.take(12) + "..."
+    val user = localCache.getUserIfExists(pubKey) ?: return pubKey.take(12)
+    return user.toBestDisplayName()
 }
 
 /**
@@ -308,7 +302,7 @@ fun ZapReceiptsDialog(
                 .distinct()
                 .filter { pubKey ->
                     val user = localCache.getUserIfExists(pubKey)
-                    user?.info == null
+                    user?.metadataOrNull()?.flow?.value == null
                 }
 
         if (pubKeysNeedingMetadata.isNotEmpty()) {
@@ -925,7 +919,7 @@ private suspend fun zapNote(
     withContext(Dispatchers.IO) {
         // Get author's lightning address from cache
         var user = localCache.getUserIfExists(event.pubKey)
-        var lnAddress = user?.info?.lud16 ?: user?.info?.lud06
+        var lnAddress = user?.lnAddress()
 
         // TODO: Use UserFinderFilterAssemblerSubscription pattern from Amethyst
         // to proactively load metadata when zap button is displayed.
@@ -1068,7 +1062,7 @@ private suspend fun fetchUserLightningAddress(
                         if (event is MetadataEvent && !resumed) {
                             localCache.consumeMetadata(event)
                             val user = localCache.getUserIfExists(pubKey)
-                            val lnAddress = user?.info?.lud16 ?: user?.info?.lud06
+                            val lnAddress = user?.lnAddress()
                             if (lnAddress != null && !resumed) {
                                 resumed = true
                                 timeoutJob.cancel()

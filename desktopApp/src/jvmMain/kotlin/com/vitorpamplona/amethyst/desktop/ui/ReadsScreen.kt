@@ -84,8 +84,8 @@ fun LongFormCard(
     onAuthorClick: (String) -> Unit = {},
     onClick: () -> Unit = {},
 ) {
-    val author = localCache.getUserIfExists(event.pubKey)
-    val authorName = author?.info?.bestName() ?: event.pubKey.take(8)
+    val author = localCache.getOrCreateUser(event.pubKey)
+    val authorName = author.toBestDisplayName()
     val publishedAt = event.publishedAt() ?: event.createdAt
 
     Card(

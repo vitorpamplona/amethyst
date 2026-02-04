@@ -333,7 +333,11 @@ fun FeedScreen(
         // Only fetch metadata for users we don't have yet
         val missingPubkeys =
             zapSenderPubkeys.filter { pubkey ->
-                localCache.getUserIfExists(pubkey)?.info == null
+                localCache
+                    .getUserIfExists(pubkey)
+                    ?.metadataOrNull()
+                    ?.flow
+                    ?.value == null
             }
         if (missingPubkeys.isEmpty()) {
             return@rememberSubscription null
@@ -449,7 +453,11 @@ fun FeedScreen(
         // Only fetch metadata for users we don't have yet
         val missingPubkeys =
             authorPubkeys.filter { pubkey ->
-                localCache.getUserIfExists(pubkey)?.info == null
+                localCache
+                    .getUserIfExists(pubkey)
+                    ?.metadataOrNull()
+                    ?.flow
+                    ?.value == null
             }
         if (missingPubkeys.isEmpty()) {
             return@rememberSubscription null

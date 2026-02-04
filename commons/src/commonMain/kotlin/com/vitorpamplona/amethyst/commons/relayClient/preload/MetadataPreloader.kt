@@ -41,7 +41,11 @@ class MetadataPreloader(
      */
     fun preloadForUsers(users: Collection<User>) {
         users.forEach { user ->
-            val metadata = user.info
+            val metadata =
+                user
+                    .metadata()
+                    .flow.value
+                    ?.info
             if (metadata != null) {
                 // Already have metadata, prefetch avatar
                 metadata.picture?.let { avatarUrl ->
@@ -58,7 +62,11 @@ class MetadataPreloader(
      * Queue a single user for metadata preloading.
      */
     fun preloadForUser(user: User) {
-        val metadata = user.info
+        val metadata =
+            user
+                .metadata()
+                .flow.value
+                ?.info
         if (metadata != null) {
             metadata.picture?.let { avatarUrl ->
                 imagePrefetcher?.prefetch(avatarUrl)
@@ -73,7 +81,7 @@ class MetadataPreloader(
      * Triggers avatar image prefetch.
      */
     fun onMetadataReceived(user: User) {
-        user.info?.picture?.let { avatarUrl ->
+        user.metadata().flow.value?.info?.picture?.let { avatarUrl ->
             imagePrefetcher?.prefetch(avatarUrl)
         }
     }
@@ -83,7 +91,7 @@ class MetadataPreloader(
      */
     fun prefetchAvatars(users: Collection<User>) {
         users.forEach { user ->
-            user.info?.picture?.let { avatarUrl ->
+            user.metadata().flow.value?.info?.picture?.let { avatarUrl ->
                 imagePrefetcher?.prefetch(avatarUrl)
             }
         }
