@@ -242,7 +242,7 @@ fun DisplayNip05ProfileStatus(
 
                 if (nip05State.nip05.name != "_") {
                     Text(
-                        text = "$user@",
+                        text = "${nip05State.nip05.name}@",
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
                         maxLines = 1,
