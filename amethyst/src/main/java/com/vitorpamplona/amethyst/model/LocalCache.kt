@@ -506,7 +506,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                         }
                     }
 
-                user.updateUserInfo(newUserMetadata, event, fallbackRelay)
+                user.updateUserInfo(newUserMetadata, event)
                 if (relay != null) {
                     user.addRelayBeingUsed(relay, event.createdAt)
                 }

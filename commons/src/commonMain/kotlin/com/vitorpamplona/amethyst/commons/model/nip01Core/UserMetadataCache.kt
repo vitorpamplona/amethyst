@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +41,6 @@ class UserInfo(
 @Stable
 class UserMetadataCache {
     val flow: MutableStateFlow<UserInfo?> = MutableStateFlow(null)
-    var relay: NormalizedRelayUrl? = null
 
     fun newMetadata(
         userInfo: UserMetadata,

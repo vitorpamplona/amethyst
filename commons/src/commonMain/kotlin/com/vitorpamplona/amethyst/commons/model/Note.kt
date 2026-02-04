@@ -230,7 +230,7 @@ open class Note(
 
             return relays.firstOrNull()
         } else {
-            currentOutbox?.firstOrNull() ?: author?.metadataOrNull()?.relay
+            currentOutbox?.firstOrNull() ?: author?.mostUsedRelay()
         }
     }
 

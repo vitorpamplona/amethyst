@@ -110,7 +110,7 @@ class DesktopLocalCache : ICacheProvider {
         if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null) {
-                user.updateUserInfo(newUserMetadata, event, null)
+                user.updateUserInfo(newUserMetadata, event)
             }
         }
     }

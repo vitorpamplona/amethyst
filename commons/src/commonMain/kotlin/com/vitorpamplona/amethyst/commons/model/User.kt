@@ -82,13 +82,19 @@ class User(
 
     fun outboxRelays() = authorRelayList()?.writeRelaysNorm()
 
-    fun relayHints() = authorRelayList()?.writeRelaysNorm()?.take(3) ?: listOfNotNull(metadataOrNull()?.relay)
+    fun relayHints() =
+        authorRelayList()?.writeRelaysNorm()?.take(3) ?: relaysBeingUsed.entries
+            .sortedByDescending { it.value.counter }
+            .take(3)
+            .map { it.key }
 
     fun inboxRelays() = authorRelayList()?.readRelaysNorm()
 
     fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
 
-    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: metadataOrNull()?.relay
+    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: mostUsedRelay()
+
+    fun mostUsedRelay() = relaysBeingUsed.maxByOrNull { it.value.counter }?.key
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
@@ -188,7 +194,6 @@ class User(
     fun updateUserInfo(
         newUserInfo: UserMetadata,
         metaEvent: MetadataEvent,
-        relay: NormalizedRelayUrl?,
     ) {
         newUserInfo.cleanBlankNames()
 
@@ -204,10 +209,6 @@ class User(
         val metadata = metadata()
 
         metadata.newMetadata(newUserInfo, metaEvent)
-
-        if (relay != null) {
-            metadata.relay = relay
-        }
 
         // doesn't create Nip05 unless needed.
         nip05StateOrNull()?.newMetadata(newUserInfo.nip05, metaEvent.pubKey)
