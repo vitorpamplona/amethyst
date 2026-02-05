@@ -81,7 +81,7 @@ class BlockPeopleListState(
             )
         } else {
             PeopleListEvent.create(
-                name = PeopleListEvent.BLOCK_LIST_D_TAG,
+                title = PeopleListEvent.BLOCK_LIST_D_TAG,
                 person = UserTag(pubkeyHex),
                 isPrivate = true,
                 signer = signer,

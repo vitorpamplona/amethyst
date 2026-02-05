@@ -87,7 +87,7 @@ class LabeledBookmarkListsState(
     suspend fun LabeledBookmarkListEvent.toLabeledBookmarkList() =
         LabeledBookmarkList(
             identifier = dTag(),
-            title = nameOrTitle() ?: dTag(),
+            title = titleOrName() ?: dTag(),
             description = description(),
             image = image(),
             privateBookmarks = privateBookmarks(signer)?.toSet() ?: emptySet(),
@@ -160,7 +160,7 @@ class LabeledBookmarkListsState(
     ) {
         val newList =
             LabeledBookmarkListEvent.create(
-                name = listName,
+                title = listName,
                 description = listDescription,
                 image = listImage,
                 publicBookmarks = if (!isBookmarkPrivate && firstBookmark != null) listOf(firstBookmark) else emptyList(),
@@ -200,7 +200,7 @@ class LabeledBookmarkListsState(
         val renamedList =
             LabeledBookmarkListEvent.modifyName(
                 earlierVersion = listEvent,
-                newName = newName,
+                newTitle = newName,
                 signer = account.signer,
             )
         account.sendMyPublicAndPrivateOutbox(renamedList)
@@ -229,7 +229,7 @@ class LabeledBookmarkListsState(
     ) {
         val clonedList =
             LabeledBookmarkListEvent.create(
-                name = customCloneName ?: currentBookmarkList.title,
+                title = customCloneName ?: currentBookmarkList.title,
                 description = customCloneDescription ?: currentBookmarkList.description,
                 publicBookmarks = currentBookmarkList.publicBookmarks.toList(),
                 privateBookmarks = currentBookmarkList.privateBookmarks.toList(),

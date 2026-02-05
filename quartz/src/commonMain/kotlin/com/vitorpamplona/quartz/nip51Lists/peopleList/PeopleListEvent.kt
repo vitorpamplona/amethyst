@@ -61,11 +61,11 @@ class PeopleListEvent(
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)
 
+    @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
-    fun nameOrTitle() = name() ?: title()
+    fun titleOrName() = title() ?: name()
 
-    @Deprecated("NIP-51 has deprecated Title. Use name instead", ReplaceWith("name()"))
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
@@ -103,7 +103,7 @@ class PeopleListEvent(
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(
-            name: String,
+            title: String,
             person: UserTag,
             isPrivate: Boolean,
             signer: NostrSigner,
@@ -112,7 +112,7 @@ class PeopleListEvent(
         ): PeopleListEvent =
             if (isPrivate) {
                 create(
-                    name = name,
+                    title = title,
                     publicMembers = emptyList(),
                     privateMembers = listOf(person),
                     signer = signer,
@@ -121,7 +121,7 @@ class PeopleListEvent(
                 )
             } else {
                 create(
-                    name = name,
+                    title = title,
                     publicMembers = listOf(person),
                     privateMembers = emptyList(),
                     signer = signer,
@@ -249,20 +249,20 @@ class PeopleListEvent(
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(
-            name: String,
+            title: String,
             publicMembers: List<UserTag> = emptyList(),
             privateMembers: List<UserTag> = emptyList(),
             signer: NostrSigner,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
         ): PeopleListEvent {
-            val template = build(name, publicMembers, privateMembers, signer, dTag, createdAt)
+            val template = build(title, publicMembers, privateMembers, signer, dTag, createdAt)
             return signer.sign(template)
         }
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun build(
-            name: String,
+            title: String,
             publicMembers: List<UserTag> = emptyList(),
             privateMembers: List<UserTag> = emptyList(),
             signer: NostrSigner,
@@ -276,7 +276,7 @@ class PeopleListEvent(
         ) {
             dTag(dTag)
             alt(ALT)
-            name(name)
+            title(title)
             peoples(publicMembers)
 
             initializer()
@@ -293,7 +293,7 @@ class PeopleListEvent(
         ): PeopleListEvent {
             val newListTemplate =
                 build(
-                    name = title,
+                    title = title,
                     publicMembers = publicMembers,
                     privateMembers = privateMembers,
                     signer = signer,
@@ -316,7 +316,7 @@ class PeopleListEvent(
         ): PeopleListEvent {
             val cloneTemplate =
                 build(
-                    name = title,
+                    title = title,
                     publicMembers = publicMembers,
                     privateMembers = privateMembers,
                     signer = signer,
@@ -330,14 +330,14 @@ class PeopleListEvent(
         }
 
         suspend fun createListWithUser(
-            name: String,
+            title: String,
             pubKeyHex: String,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): PeopleListEvent =
             create(
-                name = name,
+                title = title,
                 person = UserTag(pubKey = pubKeyHex),
                 isPrivate = isPrivate,
                 signer = signer,

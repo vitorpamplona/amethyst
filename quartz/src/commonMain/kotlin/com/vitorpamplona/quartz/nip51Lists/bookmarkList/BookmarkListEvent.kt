@@ -40,7 +40,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
-import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -62,7 +62,7 @@ class BookmarkListEvent(
 
     override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
 
-    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun countBookmarks() = tags.count(BookmarkIdTag::isTagged)
 
@@ -192,19 +192,19 @@ class BookmarkListEvent(
         }
 
         suspend fun create(
-            name: String = "",
+            title: String = "",
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
             dTag: String = DEFAULT_D_TAG_BOOKMARKS,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): BookmarkListEvent {
-            val template = build(name, publicBookmarks, privateBookmarks, signer, dTag, createdAt)
+            val template = build(title, publicBookmarks, privateBookmarks, signer, dTag, createdAt)
             return signer.sign(template)
         }
 
         suspend fun build(
-            name: String = "",
+            title: String = "",
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
             signer: NostrSigner,
@@ -218,7 +218,7 @@ class BookmarkListEvent(
         ) {
             dTag(dTag)
             alt(ALT)
-            name(name)
+            title(title)
             bookmarks(publicBookmarks)
 
             initializer()

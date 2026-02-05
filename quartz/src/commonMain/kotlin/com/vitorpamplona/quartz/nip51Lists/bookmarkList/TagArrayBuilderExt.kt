@@ -23,7 +23,11 @@ package com.vitorpamplona.quartz.nip51Lists.bookmarkList
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
+@Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
 fun TagArrayBuilder<BookmarkListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
+
+fun TagArrayBuilder<BookmarkListEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
 
 fun TagArrayBuilder<BookmarkListEvent>.bookmarks(bookmarks: List<BookmarkIdTag>) = addAll(bookmarks.map { it.toTagArray() })

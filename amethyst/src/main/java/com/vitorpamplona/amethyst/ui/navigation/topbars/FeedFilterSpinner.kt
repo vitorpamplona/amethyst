@@ -282,7 +282,7 @@ fun RenderOption(
                 val name =
                     when (noteEvent) {
                         is PeopleListEvent -> {
-                            noteEvent.nameOrTitle() ?: option.note.dTag()
+                            noteEvent.titleOrName() ?: option.note.dTag()
                         }
 
                         is FollowListEvent -> {

@@ -37,8 +37,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relaySet
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
-import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.RelayTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -52,7 +52,7 @@ class RelaySetEvent(
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag.Companion::parse)
 
-    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 

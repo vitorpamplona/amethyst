@@ -68,11 +68,12 @@ class LabeledBookmarkListEvent(
 
     override fun linkedAddressIds() = tags.mapNotNull(AddressBookmark::parseAddressId)
 
+    @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun nameOrTitle() = name() ?: title()
+    fun titleOrName() = title() ?: name()
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
@@ -93,7 +94,7 @@ class LabeledBookmarkListEvent(
         fun createBookmarkAddress(pubKey: HexKey) = Address(KIND, pubKey, Uuid.random().toString())
 
         suspend fun create(
-            name: String = "",
+            title: String = "",
             bookmarkIdTag: BookmarkIdTag,
             isPrivate: Boolean,
             optionalListDescription: String? = null,
@@ -102,7 +103,7 @@ class LabeledBookmarkListEvent(
         ): LabeledBookmarkListEvent =
             if (isPrivate) {
                 create(
-                    name = name,
+                    title = title,
                     description = optionalListDescription,
                     publicBookmarks = emptyList(),
                     privateBookmarks = listOf(bookmarkIdTag),
@@ -111,7 +112,7 @@ class LabeledBookmarkListEvent(
                 )
             } else {
                 create(
-                    name = name,
+                    title = title,
                     description = optionalListDescription,
                     publicBookmarks = listOf(bookmarkIdTag),
                     privateBookmarks = emptyList(),
@@ -195,7 +196,7 @@ class LabeledBookmarkListEvent(
 
         suspend fun modifyName(
             earlierVersion: LabeledBookmarkListEvent,
-            newName: String,
+            newTitle: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): LabeledBookmarkListEvent {
@@ -203,9 +204,9 @@ class LabeledBookmarkListEvent(
             val currentTitle = earlierVersion.tags.first { it[0] == NameTag.TAG_NAME || it[0] == TitleTag.TAG_NAME }
             val newTitleTag =
                 if (currentTitle[0] == NameTag.TAG_NAME) {
-                    NameTag.assemble(newName)
+                    NameTag.assemble(newTitle)
                 } else {
-                    TitleTag.assemble(newName)
+                    TitleTag.assemble(newTitle)
                 }
 
             return resign(
@@ -287,7 +288,7 @@ class LabeledBookmarkListEvent(
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun create(
-            name: String = "",
+            title: String = "",
             description: String? = null,
             image: String? = null,
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
@@ -297,7 +298,7 @@ class LabeledBookmarkListEvent(
             createdAt: Long = TimeUtils.now(),
         ): LabeledBookmarkListEvent {
             val template =
-                build(name, publicBookmarks, privateBookmarks, signer, dTag, createdAt) {
+                build(title, publicBookmarks, privateBookmarks, signer, dTag, createdAt) {
                     if (description != null) description(description)
                     if (image != null) image(image)
                 }
@@ -306,7 +307,7 @@ class LabeledBookmarkListEvent(
 
         @OptIn(ExperimentalUuidApi::class)
         suspend fun build(
-            name: String = "",
+            title: String = "",
             publicBookmarks: List<BookmarkIdTag> = emptyList(),
             privateBookmarks: List<BookmarkIdTag> = emptyList(),
             signer: NostrSigner,
@@ -320,7 +321,7 @@ class LabeledBookmarkListEvent(
         ) {
             dTag(dTag)
             alt(ALT)
-            name(name)
+            title(title)
             bookmarks(publicBookmarks)
 
             initializer()

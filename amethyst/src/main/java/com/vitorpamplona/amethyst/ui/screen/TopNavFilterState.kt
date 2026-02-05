@@ -316,7 +316,7 @@ class PeopleListName(
     override fun name(): String {
         val noteEvent = note.event
         return if (noteEvent is PeopleListEvent) {
-            noteEvent.nameOrTitle() ?: note.dTag()
+            noteEvent.titleOrName() ?: note.dTag()
         } else if (noteEvent is FollowListEvent) {
             noteEvent.title() ?: note.dTag()
         } else {

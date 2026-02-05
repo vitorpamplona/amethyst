@@ -25,8 +25,12 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
+@Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
 fun TagArrayBuilder<PeopleListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
+
+fun TagArrayBuilder<PeopleListEvent>.title(name: String) = addUnique(TitleTag.assemble(name))
 
 fun TagArrayBuilder<PeopleListEvent>.description(desc: String) = addUnique(DescriptionTag.assemble(desc))
 
