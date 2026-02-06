@@ -28,13 +28,10 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -57,8 +54,6 @@ class User(
     private var reports: UserReportCache? = null
     private var cards: UserCardsCache? = null
     private var nip05: UserNip05Cache? = null
-
-    var latestContactList: ContactListEvent? = null
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -127,20 +122,6 @@ class User(
             ?.value
             ?.info
             ?.lnAddress()
-
-    fun updateContactList(event: ContactListEvent): Set<HexKey> {
-        if (event.id == latestContactList?.id) return emptySet()
-
-        val oldContactListEvent = latestContactList
-        latestContactList = event
-
-        // Update following of the current user
-        flowSet?.follows?.invalidateData()
-
-        val affectedUsers = event.verifiedFollowKeySet() + (oldContactListEvent?.verifiedFollowKeySet() ?: emptySet())
-
-        return affectedUsers
-    }
 
     fun addZap(
         zapRequest: Note,
@@ -213,10 +194,6 @@ class User(
         // doesn't create Nip05 unless needed.
         nip05StateOrNull()?.newMetadata(newUserInfo.nip05, metaEvent.pubKey)
     }
-
-    fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
-
-    fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
     fun reportsOrNull(): UserReportCache? = reports
 
@@ -322,16 +299,12 @@ class UserFlowSet(
     u: User,
 ) {
     // Observers line up here.
-    val follows = UserBundledRefresherFlow(u)
-    val followers = UserBundledRefresherFlow(u)
     val usedRelays = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
-        follows.hasObservers() ||
-            followers.hasObservers() ||
-            usedRelays.hasObservers() ||
+        usedRelays.hasObservers() ||
             zaps.hasObservers() ||
             statuses.hasObservers()
 }

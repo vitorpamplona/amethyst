@@ -23,15 +23,66 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.stateIn
 
 @Stable
 class UserProfileFollowsUserFeedViewModel(
     val user: User,
     val account: Account,
-) : UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
+) : ViewModel() {
+    val contactList = account.cache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
+
+    val sortingModel: Comparator<User> =
+        compareBy(
+            { !account.isFollowing(it) },
+            { it.pubkeyHex },
+        )
+
+    fun ContactListEvent.convertNonHiddenToUsers(): List<User> {
+        val nonHiddenFollows = verifiedFollowKeySet().filter { !account.isHidden(it) }
+        return LocalCache.load(nonHiddenFollows).sortedWith(sortingModel)
+    }
+
+    val followsFlow: StateFlow<List<User>> =
+        contactList
+            .flow()
+            .metadata.stateFlow
+            .sample(200)
+            .map { noteState ->
+                (noteState.note.event as? ContactListEvent)?.convertNonHiddenToUsers() ?: emptyList()
+            }.onStart {
+                emit(
+                    (contactList.event as? ContactListEvent)?.convertNonHiddenToUsers() ?: emptyList(),
+                )
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                initialValue = emptyList(),
+                started = SharingStarted.Lazily,
+            )
+
+    val followCount =
+        followsFlow
+            .map { it.size }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                initialValue = 0,
+                started = SharingStarted.Lazily,
+            )
+
     class Factory(
         val user: User,
         val account: Account,

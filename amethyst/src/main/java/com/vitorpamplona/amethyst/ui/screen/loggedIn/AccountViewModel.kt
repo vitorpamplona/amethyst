@@ -99,6 +99,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -295,16 +296,6 @@ class AccountViewModel(
     fun isWriteable(): Boolean = account.isWriteable()
 
     fun userProfile(): User = account.userProfile()
-
-    fun <T : Event> observeByETag(
-        kind: Int,
-        eTag: HexKey,
-    ): StateFlow<T?> = LocalCache.observeETag<T>(kind = kind, eventId = eTag, viewModelScope).latest
-
-    fun <T : Event> observeByAuthor(
-        kind: Int,
-        pubkeyHex: HexKey,
-    ): StateFlow<T?> = LocalCache.observeAuthor<T>(kind = kind, pubkey = pubkeyHex, viewModelScope).latest
 
     fun reactToOrDelete(
         note: Note,
@@ -766,6 +757,8 @@ class AccountViewModel(
     ) = launchSigner { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
 
     fun removeFromMediaGallery(note: Note) = launchSigner { account.removeFromGallery(note) }
+
+    fun follows(user: User): Note = LocalCache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
 
     fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 

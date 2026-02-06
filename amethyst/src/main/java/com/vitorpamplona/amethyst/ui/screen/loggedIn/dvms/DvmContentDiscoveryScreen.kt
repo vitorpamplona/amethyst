@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.SimpleImage75Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
@@ -177,13 +178,17 @@ fun ObserverContentDiscoveryResponse(
 
     val resultFlow =
         remember(dvmRequestId) {
-            accountViewModel.observeByETag<NIP90ContentDiscoveryResponseEvent>(
-                NIP90ContentDiscoveryResponseEvent.KIND,
-                dvmRequestId.idHex,
-            )
+            accountViewModel.account.cache
+                .observeLatestEvent<NIP90ContentDiscoveryResponseEvent>(
+                    Filter(
+                        kinds = listOf(NIP90ContentDiscoveryResponseEvent.KIND),
+                        tags = mapOf("e" to listOf(dvmRequestId.idHex)),
+                        limit = 1,
+                    ),
+                )
         }
 
-    val latestResponse by resultFlow.collectAsStateWithLifecycle()
+    val latestResponse by resultFlow.collectAsStateWithLifecycle(null)
     val myResponse = latestResponse
 
     if (myResponse != null) {
@@ -214,10 +219,17 @@ fun ObserverDvmStatusResponse(
 ) {
     val statusFlow =
         remember(dvmRequestId) {
-            accountViewModel.observeByETag<NIP90StatusEvent>(NIP90StatusEvent.KIND, dvmRequestId)
+            accountViewModel.account.cache
+                .observeLatestEvent<NIP90StatusEvent>(
+                    Filter(
+                        kinds = listOf(NIP90StatusEvent.KIND),
+                        tags = mapOf("e" to listOf(dvmRequestId)),
+                        limit = 1,
+                    ),
+                )
         }
 
-    val latestStatus by statusFlow.collectAsStateWithLifecycle()
+    val latestStatus by statusFlow.collectAsStateWithLifecycle(null)
 
     // TODO: Make a good splash screen with loading animation for this DVM.
     if (latestStatus != null) {

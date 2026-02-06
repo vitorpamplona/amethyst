@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
@@ -45,7 +46,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
-import com.vitorpamplona.amethyst.ui.note.elements.WatchBookmarksFollowsAndAccount
+import com.vitorpamplona.amethyst.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -106,18 +107,16 @@ fun BookmarkGroupItemOptionsMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
 
-    var state by remember {
-        mutableStateOf(
-            DropDownParams(
-                isFollowingAuthor = false,
-                isPrivateBookmarkNote = false,
-                isPublicBookmarkNote = false,
-                isLoggedUser = false,
-                isSensitive = false,
-                showSensitiveContent = null,
-            ),
-        )
-    }
+    val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
+        DropDownParams(
+            isFollowingAuthor = false,
+            isPrivateBookmarkNote = false,
+            isPublicBookmarkNote = false,
+            isLoggedUser = false,
+            isSensitive = false,
+            showSensitiveContent = null,
+        ),
+    )
 
     val wantsToEditPost =
         remember {
@@ -148,14 +147,7 @@ fun BookmarkGroupItemOptionsMenu(
         onDismissRequest = onDismiss,
     ) {
         val clipboardManager = LocalClipboardManager.current
-        val appContext = LocalContext.current.applicationContext
         val actContext = LocalContext.current
-
-        WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
-            if (state != newState) {
-                state = newState
-            }
-        }
 
         val scope = rememberCoroutineScope()
         DropdownMenuItem(

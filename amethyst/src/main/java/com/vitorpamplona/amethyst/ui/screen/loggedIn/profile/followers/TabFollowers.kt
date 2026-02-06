@@ -22,38 +22,42 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowers
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
-import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.dal.UserProfileFollowersUserFeedViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun TabFollowers(
-    baseUser: User,
-    feedViewModel: UserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchFollowerChanges(baseUser, feedViewModel, accountViewModel)
-
     Column(Modifier.fillMaxHeight()) {
-        RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
+        val items by followersFeedViewModel.followersFlow.collectAsStateWithLifecycle()
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = FeedPadding,
+            state = rememberLazyListState(),
+        ) {
+            itemsIndexed(items, key = { _, item -> item.pubkeyHex }) { _, item ->
+                UserCompose(item, accountViewModel = accountViewModel, nav = nav)
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
+            }
+        }
     }
-}
-
-@Composable
-private fun WatchFollowerChanges(
-    baseUser: User,
-    feedViewModel: UserFeedViewModel,
-    accountViewModel: AccountViewModel,
-) {
-    val userState by observeUserFollowers(baseUser, accountViewModel)
-
-    LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }

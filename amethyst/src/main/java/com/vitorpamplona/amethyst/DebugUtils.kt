@@ -147,10 +147,8 @@ fun debugState(context: Context) {
     )
     Log.d(
         STATE_DUMP_TAG,
-        "Observable Events: " +
-            LocalCache.observablesByKindAndETag.size +
-            " / " +
-            LocalCache.observablesByKindAndAuthor.size,
+        "Observables: " +
+            LocalCache.observables.size,
     )
 
     Log.d(

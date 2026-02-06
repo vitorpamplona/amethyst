@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -52,14 +52,19 @@ class Kind3FollowListState(
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val user = cache.getOrCreateUser(signer.pubKey)
 
-    fun getFollowListFlow(): StateFlow<UserState> = user.flow().follows.stateFlow
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val note = cache.getOrCreateAddressableNote(getFollowListAddress())
 
-    fun getFollowListEvent(): ContactListEvent? = user.latestContactList
+    fun getFollowListAddress() = ContactListEvent.createAddress(signer.pubKey)
+
+    fun getFollowListFlow(): StateFlow<NoteState> = note.flow().metadata.stateFlow
+
+    fun getFollowListEvent(): ContactListEvent? = note.event as? ContactListEvent
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val innerFlow: Flow<Kind3Follows> =
         getFollowListFlow().transformLatest {
-            emit(buildKind3Follows(it.user.latestContactList ?: settings.backupContactList))
+            emit(buildKind3Follows(it.note.event as? ContactListEvent ?: settings.backupContactList))
         }
 
     val flow =
@@ -149,7 +154,9 @@ class Kind3FollowListState(
             Log.d("AccountRegisterObservers", "Kind 3 Collector Start")
             getFollowListFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating Kind 3 ${signer.pubKey}")
-                settings.updateContactListTo(it.user.latestContactList)
+                (it.note.event as? ContactListEvent)?.let {
+                    settings.updateContactListTo(it)
+                }
             }
         }
     }

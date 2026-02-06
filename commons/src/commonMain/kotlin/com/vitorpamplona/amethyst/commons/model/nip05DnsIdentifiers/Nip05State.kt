@@ -50,9 +50,7 @@ sealed interface Nip05State {
         fun reset() = verificationState.tryEmit(Nip05VerifState.NotStarted)
 
         suspend fun checkAndUpdate(nip05Client: Nip05Client) {
-            println("AABBCC checkAndUpdate $nip05")
             if (verificationState.value.isExpired()) {
-                println("AABBCC Veryfing $nip05")
                 markAsVerifying()
                 try {
                     if (nip05Client.verify(nip05, hexKey)) {

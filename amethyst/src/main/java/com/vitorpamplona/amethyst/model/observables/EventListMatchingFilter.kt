@@ -22,48 +22,47 @@ package com.vitorpamplona.amethyst.model.observables
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.Observable
+import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import java.util.SortedSet
 
-class LatestByKindWithETag<T : Event>(
-    private val kind: Int,
-    private val eTag: String,
-) {
-    private val _latest = MutableStateFlow<T?>(null)
-    val latest = _latest.asStateFlow()
+/**
+ * Creates a list of events (regular and addressable)
+ * that is updated every time a new event that matches
+ * the filter is received, including addressables.
+ */
+class EventListMatchingFilter(
+    private val filter: Filter,
+    private val cache: LocalCache,
+    private val update: (List<Event>) -> Unit,
+) : Observable {
+    // Keeping this here blocks it from being cleared from memory
+    var currentResults: SortedSet<Note> = sortedSetOf<Note>(DefaultFeedOrder)
 
-    fun matches(event: T) = event.kind == kind && event.isTaggedEvent(eTag)
-
-    fun updateIfMatches(event: T) {
-        if (matches(event)) {
-            if (event.createdAt > (_latest.value?.createdAt ?: 0)) {
-                _latest.tryEmit(event)
+    override fun new(
+        event: Event,
+        note: Note,
+    ) {
+        if (filter.match(event)) {
+            currentResults.add(note)
+            val limit = filter.limit
+            if (limit != null && currentResults.size > limit) {
+                currentResults.remove(currentResults.last())
             }
+            update(currentResults.mapNotNull { it.event })
         }
     }
 
-    fun canDelete(): Boolean = _latest.subscriptionCount.value == 0
-
-    fun restart() {
-        val latestNote =
-            LocalCache.notes
-                .maxOrNullOf(
-                    filter = { idHex: String, note: Note ->
-                        note.event?.let {
-                            it.kind == kind && it.isTaggedEvent(eTag)
-                        } == true
-                    },
-                    comparator = CreatedAtComparator,
-                )?.event as? T
-
-        if (_latest.value != latestNote) {
-            _latest.tryEmit(latestNote)
+    override fun remove(note: Note) {
+        if (currentResults.remove(note)) {
+            update(currentResults.mapNotNull { it.event })
         }
     }
 
-    suspend fun init() {
-        restart()
+    fun init() {
+        currentResults = cache.filter(filter)
+        update(currentResults.mapNotNull { it.event })
     }
 }

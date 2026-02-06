@@ -27,7 +27,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,8 +41,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarks
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollows
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -62,6 +59,9 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 @Composable
@@ -111,18 +111,16 @@ fun NoteDropDownMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
 
-    var state by remember {
-        mutableStateOf(
-            DropDownParams(
-                isFollowingAuthor = false,
-                isPrivateBookmarkNote = false,
-                isPublicBookmarkNote = false,
-                isLoggedUser = false,
-                isSensitive = false,
-                showSensitiveContent = null,
-            ),
-        )
-    }
+    val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
+        DropDownParams(
+            isFollowingAuthor = false,
+            isPrivateBookmarkNote = false,
+            isPublicBookmarkNote = false,
+            isLoggedUser = false,
+            isSensitive = false,
+            showSensitiveContent = null,
+        ),
+    )
 
     val wantsToEditPost =
         remember {
@@ -153,14 +151,7 @@ fun NoteDropDownMenu(
         onDismissRequest = onDismiss,
     ) {
         val clipboardManager = LocalClipboardManager.current
-        val appContext = LocalContext.current.applicationContext
         val actContext = LocalContext.current
-
-        WatchBookmarksFollowsAndAccount(note, accountViewModel) { newState ->
-            if (state != newState) {
-                state = newState
-            }
-        }
 
         val scope = rememberCoroutineScope()
 
@@ -374,30 +365,33 @@ fun NoteDropDownMenu(
 }
 
 @Composable
-fun WatchBookmarksFollowsAndAccount(
+fun observeBookmarksFollowsAndAccount(
     note: Note,
     accountViewModel: AccountViewModel,
-    onNew: (DropDownParams) -> Unit,
-) {
-    val followState by observeUserFollows(accountViewModel.userProfile(), accountViewModel)
-    val bookmarkState by observeUserBookmarks(accountViewModel.userProfile(), accountViewModel)
-    val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
-
-    LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-        val newState =
+) = remember(note) {
+    combine(
+        accountViewModel.account.kind3FollowList.flow,
+        accountViewModel.account.bookmarkState.bookmarks,
+        accountViewModel.showSensitiveContent(),
+    ) { follows, bookmarks, showSensitiveContent ->
+        DropDownParams(
+            isFollowingAuthor = note.author?.pubkeyHex in follows.authors,
+            isPrivateBookmarkNote = note in bookmarks.private,
+            isPublicBookmarkNote = note in bookmarks.public,
+            isLoggedUser = accountViewModel.isLoggedUser(note.author),
+            isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
+            showSensitiveContent = showSensitiveContent,
+        )
+    }.onStart {
+        emit(
             DropDownParams(
-                isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                isPrivateBookmarkNote = accountViewModel.account.bookmarkState.isInPrivateBookmarks(note),
-                isPublicBookmarkNote = accountViewModel.account.bookmarkState.isInPublicBookmarks(note),
+                isFollowingAuthor = note.author?.pubkeyHex?.let { accountViewModel.account.isFollowing(it) } ?: false,
+                isPrivateBookmarkNote = note in accountViewModel.account.bookmarkState.bookmarks.value.private,
+                isPublicBookmarkNote = note in accountViewModel.account.bookmarkState.bookmarks.value.public,
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
-                showSensitiveContent = showSensitiveContent,
-            )
-
-        launch(Dispatchers.Main) {
-            onNew(
-                newState,
-            )
-        }
-    }
+                showSensitiveContent = accountViewModel.showSensitiveContent().value,
+            ),
+        )
+    }.flowOn(Dispatchers.IO)
 }
