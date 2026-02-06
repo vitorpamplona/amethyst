@@ -49,7 +49,7 @@ class UserMetadataState(
 
     fun getUserMetadataFlow() = note.flow().metadata.stateFlow
 
-    fun getUserMetadataEvent(): MetadataEvent? = note.event as MetadataEvent?
+    fun getUserMetadataEvent(): MetadataEvent? = note.event as? MetadataEvent
 
     suspend fun sendNewUserMetadata(
         name: String? = null,
