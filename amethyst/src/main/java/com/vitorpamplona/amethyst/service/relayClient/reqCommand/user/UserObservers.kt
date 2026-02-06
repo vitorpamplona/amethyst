@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
@@ -555,21 +554,7 @@ fun observeUserStatuses(
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .statuses
-                .stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    LocalCache.findStatusesForUser(userState.user)
-                }.distinctUntilChanged()
-                .flowOn(Dispatchers.IO)
-        }
-
-    return flow.collectAsStateWithLifecycle(persistentListOf())
+    return user.statusState().statuses.collectAsStateWithLifecycle(persistentListOf())
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)

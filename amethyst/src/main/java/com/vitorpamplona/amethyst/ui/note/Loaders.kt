@@ -38,14 +38,11 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -108,17 +105,6 @@ fun LoadAddressableNote(
     }
 
     content(note)
-}
-
-@Composable
-fun LoadStatuses(
-    user: User,
-    accountViewModel: AccountViewModel,
-    content: @Composable (ImmutableList<AddressableNote>) -> Unit,
-) {
-    val userStatuses by observeUserStatuses(user, accountViewModel)
-
-    content(userStatuses)
 }
 
 @Composable

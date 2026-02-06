@@ -97,12 +97,12 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
@@ -274,15 +274,15 @@ private fun EditStatusBoxes(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
-        if (statuses.isEmpty()) {
-            StatusEditBar(accountViewModel = accountViewModel, nav = nav)
-        } else {
-            statuses.forEach {
-                val noteStatus by observeNote(it, accountViewModel)
+    val statuses by observeUserStatuses(baseAccountUser, accountViewModel)
 
-                StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
-            }
+    if (statuses.isEmpty()) {
+        StatusEditBar(accountViewModel = accountViewModel, nav = nav)
+    } else {
+        statuses.forEach {
+            val noteStatus by observeNote(it, accountViewModel)
+
+            StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
         }
     }
 }

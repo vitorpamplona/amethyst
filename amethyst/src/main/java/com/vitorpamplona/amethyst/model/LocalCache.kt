@@ -133,7 +133,6 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
@@ -198,8 +197,6 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -1224,33 +1221,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+        val note = event.toAddressableNote()
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
 
-        val isVerified =
-            if (version.event == null && (wasVerified || justVerify(event))) {
-                version.loadEvent(event, author, emptyList())
-                version.moveAllReferencesTo(note)
-                true
-            } else {
-                wasVerified
-            }
-
-        // Already processed this event.
-        if (note.event?.id == event.id) return false
-
-        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
-            note.loadEvent(event, author, emptyList())
-
-            author.flowSet?.statuses?.invalidateData()
-
-            refreshNewNoteObservers(note)
-
-            return true
+        if (new) {
+            author.statusState().addStatus(note)
         }
 
-        return false
+        return new
     }
 
     fun Event.toNote() = getOrCreateNote(id)
@@ -1511,6 +1490,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (deleteNote is AddressableNote && deletedEvent is ContactCardEvent) {
             getUserIfExists(deletedEvent.aboutUser())?.cardsOrNull()?.removeCard(deleteNote)
+        }
+
+        if (deleteNote is AddressableNote && deletedEvent is StatusEvent) {
+            deleteNote.author?.statusStateOrNull()?.removeStatus(deleteNote)
         }
 
         if (deletedEvent is TorrentCommentEvent) {
@@ -2308,23 +2291,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
 
-    fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
-        checkNotInMainThread()
-
-        return addressables
-            .filter { _, it ->
-                val noteEvent = it.event
-                (
-                    noteEvent is StatusEvent &&
-                        noteEvent.pubKey == user.pubkeyHex &&
-                        !noteEvent.isExpired() &&
-                        noteEvent.content.isNotBlank()
-                )
-            }.sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt }, { it.idHex }))
-            .reversed()
-            .toImmutableList()
-    }
-
     suspend fun findEarliestOtsForNote(
         note: Note,
         otsVerifCache: VerificationStateCache,
@@ -2628,8 +2594,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 getAddressableNoteIfExists(it.address)?.removeReport(note)
             }
         }
+
         if (note is AddressableNote && noteEvent is ContactCardEvent) {
             getUserIfExists(noteEvent.aboutUser())?.cardsOrNull()?.removeCard(note)
+        }
+
+        if (note is AddressableNote && noteEvent is StatusEvent) {
+            note.author?.statusStateOrNull()?.removeStatus(note)
         }
 
         note.clearFlow()

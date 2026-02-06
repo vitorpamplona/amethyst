@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cache
+import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
@@ -54,6 +55,7 @@ class User(
     private var reports: UserReportCache? = null
     private var cards: UserCardsCache? = null
     private var nip05: UserNip05Cache? = null
+    private var status: UserStatusCache? = null
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -218,6 +220,10 @@ class User(
             }
         }
 
+    fun statusStateOrNull(): UserStatusCache? = status
+
+    fun statusState(): UserStatusCache = status ?: UserStatusCache().also { status = it }
+
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false
 
@@ -301,12 +307,10 @@ class UserFlowSet(
     // Observers line up here.
     val usedRelays = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
-    val statuses = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
         usedRelays.hasObservers() ||
-            zaps.hasObservers() ||
-            statuses.hasObservers()
+            zaps.hasObservers()
 }
 
 @Immutable
