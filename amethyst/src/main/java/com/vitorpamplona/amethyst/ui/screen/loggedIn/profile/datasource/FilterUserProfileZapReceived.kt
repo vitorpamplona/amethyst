@@ -45,7 +45,7 @@ fun filterUserProfileZapsReceived(
                 Filter(
                     kinds = UserProfileZapReceiverKinds,
                     tags = mapOf("p" to listOf(user.pubkeyHex)),
-                    limit = 200,
+                    limit = 1000,
                     since = since?.get(relay)?.time,
                 ),
         )
