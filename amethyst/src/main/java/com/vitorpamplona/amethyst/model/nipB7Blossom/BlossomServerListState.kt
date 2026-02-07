@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nipB7Blossom
 
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.stateIn
 
 class BlossomServerListState(
     val signer: NostrSigner,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
