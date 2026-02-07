@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.LruCache
+import androidx.collection.LruCache
 
 interface MutableMediaAspectRatioCache {
     fun get(url: String): Float?
