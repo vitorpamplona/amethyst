@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip02FollowList
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.json.JsonNull.content
 
 @Stable
 class ContactListEvent(
@@ -44,7 +45,7 @@ class ContactListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
 
