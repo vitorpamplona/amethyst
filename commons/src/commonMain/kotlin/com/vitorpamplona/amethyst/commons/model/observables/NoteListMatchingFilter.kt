@@ -18,26 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.observables
+package com.vitorpamplona.amethyst.commons.model.observables
 
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.Observable
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import java.util.SortedSet
 import java.util.concurrent.ConcurrentSkipListSet
+import kotlin.collections.toList
 
 /**
- * Creates a list of events (regular and addressable)
- * that is updated every time a new event that matches
- * the filter is received, including addressables.
+ * Creates a list of notes (regular and addressable)
+ * that only gets updated when a new note appears.
+ *
+ * New versions of addressables do not update the list
  */
-class EventListMatchingFilter(
+class NoteListMatchingFilter(
     private val filter: Filter,
-    private val cache: LocalCache,
-    private val update: (List<Event>) -> Unit,
+    private val atOnce: (filter: Filter) -> SortedSet<Note>,
+    private val update: (List<Note>) -> Unit,
 ) : Observable {
-    // Keeping this here blocks it from being cleared from memory
     var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
 
     override fun new(
@@ -45,24 +45,25 @@ class EventListMatchingFilter(
         note: Note,
     ) {
         if (filter.match(event)) {
-            currentResults.add(note)
-            val limit = filter.limit
-            if (limit != null && currentResults.size > limit) {
-                currentResults.remove(currentResults.last())
-            }
+            if (currentResults.add(note)) {
+                val limit = filter.limit
+                if (limit != null && currentResults.size > limit) {
+                    currentResults.remove(currentResults.last())
+                }
 
-            update(currentResults.mapNotNull { it.event })
+                update(currentResults.toList())
+            }
         }
     }
 
     override fun remove(note: Note) {
         if (currentResults.remove(note)) {
-            update(currentResults.mapNotNull { it.event })
+            update(currentResults.toList())
         }
     }
 
     fun init() {
-        currentResults = ConcurrentSkipListSet(cache.filter(filter))
-        update(currentResults.mapNotNull { it.event })
+        currentResults = ConcurrentSkipListSet(atOnce(filter))
+        update(currentResults.toList())
     }
 }

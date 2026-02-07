@@ -28,13 +28,14 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
+import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.observables.CreatedAtIdHexComparator
-import com.vitorpamplona.amethyst.model.observables.EventListMatchingFilter
-import com.vitorpamplona.amethyst.model.observables.NoteListMatchingFilter
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
@@ -221,15 +222,6 @@ interface ILocalCache {
     ) {}
 }
 
-interface Observable {
-    fun new(
-        event: Event,
-        note: Note,
-    )
-
-    fun remove(note: Note)
-}
-
 object LocalCache : ILocalCache, ICacheProvider {
     val antiSpam = AntiSpamFilter()
 
@@ -313,7 +305,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun observeNotes(filter: Filter): Flow<List<Note>> =
         callbackFlow {
             val newFilter =
-                NoteListMatchingFilter(filter, this@LocalCache) {
+                NoteListMatchingFilter(filter, this@LocalCache::filter) {
                     trySend(it)
                 }
 
@@ -329,7 +321,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun observeEvents(filter: Filter): Flow<List<Event>> =
         callbackFlow {
             val cachedFilter =
-                EventListMatchingFilter(filter, this@LocalCache) {
+                EventListMatchingFilter(filter, this@LocalCache::filter) {
                     trySend(it)
                 }
 
