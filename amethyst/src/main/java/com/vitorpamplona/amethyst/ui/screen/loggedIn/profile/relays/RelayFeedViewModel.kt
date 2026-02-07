@@ -80,7 +80,6 @@ class RelayFeedViewModel :
             .map { relay ->
                 val info = relayState?.get(relay)
                 if (info != null) {
-                    println("AABBCC convert() relays: ${relay.url} ${info.counter}")
                     MyRelayInfo(relay, info.lastEvent, info.counter)
                 } else {
                     MyRelayInfo(relay, 0, 0)

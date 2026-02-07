@@ -22,23 +22,39 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
 @Composable
 fun TabReceivedZaps(
     baseUser: User,
-    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel, accountViewModel)
-
     Column(Modifier.fillMaxHeight()) {
-        LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
+        val feedState by zapFeedViewModel.receivedZapAmountsByUser.collectAsStateWithLifecycle()
+
+        LazyColumn(
+            contentPadding = FeedPadding,
+            state = rememberLazyListState(),
+        ) {
+            itemsIndexed(feedState, key = { _, item -> item.user.pubkeyHex }) { _, item ->
+                ZapNoteCompose(item, accountViewModel = accountViewModel, nav = nav)
+                HorizontalDivider(thickness = DividerThickness)
+            }
+        }
     }
 }

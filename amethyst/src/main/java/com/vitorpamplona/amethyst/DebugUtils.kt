@@ -98,8 +98,6 @@ fun debugState(context: Context) {
     Log.d(
         STATE_DUMP_TAG,
         "Users: " +
-            LocalCache.users.filter { _, it -> it.flowSet != null }.size +
-            " / " +
             LocalCache.users.filter { _, it -> it.metadataOrNull() != null }.size +
             " / " +
             LocalCache.users.size(),

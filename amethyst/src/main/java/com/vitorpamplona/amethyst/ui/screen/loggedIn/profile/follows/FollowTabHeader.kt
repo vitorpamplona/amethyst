@@ -23,18 +23,18 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowCount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun FollowTabHeader(
-    baseUser: User,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val followCount by observeUserFollowCount(baseUser, accountViewModel)
+    val followCount by followsFeedViewModel.followCount.collectAsStateWithLifecycle()
 
     val text =
         if (followCount > 0) {

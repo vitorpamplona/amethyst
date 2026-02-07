@@ -35,11 +35,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
-import java.math.BigDecimal
 
 interface UserDependencies
 
@@ -57,11 +55,6 @@ class User(
     private var nip05: UserNip05Cache? = null
     private var status: UserStatusCache? = null
     private var relays: UserRelaysCache? = null
-
-    var zaps = mapOf<Note, Note?>()
-        private set
-
-    var flowSet: UserFlowSet? = null
 
     fun pubkey() = Hex.decode(pubkeyHex)
 
@@ -100,38 +93,6 @@ class User(
     fun profilePicture(): String? = metadataOrNull()?.profilePicture()
 
     fun lnAddress(): String? = metadataOrNull()?.lnAddress()
-
-    fun addZap(
-        zapRequest: Note,
-        zap: Note?,
-    ) {
-        if (zaps[zapRequest] == null) {
-            zaps = zaps + Pair(zapRequest, zap)
-            flowSet?.zaps?.invalidateData()
-        }
-    }
-
-    fun removeZap(zapRequestOrZapEvent: Note) {
-        if (zaps.containsKey(zapRequestOrZapEvent)) {
-            zaps = zaps.minus(zapRequestOrZapEvent)
-            flowSet?.zaps?.invalidateData()
-        } else if (zaps.containsValue(zapRequestOrZapEvent)) {
-            zaps = zaps.filter { it.value != zapRequestOrZapEvent }
-            flowSet?.zaps?.invalidateData()
-        }
-    }
-
-    fun zappedAmount(): BigDecimal {
-        var amount = BigDecimal.ZERO
-        zaps.forEach {
-            val itemValue = (it.value?.event as? LnZapEvent)?.amount
-            if (itemValue != null) {
-                amount += itemValue
-            }
-        }
-
-        return amount
-    }
 
     fun addRelayBeingUsed(
         relay: NormalizedRelayUrl,
@@ -186,46 +147,7 @@ class User(
 
         return metadataOrNull()?.containsAny(hiddenWordsCase) == true
     }
-
-    @Synchronized
-    fun createOrDestroyFlowSync(create: Boolean) {
-        if (create) {
-            if (flowSet == null) {
-                flowSet = UserFlowSet(this)
-            }
-        } else {
-            if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet = null
-            }
-        }
-    }
-
-    fun flow(): UserFlowSet {
-        if (flowSet == null) {
-            createOrDestroyFlowSync(true)
-        }
-        return flowSet!!
-    }
-
-    fun clearFlow() {
-        if (flowSet != null && flowSet?.isInUse() == false) {
-            createOrDestroyFlowSync(false)
-        }
-    }
 }
-
-@Stable
-class UserFlowSet(
-    u: User,
-) {
-    val zaps = UserBundledRefresherFlow(u)
-
-    fun isInUse(): Boolean = zaps.hasObservers()
-}
-
-// Re-export from commons.state for backwards compatibility
-typealias UserBundledRefresherFlow = com.vitorpamplona.amethyst.commons.state.UserMetadataState
-typealias UserState = com.vitorpamplona.amethyst.commons.state.UserState
 
 fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
 

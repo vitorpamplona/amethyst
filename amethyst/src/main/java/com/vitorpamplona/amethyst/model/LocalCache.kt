@@ -1852,13 +1852,11 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
             val author = getOrCreateUser(event.pubKey)
-            val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
             val repliesTo = computeReplyTo(event)
 
             note.loadEvent(event, author, repliesTo)
 
             repliesTo.forEach { it.addZap(zapRequest, note) }
-            mentions.forEach { it.addZap(zapRequest, note) }
 
             refreshNewNoteObservers(note)
 
@@ -1886,7 +1884,6 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.loadEvent(event, author, repliesTo)
 
             repliesTo.forEach { it.addZap(note, null) }
-            mentions.forEach { it.addZap(note, null) }
 
             refreshNewNoteObservers(note)
 
@@ -2365,7 +2362,6 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun cleanObservers() {
         notes.forEach { _, it -> it.clearFlow() }
         addressables.forEach { _, it -> it.clearFlow() }
-        users.forEach { _, it -> it.clearFlow() }
     }
 
     fun pruneHiddenMessagesChannel(
@@ -2559,18 +2555,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         val noteEvent = note.event
 
-        if (noteEvent is LnZapEvent) {
-            noteEvent.zappedAuthor().forEach {
-                val author = getUserIfExists(it)
-                author?.removeZap(note)
-            }
-        }
-        if (noteEvent is LnZapRequestEvent) {
-            noteEvent.zappedAuthor().mapNotNull {
-                val author = getUserIfExists(it)
-                author?.removeZap(note)
-            }
-        }
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
                 getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(note)
@@ -2792,7 +2776,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
     }
 
-    private fun checkDeletionAndConsume(
+    fun checkDeletionAndConsume(
         event: Event,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,

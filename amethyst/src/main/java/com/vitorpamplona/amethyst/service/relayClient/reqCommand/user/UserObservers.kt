@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -51,7 +50,6 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
-import java.math.BigDecimal
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
@@ -175,37 +173,6 @@ fun observeUserPicture(
             ?.value
             ?.info
             ?.picture,
-    )
-}
-
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-@Composable
-fun observeUserFollowCount(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<Int> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    val note =
-        remember(user) {
-            accountViewModel.follows(user)
-        }
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            note
-                .flow()
-                .metadata.stateFlow
-                .mapLatest { noteState ->
-                    (noteState.note.event as? ContactListEvent)?.followCount() ?: 0
-                }.distinctUntilChanged()
-                .flowOn(Dispatchers.IO)
-        }
-
-    return flow.collectAsStateWithLifecycle(
-        (note.event as? ContactListEvent)?.followCount() ?: 0,
     )
 }
 
@@ -438,46 +405,6 @@ fun observeUserIsFollowingChannel(
 
     @SuppressLint("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(channel.roomId in account.ephemeralChatList.liveEphemeralChatList.value)
-}
-
-@Composable
-fun observeUserZaps(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<UserState?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .flow()
-        .zaps.stateFlow
-        .collectAsStateWithLifecycle()
-}
-
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-@Composable
-fun observeUserZapAmount(
-    user: User,
-    accountViewModel: AccountViewModel,
-): State<BigDecimal> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .zaps.stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.zappedAmount()
-                }.distinctUntilChanged()
-                .flowOn(Dispatchers.IO)
-        }
-
-    return flow.collectAsStateWithLifecycle(BigDecimal.ZERO)
 }
 
 @Composable

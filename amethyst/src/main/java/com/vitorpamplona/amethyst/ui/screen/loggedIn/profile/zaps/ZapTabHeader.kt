@@ -23,19 +23,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserZapAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun ZapTabHeader(
-    baseUser: User,
+    zapsViewModel: UserProfileZapsViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val zapAmount by observeUserZapAmount(baseUser, accountViewModel)
+    val zapAmount by zapsViewModel.totalReceivedZaps.collectAsStateWithLifecycle()
 
     Text(text = "${showAmountInteger(zapAmount)} ${stringRes(id = R.string.zaps)}")
 }

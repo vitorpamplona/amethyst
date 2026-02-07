@@ -76,6 +76,16 @@ class UserProfileFollowersUserFeedViewModel(
                 started = SharingStarted.Lazily,
             )
 
+    val followerCount =
+        followersFlow
+            .map { it.size }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                viewModelScope,
+                initialValue = 0,
+                started = SharingStarted.Lazily,
+            )
+
     class Factory(
         val user: User,
         val account: Account,

@@ -93,7 +93,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.TabReports
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size8dp
@@ -169,13 +169,11 @@ fun PrepareViewModels(
             factory = UserAppRecommendationsFeedViewModel.Factory(baseUser),
         )
 
-    val zapFeedViewModel: UserProfileZapsFeedViewModel =
+    val zapFeedViewModel: UserProfileZapsViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileZapsFeedViewModel",
             factory =
-                UserProfileZapsFeedViewModel.Factory(
-                    baseUser,
-                ),
+                UserProfileZapsViewModel.Factory(baseUser, accountViewModel.account),
         )
 
     val threadsViewModel: UserProfileNewThreadsFeedViewModel =
@@ -253,7 +251,7 @@ fun ProfileScreen(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     appRecommendations: UserAppRecommendationsFeedViewModel,
-    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
@@ -374,7 +372,7 @@ private fun RenderScreen(
     appRecommendations: UserAppRecommendationsFeedViewModel,
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
@@ -396,6 +394,15 @@ private fun RenderScreen(
             CreateAndRenderTabs(
                 baseUser,
                 pagerState,
+                threadsViewModel,
+                repliesViewModel,
+                mutualViewModel,
+                followsFeedViewModel,
+                followersFeedViewModel,
+                zapFeedViewModel,
+                bookmarksFeedViewModel,
+                galleryFeedViewModel,
+                reportsFeedViewModel,
                 accountViewModel,
             )
         }
@@ -431,7 +438,7 @@ private fun CreateAndRenderPages(
     mutualViewModel: UserProfileMutualFeedViewModel,
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
@@ -479,6 +486,15 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
 private fun CreateAndRenderTabs(
     baseUser: User,
     pagerState: PagerState,
+    threadsViewModel: UserProfileNewThreadsFeedViewModel,
+    repliesViewModel: UserProfileConversationsFeedViewModel,
+    mutualViewModel: UserProfileMutualFeedViewModel,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: UserProfileZapsViewModel,
+    bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -489,9 +505,9 @@ private fun CreateAndRenderTabs(
             { Text(text = stringRes(R.string.replies)) },
             { Text(text = stringRes(R.string.mutual)) },
             { Text(text = stringRes(R.string.gallery)) },
-            { FollowTabHeader(baseUser, accountViewModel) },
-            { FollowersTabHeader(baseUser, accountViewModel) },
-            { ZapTabHeader(baseUser, accountViewModel) },
+            { FollowTabHeader(followsFeedViewModel, accountViewModel) },
+            { FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel) },
+            { ZapTabHeader(zapFeedViewModel, accountViewModel) },
             { BookmarkTabHeader(baseUser, accountViewModel) },
             { FollowedTagsTabHeader(baseUser, accountViewModel) },
             { ReportsTabHeader(baseUser, accountViewModel) },

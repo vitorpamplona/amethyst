@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.getNoteIfExists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledInsert
@@ -201,15 +202,22 @@ class CardFeedContentState(
                             LocalCache.getUserIfExists(it) // don't create user if it doesn't exist
                         }
                     if (author != null) {
-                        val zapRequest =
-                            author.zaps
-                                .filter { it.value == zapEvent }
-                                .keys
-                                .firstOrNull()
+                        val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+                        if (existingZapRequest == null || existingZapRequest.event == null) {
+                            // tries to add it
+                            event.zapRequest?.let {
+                                LocalCache.checkDeletionAndConsume(it, null, false)
+                            }
+                        }
+
+                        val zapRequest = event.zapRequest
                         if (zapRequest != null) {
-                            zapsPerUser
-                                .getOrPut(author, { mutableListOf() })
-                                .add(CombinedZap(zapRequest, zapEvent))
+                            val zapRequestNote = LocalCache.getNoteIfExists(zapRequest.id)
+                            if (zapRequestNote != null) {
+                                zapsPerUser
+                                    .getOrPut(author, { mutableListOf() })
+                                    .add(CombinedZap(zapRequestNote, zapEvent))
+                            }
                         }
                     }
                 }
