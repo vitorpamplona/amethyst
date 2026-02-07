@@ -97,33 +97,11 @@ class User(
 
     fun toNostrUri() = "nostr:${toNProfile()}"
 
-    fun toBestDisplayName(): String =
-        metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.bestName() ?: pubkeyDisplayHex()
+    fun toBestDisplayName(): String = metadataOrNull()?.bestName() ?: pubkeyDisplayHex()
 
-    fun nip05(): String? =
-        metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.nip05
+    fun profilePicture(): String? = metadataOrNull()?.profilePicture()
 
-    fun profilePicture(): String? =
-        metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.picture
-
-    fun lnAddress(): String? =
-        metadataOrNull()
-            ?.flow
-            ?.value
-            ?.info
-            ?.lnAddress()
+    fun lnAddress(): String? = metadataOrNull()?.lnAddress()
 
     fun addZap(
         zapRequest: Note,
@@ -227,51 +205,8 @@ class User(
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false
 
-        metadata?.flow?.value?.let { userInfo ->
-            val info = userInfo.info
-
-            if (info.name?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.displayName?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.picture?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.banner?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.about?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.lud06?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.lud16?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-
-            if (info.nip05?.containsAny(hiddenWordsCase) == true) {
-                return true
-            }
-        }
-
-        return false
+        return metadataOrNull()?.containsAny(hiddenWordsCase) == true
     }
-
-    fun anyNameStartsWith(username: String): Boolean =
-        metadata
-            ?.flow
-            ?.value
-            ?.info
-            ?.anyNameStartsWith(username) ?: false
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {

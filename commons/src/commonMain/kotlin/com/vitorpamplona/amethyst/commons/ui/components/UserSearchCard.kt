@@ -78,7 +78,7 @@ fun UserSearchCard(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                val nip05 = user.nip05()
+                val nip05 = user.metadataOrNull()?.nip05()
                 if (nip05 != null) {
                     Text(
                         nip05,

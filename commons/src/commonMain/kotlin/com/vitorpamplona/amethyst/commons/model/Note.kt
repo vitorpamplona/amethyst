@@ -108,7 +108,7 @@ class AddressableNote(
 
 @Stable
 open class Note(
-    val idHex: String,
+    val idHex: HexKey,
 ) : NotesGatherer {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.

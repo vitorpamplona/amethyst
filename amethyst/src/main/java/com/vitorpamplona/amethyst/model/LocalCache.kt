@@ -2149,7 +2149,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         val finds =
             users.filter { _, user: User ->
                 (
-                    (user.anyNameStartsWith(username)) ||
+                    (user.metadataOrNull()?.anyNameStartsWith(username) == true) ||
                         user.pubkeyHex.startsWith(username, true) ||
                         user.pubkeyNpub().startsWith(username, true)
                 ) &&

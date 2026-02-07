@@ -88,7 +88,7 @@ class DesktopLocalCache : ICacheProvider {
         // Search by name/displayName/nip05/lud16
         return users.values
             .filter { user ->
-                user.anyNameStartsWith(prefix) ||
+                user.metadataOrNull()?.anyNameStartsWith(prefix) == true ||
                     user.pubkeyHex.startsWith(prefix, ignoreCase = true) ||
                     user.pubkeyNpub().startsWith(prefix, ignoreCase = true)
             }.sortedWith(

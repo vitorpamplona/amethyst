@@ -22,6 +22,5 @@ package com.vitorpamplona.amethyst.model
 
 // Re-export from commons for backwards compatibility
 typealias Note = com.vitorpamplona.amethyst.commons.model.Note
-typealias NotesGatherer = com.vitorpamplona.amethyst.commons.model.NotesGatherer
 typealias AddressableNote = com.vitorpamplona.amethyst.commons.model.AddressableNote
 typealias NoteState = com.vitorpamplona.amethyst.commons.model.NoteState
