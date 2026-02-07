@@ -157,20 +157,9 @@ class User(
         metaEvent: MetadataEvent,
     ) {
         newUserInfo.cleanBlankNames()
+        newUserInfo.convertLud06toLud16IfNeeded()
 
-        // converts lud06 to lud16
-        if (newUserInfo.lud16.isNullOrBlank()) {
-            newUserInfo.lud06?.let {
-                if (it.lowercase().startsWith("lnurl")) {
-                    newUserInfo.lud16 = Lud06().toLud16(it)
-                }
-            }
-        }
-
-        val metadata = metadata()
-
-        metadata.newMetadata(newUserInfo, metaEvent)
-
+        metadata().newMetadata(newUserInfo, metaEvent)
         // doesn't create Nip05 unless needed.
         nip05StateOrNull()?.newMetadata(newUserInfo.nip05, metaEvent.pubKey)
     }

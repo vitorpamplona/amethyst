@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.metadata
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.lightning.Lud06
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -101,5 +102,15 @@ class UserMetadata {
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
+    }
+
+    fun convertLud06toLud16IfNeeded() {
+        if (lud16.isNullOrBlank()) {
+            lud06?.let {
+                if (it.lowercase().startsWith("lnurl")) {
+                    lud16 = Lud06().toLud16(it)
+                }
+            }
+        }
     }
 }
