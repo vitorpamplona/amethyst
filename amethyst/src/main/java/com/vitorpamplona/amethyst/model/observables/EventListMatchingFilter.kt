@@ -23,10 +23,9 @@ package com.vitorpamplona.amethyst.model.observables
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.Observable
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import java.util.SortedSet
+import java.util.concurrent.ConcurrentSkipListSet
 
 /**
  * Creates a list of events (regular and addressable)
@@ -39,7 +38,7 @@ class EventListMatchingFilter(
     private val update: (List<Event>) -> Unit,
 ) : Observable {
     // Keeping this here blocks it from being cleared from memory
-    var currentResults: SortedSet<Note> = sortedSetOf<Note>(DefaultFeedOrder)
+    var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
 
     override fun new(
         event: Event,
@@ -51,6 +50,7 @@ class EventListMatchingFilter(
             if (limit != null && currentResults.size > limit) {
                 currentResults.remove(currentResults.last())
             }
+
             update(currentResults.mapNotNull { it.event })
         }
     }
@@ -62,7 +62,7 @@ class EventListMatchingFilter(
     }
 
     fun init() {
-        currentResults = cache.filter(filter)
+        currentResults = ConcurrentSkipListSet(cache.filter(filter))
         update(currentResults.mapNotNull { it.event })
     }
 }

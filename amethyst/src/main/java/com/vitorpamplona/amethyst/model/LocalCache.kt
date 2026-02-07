@@ -32,11 +32,11 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.model.observables.NoteListMatchingFilter
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -307,7 +307,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 (addressableMatches + noteMatches)
             }
 
-        return limitedSet.toSortedSet(DefaultFeedOrder)
+        return limitedSet.toSortedSet(CreatedAtIdHexComparator)
     }
 
     fun observeNotes(filter: Filter): Flow<List<Note>> =
