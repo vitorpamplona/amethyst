@@ -142,11 +142,7 @@ class User(
 
     fun relayState(): UserRelaysCache = relays ?: UserRelaysCache().also { relays = it }
 
-    fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
-        if (hiddenWordsCase.isEmpty()) return false
-
-        return metadataOrNull()?.containsAny(hiddenWordsCase) == true
-    }
+    fun containsAny(hiddenWordsCase: List<DualCase>) = metadataOrNull()?.containsAny(hiddenWordsCase) == true
 }
 
 fun Set<User>.toHexSet() = mapTo(LinkedHashSet(size)) { it.pubkeyHex }
