@@ -29,9 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  *
  * @return Shortened string with ellipsis in the middle, or original if <= 16 chars
  */
-fun String.toShortDisplay(): String {
-    if (length <= 16) return this
-    return replaceRange(8, length - 8, "…")
+fun String.toShortDisplay(prefixSize: Int = 0): String {
+    if (length <= prefixSize + 16) return this
+    return replaceRange(prefixSize + 8, length - 8, "…")
 }
 
 /**

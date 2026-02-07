@@ -69,7 +69,7 @@ class User(
 
     fun pubkeyNpub() = pubkey().toNpub()
 
-    fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay()
+    fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay(5)
 
     fun dmInboxRelayList() = dmRelayListNote.event as? ChatMessageRelayListEvent
 
