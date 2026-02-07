@@ -78,7 +78,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -548,15 +547,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null && (wasVerified || justVerify(event))) {
-                val fallbackRelay =
-                    relay?.isLocalHost()?.let {
-                        if (!it) {
-                            relay
-                        } else {
-                            null
-                        }
-                    }
-
                 user.updateUserInfo(newUserMetadata, event)
                 if (relay != null) {
                     user.addRelayBeingUsed(relay, event.createdAt)

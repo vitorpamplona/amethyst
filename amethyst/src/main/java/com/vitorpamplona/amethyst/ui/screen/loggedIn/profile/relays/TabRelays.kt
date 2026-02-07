@@ -68,6 +68,6 @@ fun TabRelays(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
+        RelayFeedView(feedViewModel, accountViewModel, nav = nav)
     }
 }

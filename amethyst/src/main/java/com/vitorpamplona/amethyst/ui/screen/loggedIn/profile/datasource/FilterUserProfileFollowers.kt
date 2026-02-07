@@ -35,7 +35,7 @@ fun filterUserProfileFollowers(
 ): List<RelayBasedFilter> {
     val relays =
         user.inboxRelays()?.ifEmpty { null }
-            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+            ?: user.allUsedRelaysOrNull()
             ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
 
     return relays.map {

@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.model.nip01Core.UserRelaysCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cache
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
-import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -40,7 +39,6 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.containsAny
 import java.math.BigDecimal
 
 interface UserDependencies
@@ -51,16 +49,16 @@ class User(
     val nip65RelayListNote: Note,
     val dmRelayListNote: Note,
 ) {
+    // These objects are designed to keep the cache
+    // while this user obj is being used anywhere.
     private var metadata: UserMetadataCache? = null
     private var reports: UserReportCache? = null
     private var cards: UserCardsCache? = null
     private var nip05: UserNip05Cache? = null
     private var status: UserStatusCache? = null
+    private var relays: UserRelaysCache? = null
 
     var zaps = mapOf<Note, Note?>()
-        private set
-
-    var relaysBeingUsed = mapOf<NormalizedRelayUrl, RelayInfo>()
         private set
 
     var flowSet: UserFlowSet? = null
@@ -79,19 +77,19 @@ class User(
 
     fun outboxRelays() = authorRelayList()?.writeRelaysNorm()
 
-    fun relayHints() =
-        authorRelayList()?.writeRelaysNorm()?.take(3) ?: relaysBeingUsed.entries
-            .sortedByDescending { it.value.counter }
-            .take(3)
-            .map { it.key }
+    fun relayHints() = outboxRelays()?.take(3) ?: relays?.mostUsed()?.take(3) ?: emptyList()
 
     fun inboxRelays() = authorRelayList()?.readRelaysNorm()
 
     fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
 
-    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: mostUsedRelay()
+    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: mostUsedNonLocalRelay()
 
-    fun mostUsedRelay() = relaysBeingUsed.maxByOrNull { it.value.counter }?.key
+    fun allUsedRelaysOrNull() = relays?.allOrNull()
+
+    fun allUsedRelays() = relays?.allOrNull() ?: emptySet()
+
+    fun mostUsedNonLocalRelay() = relays?.mostUsedNonLocalRelay()
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
@@ -138,19 +136,7 @@ class User(
     fun addRelayBeingUsed(
         relay: NormalizedRelayUrl,
         eventTime: Long,
-    ) {
-        val here = relaysBeingUsed[relay]
-        if (here == null) {
-            relaysBeingUsed = relaysBeingUsed + Pair(relay, RelayInfo(relay, eventTime, 1))
-        } else {
-            if (eventTime > here.lastEvent) {
-                here.lastEvent = eventTime
-            }
-            here.counter++
-        }
-
-        flowSet?.usedRelays?.invalidateData()
-    }
+    ) = relayState().add(relay, eventTime)
 
     fun updateUserInfo(
         newUserInfo: UserMetadata,
@@ -191,6 +177,10 @@ class User(
 
     fun statusState(): UserStatusCache = status ?: UserStatusCache().also { status = it }
 
+    fun relayStateOrNull(): UserRelaysCache? = relays
+
+    fun relayState(): UserRelaysCache = relays ?: UserRelaysCache().also { relays = it }
+
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
         if (hiddenWordsCase.isEmpty()) return false
 
@@ -228,21 +218,10 @@ class User(
 class UserFlowSet(
     u: User,
 ) {
-    // Observers line up here.
-    val usedRelays = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
 
-    fun isInUse(): Boolean =
-        usedRelays.hasObservers() ||
-            zaps.hasObservers()
+    fun isInUse(): Boolean = zaps.hasObservers()
 }
-
-@Immutable
-data class RelayInfo(
-    val url: NormalizedRelayUrl,
-    var lastEvent: Long,
-    var counter: Long,
-)
 
 // Re-export from commons.state for backwards compatibility
 typealias UserBundledRefresherFlow = com.vitorpamplona.amethyst.commons.state.UserMetadataState

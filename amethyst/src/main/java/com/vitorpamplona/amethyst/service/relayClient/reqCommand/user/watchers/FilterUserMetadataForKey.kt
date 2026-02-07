@@ -51,7 +51,7 @@ fun filterUserMetadataForKey(
             authors.forEach { key ->
                 val relays =
                     key.outboxRelays()
-                        ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
+                        ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
 
                 relays.forEach {
                     add(it, key)

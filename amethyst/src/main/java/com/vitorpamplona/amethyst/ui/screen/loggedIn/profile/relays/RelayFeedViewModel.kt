@@ -25,8 +25,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.nip01Core.RelayInfo
+import com.vitorpamplona.amethyst.commons.model.nip01Core.Wrapper
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -40,31 +41,50 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+
+class MyRelayInfo(
+    val url: NormalizedRelayUrl,
+    val lastEvent: Long,
+    val counter: Int,
+)
 
 @Stable
 class RelayFeedViewModel :
     ViewModel(),
     InvalidatableContent {
     val order =
-        compareByDescending<RelayInfo> { it.lastEvent }
-            .thenByDescending { it.counter }
+        compareByDescending<MyRelayInfo> { it.counter }
+            .thenByDescending { it.lastEvent }
             .thenBy { it.url.url }
 
     var currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
 
     fun convert(
         relays: Set<NormalizedRelayUrl>?,
-        user: User?,
-    ): List<RelayInfo> {
-        if (relays == null || user == null) return emptyList()
+        relayState: Wrapper,
+    ): List<MyRelayInfo> = convert(relays, relayState.data)
+
+    fun convert(
+        relays: Set<NormalizedRelayUrl>?,
+        relayState: Map<NormalizedRelayUrl, RelayInfo>?,
+    ): List<MyRelayInfo> {
+        if (relays == null) return emptyList()
         return relays
             .map { relay ->
-                user.relaysBeingUsed[relay] ?: RelayInfo(relay, 0, 0)
+                val info = relayState?.get(relay)
+                if (info != null) {
+                    println("AABBCC convert() relays: ${relay.url} ${info.counter}")
+                    MyRelayInfo(relay, info.lastEvent, info.counter)
+                } else {
+                    MyRelayInfo(relay, 0, 0)
+                }
             }.sortedWith(order)
     }
 
@@ -75,20 +95,19 @@ class RelayFeedViewModel :
                 if (user != null) {
                     emitAll(
                         combine(
-                            user.nip65RelayListNote
-                                .flow()
-                                .metadata.stateFlow,
-                            user.flow().usedRelays.stateFlow,
-                        ) { nip65, userState ->
-                            val relays = (nip65.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet() ?: emptySet()
-                            convert(relays, userState.user)
-                        },
+                            flow =
+                                user.nip65RelayListNote.flow().metadata.stateFlow.map { nip65 ->
+                                    (nip65.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet() ?: emptySet()
+                                },
+                            flow2 = user.relayState().flow(),
+                            transform = ::convert,
+                        ),
                     )
                 } else {
-                    emit(emptyList<RelayInfo>())
+                    emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet(), currentUser.value))
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -99,20 +118,19 @@ class RelayFeedViewModel :
                 if (user != null) {
                     emitAll(
                         combine(
-                            user.nip65RelayListNote
-                                .flow()
-                                .metadata.stateFlow,
-                            user.flow().usedRelays.stateFlow,
-                        ) { nip65, userState ->
-                            val relays = (nip65.note.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet() ?: emptySet()
-                            convert(relays, userState.user)
-                        },
+                            flow =
+                                user.nip65RelayListNote.flow().metadata.stateFlow.map { nip65 ->
+                                    (nip65.note.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet() ?: emptySet()
+                                },
+                            flow2 = user.relayState().flow(),
+                            transform = ::convert,
+                        ),
                     )
                 } else {
-                    emit(emptyList<RelayInfo>())
+                    emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet(), currentUser.value))
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -123,20 +141,22 @@ class RelayFeedViewModel :
                 if (user != null) {
                     emitAll(
                         combine(
-                            user.dmRelayListNote
-                                .flow()
-                                .metadata.stateFlow,
-                            user.flow().usedRelays.stateFlow,
-                        ) { nip65, userState ->
-                            val relays = (nip65.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
-                            convert(relays, userState.user)
-                        },
+                            flow =
+                                user.dmRelayListNote
+                                    .flow()
+                                    .metadata.stateFlow
+                                    .map { dmNote ->
+                                        (dmNote.note.event as? ChatMessageRelayListEvent)?.relays()?.toSet() ?: emptySet()
+                                    },
+                            flow2 = user.relayState().flow(),
+                            transform = ::convert,
+                        ),
                     )
                 } else {
-                    emit(emptyList<RelayInfo>())
+                    emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? ChatMessageRelayListEvent)?.relays()?.toSet(), currentUser.value))
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? ChatMessageRelayListEvent)?.relays()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

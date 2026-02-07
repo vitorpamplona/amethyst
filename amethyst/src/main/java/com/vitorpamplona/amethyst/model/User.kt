@@ -22,5 +22,5 @@ package com.vitorpamplona.amethyst.model
 
 // Re-export from commons for backwards compatibility
 typealias User = com.vitorpamplona.amethyst.commons.model.User
-typealias RelayInfo = com.vitorpamplona.amethyst.commons.model.RelayInfo
+typealias RelayInfo = com.vitorpamplona.amethyst.commons.model.nip01Core.RelayInfo
 typealias UserState = com.vitorpamplona.amethyst.commons.model.UserState

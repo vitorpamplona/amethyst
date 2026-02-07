@@ -40,7 +40,7 @@ class UserProfileMetadataFilterSubAssembler(
                 keys.mapTo(mutableSetOf()) { key -> key.user }.forEach { user ->
                     val relays =
                         user.outboxRelays()?.ifEmpty { null }
-                            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+                            ?: user.allUsedRelaysOrNull()
                             ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
 
                     relays.forEach { relay ->

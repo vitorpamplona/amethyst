@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.MyRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
@@ -55,7 +55,7 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun RelayCompose(
-    relay: RelayInfo,
+    relay: MyRelayInfo,
     accountViewModel: AccountViewModel,
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit,
@@ -106,7 +106,7 @@ fun RelayCompose(
 @Composable
 private fun RelayOptions(
     accountViewModel: AccountViewModel,
-    relay: RelayInfo,
+    relay: MyRelayInfo,
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit,
 ) {

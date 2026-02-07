@@ -740,7 +740,7 @@ class Account(
                             outboxRelays.flow.value
                         } else {
                             replyToAuthor.inboxRelays()?.ifEmpty { null }?.toSet()
-                                ?: replyToAuthor.relaysBeingUsed.keys.ifEmpty { null }
+                                ?: replyToAuthor.allUsedRelaysOrNull()
                                 ?: cache.relayHints
                                     .hintsForKey(replyToAuthor.pubkeyHex)
                                     .ifEmpty { null }
@@ -767,7 +767,7 @@ class Account(
             notificationRelays.flow.value
         } else {
             user.inboxRelays()?.ifEmpty { null }?.toSet()
-                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.relaysBeingUsed.keys)
+                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.allUsedRelays())
         }
 
     private fun computeRelayListForLinkedUser(pubkey: HexKey): Set<NormalizedRelayUrl> =
@@ -822,7 +822,7 @@ class Account(
             } else {
                 val relays =
                     author.outboxRelays()?.ifEmpty { null }
-                        ?: author.relaysBeingUsed.keys.ifEmpty { null }
+                        ?: author.allUsedRelaysOrNull()
                         ?: cache.relayHints.hintsForKey(author.pubkeyHex)
 
                 relayList.addAll(relays)
@@ -1741,7 +1741,7 @@ class Account(
 
         val relayList =
             dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }
-                ?: (dvmPublicKey.relaysBeingUsed.keys + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
+                ?: (dvmPublicKey.allUsedRelays() + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
 
         cache.justConsumeMyOwnEvent(request)
         onReady(request)

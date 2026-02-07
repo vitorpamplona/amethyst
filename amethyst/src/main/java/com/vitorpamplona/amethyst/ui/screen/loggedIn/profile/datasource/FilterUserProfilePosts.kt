@@ -72,7 +72,7 @@ fun filterUserProfilePosts(
 ): List<RelayBasedFilter> {
     val relays =
         user.outboxRelays()?.ifEmpty { null }
-            ?: (user.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
+            ?: (user.allUsedRelays() + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
 
     return relays
         .map { relay ->

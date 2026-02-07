@@ -34,8 +34,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.RelayInfo
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
@@ -48,56 +46,51 @@ fun RelayFeedView(
     viewModel: RelayFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    enablePullRefresh: Boolean = true,
 ) {
     val outboxListState by viewModel.nip65OutboxFlow.collectAsStateWithLifecycle()
     val inboxListState by viewModel.nip65InboxFlow.collectAsStateWithLifecycle()
     val dmListState by viewModel.dmInboxFlow.collectAsStateWithLifecycle()
 
-    RefresheableBox(viewModel, enablePullRefresh) {
-        val listState = rememberLazyListState()
-
-        LazyColumn(
-            contentPadding = PaddingValues(top = 10.dp, bottom = 20.dp),
-            state = listState,
-        ) {
-            item {
-                SettingsCategory(
-                    R.string.public_home_section,
-                    R.string.public_home_section_explainer_profile,
-                    Modifier.padding(top = 10.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
-                )
-            }
-            itemsIndexed(outboxListState, key = { _, item -> "outbox" + item.url.url }) { _, item ->
-                RenderRelayRow(item, accountViewModel, nav)
-            }
-            item {
-                SettingsCategory(
-                    R.string.public_notif_section,
-                    R.string.public_notif_section_explainer_profile,
-                    Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
-                )
-            }
-            itemsIndexed(inboxListState, key = { _, item -> "inbox" + item.url.url }) { _, item ->
-                RenderRelayRow(item, accountViewModel, nav)
-            }
-            item {
-                SettingsCategory(
-                    R.string.private_inbox_section,
-                    R.string.private_inbox_section_explainer_profile,
-                    Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
-                )
-            }
-            itemsIndexed(dmListState, key = { _, item -> "dminbox" + item.url.url }) { _, item ->
-                RenderRelayRow(item, accountViewModel, nav)
-            }
+    LazyColumn(
+        contentPadding = PaddingValues(top = 10.dp, bottom = 20.dp),
+        state = rememberLazyListState(),
+    ) {
+        item {
+            SettingsCategory(
+                R.string.public_home_section,
+                R.string.public_home_section_explainer_profile,
+                Modifier.padding(top = 10.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
+            )
+        }
+        itemsIndexed(outboxListState, key = { _, item -> "outbox" + item.url.url }) { _, item ->
+            RenderRelayRow(item, accountViewModel, nav)
+        }
+        item {
+            SettingsCategory(
+                R.string.public_notif_section,
+                R.string.public_notif_section_explainer_profile,
+                Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
+            )
+        }
+        itemsIndexed(inboxListState, key = { _, item -> "inbox" + item.url.url }) { _, item ->
+            RenderRelayRow(item, accountViewModel, nav)
+        }
+        item {
+            SettingsCategory(
+                R.string.private_inbox_section,
+                R.string.private_inbox_section_explainer_profile,
+                Modifier.padding(top = 24.dp, bottom = 8.dp, start = 10.dp, end = 10.dp),
+            )
+        }
+        itemsIndexed(dmListState, key = { _, item -> "dminbox" + item.url.url }) { _, item ->
+            RenderRelayRow(item, accountViewModel, nav)
         }
     }
 }
 
 @Composable
 private fun RenderRelayRow(
-    relay: RelayInfo,
+    relay: MyRelayInfo,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
