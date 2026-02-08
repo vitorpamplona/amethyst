@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.androidBenchmark)
 }
 
@@ -24,7 +23,7 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    sourceSets.androidTest.resources.srcDirs += ["../quartz/src/androidInstrumentedTest/resources"]
+    sourceSets.androidTest.resources.srcDirs += ["../quartz/src/androidDeviceTest/resources"]
 
     testBuildType = "benchmark"
     buildTypes {

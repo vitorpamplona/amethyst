@@ -3,45 +3,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-}
-
-android {
-    namespace = "com.vitorpamplona.quartz"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            proguardFiles (getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-        create("benchmark") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-    packaging {
-        resources {
-            excludes.add("**/libscrypt.dylib")
-        }
-    }
-    publishing {
-        singleVariant("release")
-    }
 }
 
 kotlin {
@@ -55,13 +19,26 @@ kotlin {
         }
     }
 
-    // Target declarations - add or remove as needed below. These define
-    // which platforms this KMP module supports.
-    // See: https://kotlinlang.org/docs/multiplatform-discover-project.html#targets
-    androidTarget {
-        publishLibraryVariants("release")
+    androidLibrary {
+        namespace = "com.vitorpamplona.quartz"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
+        }
+
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("consumer-rules.pro")
+            }
+        }
+
+        withHostTest {}
+
+        withDeviceTest {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
     }
 
@@ -191,14 +168,14 @@ kotlin {
             }
         }
 
-        androidUnitTest.configure {
+        getByName("androidHostTest") {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
             }
         }
 
-        androidInstrumentedTest {
+        getByName("androidDeviceTest") {
             dependencies {
                 implementation(libs.androidx.runner)
                 implementation(libs.androidx.core)
@@ -216,15 +193,15 @@ kotlin {
         }
 
         val iosX64Main by getting {
-            dependsOn(iosMain.get()) // iosX64Main depends on iosMain
+            dependsOn(iosMain.get())
         }
 
         val iosArm64Main by getting {
-            dependsOn(iosMain.get()) // iosArm64Main depends on iosMain
+            dependsOn(iosMain.get())
         }
 
         val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain.get()) // iosSimulatorArm64Main depends on iosMain
+            dependsOn(iosMain.get())
         }
 
         iosTest {
@@ -235,15 +212,15 @@ kotlin {
         }
 
         val iosX64Test by getting {
-            dependsOn(iosTest.get()) // iosX64Test depends on iosTest
+            dependsOn(iosTest.get())
         }
 
         val iosArm64Test by getting {
-            dependsOn(iosTest.get()) // iosArm64Test depends on iosTest
+            dependsOn(iosTest.get())
         }
 
         val iosSimulatorArm64Test by getting {
-            dependsOn(iosTest.get()) // iosSimulatorArm64Test depends on iosTest
+            dependsOn(iosTest.get())
         }
     }
 }
@@ -255,9 +232,6 @@ mavenPublishing {
         KotlinMultiplatform(
             // whether to publish a sources jar
             sourcesJar = true,
-            // configure which Android library variants to publish if this project has an Android target
-            // defaults to "release" when using the main plugin and nothing for the base plugin
-            androidVariantsToPublish = listOf("release"),
         )
     )
 
@@ -268,7 +242,6 @@ mavenPublishing {
     )
 
     // Configure publishing to Maven Central
-    //publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
     publishToMavenCentral(automaticRelease = true)
 
     // Enable GPG signing for all publications

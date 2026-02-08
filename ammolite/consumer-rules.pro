@@ -20,12 +20,8 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 # preserve the line number information for debugging stack traces.
--dontobfuscate
 -keepattributes LocalVariableTable
 -keepattributes LocalVariableTypeTable
--keepattributes *Annotation*
--keepattributes SourceFile
--keepattributes LineNumberTable
 -keepattributes Signature
 -keepattributes Exceptions
 -keepattributes InnerClasses
