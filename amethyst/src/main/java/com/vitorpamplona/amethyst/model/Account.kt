@@ -250,7 +250,7 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
+    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings.zapPaymentRequest)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)

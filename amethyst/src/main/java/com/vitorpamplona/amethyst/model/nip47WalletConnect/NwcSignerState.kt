@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.model.nip47WalletConnect
 
 import com.vitorpamplona.amethyst.commons.model.INwcSignerState
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentQueryState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -59,14 +60,14 @@ import kotlinx.coroutines.launch
  * @property signer the main Nostr signer used for general Nostr operations
  * @property cache the local cache for handling notes and events
  * @property scope the coroutine scope used for async operations
- * @property settings the account settings containing NIP-47 configuration
+ * @property nip47Setup the NIP-47 configuration
  */
 class NwcSignerState(
     val signer: NostrSigner,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
     val cache: LocalCache,
     val scope: CoroutineScope,
-    val settings: AccountSettings,
+    val nip47Setup: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?>,
 ) : INwcSignerState {
     /**
      * Derives a NIP-47 signer from the zap payment request in settings.
@@ -74,14 +75,14 @@ class NwcSignerState(
      * Flows updates whenever settings change.
      */
     val nip47Signer =
-        settings.zapPaymentRequest
+        nip47Setup
             .map {
                 buildSigner(it) ?: signer
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                buildSigner(settings.zapPaymentRequest.value) ?: signer,
+                buildSigner(nip47Setup.value) ?: signer,
             )
 
     /**
@@ -111,30 +112,30 @@ class NwcSignerState(
             NostrSignerInternal(KeyPair(it))
         }
 
-    fun hasWalletConnectSetup(): Boolean = settings.zapPaymentRequest.value != null
+    fun hasWalletConnectSetup(): Boolean = nip47Setup.value != null
 
-    override fun isNIP47Author(pubkeyHex: String?): Boolean = nip47Signer.value.pubKey == pubkeyHex
+    override fun isNIP47Author(pubkey: HexKey?): Boolean = nip47Signer.value.pubKey == pubkey
 
     /**
      * Decrypts a NIP-47 payment request using the current signer.
      *
-     * @param nwcRequest the NIP-47 payment request event to decrypt
+     * @param event the NIP-47 payment request event to decrypt
      * @return the decrypted request or null if not set up or decryption fails
      */
-    override suspend fun decryptRequest(nwcRequest: LnZapPaymentRequestEvent): Request? {
+    override suspend fun decryptRequest(event: LnZapPaymentRequestEvent): Request? {
         if (!hasWalletConnectSetup()) return null
-        return zapPaymentRequestDecryptionCache.value.decryptRequest(nwcRequest)
+        return zapPaymentRequestDecryptionCache.value.decryptRequest(event)
     }
 
     /**
      * Decrypts a NIP-47 payment response using the current signer.
      *
-     * @param nwsResponse the NIP-47 payment response event to decrypt
+     * @param event the NIP-47 payment response event to decrypt
      * @return the decrypted response or null if not set up or decryption fails
      */
-    override suspend fun decryptResponse(nwsResponse: LnZapPaymentResponseEvent): Response? {
+    override suspend fun decryptResponse(event: LnZapPaymentResponseEvent): Response? {
         if (!hasWalletConnectSetup()) return null
-        return zapPaymentResponseDecryptionCache.value.decryptResponse(nwsResponse)
+        return zapPaymentResponseDecryptionCache.value.decryptResponse(event)
     }
 
     /**
@@ -152,8 +153,7 @@ class NwcSignerState(
         zappedNote: Note?,
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
-        val walletService = settings.zapPaymentRequest.value
-        if (walletService == null) throw IllegalArgumentException("No NIP47 setup")
+        val walletService = nip47Setup.value ?: throw IllegalArgumentException("No NIP47 setup")
 
         val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value)
 
