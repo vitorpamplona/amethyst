@@ -495,7 +495,7 @@ class ChatNewMessageViewModel :
                     toUser = toUser,
                     message = message,
                     imetas = usedAttachments,
-                    replyingTo = replyTo.value?.toEId(),
+                    replyingTo = replyTo.value?.toEventHint<PrivateDmEvent>(),
                     signer = accountViewModel.account.signer,
                 ) {
                     expiration?.let { expiration(it) }

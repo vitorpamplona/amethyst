@@ -35,13 +35,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -102,8 +98,6 @@ class AddressableNote(
     fun dTag(): String = address.dTag
 
     fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
-
-    fun toATag() = ATag(address, relayHintUrl())
 }
 
 @Stable
@@ -915,40 +909,12 @@ open class Note(
         }
     }
 
-    fun toETag(): ETag {
-        val noteEvent = event
-        return if (noteEvent != null) {
-            ETag(noteEvent.id, relayHintUrl(), noteEvent.pubKey)
-        } else {
-            ETag(idHex, relayHintUrl(), author?.pubkeyHex)
-        }
-    }
-
-    fun toEId(): EventReference {
-        val noteEvent = event
-        return if (noteEvent != null) {
-            // uses the confirmed event id if available
-            EventReference(noteEvent.id, noteEvent.pubKey, relayHintUrl())
-        } else {
-            EventReference(idHex, author?.pubkeyHex, relayHintUrl())
-        }
-    }
-
     inline fun <reified T : Event> toEventHint(): EventHintBundle<T>? {
         val safeEvent = event
         return if (safeEvent is T) {
             EventHintBundle(safeEvent, relayHintUrl(), author?.bestRelayHint())
         } else {
             null
-        }
-    }
-
-    fun toMarkedETag(marker: MarkedETag.MARKER): MarkedETag {
-        val noteEvent = event
-        return if (noteEvent != null) {
-            MarkedETag(noteEvent.id, relayHintUrl(), marker, noteEvent.pubKey)
-        } else {
-            MarkedETag(idHex, relayHintUrl(), marker, author?.pubkeyHex)
         }
     }
 }

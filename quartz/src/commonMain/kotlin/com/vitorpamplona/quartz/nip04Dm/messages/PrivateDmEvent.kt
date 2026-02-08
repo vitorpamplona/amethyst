@@ -26,11 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -126,7 +126,7 @@ class PrivateDmEvent(
             toUser: PTag,
             message: String,
             imetas: List<IMetaTag>? = null,
-            replyingTo: EventReference? = null,
+            replyingTo: EventHintBundle<PrivateDmEvent>? = null,
             createdAt: Long = TimeUtils.now(),
             signer: NostrSigner,
             initializer: TagArrayBuilder<PrivateDmEvent>.() -> Unit = {},
@@ -150,7 +150,7 @@ class PrivateDmEvent(
             to: PTag,
             message: String,
             imetas: List<IMetaTag>? = null,
-            replyingTo: EventReference?,
+            replyingTo: EventHintBundle<PrivateDmEvent>?,
             createdAt: Long = TimeUtils.now(),
             signer: NostrSigner,
         ) = signer.sign(build(to, message, imetas, replyingTo, createdAt, signer))
