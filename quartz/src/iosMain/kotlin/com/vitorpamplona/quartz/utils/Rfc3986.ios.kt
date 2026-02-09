@@ -28,7 +28,10 @@ import swiftbridge.Rfc3986UriBridge
 actual object Rfc3986 {
     private val rfc3986UriBridge = Rfc3986UriBridge()
 
-    actual fun normalize(uri: String): String = rfc3986UriBridge.normalizeUrlWithUrl(uri, null) ?: throw Exception("Could not normalize URL.")
+    actual fun normalize(uri: String): String =
+        rfc3986UriBridge
+            .normalizeUrlWithUrl(uri, null)
+            .let { if (it?.last() == '/') it else "$it/" }
 
     actual fun isValidUrl(url: String): Boolean = rfc3986UriBridge.isUrlValidWithUrl(url)
 
