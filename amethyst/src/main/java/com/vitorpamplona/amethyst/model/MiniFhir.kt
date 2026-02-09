@@ -168,6 +168,7 @@ fun parseResourceBundleOrNull(json: String): FhirElementDatabase? {
                 is Bundle -> {
                     resource.entry.associateBy { it.id }.toImmutableMap()
                 }
+
                 else -> {
                     persistentMapOf(resource.id to resource)
                 }

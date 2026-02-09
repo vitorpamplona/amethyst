@@ -47,9 +47,11 @@ fun MessagesScreen(
         derivedStateOf {
             when (windowSizeClass.widthSizeClass) {
                 WindowWidthSizeClass.Compact -> false
+
                 WindowWidthSizeClass.Expanded,
                 WindowWidthSizeClass.Medium,
                 -> true
+
                 else -> false
             }
         }

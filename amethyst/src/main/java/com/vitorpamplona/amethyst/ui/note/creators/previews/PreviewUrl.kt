@@ -235,6 +235,7 @@ private fun MyLoadUrlPreviewDirect(
                     }
                 }
             }
+
             else -> {
                 Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.aspectRatio(1f)) {
                     ClickableUrl(urlText, url)
@@ -288,11 +289,13 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                     UrlPreviewCard(url, previewInfo = state.previewInfo)
                 }
             }
+
             is UrlPreviewState.Loading -> {
                 WaitAndDisplay {
                     DisplayUrlWithLoadingSymbol(url)
                 }
             }
+
             else -> {
                 ClickableUrl(urlText, url)
             }

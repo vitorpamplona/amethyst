@@ -66,54 +66,63 @@ class OpenGraphParser {
 
         metaTags.forEach {
             when (it.attr(ATTRIBUTE_VALUE_PROPERTY)) {
-                in META_X_TITLE ->
+                in META_X_TITLE -> {
                     if (title.isEmpty()) {
                         title = it.attr(CONTENT)
                     }
+                }
 
-                in META_X_DESCRIPTION ->
+                in META_X_DESCRIPTION -> {
                     if (description.isEmpty()) {
                         description = it.attr(CONTENT)
                     }
+                }
 
-                in META_X_IMAGE ->
+                in META_X_IMAGE -> {
                     if (image.isEmpty()) {
                         image = it.attr(CONTENT)
                     }
+                }
             }
 
             when (it.attr(ATTRIBUTE_VALUE_NAME)) {
-                in META_X_TITLE ->
+                in META_X_TITLE -> {
                     if (title.isEmpty()) {
                         title = it.attr(CONTENT)
                     }
+                }
 
-                in META_X_DESCRIPTION ->
+                in META_X_DESCRIPTION -> {
                     if (description.isEmpty()) {
                         description = it.attr(CONTENT)
                     }
+                }
 
-                in META_X_IMAGE ->
+                in META_X_IMAGE -> {
                     if (image.isEmpty()) {
                         image = it.attr(CONTENT)
                     }
+                }
             }
 
             when (it.attr(ATTRIBUTE_VALUE_ITEMPROP)) {
-                in META_X_TITLE ->
+                in META_X_TITLE -> {
                     if (title.isEmpty()) {
                         title = it.attr(CONTENT)
                     }
+                }
 
-                in META_X_DESCRIPTION ->
+                in META_X_DESCRIPTION -> {
                     if (description.isEmpty()) {
                         description = it.attr(CONTENT)
                     }
+                }
 
-                in META_X_IMAGE ->
+                in META_X_IMAGE -> {
                     if (image.isEmpty()) {
                         image = it.attr(CONTENT)
                     }
+                }
             }
 
             if (title.isNotEmpty() && description.isNotEmpty() && image.isNotEmpty()) {

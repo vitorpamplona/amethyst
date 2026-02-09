@@ -201,9 +201,11 @@ fun RenderFhirResource(event: FhirResourceEvent) {
                     RenderEyeGlassesPrescription(it, state.localDb)
                 }
             }
+
             is VisionPrescription -> {
                 RenderEyeGlassesPrescription(resource, state.localDb)
             }
+
             else -> {
             }
         }

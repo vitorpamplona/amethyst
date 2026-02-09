@@ -72,15 +72,18 @@ fun DisplayZapSplits(
         FlowRow {
             list.forEach {
                 when (it) {
-                    is ZapSplitSetupLnAddress ->
+                    is ZapSplitSetupLnAddress -> {
                         ClickableTextPrimary(it.lnAddress) { }
-                    is ZapSplitSetup ->
+                    }
+
+                    is ZapSplitSetup -> {
                         UserPicture(
                             userHex = it.pubKeyHex,
                             size = Size25dp,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
+                    }
                 }
             }
         }

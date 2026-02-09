@@ -155,18 +155,22 @@ fun LoginPage(
 
         loginViewModel.errorManager.error?.let { error ->
             when (error) {
-                is LoginErrorManager.SingleErrorMsg ->
+                is LoginErrorManager.SingleErrorMsg -> {
                     Text(
                         text = stringRes(error.errorResId),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
-                is LoginErrorManager.ParamsErrorMsg ->
+                }
+
+                is LoginErrorManager.ParamsErrorMsg -> {
                     Text(
                         text = stringRes(error.errorResId, *error.params),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
+                }
+
                 else -> {}
             }
         }

@@ -64,12 +64,15 @@ fun UserFeedView(
             is UserFeedState.Empty -> {
                 FeedEmpty { viewModel.invalidateData() }
             }
+
             is UserFeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is UserFeedState.Loaded -> {
                 FeedLoaded(state, accountViewModel, nav)
             }
+
             is UserFeedState.Loading -> {
                 LoadingFeed()
             }

@@ -36,14 +36,24 @@ class GalleryParser {
 
         paragraph.words.forEach { word ->
             when (word) {
-                is ImageSegment, is Base64Segment -> imageCount++
-                is VideoSegment -> hasNonWhitespaceNonImageContent = true // Videos are not images
+                is ImageSegment, is Base64Segment -> {
+                    imageCount++
+                }
+
+                is VideoSegment -> {
+                    hasNonWhitespaceNonImageContent = true
+                }
+
+                // Videos are not images
                 is RegularTextSegment -> {
                     if (word.segmentText.isNotBlank()) {
                         hasNonWhitespaceNonImageContent = true
                     }
                 }
-                else -> hasNonWhitespaceNonImageContent = true // Links, emojis, etc.
+
+                else -> {
+                    hasNonWhitespaceNonImageContent = true
+                } // Links, emojis, etc.
             }
         }
 
@@ -159,9 +169,16 @@ class GalleryParser {
                             hasVideo = true
                             break
                         }
-                        seg is ImageSegment || seg is Base64Segment -> imageSegments.add(seg)
+
+                        seg is ImageSegment || seg is Base64Segment -> {
+                            imageSegments.add(seg)
+                        }
+
                         seg is RegularTextSegment && seg.segmentText.isBlank() -> { /* skip whitespace */ }
-                        else -> break
+
+                        else -> {
+                            break
+                        }
                     }
                     j++
                 }

@@ -94,12 +94,16 @@ private suspend fun checkChannelIsOnline(
                         }
                     }
                 }
+
                 is EphemeralChatChannel -> {
                     // Check relay connection for ephemeral chat
                     val relayUrl = channel.roomId.relayUrl
                     OnlineChecker.isOnline(relayUrl.url, accountViewModel.httpClientBuilder::okHttpClientForVideo)
                 }
-                else -> false
+
+                else -> {
+                    false
+                }
             }
         } catch (e: Exception) {
             Log.d("LiveStatusIndicator", "Network error checking channel ${channel.toBestDisplayName()}: ${e.message}")

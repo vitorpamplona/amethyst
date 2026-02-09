@@ -34,8 +34,14 @@ fun DisplayExternalId(
     nav: INav,
 ) {
     when (externalId) {
-        is GeohashId -> DisplayGeohashExternalId(externalId, accountViewModel, nav)
-        is HashtagId -> DisplayHashtagExternalId(externalId, accountViewModel, nav)
+        is GeohashId -> {
+            DisplayGeohashExternalId(externalId, accountViewModel, nav)
+        }
+
+        is HashtagId -> {
+            DisplayHashtagExternalId(externalId, accountViewModel, nav)
+        }
+
         else -> {}
     }
 }

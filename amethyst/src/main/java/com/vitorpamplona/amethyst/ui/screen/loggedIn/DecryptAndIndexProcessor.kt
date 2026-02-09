@@ -195,19 +195,24 @@ class DraftEventHandler(
         draftEventWrap.replyTo?.forEach { it.addReply(draftEventWrap) }
 
         when (rumor) {
-            is ChatroomKeyable -> account.chatroomList.add(rumor, draftEventWrap)
+            is ChatroomKeyable -> {
+                account.chatroomList.add(rumor, draftEventWrap)
+            }
+
             is EphemeralChatEvent -> {
                 rumor.roomId()?.let { roomId ->
                     val channel = cache.getOrCreateEphemeralChannel(roomId)
                     channel.addNote(draftEventWrap, null)
                 }
             }
+
             is ChannelMessageEvent -> {
                 rumor.channelId()?.let { channelId ->
                     val channel = cache.checkGetOrCreatePublicChatChannel(channelId)
                     channel?.addNote(draftEventWrap, null)
                 }
             }
+
             is LiveActivitiesChatMessageEvent -> {
                 rumor.activityAddress()?.let { channelId ->
                     val channel = cache.getOrCreateLiveChannel(channelId)

@@ -297,14 +297,16 @@ fun AcceptableNote(
     if (isQuotedNote || isBoostedNote) {
         val noteEvent = baseNote.event
         when (noteEvent) {
-            is ChannelCreateEvent ->
+            is ChannelCreateEvent -> {
                 RenderPublicChatChannelHeader(
                     channelId = noteEvent.id,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            is ChannelMetadataEvent ->
+            }
+
+            is ChannelMetadataEvent -> {
                 noteEvent.channelId()?.let {
                     RenderPublicChatChannelHeader(
                         channelId = it,
@@ -313,7 +315,9 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is CommunityDefinitionEvent ->
+            }
+
+            is CommunityDefinitionEvent -> {
                 (baseNote as? AddressableNote)?.let {
                     RenderCommunity(
                         baseNote = it,
@@ -321,8 +325,13 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
-            else ->
+            }
+
+            is BadgeDefinitionEvent -> {
+                BadgeDisplay(baseNote = baseNote, accountViewModel)
+            }
+
+            else -> {
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
@@ -341,17 +350,20 @@ fun AcceptableNote(
                         moreOptions = moreOptions,
                     )
                 }
+            }
         }
     } else {
         when (val noteEvent = baseNote.event) {
-            is ChannelCreateEvent ->
+            is ChannelCreateEvent -> {
                 RenderPublicChatChannelHeader(
                     channelId = noteEvent.id,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            is ChannelMetadataEvent ->
+            }
+
+            is ChannelMetadataEvent -> {
                 noteEvent.channelId()?.let {
                     RenderPublicChatChannelHeader(
                         channelId = it,
@@ -360,7 +372,9 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is CommunityDefinitionEvent ->
+            }
+
+            is CommunityDefinitionEvent -> {
                 (baseNote as? AddressableNote)?.let {
                     RenderCommunity(
                         baseNote = it,
@@ -368,8 +382,13 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote, accountViewModel)
-            else ->
+            }
+
+            is BadgeDefinitionEvent -> {
+                BadgeDisplay(baseNote, accountViewModel)
+            }
+
+            else -> {
                 LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
                     CheckNewAndRenderNote(
                         baseNote = baseNote,
@@ -388,6 +407,7 @@ fun AcceptableNote(
                         moreOptions = moreOptions,
                     )
                 }
+            }
         }
     }
 }
@@ -717,34 +737,118 @@ private fun RenderNoteRow(
     nav: INav,
 ) {
     when (val noteEvent = baseNote.event) {
-        is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
-        is AudioTrackEvent -> RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-        is AudioHeaderEvent -> RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-        is DraftWrapEvent -> RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
-        is ReactionEvent -> RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is RepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is GenericRepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ReportEvent -> RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is LongTextNoteEvent -> RenderLongFormContent(baseNote, accountViewModel, nav)
-        is WikiNoteEvent -> RenderWikiContent(baseNote, accountViewModel, nav)
-        is NipTextEvent -> RenderNipContent(baseNote, accountViewModel, nav)
-        is BadgeAwardEvent -> RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
-        is FhirResourceEvent -> RenderFhirResource(baseNote, accountViewModel, nav)
-        is PeopleListEvent -> DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
-        is FollowListEvent -> DisplayFollowList(baseNote, true, accountViewModel, nav)
-        is RelaySetEvent -> DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-        is ChatMessageRelayListEvent -> DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is AdvertisedRelayListEvent -> DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is SearchRelayListEvent -> DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is BlockedRelayListEvent -> DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is TrustedRelayListEvent -> DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is IndexerRelayListEvent -> DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is ProxyRelayListEvent -> DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is BroadcastRelayListEvent -> DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is PinListEvent -> RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
-        is EmojiPackEvent -> RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
-        is LiveActivitiesEvent -> RenderLiveActivityEvent(baseNote, accountViewModel, nav)
-        is GitRepositoryEvent -> RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+        is AppDefinitionEvent -> {
+            RenderAppDefinition(baseNote, accountViewModel, nav)
+        }
+
+        is AudioTrackEvent -> {
+            RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is AudioHeaderEvent -> {
+            RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is DraftWrapEvent -> {
+            RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
+        }
+
+        is ReactionEvent -> {
+            RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is RepostEvent -> {
+            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is GenericRepostEvent -> {
+            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is ReportEvent -> {
+            RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is LongTextNoteEvent -> {
+            RenderLongFormContent(baseNote, accountViewModel, nav)
+        }
+
+        is WikiNoteEvent -> {
+            RenderWikiContent(baseNote, accountViewModel, nav)
+        }
+
+        is NipTextEvent -> {
+            RenderNipContent(baseNote, accountViewModel, nav)
+        }
+
+        is BadgeAwardEvent -> {
+            RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is FhirResourceEvent -> {
+            RenderFhirResource(baseNote, accountViewModel, nav)
+        }
+
+        is PeopleListEvent -> {
+            DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is FollowListEvent -> {
+            DisplayFollowList(baseNote, true, accountViewModel, nav)
+        }
+
+        is RelaySetEvent -> {
+            DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is ChatMessageRelayListEvent -> {
+            DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is AdvertisedRelayListEvent -> {
+            DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is SearchRelayListEvent -> {
+            DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is BlockedRelayListEvent -> {
+            DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is TrustedRelayListEvent -> {
+            DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is IndexerRelayListEvent -> {
+            DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is ProxyRelayListEvent -> {
+            DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is BroadcastRelayListEvent -> {
+            DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is PinListEvent -> {
+            RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is EmojiPackEvent -> {
+            RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
+        }
+
+        is LiveActivitiesEvent -> {
+            RenderLiveActivityEvent(baseNote, accountViewModel, nav)
+        }
+
+        is GitRepositoryEvent -> {
+            RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+        }
+
         is GitPatchEvent -> {
             RenderGitPatchEvent(
                 baseNote,
@@ -756,6 +860,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is GitIssueEvent -> {
             RenderGitIssueEvent(
                 baseNote,
@@ -767,6 +872,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is PrivateDmEvent -> {
             RenderPrivateMessage(
                 baseNote,
@@ -778,6 +884,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is ChatMessageEvent -> {
             RenderChatMessage(
                 baseNote,
@@ -790,6 +897,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is ChatMessageEncryptedFileHeaderEvent -> {
             RenderChatMessageEncryptedFile(
                 baseNote,
@@ -802,6 +910,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,
@@ -810,6 +919,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is HighlightEvent -> {
             RenderHighlight(
                 baseNote,
@@ -821,6 +931,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is CommentEvent -> {
             RenderTextEvent(
                 baseNote,
@@ -834,7 +945,8 @@ private fun RenderNoteRow(
                 nav,
             )
         }
-        is NIP90ContentDiscoveryResponseEvent ->
+
+        is NIP90ContentDiscoveryResponseEvent -> {
             RenderNIP90ContentDiscoveryResponse(
                 baseNote,
                 makeItShort,
@@ -844,13 +956,15 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
 
-        is NIP90StatusEvent ->
+        is NIP90StatusEvent -> {
             RenderNIP90Status(
                 baseNote,
                 accountViewModel,
                 nav,
             )
+        }
 
         is PollNoteEvent -> {
             RenderPoll(
@@ -864,14 +978,39 @@ private fun RenderNoteRow(
                 nav,
             )
         }
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
-        is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        is VideoNormalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        is VideoShortEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
-        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, accountViewModel, nav)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+
+        is FileHeaderEvent -> {
+            FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+        }
+
+        is VideoHorizontalEvent -> {
+            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is VideoVerticalEvent -> {
+            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is VideoNormalEvent -> {
+            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is VideoShortEvent -> {
+            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is PictureEvent -> {
+            PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+        }
+
+        is BaseVoiceEvent -> {
+            RenderVoiceTrack(baseNote, accountViewModel, nav)
+        }
+
+        is FileStorageHeaderEvent -> {
+            FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+        }
+
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(
                 baseNote,
@@ -881,6 +1020,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is TextNoteModificationEvent -> {
             RenderTextModificationEvent(
                 baseNote,
@@ -892,7 +1032,8 @@ private fun RenderNoteRow(
                 nav,
             )
         }
-        is ChannelMessageEvent ->
+
+        is ChannelMessageEvent -> {
             RenderChannelMessage(
                 baseNote,
                 makeItShort,
@@ -903,7 +1044,9 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
-        is LiveActivitiesChatMessageEvent ->
+        }
+
+        is LiveActivitiesChatMessageEvent -> {
             RenderLiveActivityChatMessage(
                 baseNote,
                 makeItShort,
@@ -914,15 +1057,18 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
-        is TorrentEvent ->
+        }
+
+        is TorrentEvent -> {
             RenderTorrent(
                 baseNote,
                 backgroundColor,
                 accountViewModel,
                 nav,
             )
+        }
 
-        is TorrentCommentEvent ->
+        is TorrentCommentEvent -> {
             RenderTorrentComment(
                 baseNote,
                 makeItShort,
@@ -934,8 +1080,9 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
 
-        is InteractiveStoryBaseEvent ->
+        is InteractiveStoryBaseEvent -> {
             RenderInteractiveStory(
                 baseNote,
                 makeItShort,
@@ -945,7 +1092,9 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
-        is PublicMessageEvent ->
+        }
+
+        is PublicMessageEvent -> {
             RenderPublicMessage(
                 baseNote,
                 makeItShort,
@@ -955,6 +1104,8 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
         else -> {
             RenderTextEvent(
                 baseNote,

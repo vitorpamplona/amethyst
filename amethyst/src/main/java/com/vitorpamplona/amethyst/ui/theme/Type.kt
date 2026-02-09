@@ -67,41 +67,57 @@ val DefaultParagraphSpacing: TextUnit = 18.sp
 
 internal val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
     when (level) {
-        0 ->
+        0 -> {
             Typography.displayLarge.copy(
                 fontSize = 32.sp,
                 lineHeight = 40.sp,
             )
-        1 ->
+        }
+
+        1 -> {
             Typography.displayMedium.copy(
                 fontSize = 28.sp,
                 lineHeight = 36.sp,
             )
-        2 ->
+        }
+
+        2 -> {
             Typography.displaySmall.copy(
                 fontSize = 26.sp,
                 lineHeight = 34.sp,
             )
-        3 ->
+        }
+
+        3 -> {
             Typography.displaySmall.copy(
                 fontSize = 24.sp,
                 lineHeight = 32.sp,
             )
-        4 ->
+        }
+
+        4 -> {
             Typography.headlineLarge.copy(
                 fontSize = 22.sp,
                 lineHeight = 26.sp,
             )
-        5 ->
+        }
+
+        5 -> {
             Typography.headlineMedium.copy(
                 fontSize = 20.sp,
                 lineHeight = 24.sp,
             )
-        6 ->
+        }
+
+        6 -> {
             Typography.headlineSmall.copy(
                 fontSize = 18.sp,
                 lineHeight = 22.sp,
             )
-        else -> textStyle
+        }
+
+        else -> {
+            textStyle
+        }
     }
 }

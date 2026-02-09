@@ -238,9 +238,11 @@ fun ZapCustomDialog(
                                 LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
                                     Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
                                 }
+
                                 LnZapEvent.ZapType.PRIVATE -> {
                                     Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
                                 }
+
                                 LnZapEvent.ZapType.NONZAP -> {
                                     Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
                                 }

@@ -176,6 +176,7 @@ fun RenderLiveActivityEventInner(
                 }
 
                 StatusTag.STATUS.ENDED -> {}
+
                 null -> {}
             }
         }

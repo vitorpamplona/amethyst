@@ -962,8 +962,14 @@ private fun RenderReactionType(
         )
     } else {
         when (reactionType) {
-            "+" -> LikedIcon(iconSizeModifier)
-            "-" -> Text(text = "\uD83D\uDC4E", maxLines = 1, fontSize = iconFontSize)
+            "+" -> {
+                LikedIcon(iconSizeModifier)
+            }
+
+            "-" -> {
+                Text(text = "\uD83D\uDC4E", maxLines = 1, fontSize = iconFontSize)
+            }
+
             else -> {
                 if (EmojiCoder.isCoded(reactionType)) {
                     AnimatedBorderTextCornerRadius(
@@ -1611,6 +1617,7 @@ fun RenderReaction(reactionType: String) {
                     fontSize = 22.sp,
                 )
             }
+
             else -> {
                 if (EmojiCoder.isCoded(reactionType)) {
                     AnimatedBorderTextCornerRadius(

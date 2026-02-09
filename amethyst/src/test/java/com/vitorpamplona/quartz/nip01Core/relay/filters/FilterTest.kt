@@ -18,48 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip03Timestamp.ots.op
+package com.vitorpamplona.quartz.nip01Core.relay.filters
 
-import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.utils.Log
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
-/**
- * Operations that act on a single message.
- *
- * @see Op
- */
-abstract class OpUnary : Op() {
-    override fun tagName(): String = ""
-
-    override fun toString(): String = tagName()
-
-    companion object {
-        fun deserializeFromTag(
-            ctx: StreamDeserializationContext,
-            tag: Byte,
-        ): Op? =
-            when (tag) {
-                OpSHA1.TAG -> {
-                    OpSHA1()
-                }
-
-                OpSHA256.TAG -> {
-                    OpSHA256()
-                }
-
-                OpRIPEMD160.TAG -> {
-                    OpRIPEMD160()
-                }
-
-                OpKECCAK256.TAG -> {
-                    OpKECCAK256()
-                }
-
-                else -> {
-                    Log.e("OpenTimestamp", "Unknown operation tag: $tag")
-
-                    null // TODO: Is this OK? Won't it blow up later? Better to throw?
-                }
-            }
+class FilterTest {
+    @Test
+    fun testIsEmpty() {
+        assertTrue(Filter().isEmpty())
+        assertTrue(Filter(ids = listOf()).isEmpty())
+        assertTrue(Filter(authors = listOf()).isEmpty())
+        assertTrue(Filter(kinds = listOf()).isEmpty())
+        assertTrue(Filter(tags = mapOf()).isEmpty())
+        assertTrue(Filter(tagsAll = mapOf()).isEmpty())
+        assertTrue(Filter(tags = mapOf("e" to listOf())).isEmpty())
+        assertTrue(Filter(tagsAll = mapOf("e" to listOf())).isEmpty())
+        assertTrue(Filter(search = "").isEmpty())
     }
 }

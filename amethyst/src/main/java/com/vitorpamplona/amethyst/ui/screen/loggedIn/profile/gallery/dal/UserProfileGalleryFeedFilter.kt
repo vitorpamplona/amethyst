@@ -51,8 +51,7 @@ class UserProfileGalleryFeedFilter(
                 acceptableEvent(it, params, user)
             }
 
-        var sorted = sort(notes)
-        return sorted.toList()
+        return sort(notes).toList()
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -70,7 +69,13 @@ class UserProfileGalleryFeedFilter(
     ): Boolean {
         val noteEvent = it.event
         return (
-            (it.event?.pubKey == user.pubkeyHex && (noteEvent is PictureEvent || noteEvent is VideoEvent || (noteEvent is ProfileGalleryEntryEvent) && noteEvent.hasUrl() && noteEvent.hasFromEvent())) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
+            (
+                it.event?.pubKey == user.pubkeyHex && (
+                    noteEvent is PictureEvent ||
+                        noteEvent is VideoEvent ||
+                        (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
+                )
+            ) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
         ) &&
             params.match(noteEvent, it.relays) &&
             account.isAcceptable(it)

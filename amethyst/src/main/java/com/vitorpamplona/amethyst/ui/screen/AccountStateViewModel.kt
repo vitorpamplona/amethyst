@@ -119,12 +119,7 @@ class AccountStateViewModel : ViewModel() {
                 is NEmbed -> null
                 is NRelay -> null
                 is NAddress -> null
-                else ->
-                    try {
-                        if (loginWithExternalSigner) Hex.decode(key) else null
-                    } catch (e: Exception) {
-                        null
-                    }
+                else -> runCatching { if (loginWithExternalSigner) Hex.decode(key) else null }
             }
 
         if (loginWithExternalSigner && pubKeyParsed == null) {
@@ -350,11 +345,15 @@ class AccountStateViewModel : ViewModel() {
 
     fun currentAccountNPub() =
         when (val state = _accountContent.value) {
-            is AccountState.LoggedIn ->
+            is AccountState.LoggedIn -> {
                 state.account.signer.pubKey
                     .hexToByteArray()
                     .toNpub()
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
 
     fun logOff(accountInfo: AccountInfo) {

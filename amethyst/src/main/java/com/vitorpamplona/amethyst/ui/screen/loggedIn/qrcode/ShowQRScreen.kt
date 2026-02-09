@@ -263,13 +263,17 @@ fun WatchAndDisplayNip05Row(
     val nip05StateMetadata by user.nip05State().flow.collectAsStateWithLifecycle()
 
     when (val nip05State = nip05StateMetadata) {
-        is Nip05State.Exists -> ObserveAndDisplayNIP05(nip05State, accountViewModel)
-        else ->
+        is Nip05State.Exists -> {
+            ObserveAndDisplayNIP05(nip05State, accountViewModel)
+        }
+
+        else -> {
             Text(
                 text = user.pubkeyDisplayHex(),
                 fontSize = Font14SP,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
     }
 }

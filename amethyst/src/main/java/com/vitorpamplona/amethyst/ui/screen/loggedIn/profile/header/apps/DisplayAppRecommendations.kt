@@ -63,6 +63,7 @@ fun DisplayAppRecommendations(
                     Recommends(state, accountViewModel, nav)
                 }
             }
+
             else -> {}
         }
     }

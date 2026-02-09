@@ -221,8 +221,14 @@ fun RenderLikeGallery(
                     )
                 } else {
                     when (val shortReaction = reactionType) {
-                        "+" -> LikedIcon(modifier.size(Size19dp))
-                        "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
+                        "+" -> {
+                            LikedIcon(modifier.size(Size19dp))
+                        }
+
+                        "-" -> {
+                            Text(text = "\uD83D\uDC4E", modifier = modifier)
+                        }
+
                         else -> {
                             if (EmojiCoder.isCoded(shortReaction)) {
                                 DisplaySecretEmojiAsReaction(

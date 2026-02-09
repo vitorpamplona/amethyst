@@ -93,6 +93,7 @@ fun ChannelFileUploadDialog(
                             }
                         }
                     }
+
                     is LiveActivitiesChannel -> {
                         channel.creator?.let {
                             UserPicture(

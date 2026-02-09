@@ -898,59 +898,101 @@ object LocalCache : ILocalCache, ICacheProvider {
     @Suppress("DEPRECATION")
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
-            is PollNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
-            is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is CommentEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is PollNoteEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            is VoiceReplyEvent -> event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
+            is LongTextNoteEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
-            is ChatMessageEncryptedFileHeaderEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is GitReplyEvent -> {
+                event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            is LnZapEvent ->
+            is TextNoteEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is CommentEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is VoiceReplyEvent -> {
+                event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is ChatMessageEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is LnZapEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
                     (event.zapRequest?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptyList())
-            is LnZapRequestEvent ->
+            }
+
+            is LnZapRequestEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
-            is BadgeProfilesEvent ->
+            }
+
+            is BadgeProfilesEvent -> {
                 event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
-            is BadgeAwardEvent -> event.awardDefinition().map { getOrCreateAddressableNote(it) }
-            is PrivateDmEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
-            is RepostEvent ->
+            }
+
+            is BadgeAwardEvent -> {
+                event.awardDefinition().map { getOrCreateAddressableNote(it) }
+            }
+
+            is PrivateDmEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is RepostEvent -> {
                 listOfNotNull(
                     event.boostedEventId()?.let { checkGetOrCreateNote(it) },
                     event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
                 )
-            is GenericRepostEvent ->
+            }
+
+            is GenericRepostEvent -> {
                 listOfNotNull(
                     event.boostedEventId()?.let { checkGetOrCreateNote(it) },
                     event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
                 )
-            is CommunityPostApprovalEvent ->
+            }
+
+            is CommunityPostApprovalEvent -> {
                 event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.approvedAddresses().map { getOrCreateAddressableNote(it) }
-            is ReactionEvent ->
+            }
+
+            is ReactionEvent -> {
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
-            is ChannelMessageEvent ->
-                event
-                    .tagsWithoutCitations()
-                    .filter { it != event.channelId() }
-                    .mapNotNull { checkGetOrCreateNote(it) }
-            is LiveActivitiesChatMessageEvent ->
-                event
-                    .tagsWithoutCitations()
-                    .filter { it != event.activity()?.toTag() }
-                    .mapNotNull { checkGetOrCreateNote(it) }
-            is TorrentCommentEvent ->
-                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            else -> emptyList()
+            is ChannelMessageEvent -> {
+                event.tagsWithoutCitations().filter { it != event.channelId() }.mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is LiveActivitiesChatMessageEvent -> {
+                event.tagsWithoutCitations().filter { it != event.activity()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is TorrentCommentEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            else -> {
+                emptyList()
+            }
         }
 
     fun consume(
@@ -2691,27 +2733,38 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(nip19: Entity) {
         when (nip19) {
-            is NSec -> getOrCreateUser(nip19.toPubKeyHex())
-            is NPub -> getOrCreateUser(nip19.hex)
+            is NSec -> {
+                getOrCreateUser(nip19.toPubKeyHex())
+            }
+
+            is NPub -> {
+                getOrCreateUser(nip19.hex)
+            }
+
             is NProfile -> {
                 nip19.relay.forEach { relayHint ->
                     relayHints.addKey(nip19.hex, relayHint)
                 }
                 getOrCreateUser(nip19.hex)
             }
+
             is NNote -> {
                 getOrCreateNote(nip19.hex)
             }
+
             is NEvent -> {
                 nip19.relay.forEach { relayHint ->
                     relayHints.addEvent(nip19.hex, relayHint)
                 }
                 getOrCreateNote(nip19.hex)
             }
+
             is NEmbed -> {
                 justConsume(nip19.event, null, false)
             }
+
             is NRelay -> {}
+
             is NAddress -> {
                 val aTag = nip19.aTag()
                 nip19.relay.forEach { relayHint ->
@@ -2719,6 +2772,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
                 getOrCreateAddressableNote(nip19.address())
             }
+
             else -> { }
         }
     }
@@ -2966,10 +3020,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
-                else -> {
-                    Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}")
-                    false
-                }
+                else -> Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}").let { false }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

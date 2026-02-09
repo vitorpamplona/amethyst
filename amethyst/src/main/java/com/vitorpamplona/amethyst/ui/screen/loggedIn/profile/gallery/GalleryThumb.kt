@@ -173,14 +173,17 @@ fun GalleryContentView(
 ) {
     AutoNonlazyGrid(contentList.size) { contentIndex ->
         when (val content = contentList[contentIndex]) {
-            is MediaUrlImage ->
+            is MediaUrlImage -> {
                 SensitivityWarning(content.contentWarning != null, accountViewModel) {
                     UrlImageView(content, accountViewModel, ratio = ratio)
                 }
-            is MediaUrlVideo ->
+            }
+
+            is MediaUrlVideo -> {
                 SensitivityWarning(content.contentWarning != null, accountViewModel) {
                     UrlVideoView(content, accountViewModel, ratio = ratio)
                 }
+            }
         }
     }
 }
@@ -226,12 +229,15 @@ fun UrlImageView(
                             }
                         }
                     }
+
                     is AsyncImagePainter.State.Error -> {
                         ClickableUrl(urlText = "${content.url} ", url = content.url)
                     }
+
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(defaultModifier)
                     }
+
                     else -> {}
                 }
             }

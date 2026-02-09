@@ -237,6 +237,7 @@ fun ReadsScreen(
                     },
                 )
             }
+
             FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingLongFormFeedSubscription(
@@ -322,12 +323,15 @@ fun ReadsScreen(
             connectedRelays.isEmpty() -> {
                 LoadingState("Connecting to relays...")
             }
+
             feedMode == FeedMode.FOLLOWING && followedUsers.isEmpty() -> {
                 LoadingState("Loading followed users...")
             }
+
             events.isEmpty() && !initialLoadComplete -> {
                 LoadingState("Loading articles...")
             }
+
             events.isEmpty() && initialLoadComplete -> {
                 EmptyState(
                     title =
@@ -345,6 +349,7 @@ fun ReadsScreen(
                     onRefresh = { relayManager.connect() },
                 )
             }
+
             else -> {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),

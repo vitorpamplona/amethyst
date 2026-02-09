@@ -46,14 +46,12 @@ enum class ReportType(
                 "harassment" -> HARASSMENT
                 "Harassment" -> HARASSMENT
                 "Harrassment" -> HARASSMENT
-
                 "impersonation" -> IMPERSONATION
                 "Impersonation" -> IMPERSONATION
                 "Falsificação de identidade \uD83E\uDD78" -> IMPERSONATION
                 "Suplantación de identidad \uD83E\uDD78" -> IMPERSONATION
                 "Impersonation \uD83E\uDD78" -> IMPERSONATION
                 "Předstírání identity \uD83E\uDD78" -> IMPERSONATION
-
                 "illegal" -> ILLEGAL
                 "Illegal" -> ILLEGAL
                 "Illegal Material" -> ILLEGAL
@@ -63,7 +61,6 @@ enum class ReportType(
                 "csam" -> ILLEGAL
                 "abuse" -> ILLEGAL
                 "fraud" -> ILLEGAL
-
                 "explicit" -> NUDITY
                 "explıcıt" -> NUDITY
                 "Explicit" -> NUDITY
@@ -73,14 +70,11 @@ enum class ReportType(
                 "sexual-content" -> NUDITY
                 "inappropriate" -> NUDITY
                 "Naaktheid \uD83C\uDF51\uD83C\uDF46" -> NUDITY
-
                 "profanity" -> PROFANITY
                 "Profanity" -> PROFANITY
                 "Profanity \uD83D\uDDEF\uFE0F" -> PROFANITY
-
                 "malware" -> MALWARE
                 "Malware" -> MALWARE
-
                 "other" -> OTHER
                 "Other" -> OTHER
                 "mod" -> OTHER
@@ -89,20 +83,14 @@ enum class ReportType(
                 "ai-generated" -> OTHER
                 "duplicate" -> OTHER
                 "" -> OTHER
-
                 "spam" -> SPAM
                 "Spam" -> SPAM
                 "Spam \uD83D\uDCE3" -> SPAM
                 "Bot Activity" -> SPAM
                 "スパム \uD83D\uDCE3" -> SPAM
                 "Pourriel \uD83D\uDCE3" -> SPAM
-
                 "violence" -> VIOLENCE
-
-                else -> {
-                    Log.w("ReportedEventTag", "Report type not supported: `$code` ${tag.joinToString(", ")}")
-                    OTHER
-                }
+                else -> Log.w("ReportedEventTag", "Report type not supported: `$code` ${tag.joinToString(", ")}").let { OTHER }
             }
     }
 }

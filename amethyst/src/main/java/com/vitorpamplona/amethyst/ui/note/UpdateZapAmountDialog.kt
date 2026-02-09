@@ -584,9 +584,15 @@ fun authenticate(
                     super.onAuthenticationError(errorCode, errString)
 
                     when (errorCode) {
-                        BiometricPrompt.ERROR_NEGATIVE_BUTTON -> keyguardPrompt()
-                        BiometricPrompt.ERROR_LOCKOUT -> keyguardPrompt()
-                        else ->
+                        BiometricPrompt.ERROR_NEGATIVE_BUTTON -> {
+                            keyguardPrompt()
+                        }
+
+                        BiometricPrompt.ERROR_LOCKOUT -> {
+                            keyguardPrompt()
+                        }
+
+                        else -> {
                             onError(
                                 stringRes(context, R.string.biometric_authentication_failed),
                                 stringRes(
@@ -595,6 +601,7 @@ fun authenticate(
                                     errString.toString(),
                                 ),
                             )
+                        }
                     }
                 }
 

@@ -171,9 +171,11 @@ class NwcPaymentHandler(
             is PayInvoiceSuccessResponse -> {
                 PaymentResult.Success(response.result?.preimage)
             }
+
             is PayInvoiceErrorResponse -> {
                 PaymentResult.Error(response.error?.message ?: "Unknown error")
             }
+
             else -> {
                 PaymentResult.Error("Unexpected response type: ${response.resultType}")
             }

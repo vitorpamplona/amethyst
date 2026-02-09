@@ -124,9 +124,18 @@ open class DiscoverLiveFeedFilter(
                     2
                 }
             }
-            StatusTag.STATUS.PLANNED -> 1
-            StatusTag.STATUS.ENDED -> 0
-            else -> 0
+
+            StatusTag.STATUS.PLANNED -> {
+                1
+            }
+
+            StatusTag.STATUS.ENDED -> {
+                0
+            }
+
+            else -> {
+                0
+            }
         }
     }
 }

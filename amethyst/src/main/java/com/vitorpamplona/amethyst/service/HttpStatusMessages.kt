@@ -45,7 +45,6 @@ class HttpStatusMessages {
                 416 -> R.string.http_status_416
                 417 -> R.string.http_status_417
                 426 -> R.string.http_status_426
-
                 500 -> R.string.http_status_500
                 501 -> R.string.http_status_501
                 502 -> R.string.http_status_502
@@ -56,7 +55,6 @@ class HttpStatusMessages {
                 507 -> R.string.http_status_507
                 508 -> R.string.http_status_508
                 511 -> R.string.http_status_511
-
                 else -> null
             }
     }

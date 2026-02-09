@@ -39,7 +39,7 @@ fun DisplayErrorMessages(
 
     openDialogMsg.value?.let { obj ->
         when (obj) {
-            is ResourceToastMsg ->
+            is ResourceToastMsg -> {
                 if (obj.params != null) {
                     InformationDialog(
                         stringRes(obj.titleResId),
@@ -55,16 +55,18 @@ fun DisplayErrorMessages(
                         toastManager.clearToasts()
                     }
                 }
+            }
 
-            is StringToastMsg ->
+            is StringToastMsg -> {
                 InformationDialog(
                     obj.title,
                     obj.msg,
                 ) {
                     toastManager.clearToasts()
                 }
+            }
 
-            is ActionableStringToastMsg ->
+            is ActionableStringToastMsg -> {
                 InformationDialog(
                     obj.title,
                     obj.msg,
@@ -72,8 +74,9 @@ fun DisplayErrorMessages(
                     obj.action()
                     toastManager.clearToasts()
                 }
+            }
 
-            is ThrowableToastMsg ->
+            is ThrowableToastMsg -> {
                 InformationDialog(
                     stringRes(obj.titleResId),
                     obj.msg,
@@ -81,8 +84,11 @@ fun DisplayErrorMessages(
                 ) {
                     toastManager.clearToasts()
                 }
+            }
 
-            is MultiErrorToastMsg -> MultiUserErrorMessageDialog(obj, accountViewModel, nav)
+            is MultiErrorToastMsg -> {
+                MultiUserErrorMessageDialog(obj, accountViewModel, nav)
+            }
         }
     }
 }

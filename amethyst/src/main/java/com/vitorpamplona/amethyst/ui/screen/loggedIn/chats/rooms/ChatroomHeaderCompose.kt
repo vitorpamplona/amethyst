@@ -120,26 +120,33 @@ private fun ChatroomEntry(
 ) {
     val baseNoteEvent = lastMessage.event
     when (baseNoteEvent) {
-        is ChannelMessageEvent ->
+        is ChannelMessageEvent -> {
             baseNoteEvent.channelId()?.let {
                 LoadPublicChatChannel(it, accountViewModel) { channel ->
                     ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
                 }
             }
-        is ChannelMetadataEvent ->
+        }
+
+        is ChannelMetadataEvent -> {
             baseNoteEvent.channelId()?.let {
                 LoadPublicChatChannel(it, accountViewModel) { channel ->
                     ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
                 }
             }
-        is ChannelCreateEvent ->
+        }
+
+        is ChannelCreateEvent -> {
             LoadPublicChatChannel(baseNoteEvent.id, accountViewModel) { channel ->
                 ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
             }
+        }
+
         is ChatroomKeyable -> {
             val room = baseNoteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex)
             UserRoomCompose(room, lastMessage, accountViewModel, nav)
         }
+
         is EphemeralChatEvent -> {
             baseNoteEvent.roomId()?.let {
                 LoadEphemeralChatChannel(it, accountViewModel) { channel ->
@@ -147,7 +154,10 @@ private fun ChatroomEntry(
                 }
             }
         }
-        else -> BlankNote()
+
+        else -> {
+            BlankNote()
+        }
     }
 }
 

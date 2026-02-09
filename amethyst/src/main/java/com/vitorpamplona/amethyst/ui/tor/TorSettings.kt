@@ -52,9 +52,7 @@ fun parseTorType(code: Int?): TorType =
         TorType.OFF.screenCode -> TorType.OFF
         TorType.INTERNAL.screenCode -> TorType.INTERNAL
         TorType.EXTERNAL.screenCode -> TorType.EXTERNAL
-        else -> {
-            TorType.INTERNAL
-        }
+        else -> TorType.INTERNAL
     }
 
 enum class TorPresetType(
@@ -75,9 +73,7 @@ fun parseTorPresetType(code: Int?): TorPresetType =
         TorPresetType.DEFAULT.screenCode -> TorPresetType.DEFAULT
         TorPresetType.SMALL_PAYLOADS.screenCode -> TorPresetType.SMALL_PAYLOADS
         TorPresetType.FULL_PRIVACY.screenCode -> TorPresetType.FULL_PRIVACY
-        else -> {
-            TorPresetType.CUSTOM
-        }
+        else -> TorPresetType.CUSTOM
     }
 
 fun isPreset(

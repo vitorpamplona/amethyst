@@ -29,10 +29,16 @@ fun String.firstFullCharOld(): String {
     return when (this.length) {
         0,
         1,
-        -> return this
+        -> {
+            return this
+        }
+
         2,
         3,
-        -> return if (isUTF16Char(0)) this.take(2) else this.take(1)
+        -> {
+            return if (isUTF16Char(0)) this.take(2) else this.take(1)
+        }
+
         else -> {
             val first = isUTF16Char(0)
             val second = isUTF16Char(2)

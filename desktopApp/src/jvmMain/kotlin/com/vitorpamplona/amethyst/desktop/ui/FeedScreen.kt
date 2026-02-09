@@ -268,6 +268,7 @@ fun FeedScreen(
                     },
                 )
             }
+
             FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingFeedSubscription(

@@ -31,9 +31,11 @@ class Nip04DecryptResponse {
                 is BunkerResponseDecrypt -> {
                     SignerResult.RequestAddressed.Successful(DecryptionResult(response.plaintext))
                 }
+
                 is BunkerResponseError -> {
                     SignerResult.RequestAddressed.Rejected()
                 }
+
                 else -> {
                     SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
                 }

@@ -65,7 +65,9 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
                 }
             }
 
-            else -> null
+            else -> {
+                null
+            }
         }
 
         gen.writeEndArray()

@@ -296,6 +296,7 @@ fun App(
                         onLoginSuccess = { onScreenChange(DesktopScreen.Feed) },
                     )
                 }
+
                 is AccountState.LoggedIn -> {
                     val account = accountState as AccountState.LoggedIn
                     val nwcConnection by accountManager.nwcConnection.collectAsState()
@@ -442,7 +443,7 @@ fun MainContent(
                 modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
             ) {
                 when (currentScreen) {
-                    DesktopScreen.Feed ->
+                    DesktopScreen.Feed -> {
                         FeedScreen(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -458,7 +459,9 @@ fun MainContent(
                             },
                             onZapFeedback = onZapFeedback,
                         )
-                    DesktopScreen.Reads ->
+                    }
+
+                    DesktopScreen.Reads -> {
                         ReadsScreen(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -470,7 +473,9 @@ fun MainContent(
                                 onScreenChange(DesktopScreen.Thread(noteId))
                             },
                         )
-                    DesktopScreen.Search ->
+                    }
+
+                    DesktopScreen.Search -> {
                         SearchScreen(
                             localCache = localCache,
                             relayManager = relayManager,
@@ -482,7 +487,9 @@ fun MainContent(
                                 onScreenChange(DesktopScreen.Thread(noteId))
                             },
                         )
-                    DesktopScreen.Bookmarks ->
+                    }
+
+                    DesktopScreen.Bookmarks -> {
                         BookmarksScreen(
                             relayManager = relayManager,
                             localCache = localCache,
@@ -497,9 +504,17 @@ fun MainContent(
                             },
                             onZapFeedback = onZapFeedback,
                         )
-                    DesktopScreen.Messages -> MessagesPlaceholder()
-                    DesktopScreen.Notifications -> NotificationsScreen(relayManager, account, subscriptionsCoordinator)
-                    DesktopScreen.MyProfile ->
+                    }
+
+                    DesktopScreen.Messages -> {
+                        MessagesPlaceholder()
+                    }
+
+                    DesktopScreen.Notifications -> {
+                        NotificationsScreen(relayManager, account, subscriptionsCoordinator)
+                    }
+
+                    DesktopScreen.MyProfile -> {
                         UserProfileScreen(
                             pubKeyHex = account.pubKeyHex,
                             relayManager = relayManager,
@@ -514,7 +529,9 @@ fun MainContent(
                             },
                             onZapFeedback = onZapFeedback,
                         )
-                    is DesktopScreen.UserProfile ->
+                    }
+
+                    is DesktopScreen.UserProfile -> {
                         UserProfileScreen(
                             pubKeyHex = currentScreen.pubKeyHex,
                             relayManager = relayManager,
@@ -529,7 +546,9 @@ fun MainContent(
                             },
                             onZapFeedback = onZapFeedback,
                         )
-                    is DesktopScreen.Thread ->
+                    }
+
+                    is DesktopScreen.Thread -> {
                         ThreadScreen(
                             noteId = currentScreen.noteId,
                             relayManager = relayManager,
@@ -547,7 +566,11 @@ fun MainContent(
                             onZapFeedback = onZapFeedback,
                             onReply = onShowReplyDialog,
                         )
-                    DesktopScreen.Settings -> RelaySettingsScreen(relayManager, account, accountManager)
+                    }
+
+                    DesktopScreen.Settings -> {
+                        RelaySettingsScreen(relayManager, account, accountManager)
+                    }
                 }
             }
         }

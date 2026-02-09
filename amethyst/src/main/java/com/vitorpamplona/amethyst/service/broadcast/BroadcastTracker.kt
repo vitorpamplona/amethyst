@@ -366,13 +366,21 @@ class BroadcastTracker {
                         // Recalculate status
                         val newStatus =
                             when {
-                                currentBroadcast.results.values.any { it is RelayResult.Pending || it is RelayResult.Retrying } ->
+                                currentBroadcast.results.values.any { it is RelayResult.Pending || it is RelayResult.Retrying } -> {
                                     BroadcastStatus.IN_PROGRESS
-                                currentBroadcast.results.all { it.value is RelayResult.Success } ->
+                                }
+
+                                currentBroadcast.results.all { it.value is RelayResult.Success } -> {
                                     BroadcastStatus.SUCCESS
-                                currentBroadcast.results.none { it.value is RelayResult.Success } ->
+                                }
+
+                                currentBroadcast.results.none { it.value is RelayResult.Success } -> {
                                     BroadcastStatus.FAILED
-                                else -> BroadcastStatus.PARTIAL
+                                }
+
+                                else -> {
+                                    BroadcastStatus.PARTIAL
+                                }
                             }
                         currentBroadcast.copy(status = newStatus)
                     }

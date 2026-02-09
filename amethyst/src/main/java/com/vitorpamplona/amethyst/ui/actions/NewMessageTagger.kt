@@ -71,12 +71,25 @@ class NewMessageTagger(
                 val results = parseDirtyWordForKey(word)
 
                 when (val entity = results?.key?.entity) {
-                    is NPub -> addUserToMentions(dao.getOrCreateUser(entity.hex))
-                    is NProfile -> addUserToMentions(dao.getOrCreateUser(entity.hex))
+                    is NPub -> {
+                        addUserToMentions(dao.getOrCreateUser(entity.hex))
+                    }
 
-                    is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
-                    is NEvent -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
-                    is NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
+                    is NProfile -> {
+                        addUserToMentions(dao.getOrCreateUser(entity.hex))
+                    }
+
+                    is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
+                        addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    }
+
+                    is NEvent -> {
+                        addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    }
+
+                    is NEmbed -> {
+                        addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
+                    }
 
                     is NAddress -> {
                         val note = dao.getOrCreateAddressableNote(entity.address())
@@ -86,6 +99,7 @@ class NewMessageTagger(
                     }
 
                     is NSec -> {}
+
                     is NRelay -> {}
                 }
             }
@@ -104,6 +118,7 @@ class NewMessageTagger(
                                 is NPub -> {
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
+
                                 is NProfile -> {
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
@@ -111,6 +126,7 @@ class NewMessageTagger(
                                 is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }
+
                                 is NEvent -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }

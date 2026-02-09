@@ -170,6 +170,7 @@ class PoolRequests {
                     forFilters = cmd.filters,
                 )
             }
+
             is CloseCmd -> {
                 subState(cmd.subId).onCloseReq(relay)
                 desiredSubListeners.get(cmd.subId)?.onCloseReq(
@@ -197,6 +198,7 @@ class PoolRequests {
                     forFilters = state?.lastKnownFilterStates(relay.url),
                 )
             }
+
             is EoseMessage -> {
                 val state = relayState.get(msg.subId)
                 state?.onEose(relay.url)
@@ -210,6 +212,7 @@ class PoolRequests {
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
+
             is ClosedMessage -> {
                 val state = relayState.get(msg.subId)
                 state?.onClosed(relay.url)

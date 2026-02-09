@@ -93,6 +93,7 @@ class EnsureTest {
             (args[1].length == KEY_SIZE),
             (args[1].isHex()),
             -> null
+
             else -> args[0] + args[1]
         }
 

@@ -87,24 +87,29 @@ fun routeForInner(
         is AppDefinitionEvent -> {
             Route.ContentDiscovery(noteEvent.id)
         }
+
         is IsInPublicChatChannel -> {
             noteEvent.channelId()?.let {
                 Route.PublicChatChannel(it)
             }
         }
+
         is ChannelCreateEvent -> {
             Route.PublicChatChannel(noteEvent.id)
         }
+
         is LiveActivitiesEvent -> {
             noteEvent.address().let {
                 Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
             }
         }
+
         is LiveActivitiesChatMessageEvent -> {
             noteEvent.activityAddress()?.let {
                 Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
             }
         }
+
         is EphemeralChatEvent -> {
             noteEvent.roomId()?.let {
                 Route.EphemeralChat(it.id, it.relayUrl.url)
@@ -124,16 +129,19 @@ fun routeForInner(
         is CommunityDefinitionEvent -> {
             Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
+
         is GiftWrapEvent -> {
             noteEvent.innerEventId?.let {
                 routeFor(LocalCache.getOrCreateNote(it), loggedIn)
             }
         }
+
         is SealedRumorEvent -> {
             noteEvent.innerEventId?.let {
                 routeFor(LocalCache.getOrCreateNote(it), loggedIn)
             }
         }
+
         is AddressableEvent -> {
             Route.Note(noteEvent.aTag().toTag())
         }
@@ -232,23 +240,31 @@ fun routeReplyTo(
                 Route.PublicChatChannel(channelId, replyTo = note.idHex)
             }
         }
+
         is LiveActivitiesChatMessageEvent -> {
             noteEvent.activityAddress()?.let {
                 Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag, replyTo = note.idHex)
             }
         }
+
         is EphemeralChatEvent -> {
             noteEvent.roomId()?.let {
                 Route.EphemeralChat(it.id, it.relayUrl.url, replyTo = note.idHex)
             }
         }
-        is PublicMessageEvent ->
+
+        is PublicMessageEvent -> {
             Route.NewPublicMessage(
                 users = noteEvent.groupKeySet() - account.userProfile().pubkeyHex,
                 parentId = noteEvent.id,
             )
-        is TextNoteEvent -> Route.NewShortNote(baseReplyTo = note.idHex)
-        is PrivateDmEvent ->
+        }
+
+        is TextNoteEvent -> {
+            Route.NewShortNote(baseReplyTo = note.idHex)
+        }
+
+        is PrivateDmEvent -> {
             routeToMessage(
                 room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
                 draftMessage = null,
@@ -256,7 +272,9 @@ fun routeReplyTo(
                 draftId = null,
                 account = account,
             )
-        is ChatroomKeyable ->
+        }
+
+        is ChatroomKeyable -> {
             routeToMessage(
                 room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
                 draftMessage = null,
@@ -264,6 +282,8 @@ fun routeReplyTo(
                 draftId = null,
                 account = account,
             )
+        }
+
         is CommentEvent -> {
             if (noteEvent.isGeohashedScoped()) {
                 Route.GeoPost(replyTo = note.idHex)
@@ -274,7 +294,9 @@ fun routeReplyTo(
             }
         }
 
-        else -> Route.GenericCommentPost(replyTo = note.idHex)
+        else -> {
+            Route.GenericCommentPost(replyTo = note.idHex)
+        }
     }
 }
 
@@ -286,10 +308,14 @@ suspend fun routeEditDraftTo(
     val draft = account.draftsDecryptionCache.cachedDraft(noteEvent)
 
     return when (draft) {
-        is ChannelMessageEvent -> draft.channelId()?.let { Route.PublicChatChannel(it, draftId = note.idHex) }
+        is ChannelMessageEvent -> {
+            draft.channelId()?.let { Route.PublicChatChannel(it, draftId = note.idHex) }
+        }
+
         is LiveActivitiesChatMessageEvent -> {
             draft.activityAddress()?.let { Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag, draftId = note.idHex) }
         }
+
         is EphemeralChatEvent -> {
             draft.roomId()?.let { Route.EphemeralChat(it.id, it.relayUrl.url, draftId = note.idHex) }
         }
@@ -300,15 +326,21 @@ suspend fun routeEditDraftTo(
             return Route.Room(room, draftId = note.idHex)
         }
 
-        is TextNoteEvent -> Route.NewShortNote(draft = note.idHex)
-        is ClassifiedsEvent -> Route.NewProduct(draft = note.idHex)
+        is TextNoteEvent -> {
+            Route.NewShortNote(draft = note.idHex)
+        }
 
-        is PublicMessageEvent ->
+        is ClassifiedsEvent -> {
+            Route.NewProduct(draft = note.idHex)
+        }
+
+        is PublicMessageEvent -> {
             Route.NewPublicMessage(
                 users = draft.groupKeySet() - account.userProfile().pubkeyHex,
                 parentId = noteEvent.id,
                 draftId = note.idHex,
             )
+        }
 
         is CommentEvent -> {
             if (draft.isGeohashedScoped()) {
@@ -320,6 +352,8 @@ suspend fun routeEditDraftTo(
             }
         }
 
-        else -> null
+        else -> {
+            null
+        }
     }
 }

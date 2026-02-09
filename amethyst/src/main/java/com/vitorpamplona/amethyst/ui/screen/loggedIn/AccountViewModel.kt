@@ -1637,19 +1637,24 @@ class AccountViewModel(
 
                     when (val parsed = it.entity) {
                         is NSec -> {}
+
                         is NPub -> {}
+
                         is NProfile -> {}
+
                         is NNote -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
                         }
+
                         is NEvent -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
                         }
-                        is NEmbed ->
+
+                        is NEmbed -> {
                             withContext(Dispatchers.IO) {
                                 val baseNote = LocalCache.getOrCreateNote(parsed.event)
                                 if (baseNote.event == null) {
@@ -1660,13 +1665,16 @@ class AccountViewModel(
 
                                 returningNote = baseNote
                             }
+                        }
 
                         is NRelay -> {}
+
                         is NAddress -> {
                             LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
                                 returningNote = note
                             }
                         }
+
                         else -> {}
                     }
 

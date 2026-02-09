@@ -84,10 +84,11 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     )
                 }
 
-                CloseCmd.LABEL ->
+                CloseCmd.LABEL -> {
                     CloseCmd(
                         subId = jp.nextTextValue(),
                     )
+                }
 
                 AuthCmd.LABEL -> {
                     jp.nextToken()

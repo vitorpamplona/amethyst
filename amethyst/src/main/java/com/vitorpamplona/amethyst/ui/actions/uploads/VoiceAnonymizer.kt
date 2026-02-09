@@ -306,7 +306,10 @@ class VoiceAnonymizer {
                     val randomShift = 0.9 + (Math.random() * 0.2)
                     baseFactor * randomShift
                 }
-                else -> baseFactor
+
+                else -> {
+                    baseFactor
+                }
             }
         val totalSamples = pcmData.size
         val processedSamples = ArrayList<Float>(totalSamples)

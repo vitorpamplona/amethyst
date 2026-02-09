@@ -43,9 +43,7 @@ fun <T : Event> TagArrayBuilder<T>.quote(entity: Entity) =
         is NEmbed -> add(entity.toQuoteTagArray())
         is NPub -> add(entity.toQuoteTagArray())
         is NProfile -> add(entity.toQuoteTagArray())
-        else -> {
-            this
-        }
+        else -> this
     }
 
 fun <T : Event> TagArrayBuilder<T>.quotes(entities: List<Entity>) = entities.forEach { quote(it) }

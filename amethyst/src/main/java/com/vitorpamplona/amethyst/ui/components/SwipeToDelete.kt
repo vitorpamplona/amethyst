@@ -65,8 +65,14 @@ fun SwipeToDeleteContainer(
                     StartToEnd -> {
                         onStartToEnd()
                     }
-                    EndToStart -> return@rememberSwipeToDismissBoxState false
-                    Settled -> return@rememberSwipeToDismissBoxState false
+
+                    EndToStart -> {
+                        return@rememberSwipeToDismissBoxState false
+                    }
+
+                    Settled -> {
+                        return@rememberSwipeToDismissBoxState false
+                    }
                 }
                 return@rememberSwipeToDismissBoxState true
             },

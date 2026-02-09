@@ -190,12 +190,15 @@ fun RenderPage(
             is FeedState.Empty -> {
                 FeedEmpty(videoFeedContentState::invalidateData)
             }
+
             is FeedState.FeedError -> {
                 FeedError(state.errorMessage, videoFeedContentState::invalidateData)
             }
+
             is FeedState.Loaded -> {
                 LoadedState(state, pagerStateKey, videoFeedContentState, accountViewModel, nav)
             }
+
             is FeedState.Loading -> {
                 LoadingFeed()
             }

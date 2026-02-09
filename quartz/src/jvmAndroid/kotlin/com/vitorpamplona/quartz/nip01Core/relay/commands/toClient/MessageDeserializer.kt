@@ -51,38 +51,44 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                     )
                 }
 
-                EoseMessage.LABEL ->
+                EoseMessage.LABEL -> {
                     EoseMessage(
                         subId = jp.nextTextValue(),
                     )
+                }
 
-                NoticeMessage.LABEL ->
+                NoticeMessage.LABEL -> {
                     NoticeMessage(
                         message = jp.nextTextValue(),
                     )
+                }
 
-                OkMessage.LABEL ->
+                OkMessage.LABEL -> {
                     OkMessage(
                         eventId = jp.nextTextValue(),
                         success = jp.nextBooleanValue(),
                         message = jp.nextTextValue() ?: "",
                     )
+                }
 
-                AuthMessage.LABEL ->
+                AuthMessage.LABEL -> {
                     AuthMessage(
                         challenge = jp.nextTextValue(),
                     )
+                }
 
-                NotifyMessage.LABEL ->
+                NotifyMessage.LABEL -> {
                     NotifyMessage(
                         message = jp.nextTextValue(),
                     )
+                }
 
-                ClosedMessage.LABEL ->
+                ClosedMessage.LABEL -> {
                     ClosedMessage(
                         subId = jp.nextTextValue(),
                         message = jp.nextTextValue() ?: "",
                     )
+                }
 
                 CountMessage.LABEL -> {
                     val queryId = jp.nextTextValue()

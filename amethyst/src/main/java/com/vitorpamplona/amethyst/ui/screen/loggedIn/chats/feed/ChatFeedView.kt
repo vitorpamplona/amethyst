@@ -84,10 +84,19 @@ fun RenderChatFeedView(
 
     CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
         when (state) {
-            is FeedState.Loading -> LoadingFeed()
-            is FeedState.Empty -> FeedEmpty { feed.invalidateData() }
-            is FeedState.FeedError -> FeedError(state.errorMessage) { feed.invalidateData() }
-            is FeedState.Loaded ->
+            is FeedState.Loading -> {
+                LoadingFeed()
+            }
+
+            is FeedState.Empty -> {
+                FeedEmpty { feed.invalidateData() }
+            }
+
+            is FeedState.FeedError -> {
+                FeedError(state.errorMessage) { feed.invalidateData() }
+            }
+
+            is FeedState.Loaded -> {
                 ChatFeedLoaded(
                     state,
                     accountViewModel,
@@ -98,6 +107,7 @@ fun RenderChatFeedView(
                     onWantsToEditDraft,
                     avoidDraft,
                 )
+            }
         }
     }
 }

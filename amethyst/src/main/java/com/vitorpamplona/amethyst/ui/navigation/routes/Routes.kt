@@ -312,7 +312,6 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Video>() -> entry.toRoute<Route.Video>()
         dest.hasRoute<Route.Discover>() -> entry.toRoute<Route.Discover>()
         dest.hasRoute<Route.Notification>() -> entry.toRoute<Route.Notification>()
-
         dest.hasRoute<Route.Search>() -> entry.toRoute<Route.Search>()
         dest.hasRoute<Route.SecurityFilters>() -> entry.toRoute<Route.SecurityFilters>()
         dest.hasRoute<Route.PrivacyOptions>() -> entry.toRoute<Route.PrivacyOptions>()
@@ -321,16 +320,13 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Drafts>() -> entry.toRoute<Route.Drafts>()
         dest.hasRoute<Route.Settings>() -> entry.toRoute<Route.Settings>()
         dest.hasRoute<Route.EditProfile>() -> entry.toRoute<Route.EditProfile>()
-
         dest.hasRoute<Route.Profile>() -> entry.toRoute<Route.Profile>()
         dest.hasRoute<Route.Note>() -> entry.toRoute<Route.Note>()
         dest.hasRoute<Route.Hashtag>() -> entry.toRoute<Route.Hashtag>()
         dest.hasRoute<Route.Geohash>() -> entry.toRoute<Route.Geohash>()
         dest.hasRoute<Route.Community>() -> entry.toRoute<Route.Community>()
-
         dest.hasRoute<Route.QRDisplay>() -> entry.toRoute<Route.QRDisplay>()
         dest.hasRoute<Route.RelayInfo>() -> entry.toRoute<Route.RelayInfo>()
-
         dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
         dest.hasRoute<Route.PublicChatChannel>() -> entry.toRoute<Route.PublicChatChannel>()
         dest.hasRoute<Route.LiveActivityChannel>() -> entry.toRoute<Route.LiveActivityChannel>()
@@ -349,7 +345,6 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
         dest.hasRoute<Route.GenericCommentPost>() -> entry.toRoute<Route.GenericCommentPost>()
         dest.hasRoute<Route.NewPublicMessage>() -> entry.toRoute<Route.NewPublicMessage>()
-
         dest.hasRoute<Route.Lists>() -> entry.toRoute<Route.Lists>()
         dest.hasRoute<Route.MyPeopleListView>() -> entry.toRoute<Route.MyPeopleListView>()
         dest.hasRoute<Route.MyFollowPackView>() -> entry.toRoute<Route.MyFollowPackView>()
@@ -359,10 +354,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.NewGroupDM>() -> entry.toRoute<Route.NewGroupDM>()
         dest.hasRoute<Route.UserSettings>() -> entry.toRoute<Route.UserSettings>()
         dest.hasRoute<Route.ManualZapSplitPayment>() -> entry.toRoute<Route.ManualZapSplitPayment>()
-
-        else -> {
-            null
-        }
+        else -> null
     }
 }
 

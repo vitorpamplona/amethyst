@@ -157,7 +157,7 @@ fun BookmarkGroupScreenView(
                     .imePadding(),
         ) {
             when (bookmarkType) {
-                BookmarkType.PostBookmark ->
+                BookmarkType.PostBookmark -> {
                     RenderPostList(
                         bookmarkGroupViewModel,
                         pagerState,
@@ -182,7 +182,9 @@ fun BookmarkGroupScreenView(
                         },
                         nav,
                     )
-                BookmarkType.ArticleBookmark ->
+                }
+
+                BookmarkType.ArticleBookmark -> {
                     RenderArticleList(
                         bookmarkGroupViewModel,
                         pagerState,
@@ -207,6 +209,7 @@ fun BookmarkGroupScreenView(
                         },
                         nav,
                     )
+                }
             }
         }
     }
@@ -246,26 +249,32 @@ fun BookmarkGroupHeaderTabs(
     val bookmarkGroup by bookmarkGroupViewModel.selectedBookmarkGroupFlow.collectAsStateWithLifecycle()
     val privateItemTypeLabel =
         when (bookmarkType) {
-            BookmarkType.PostBookmark ->
+            BookmarkType.PostBookmark -> {
                 bookmarkGroup?.let {
                     stringRes(R.string.private_posts_count, it.privatePostBookmarks.size)
                 } ?: stringRes(R.string.private_posts_label)
-            BookmarkType.ArticleBookmark ->
+            }
+
+            BookmarkType.ArticleBookmark -> {
                 bookmarkGroup?.let {
                     stringRes(R.string.private_articles_count, it.privateArticleBookmarks.size)
                 } ?: stringRes(R.string.private_posts_label)
+            }
         }
 
     val publicItemTypeLabel =
         when (bookmarkType) {
-            BookmarkType.PostBookmark ->
+            BookmarkType.PostBookmark -> {
                 bookmarkGroup?.let {
                     stringRes(R.string.public_posts_count, it.publicPostBookmarks.size)
                 } ?: stringRes(R.string.public_posts_label)
-            BookmarkType.ArticleBookmark ->
+            }
+
+            BookmarkType.ArticleBookmark -> {
                 bookmarkGroup?.let {
                     stringRes(R.string.public_articles_count, it.publicArticleBookmarks.size)
                 } ?: stringRes(R.string.public_articles_label)
+            }
         }
 
     TabRow(

@@ -339,6 +339,7 @@ fun UserProfileScreen(
                                 Spacer(Modifier.width(8.dp))
                                 Text("Loading...")
                             }
+
                             isLoading -> {
                                 androidx.compose.material3.CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
@@ -348,6 +349,7 @@ fun UserProfileScreen(
                                 Spacer(Modifier.width(8.dp))
                                 Text(if (isFollowing) "Unfollowing..." else "Following...")
                             }
+
                             else -> {
                                 Icon(
                                     if (isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
@@ -529,6 +531,7 @@ fun UserProfileScreen(
                         }
                     }
                 }
+
                 postsLoading -> {
                     // Loading state
                     Box(
@@ -546,6 +549,7 @@ fun UserProfileScreen(
                         }
                     }
                 }
+
                 events.isEmpty() -> {
                     // Empty state (loaded but no posts)
                     Box(
@@ -559,6 +563,7 @@ fun UserProfileScreen(
                         )
                     }
                 }
+
                 else -> {
                     // Posts loaded successfully
                     LazyColumn(

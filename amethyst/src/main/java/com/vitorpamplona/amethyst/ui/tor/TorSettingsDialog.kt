@@ -257,7 +257,7 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
                 dialogViewModel.moneyOperationsViaTor,
             )
 
-            /**
+            /*
              * Too hard to separate Coil into regular images and profile pics
              SwitchSettingsRow(
              R.string.tor_use_profile_pictures,

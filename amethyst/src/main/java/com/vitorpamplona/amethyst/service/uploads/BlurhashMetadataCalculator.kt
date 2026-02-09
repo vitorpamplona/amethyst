@@ -60,6 +60,7 @@ object BlurhashMetadataCalculator {
                 val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
                 processImage(bitmap, dimPrecomputed)
             }
+
             isVideo(mimeType) -> {
                 val retriever = MediaMetadataRetriever()
                 try {
@@ -69,7 +70,10 @@ object BlurhashMetadataCalculator {
                     retriever.release()
                 }
             }
-            else -> null to dimPrecomputed
+
+            else -> {
+                null to dimPrecomputed
+            }
         }
 
     fun computeFromUri(
@@ -82,11 +86,12 @@ object BlurhashMetadataCalculator {
 
         return try {
             when {
-                isImage(mimeType) ->
+                isImage(mimeType) -> {
                     context.contentResolver.openInputStream(uri)?.use { stream ->
                         val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
                         processImage(bitmap, dimPrecomputed)
                     } ?: (null to dimPrecomputed)
+                }
 
                 isVideo(mimeType) -> {
                     val retriever = MediaMetadataRetriever()
@@ -98,7 +103,9 @@ object BlurhashMetadataCalculator {
                     }
                 }
 
-                else -> null
+                else -> {
+                    null
+                }
             }
         } catch (e: Exception) {
             Log.w("BlurhashMetadataCalc", "Failed to compute metadata from uri", e)

@@ -54,9 +54,7 @@ fun parseThemeType(code: Int?): ThemeType =
         ThemeType.SYSTEM.screenCode -> ThemeType.SYSTEM
         ThemeType.LIGHT.screenCode -> ThemeType.LIGHT
         ThemeType.DARK.screenCode -> ThemeType.DARK
-        else -> {
-            ThemeType.SYSTEM
-        }
+        else -> ThemeType.SYSTEM
     }
 
 enum class ConnectivityType(
@@ -91,9 +89,7 @@ fun parseConnectivityType(code: Boolean?): ConnectivityType =
         ConnectivityType.ALWAYS.prefCode -> ConnectivityType.ALWAYS
         ConnectivityType.WIFI_ONLY.prefCode -> ConnectivityType.WIFI_ONLY
         ConnectivityType.NEVER.prefCode -> ConnectivityType.NEVER
-        else -> {
-            ConnectivityType.ALWAYS
-        }
+        else -> ConnectivityType.ALWAYS
     }
 
 fun parseConnectivityType(screenCode: Int): ConnectivityType =
@@ -101,9 +97,7 @@ fun parseConnectivityType(screenCode: Int): ConnectivityType =
         ConnectivityType.ALWAYS.screenCode -> ConnectivityType.ALWAYS
         ConnectivityType.WIFI_ONLY.screenCode -> ConnectivityType.WIFI_ONLY
         ConnectivityType.NEVER.screenCode -> ConnectivityType.NEVER
-        else -> {
-            ConnectivityType.ALWAYS
-        }
+        else -> ConnectivityType.ALWAYS
     }
 
 fun parseFeatureSetType(screenCode: Int): FeatureSetType =
@@ -111,18 +105,14 @@ fun parseFeatureSetType(screenCode: Int): FeatureSetType =
         FeatureSetType.COMPLETE.screenCode -> FeatureSetType.COMPLETE
         FeatureSetType.SIMPLIFIED.screenCode -> FeatureSetType.SIMPLIFIED
         FeatureSetType.PERFORMANCE.screenCode -> FeatureSetType.PERFORMANCE
-        else -> {
-            FeatureSetType.COMPLETE
-        }
+        else -> FeatureSetType.COMPLETE
     }
 
 fun parseGalleryType(screenCode: Int): ProfileGalleryType =
     when (screenCode) {
         ProfileGalleryType.CLASSIC.screenCode -> ProfileGalleryType.CLASSIC
         ProfileGalleryType.MODERN.screenCode -> ProfileGalleryType.MODERN
-        else -> {
-            ProfileGalleryType.CLASSIC
-        }
+        else -> ProfileGalleryType.CLASSIC
     }
 
 enum class BooleanType(
@@ -138,18 +128,14 @@ fun parseBooleanType(code: Boolean?): BooleanType =
     when (code) {
         BooleanType.ALWAYS.prefCode -> BooleanType.ALWAYS
         BooleanType.NEVER.prefCode -> BooleanType.NEVER
-        else -> {
-            BooleanType.ALWAYS
-        }
+        else -> BooleanType.ALWAYS
     }
 
 fun parseBooleanType(screenCode: Int): BooleanType =
     when (screenCode) {
         BooleanType.ALWAYS.screenCode -> BooleanType.ALWAYS
         BooleanType.NEVER.screenCode -> BooleanType.NEVER
-        else -> {
-            BooleanType.ALWAYS
-        }
+        else -> BooleanType.ALWAYS
     }
 
 enum class WarningType(
@@ -167,9 +153,7 @@ fun parseWarningType(screenCode: Int): WarningType =
         WarningType.WARN.screenCode -> WarningType.WARN
         WarningType.SHOW.screenCode -> WarningType.SHOW
         WarningType.HIDE.screenCode -> WarningType.HIDE
-        else -> {
-            WarningType.WARN
-        }
+        else -> WarningType.WARN
     }
 
 fun parseWarningType(code: Boolean?): WarningType =
@@ -177,7 +161,5 @@ fun parseWarningType(code: Boolean?): WarningType =
         WarningType.WARN.prefCode -> WarningType.WARN
         WarningType.HIDE.prefCode -> WarningType.HIDE
         WarningType.SHOW.prefCode -> WarningType.SHOW
-        else -> {
-            WarningType.WARN
-        }
+        else -> WarningType.WARN
     }

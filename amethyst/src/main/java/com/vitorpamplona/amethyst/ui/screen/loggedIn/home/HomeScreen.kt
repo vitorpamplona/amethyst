@@ -239,8 +239,12 @@ fun HomeScreenFloatingButton(
             .collectAsStateWithLifecycle()
 
         when (val myLocation = location) {
-            is LocationState.LocationResult.Success -> NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+            is LocationState.LocationResult.Success -> {
+                NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+            }
+
             is LocationState.LocationResult.LackPermission -> { }
+
             is LocationState.LocationResult.Loading -> { }
         }
     } else {

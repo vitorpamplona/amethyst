@@ -59,12 +59,15 @@ fun StringFeedView(
             is StringFeedState.Empty -> {
                 StringFeedEmpty(pre, post) { viewModel.invalidateData() }
             }
+
             is StringFeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is StringFeedState.Loaded -> {
                 FeedLoaded(state, pre, post, inner)
             }
+
             is StringFeedState.Loading -> {
                 LoadingFeed()
             }

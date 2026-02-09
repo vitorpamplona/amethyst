@@ -136,6 +136,7 @@ class PoolCounts {
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
+
             is ClosedMessage -> {
                 subState(msg.subId).onClosed(relay.url)
                 sendToRelayIfChanged(msg.subId, relay.url) { cmd ->

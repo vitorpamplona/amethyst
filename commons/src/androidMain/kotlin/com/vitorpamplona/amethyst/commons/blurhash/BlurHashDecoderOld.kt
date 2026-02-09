@@ -189,6 +189,7 @@ object BlurHashDecoderOld {
         calculate -> {
             DoubleArray(height * numCompY).also { cacheCosinesY[height * numCompY] = it }
         }
+
         else -> {
             cacheCosinesY[height * numCompY]!!
         }
@@ -202,7 +203,10 @@ object BlurHashDecoderOld {
         calculate -> {
             DoubleArray(width * numCompX).also { cacheCosinesX[width * numCompX] = it }
         }
-        else -> cacheCosinesX[width * numCompX]!!
+
+        else -> {
+            cacheCosinesX[width * numCompX]!!
+        }
     }
 
     private fun DoubleArray.getCos(

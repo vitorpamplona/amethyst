@@ -87,6 +87,7 @@ fun MyAsyncImage(
                             }
                         }
                     }
+
                     is AsyncImagePainter.State.Error -> {
                         if (onError != null) {
                             if (ratio != null) {
@@ -102,6 +103,7 @@ fun MyAsyncImage(
                             ClickableUrl(urlText = imageUrl, url = imageUrl)
                         }
                     }
+
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(loadedImageModifier)
 
@@ -110,6 +112,7 @@ fun MyAsyncImage(
                             MediaAspectRatioCache.add(imageUrl, drawable.width, drawable.height)
                         }
                     }
+
                     else -> {}
                 }
             }

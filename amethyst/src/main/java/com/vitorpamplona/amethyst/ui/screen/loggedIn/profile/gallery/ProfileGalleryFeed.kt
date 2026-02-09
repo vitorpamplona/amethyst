@@ -61,9 +61,11 @@ fun RenderGalleryFeed(
             is FeedState.Empty -> {
                 FeedEmpty { viewModel.invalidateData() }
             }
+
             is FeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is FeedState.Loaded -> {
                 GalleryFeedLoaded(
                     state,
@@ -72,6 +74,7 @@ fun RenderGalleryFeed(
                     nav,
                 )
             }
+
             is FeedState.Loading -> {
                 LoadingFeed()
             }

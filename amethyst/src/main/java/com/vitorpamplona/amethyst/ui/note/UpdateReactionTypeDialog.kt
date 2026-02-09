@@ -326,12 +326,15 @@ private fun RenderReactionOption(
                         )
                     }
                 }
-                "-" ->
+
+                "-" -> {
                     Text(
                         text = "\uD83D\uDC4E ✖",
                         color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
+                }
+
                 else -> {
                     if (EmojiCoder.isCoded(reactionType)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

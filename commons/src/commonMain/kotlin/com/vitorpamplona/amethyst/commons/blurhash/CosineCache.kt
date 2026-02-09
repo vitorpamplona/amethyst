@@ -60,6 +60,7 @@ object CosineCache {
                 cacheCosinesY.put(height * numCompY, it)
             }
         }
+
         else -> {
             cacheCosinesY[height * numCompY]!!
         }
@@ -77,6 +78,9 @@ object CosineCache {
                 cos(PI * x * i / width)
             }.also { cacheCosinesX.put(width * numCompX, it) }
         }
-        else -> cacheCosinesX[width * numCompX]!!
+
+        else -> {
+            cacheCosinesX[width * numCompX]!!
+        }
     }
 }

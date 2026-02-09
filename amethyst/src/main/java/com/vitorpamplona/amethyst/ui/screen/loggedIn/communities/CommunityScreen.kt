@@ -196,20 +196,23 @@ fun CommunityScreen(
             state = pagerState,
         ) { page ->
             when (page) {
-                0 ->
+                0 -> {
                     RefresheableFeedView(
                         feedViewModel,
                         null,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
-                1 ->
+                }
+
+                1 -> {
                     RefresheableFeedView(
                         modFeedViewModel,
                         null,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                }
             }
         }
     }

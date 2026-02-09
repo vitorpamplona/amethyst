@@ -59,6 +59,7 @@ fun parseSearchInput(input: String): List<SearchResult> {
                     ),
                 )
             }
+
             is NProfile -> {
                 results.add(
                     SearchResult.UserResult(
@@ -67,6 +68,7 @@ fun parseSearchInput(input: String): List<SearchResult> {
                     ),
                 )
             }
+
             is NSec -> {
                 results.add(
                     SearchResult.UserResult(
@@ -75,6 +77,7 @@ fun parseSearchInput(input: String): List<SearchResult> {
                     ),
                 )
             }
+
             is NNote -> {
                 results.add(
                     SearchResult.NoteResult(
@@ -83,6 +86,7 @@ fun parseSearchInput(input: String): List<SearchResult> {
                     ),
                 )
             }
+
             is NEvent -> {
                 results.add(
                     SearchResult.NoteResult(
@@ -91,6 +95,7 @@ fun parseSearchInput(input: String): List<SearchResult> {
                     ),
                 )
             }
+
             is NAddress -> {
                 results.add(
                     SearchResult.AddressResult(
@@ -101,6 +106,7 @@ fun parseSearchInput(input: String): List<SearchResult> {
                     ),
                 )
             }
+
             else -> { }
         }
         return results

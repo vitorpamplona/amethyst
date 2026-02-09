@@ -108,14 +108,17 @@ object MetaTagsParser {
                         consume()
                         break
                     }
+
                     // `>` out of quote -> end of tag
                     quote == null && c == '>' -> {
                         break
                     }
+
                     // entering quote
                     quote == null && (c == '\'' || c == '"') -> {
                         quote = c
                     }
+
                     // leaving quote
                     quote != null && c == quote -> {
                         quote = null
@@ -263,6 +266,7 @@ object MetaTagsParser {
                 State.AFTER_EQ -> {
                     when {
                         c.isWhitespace() -> {}
+
                         c == '\'' || c == '"' -> {
                             valueBegin = i + 1
                             valueQuote = c

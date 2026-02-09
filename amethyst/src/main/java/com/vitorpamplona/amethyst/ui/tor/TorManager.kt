@@ -58,9 +58,11 @@ class TorManager(
                 TorType.INTERNAL -> {
                     emitAll(service.status)
                 }
+
                 TorType.OFF -> {
                     emit(TorServiceStatus.Off)
                 }
+
                 TorType.EXTERNAL -> {
                     if (externalSocksPort > 0) {
                         emit(TorServiceStatus.Active(externalSocksPort))

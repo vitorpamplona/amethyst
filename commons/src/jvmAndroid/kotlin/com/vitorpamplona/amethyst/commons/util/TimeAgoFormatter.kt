@@ -62,19 +62,24 @@ fun timeAgo(
             updateFormattersIfNeeded()
             prefix + yearFormatter.format(time * 1000)
         }
+
         timeDifference > TimeUtils.ONE_MONTH -> {
             updateFormattersIfNeeded()
             prefix + monthFormatter.format(time * 1000)
         }
+
         timeDifference > TimeUtils.ONE_DAY -> {
             prefix + (timeDifference / TimeUtils.ONE_DAY).toString() + "d"
         }
+
         timeDifference > TimeUtils.ONE_HOUR -> {
             prefix + (timeDifference / TimeUtils.ONE_HOUR).toString() + "h"
         }
+
         timeDifference > TimeUtils.ONE_MINUTE -> {
             prefix + (timeDifference / TimeUtils.ONE_MINUTE).toString() + "m"
         }
+
         else -> {
             prefix + "now"
         }
@@ -83,46 +88,22 @@ fun timeAgo(
 
 fun timeDiffAgoLong(timeDifference: Int): String =
     when {
-        timeDifference > TimeUtils.ONE_YEAR -> {
-            (timeDifference / TimeUtils.ONE_YEAR).toString() + " years"
-        }
-        timeDifference > TimeUtils.ONE_MONTH -> {
-            (timeDifference / TimeUtils.ONE_MONTH).toString() + " months"
-        }
-        timeDifference > TimeUtils.ONE_DAY -> {
-            (timeDifference / TimeUtils.ONE_DAY).toString() + " days"
-        }
-        timeDifference > TimeUtils.ONE_HOUR -> {
-            (timeDifference / TimeUtils.ONE_HOUR).toString() + " hours"
-        }
-        timeDifference > TimeUtils.ONE_MINUTE -> {
-            (timeDifference / TimeUtils.ONE_MINUTE).toString() + " minutes"
-        }
-        else -> {
-            "now"
-        }
+        timeDifference > TimeUtils.ONE_YEAR -> (timeDifference / TimeUtils.ONE_YEAR).toString() + " years"
+        timeDifference > TimeUtils.ONE_MONTH -> (timeDifference / TimeUtils.ONE_MONTH).toString() + " months"
+        timeDifference > TimeUtils.ONE_DAY -> (timeDifference / TimeUtils.ONE_DAY).toString() + " days"
+        timeDifference > TimeUtils.ONE_HOUR -> (timeDifference / TimeUtils.ONE_HOUR).toString() + " hours"
+        timeDifference > TimeUtils.ONE_MINUTE -> (timeDifference / TimeUtils.ONE_MINUTE).toString() + " minutes"
+        else -> "now"
     }
 
 fun timeDiffAgoShortish(timeDifference: Int): String =
     when {
-        timeDifference > TimeUtils.ONE_YEAR -> {
-            (timeDifference / TimeUtils.ONE_YEAR).toString() + " yrs"
-        }
-        timeDifference > TimeUtils.ONE_MONTH -> {
-            (timeDifference / TimeUtils.ONE_MONTH).toString() + " mos"
-        }
-        timeDifference > TimeUtils.ONE_DAY -> {
-            (timeDifference / TimeUtils.ONE_DAY).toString() + " days"
-        }
-        timeDifference > TimeUtils.ONE_HOUR -> {
-            (timeDifference / TimeUtils.ONE_HOUR).toString() + " hrs"
-        }
-        timeDifference > TimeUtils.ONE_MINUTE -> {
-            (timeDifference / TimeUtils.ONE_MINUTE).toString() + " mins"
-        }
-        else -> {
-            "now"
-        }
+        timeDifference > TimeUtils.ONE_YEAR -> (timeDifference / TimeUtils.ONE_YEAR).toString() + " yrs"
+        timeDifference > TimeUtils.ONE_MONTH -> (timeDifference / TimeUtils.ONE_MONTH).toString() + " mos"
+        timeDifference > TimeUtils.ONE_DAY -> (timeDifference / TimeUtils.ONE_DAY).toString() + " days"
+        timeDifference > TimeUtils.ONE_HOUR -> (timeDifference / TimeUtils.ONE_HOUR).toString() + " hrs"
+        timeDifference > TimeUtils.ONE_MINUTE -> (timeDifference / TimeUtils.ONE_MINUTE).toString() + " mins"
+        else -> "now"
     }
 
 /**
@@ -148,11 +129,15 @@ fun dateFormatter(
             updateFormattersIfNeeded()
             yearFormatter.format(time * 1000)
         }
+
         timeDifference > TimeUtils.ONE_DAY -> {
             updateFormattersIfNeeded()
             monthFormatter.format(time * 1000)
         }
-        else -> today
+
+        else -> {
+            today
+        }
     }
 }
 

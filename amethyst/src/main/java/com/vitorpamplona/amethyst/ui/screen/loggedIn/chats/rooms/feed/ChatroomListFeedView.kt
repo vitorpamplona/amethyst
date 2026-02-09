@@ -77,12 +77,15 @@ private fun CrossFadeState(
             is FeedState.Empty -> {
                 FeedEmpty { feedContentState.invalidateData() }
             }
+
             is FeedState.FeedError -> {
                 FeedError(state.errorMessage) { feedContentState.invalidateData() }
             }
+
             is FeedState.Loaded -> {
                 FeedLoaded(state, listState, accountViewModel, nav)
             }
+
             FeedState.Loading -> {
                 LoadingFeed()
             }

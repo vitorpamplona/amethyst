@@ -191,7 +191,10 @@ open class Note(
     fun relayHintUrl(): NormalizedRelayUrl? {
         // checks Community Events first
         when (val noteEvent = event) {
-            is CommunityDefinitionEvent -> noteEvent.relayUrls().firstOrNull()?.let { return it }
+            is CommunityDefinitionEvent -> {
+                noteEvent.relayUrls().firstOrNull()?.let { return it }
+            }
+
             is IsInPublicChatChannel -> {
                 inGatherers?.forEach {
                     if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
@@ -199,9 +202,11 @@ open class Note(
                     }
                 }
             }
+
             is LiveActivitiesEvent -> {
                 noteEvent.relays().ifEmpty { null }?.toSet()
             }
+
             is LiveActivitiesChatMessageEvent -> {
                 inGatherers?.forEach {
                     if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
@@ -209,7 +214,10 @@ open class Note(
                     }
                 }
             }
-            is EphemeralChatEvent -> noteEvent.roomId()?.let { return it.relayUrl }
+
+            is EphemeralChatEvent -> {
+                noteEvent.roomId()?.let { return it.relayUrl }
+            }
         }
 
         val currentOutbox = author?.outboxRelays()?.toSet()

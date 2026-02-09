@@ -189,34 +189,8 @@ class EventFactory {
                 ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelMuteUserEvent.KIND -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
-                ChatMessageEncryptedFileHeaderEvent.KIND -> {
-                    if (id.isBlank()) {
-                        ChatMessageEncryptedFileHeaderEvent(
-                            EventHasher.hashId(pubKey, createdAt, kind, tags, content),
-                            pubKey,
-                            createdAt,
-                            tags,
-                            content,
-                            sig,
-                        )
-                    } else {
-                        ChatMessageEncryptedFileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
-                    }
-                }
-                ChatMessageEvent.KIND -> {
-                    if (id.isBlank()) {
-                        ChatMessageEvent(
-                            EventHasher.hashId(pubKey, createdAt, kind, tags, content),
-                            pubKey,
-                            createdAt,
-                            tags,
-                            content,
-                            sig,
-                        )
-                    } else {
-                        ChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
-                    }
-                }
+                ChatMessageEncryptedFileHeaderEvent.KIND -> ChatMessageEncryptedFileHeaderEvent(id.ifBlank { EventHasher.hashId(pubKey, createdAt, kind, tags, content) }, pubKey, createdAt, tags, content, sig)
+                ChatMessageEvent.KIND -> ChatMessageEvent(id.ifBlank { EventHasher.hashId(pubKey, createdAt, kind, tags, content) }, pubKey, createdAt, tags, content, sig)
                 ChatMessageRelayListEvent.KIND -> ChatMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
                 CommentEvent.KIND -> CommentEvent(id, pubKey, createdAt, tags, content, sig)
@@ -307,10 +281,7 @@ class EventFactory {
                 VoiceEvent.KIND -> VoiceEvent(id, pubKey, createdAt, tags, content, sig)
                 VoiceReplyEvent.KIND -> VoiceReplyEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
-                else -> {
-                    factories[kind]?.build(id, pubKey, createdAt, tags, content, sig)
-                        ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
-                }
+                else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T
     }
 }

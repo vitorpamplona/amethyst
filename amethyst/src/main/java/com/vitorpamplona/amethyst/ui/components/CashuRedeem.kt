@@ -93,12 +93,17 @@ fun CashuPreview(
 
     CrossfadeIfEnabled(targetState = cashuData, label = "CashuPreview", accountViewModel = accountViewModel) {
         when (it) {
-            is GenericLoadable.Loaded<ImmutableList<CashuToken>> -> CashuPreview(it.loaded, accountViewModel)
-            is GenericLoadable.Error<ImmutableList<CashuToken>> ->
+            is GenericLoadable.Loaded<ImmutableList<CashuToken>> -> {
+                CashuPreview(it.loaded, accountViewModel)
+            }
+
+            is GenericLoadable.Error<ImmutableList<CashuToken>> -> {
                 Text(
                     text = "$cashutoken ",
                     style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
                 )
+            }
+
             else -> {}
         }
     }

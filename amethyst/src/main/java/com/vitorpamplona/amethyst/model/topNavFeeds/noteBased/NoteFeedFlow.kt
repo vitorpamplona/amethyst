@@ -68,21 +68,27 @@ class NoteFeedFlow(
                     AuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
                 }
             }
+
             is MuteListEvent -> {
                 MutedAuthorsByOutboxTopNavFilter(caches.muteListCache.cachedUserIdSet(noteEvent), blockedRelays)
             }
+
             is FollowListEvent -> {
                 AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays)
             }
+
             is CommunityListEvent -> {
                 AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
+
             is HashtagListEvent -> {
                 HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), outboxRelays)
             }
+
             is GeohashListEvent -> {
                 LocationTopNavFilter(caches.geohashCache.cachedGeohashes(noteEvent), outboxRelays)
             }
+
             is CommunityDefinitionEvent -> {
                 SingleCommunityTopNavFilter(
                     community = noteEvent.addressTag(),
@@ -91,7 +97,10 @@ class NoteFeedFlow(
                     blockedRelays = blockedRelays,
                 )
             }
-            else -> AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
+
+            else -> {
+                AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
+            }
         }
 
     suspend fun FlowCollector<IFeedTopNavFilter>.processByOutbox(
@@ -106,21 +115,27 @@ class NoteFeedFlow(
                     emit(AuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
                 }
             }
+
             is MuteListEvent -> {
                 emit(MutedAuthorsByOutboxTopNavFilter(caches.muteListCache.mutedUserIdSet(noteEvent), blockedRelays))
             }
+
             is FollowListEvent -> {
                 emit(AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays))
             }
+
             is CommunityListEvent -> {
                 emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
             }
+
             is HashtagListEvent -> {
                 emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), outboxRelays))
             }
+
             is GeohashListEvent -> {
                 emit(LocationTopNavFilter(caches.geohashCache.geohashes(noteEvent), outboxRelays))
             }
+
             is CommunityDefinitionEvent -> {
                 emit(
                     SingleCommunityTopNavFilter(
@@ -131,10 +146,12 @@ class NoteFeedFlow(
                     ),
                 )
             }
-            else ->
+
+            else -> {
                 emit(
                     AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays),
                 )
+            }
         }
     }
 
@@ -150,21 +167,27 @@ class NoteFeedFlow(
                     AuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
                 }
             }
+
             is MuteListEvent -> {
                 MutedAuthorsByProxyTopNavFilter(caches.muteListCache.cachedUserIdSet(noteEvent), proxyRelays)
             }
+
             is FollowListEvent -> {
                 AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays)
             }
+
             is CommunityListEvent -> {
                 AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
+
             is HashtagListEvent -> {
                 HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), proxyRelays)
             }
+
             is GeohashListEvent -> {
                 LocationTopNavFilter(caches.geohashCache.cachedGeohashes(noteEvent), proxyRelays)
             }
+
             is CommunityDefinitionEvent -> {
                 SingleCommunityTopNavFilter(
                     community = noteEvent.addressTag(),
@@ -173,7 +196,10 @@ class NoteFeedFlow(
                     blockedRelays = blockedRelays,
                 )
             }
-            else -> AuthorsByProxyTopNavFilter(emptySet(), proxyRelays)
+
+            else -> {
+                AuthorsByProxyTopNavFilter(emptySet(), proxyRelays)
+            }
         }
 
     suspend fun FlowCollector<IFeedTopNavFilter>.processByProxy(
@@ -188,21 +214,27 @@ class NoteFeedFlow(
                     emit(AuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
                 }
             }
+
             is MuteListEvent -> {
                 emit(MutedAuthorsByProxyTopNavFilter(caches.muteListCache.mutedUserIdSet(noteEvent), proxyRelays))
             }
+
             is FollowListEvent -> {
                 emit(AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays))
             }
+
             is CommunityListEvent -> {
                 emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
             }
+
             is HashtagListEvent -> {
                 emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), proxyRelays))
             }
+
             is GeohashListEvent -> {
                 emit(LocationTopNavFilter(caches.geohashCache.geohashes(noteEvent), proxyRelays))
             }
+
             is CommunityDefinitionEvent -> {
                 emit(
                     SingleCommunityTopNavFilter(
@@ -213,10 +245,12 @@ class NoteFeedFlow(
                     ),
                 )
             }
-            else ->
+
+            else -> {
                 emit(
                     AuthorsByProxyTopNavFilter(emptySet(), proxyRelays),
                 )
+            }
         }
     }
 

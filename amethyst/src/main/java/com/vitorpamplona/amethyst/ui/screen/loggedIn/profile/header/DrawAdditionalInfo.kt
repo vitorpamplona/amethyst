@@ -261,6 +261,7 @@ fun DisplayNip05ProfileStatus(
                 )
             }
         }
+
         else -> { }
     }
 }

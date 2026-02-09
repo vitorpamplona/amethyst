@@ -41,9 +41,11 @@ class SqlSelectionBuilder(
             is Condition.Empty -> {
                 ""
             }
+
             is Condition.Raw -> {
                 cond.condition
             }
+
             is Condition.Equals -> {
                 if (cond.value == null) {
                     "${cond.column} IS NULL"
@@ -52,6 +54,7 @@ class SqlSelectionBuilder(
                     "${cond.column} = ?"
                 }
             }
+
             is Condition.NotEquals -> {
                 if (cond.value == null) {
                     "${cond.column} IS NULL"
@@ -60,36 +63,45 @@ class SqlSelectionBuilder(
                     "${cond.column} != ?"
                 }
             }
+
             is Condition.GreaterThan -> {
                 selectionArgs.add(cond.value.toString())
                 "${cond.column} > ?"
             }
+
             is Condition.GreaterThanOrEquals -> {
                 selectionArgs.add(cond.value.toString())
                 "${cond.column} >= ?"
             }
+
             is Condition.LessThan -> {
                 selectionArgs.add(cond.value.toString())
                 "${cond.column} < ?"
             }
+
             is Condition.LessThanOrEquals -> {
                 selectionArgs.add(cond.value.toString())
                 "${cond.column} <= ?"
             }
+
             is Condition.Like -> {
                 selectionArgs.add(cond.value)
                 "${cond.column} LIKE ?"
             }
+
             is Condition.Match -> {
                 selectionArgs.add(cond.value)
                 "${cond.table} MATCH ?"
             }
+
             is Condition.IsNull -> {
                 "${cond.column} IS NULL"
             }
+
             is Condition.IsNotNull -> {
                 "${cond.column} IS NOT NULL"
             }
+
             is Condition.In -> {
                 if (cond.values.isEmpty()) {
                     // Handle empty IN clause gracefully, perhaps by making it always false
@@ -102,6 +114,7 @@ class SqlSelectionBuilder(
                     "${cond.column} IN ($placeholders)"
                 }
             }
+
             is Condition.And -> {
                 if (cond.conditions.isEmpty()) {
                     "1 = 1" // Always true for an empty AND
@@ -109,6 +122,7 @@ class SqlSelectionBuilder(
                     cond.conditions.joinToString(" AND ") { "(${buildCondition(it)})" }
                 }
             }
+
             is Condition.Or -> {
                 if (cond.conditions.isEmpty()) {
                     "1 = 0" // Always false for an empty OR

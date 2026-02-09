@@ -179,6 +179,7 @@ fun FeedFilterSpinner(
                                     lineHeight = 12.sp,
                                 )
                             }
+
                             LocationState.LocationResult.Loading -> {
                                 Text(
                                     text = stringRes(R.string.loading_location),
@@ -252,6 +253,7 @@ fun RenderOption(
                 }
             }
         }
+
         is HashtagName -> {
             Row(
                 horizontalArrangement = Arrangement.Center,
@@ -260,6 +262,7 @@ fun RenderOption(
                 Text(text = option.name(), color = MaterialTheme.colorScheme.onSurface)
             }
         }
+
         is ResourceName -> {
             Row(
                 horizontalArrangement = Arrangement.Center,
@@ -271,6 +274,7 @@ fun RenderOption(
                 )
             }
         }
+
         is PeopleListName -> {
             Row(
                 horizontalArrangement = Arrangement.Center,
@@ -297,6 +301,7 @@ fun RenderOption(
                 Text(text = name, color = MaterialTheme.colorScheme.onSurface)
             }
         }
+
         is CommunityName -> {
             Row(
                 horizontalArrangement = Arrangement.Center,

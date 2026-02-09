@@ -118,21 +118,23 @@ private fun RenderBookmarkScreen(
         Column(Modifier.padding(it).fillMaxHeight()) {
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
-                    0 ->
+                    0 -> {
                         RefresheableFeedView(
                             privateFeedViewModel,
                             null,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
+                    }
 
-                    1 ->
+                    1 -> {
                         RefresheableFeedView(
                             publicFeedViewModel,
                             null,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
+                    }
                 }
             }
         }

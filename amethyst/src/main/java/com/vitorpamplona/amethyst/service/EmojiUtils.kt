@@ -25,14 +25,16 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 
 fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
 
-fun String.firstFullCharOld(): String {
-    return when (this.length) {
-        0,
-        1,
-        -> return this
-        2,
-        3,
-        -> return if (isUTF16Char(0)) this.take(2) else this.take(1)
+fun String.firstFullCharOld(): String =
+    when (this.length) {
+        0, 1 -> {
+            this
+        }
+
+        2, 3 -> {
+            if (isUTF16Char(0)) this.take(2) else this.take(1)
+        }
+
         else -> {
             val first = isUTF16Char(0)
             val second = isUTF16Char(2)
@@ -45,7 +47,6 @@ fun String.firstFullCharOld(): String {
             }
         }
     }
-}
 
 fun String.firstFullChar(): String {
     var isInJoin = false

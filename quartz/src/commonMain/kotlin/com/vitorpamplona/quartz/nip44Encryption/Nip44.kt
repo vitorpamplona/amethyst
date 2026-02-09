@@ -102,7 +102,9 @@ object Nip44 {
                 v2.decrypt(encryptedInfo, privateKey, pubKey)
             }
 
-            else -> throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${info.v}")
+            else -> {
+                throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${info.v}")
+            }
         }
     }
 

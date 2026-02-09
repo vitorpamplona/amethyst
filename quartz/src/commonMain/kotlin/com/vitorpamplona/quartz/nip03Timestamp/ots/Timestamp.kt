@@ -399,7 +399,7 @@ class Timestamp(
     }
 
     val isTimestampComplete: Boolean
-        /**
+        /*
          * Determine if timestamp is complete and can be verified.
          *
          * @return True if the timestamp is complete, False otherwise.

@@ -100,8 +100,14 @@ abstract class DecryptCache<I : Any, T : Any>(
     suspend fun decrypt(input: I): T? {
         val cachedResult = cache
         return when (cachedResult) {
-            is CacheResults.Success<T> -> cachedResult.value
-            is CacheResults.DontTryAgain -> null
+            is CacheResults.Success<T> -> {
+                cachedResult.value
+            }
+
+            is CacheResults.DontTryAgain -> {
+                null
+            }
+
             is CacheResults.CanTryAgain -> {
                 if (TimeUtils.now() > cachedResult.after) {
                     performDecrypt(input)
@@ -109,6 +115,7 @@ abstract class DecryptCache<I : Any, T : Any>(
                     null
                 }
             }
+
             is CacheResults.NeedsForegroundActivityToTryAgain<*> -> {
                 if (TimeUtils.now() > cachedResult.after && signer.hasForegroundSupport()) {
                     performDecrypt(input)

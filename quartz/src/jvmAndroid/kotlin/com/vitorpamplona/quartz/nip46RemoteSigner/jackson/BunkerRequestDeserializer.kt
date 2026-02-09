@@ -50,12 +50,10 @@ class BunkerRequestDeserializer : StdDeserializer<BunkerRequest>(BunkerRequest::
             BunkerRequestConnect.METHOD_NAME -> BunkerRequestConnect.parse(id, params)
             BunkerRequestGetPublicKey.METHOD_NAME -> BunkerRequestGetPublicKey.parse(id, params)
             BunkerRequestGetRelays.METHOD_NAME -> BunkerRequestGetRelays.parse(id, params)
-
             BunkerRequestNip04Decrypt.METHOD_NAME -> BunkerRequestNip04Decrypt.parse(id, params)
             BunkerRequestNip04Encrypt.METHOD_NAME -> BunkerRequestNip04Encrypt.parse(id, params)
             BunkerRequestNip44Decrypt.METHOD_NAME -> BunkerRequestNip44Decrypt.parse(id, params)
             BunkerRequestNip44Encrypt.METHOD_NAME -> BunkerRequestNip44Encrypt.parse(id, params)
-
             BunkerRequestPing.METHOD_NAME -> BunkerRequestPing.parse(id, params)
             BunkerRequestSign.METHOD_NAME -> BunkerRequestSign.parse(id, params)
             else -> BunkerRequest(id, method, params)

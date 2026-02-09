@@ -167,12 +167,15 @@ fun RenderLiveActivityThumb(
                                 }
                             }
                         }
+
                         StatusTag.STATUS.ENDED -> {
                             EndedFlag()
                         }
+
                         StatusTag.STATUS.PLANNED -> {
                             ScheduledFlag(card.starts)
                         }
+
                         else -> {
                             EndedFlag()
                         }

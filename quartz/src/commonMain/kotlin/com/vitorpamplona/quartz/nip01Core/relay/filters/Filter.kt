@@ -80,8 +80,8 @@ class Filter(
         (ids == null || ids.isEmpty()) &&
             (authors == null || authors.isEmpty()) &&
             (kinds == null || kinds.isEmpty()) &&
-            (tags == null || tags.isEmpty() && tags.values.all { it.isNotEmpty() }) &&
-            (tagsAll == null || tagsAll.isEmpty() && tagsAll.values.all { it.isNotEmpty() }) &&
+            (tags == null || tags.isEmpty() || tags.values.all { it.isEmpty() }) &&
+            (tagsAll == null || tagsAll.isEmpty() || tagsAll.values.all { it.isEmpty() }) &&
             (since == null) &&
             (until == null) &&
             (limit == null) &&

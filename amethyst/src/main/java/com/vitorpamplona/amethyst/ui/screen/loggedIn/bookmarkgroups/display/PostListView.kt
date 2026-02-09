@@ -52,7 +52,7 @@ fun RenderPostList(
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {
-            0 ->
+            0 -> {
                 PostList(
                     modifier = Modifier.fillMaxSize(),
                     posts = publicPosts,
@@ -66,7 +66,9 @@ fun RenderPostList(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            1 ->
+            }
+
+            1 -> {
                 PostList(
                     modifier = Modifier.fillMaxSize(),
                     posts = privatePosts,
@@ -80,6 +82,7 @@ fun RenderPostList(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            }
         }
     }
 }

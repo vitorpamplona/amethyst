@@ -243,13 +243,15 @@ fun DisplayStatusInner(
     nav: INav,
 ) {
     when (type) {
-        "music" ->
+        "music" -> {
             Icon(
                 imageVector = CustomHashTagIcons.Tunestr,
                 null,
                 modifier = Size15Modifier.padding(end = Size5dp),
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
+        }
+
         else -> {}
     }
 
@@ -408,41 +410,50 @@ fun RenderNIP05VerifiedSymbol(
 ) {
     CrossfadeIfEnabled(targetState = state, accountViewModel = accountViewModel) {
         when (it) {
-            is Nip05VerifState.Verifying ->
+            is Nip05VerifState.Verifying -> {
                 Icon(
                     imageVector = Icons.Default.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
                 )
-            is Nip05VerifState.NotStarted ->
+            }
+
+            is Nip05VerifState.NotStarted -> {
                 Icon(
                     imageVector = Icons.Default.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
                     modifier = modifier,
                     tint = Color.Yellow,
                 )
-            is Nip05VerifState.Verified ->
+            }
+
+            is Nip05VerifState.Verified -> {
                 Icon(
                     painter = painterRes(R.drawable.nip_05, compositionSizeReference),
                     contentDescription = stringRes(id = R.string.nip05_verified),
                     modifier = modifier,
                     tint = Color.Unspecified,
                 )
-            is Nip05VerifState.Failed ->
+            }
+
+            is Nip05VerifState.Failed -> {
                 Icon(
                     imageVector = Icons.Default.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,
                 )
-            is Nip05VerifState.Error ->
+            }
+
+            is Nip05VerifState.Error -> {
                 Icon(
                     imageVector = Icons.Default.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),
                     modifier = modifier,
                     tint = Color.Red,
                 )
+            }
         }
     }
 }

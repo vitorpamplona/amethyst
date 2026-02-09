@@ -52,6 +52,7 @@ fun DisplayLocationObserver(viewModel: ILocationGrabber) {
                 lineHeight = 12.sp,
             )
         }
+
         LocationState.LocationResult.Loading -> {
             Text(
                 text = stringRes(R.string.loading_location),

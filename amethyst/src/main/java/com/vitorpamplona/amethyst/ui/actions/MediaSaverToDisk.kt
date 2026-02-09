@@ -57,8 +57,11 @@ object MediaSaverToDisk {
         onError: (Throwable) -> Any?,
     ) = withContext(Dispatchers.IO) {
         when {
-            videoUri.isNullOrBlank() -> return@withContext
-            videoUri.startsWith("file") ->
+            videoUri.isNullOrBlank() -> {
+                return@withContext
+            }
+
+            videoUri.startsWith("file") -> {
                 save(
                     localFile = videoUri.toUri().toFile(),
                     mimeType = mimeType,
@@ -66,7 +69,9 @@ object MediaSaverToDisk {
                     onSuccess = onSuccess,
                     onError = onError,
                 )
-            else ->
+            }
+
+            else -> {
                 downloadAndSave(
                     url = videoUri,
                     mimeType = mimeType,
@@ -75,6 +80,7 @@ object MediaSaverToDisk {
                     onSuccess = onSuccess,
                     onError = onError,
                 )
+            }
         }
     }
 

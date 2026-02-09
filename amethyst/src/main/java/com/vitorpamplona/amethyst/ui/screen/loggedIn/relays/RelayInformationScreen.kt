@@ -316,7 +316,7 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
         }
 
         when (msg) {
-            is ErrorDebugMessage ->
+            is ErrorDebugMessage -> {
                 SelectionContainer {
                     Text(
                         text = msg.message,
@@ -324,7 +324,9 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-            is NoticeDebugMessage ->
+            }
+
+            is NoticeDebugMessage -> {
                 SelectionContainer {
                     Text(
                         text = msg.message,
@@ -332,7 +334,9 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-            is SpamDebugMessage ->
+            }
+
+            is SpamDebugMessage -> {
                 SelectionContainer {
                     val uri = LocalUriHandler.current
                     val start = stringRes(R.string.duplicated_post)
@@ -358,6 +362,7 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
+            }
         }
     }
 }

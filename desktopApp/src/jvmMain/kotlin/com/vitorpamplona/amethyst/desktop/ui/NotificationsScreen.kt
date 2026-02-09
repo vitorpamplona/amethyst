@@ -153,17 +153,21 @@ fun NotificationsScreen(
 
                     val notification =
                         when (event) {
-                            is ReactionEvent ->
+                            is ReactionEvent -> {
                                 NotificationItem.Reaction(
                                     event = event,
                                     timestamp = event.createdAt,
                                     content = event.content,
                                 )
-                            is RepostEvent, is GenericRepostEvent ->
+                            }
+
+                            is RepostEvent, is GenericRepostEvent -> {
                                 NotificationItem.Repost(
                                     event = event,
                                     timestamp = event.createdAt,
                                 )
+                            }
+
                             is LnZapEvent -> {
                                 val amount = event.amount?.toLong()
                                 NotificationItem.Zap(
@@ -172,6 +176,7 @@ fun NotificationsScreen(
                                     amount = amount,
                                 )
                             }
+
                             is TextNoteEvent -> {
                                 val eTags = event.tags.filter { it.size > 1 && it[0] == "e" }
                                 val isReply = eTags.isNotEmpty()
@@ -181,7 +186,10 @@ fun NotificationsScreen(
                                     NotificationItem.Mention(event, event.createdAt)
                                 }
                             }
-                            else -> NotificationItem.Mention(event, event.createdAt)
+
+                            else -> {
+                                NotificationItem.Mention(event, event.createdAt)
+                            }
                         }
 
                     notificationState.addItem(notification)
@@ -230,15 +238,26 @@ fun NotificationsScreen(
 fun NotificationCard(notification: NotificationItem) {
     val (icon, label, color) =
         when (notification) {
-            is NotificationItem.Mention -> Triple(Icons.Default.Favorite, "mentioned you", MaterialTheme.colorScheme.primary)
-            is NotificationItem.Reply -> Triple(Reply, "replied", MaterialTheme.colorScheme.secondary)
-            is NotificationItem.Reaction ->
+            is NotificationItem.Mention -> {
+                Triple(Icons.Default.Favorite, "mentioned you", MaterialTheme.colorScheme.primary)
+            }
+
+            is NotificationItem.Reply -> {
+                Triple(Reply, "replied", MaterialTheme.colorScheme.secondary)
+            }
+
+            is NotificationItem.Reaction -> {
                 Triple(
                     Icons.Default.Favorite,
                     "reacted ${notification.content}",
                     MaterialTheme.colorScheme.tertiary,
                 )
-            is NotificationItem.Repost -> Triple(Repost, "reposted", MaterialTheme.colorScheme.primary)
+            }
+
+            is NotificationItem.Repost -> {
+                Triple(Repost, "reposted", MaterialTheme.colorScheme.primary)
+            }
+
             is NotificationItem.Zap -> {
                 val amountText = notification.amount?.let { " ${it / 1000} sats" } ?: ""
                 Triple(Zap, "zapped$amountText", MaterialTheme.colorScheme.primary)

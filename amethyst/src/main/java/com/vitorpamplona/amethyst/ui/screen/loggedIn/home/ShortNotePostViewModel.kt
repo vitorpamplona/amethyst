@@ -581,10 +581,22 @@ open class ShortNotePostViewModel :
                 val quotes = event.taggedQuotes()
                 if (quotes.isNotEmpty()) "Quote" else "Post"
             }
-            is PollNoteEvent -> "Poll"
-            is VoiceEvent -> "Voice"
-            is VoiceReplyEvent -> "Voice Reply"
-            else -> "Post"
+
+            is PollNoteEvent -> {
+                "Poll"
+            }
+
+            is VoiceEvent -> {
+                "Voice"
+            }
+
+            is VoiceReplyEvent -> {
+                "Voice Reply"
+            }
+
+            else -> {
+                "Post"
+            }
         }
 
     suspend fun sendDraftSync() {
@@ -1115,6 +1127,7 @@ open class ShortNotePostViewModel :
                             voiceLocalFile = null
                             voiceRecording = null
                         }
+
                         is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
                             // For NIP95, we need to create the event and get the nevent URL
                             // This is handled differently - skip for now
@@ -1122,6 +1135,7 @@ open class ShortNotePostViewModel :
                         }
                     }
                 }
+
                 is UploadingState.Error -> {
                     onError(uploadErrorTitle, uploadVoiceFailed)
                     voiceRecording = null

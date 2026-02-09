@@ -160,7 +160,9 @@ fun RenderStrangeNamePreview() {
                         )
                     }
 
-                    is RegularTextSegment -> Text(word.segmentText)
+                    is RegularTextSegment -> {
+                        Text(word.segmentText)
+                    }
                 }
             }
         }
@@ -180,12 +182,21 @@ fun RenderRegularPreview() {
                 when (word) {
                     // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                     // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
-                    is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+                    is EmojiSegment -> {
+                        RenderCustomEmoji(word.segmentText, state)
+                    }
+
                     // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
                     // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                     // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-                    is EmailSegment -> ClickableEmail(word.segmentText)
-                    is PhoneSegment -> ClickablePhone(word.segmentText)
+                    is EmailSegment -> {
+                        ClickableEmail(word.segmentText)
+                    }
+
+                    is PhoneSegment -> {
+                        ClickablePhone(word.segmentText)
+                    }
+
                     is BechSegment -> {
                         CreateClickableText(
                             word.segmentText.substring(0, 10),
@@ -196,11 +207,19 @@ fun RenderRegularPreview() {
                         )
                     }
 
-                    is HashTagSegment -> HashTag(word, EmptyNav())
+                    is HashTagSegment -> {
+                        HashTag(word, EmptyNav())
+                    }
+
                     // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                     // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                    is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-                    is RegularTextSegment -> Text(word.segmentText)
+                    is SchemelessUrlSegment -> {
+                        NoProtocolUrlRenderer(word)
+                    }
+
+                    is RegularTextSegment -> {
+                        Text(word.segmentText)
+                    }
                 }
             }
         }
@@ -219,16 +238,21 @@ fun RenderRegularPreview2() {
                 // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                 // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
                 is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+
                 // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
                 // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                 // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
                 is EmailSegment -> ClickableEmail(word.segmentText)
+
                 is PhoneSegment -> ClickablePhone(word.segmentText)
+
                 // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
                 is HashTagSegment -> HashTag(word, EmptyNav())
+
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+
                 is RegularTextSegment -> Text(word.segmentText)
             }
         }
@@ -260,17 +284,23 @@ fun RenderRegularPreview3() {
             when (word) {
                 // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                 is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, null, accountViewModel)
+
                 is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+
                 // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
                 // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                 // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
                 is EmailSegment -> ClickableEmail(word.segmentText)
+
                 is PhoneSegment -> ClickablePhone(word.segmentText)
+
                 // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
                 is HashTagSegment -> HashTag(word, EmptyNav())
+
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+
                 is RegularTextSegment -> Text(word.segmentText)
             }
         }
@@ -415,23 +445,38 @@ private fun RenderWordWithoutPreview(
     when (word) {
         // Don't preview Images
         is ImageSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         // Don't preview Videos
         is VideoSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+
         // Don't offer to pay invoices
         is InvoiceSegment -> Text(word.segmentText)
+
         // Don't offer to withdraw
         is WithdrawSegment -> Text(word.segmentText)
+
         is CashuSegment -> Text(word.segmentText)
+
         is EmailSegment -> ClickableEmail(word.segmentText)
+
         is SecretEmoji -> Text(word.segmentText)
+
         is PhoneSegment -> ClickablePhone(word.segmentText)
+
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
+
         is HashTagSegment -> HashTag(word, nav)
+
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+
         is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
+
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+
         is RegularTextSegment -> Text(word.segmentText)
     }
 }

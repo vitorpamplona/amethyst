@@ -119,9 +119,11 @@ fun RenderCardFeed(
             is CardFeedState.Empty -> {
                 NotificationFeedEmpty(feedContent::invalidateData)
             }
+
             is CardFeedState.FeedError -> {
                 FeedError(state.errorMessage, feedContent::invalidateData)
             }
+
             is CardFeedState.Loaded -> {
                 FeedLoaded(
                     loaded = state,
@@ -131,6 +133,7 @@ fun RenderCardFeed(
                     nav = nav,
                 )
             }
+
             CardFeedState.Loading -> {
                 LoadingFeed()
             }
@@ -205,7 +208,7 @@ private fun RenderCardItem(
     nav: INav,
 ) {
     when (item) {
-        is NoteCard ->
+        is NoteCard -> {
             NoteCardCompose(
                 item,
                 routeForLastRead = routeForLastRead,
@@ -214,7 +217,9 @@ private fun RenderCardItem(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
-        is ZapUserSetCard ->
+        }
+
+        is ZapUserSetCard -> {
             ZapUserSetCompose(
                 item,
                 isInnerNote = false,
@@ -222,7 +227,9 @@ private fun RenderCardItem(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
             )
-        is MultiSetCard ->
+        }
+
+        is MultiSetCard -> {
             MultiSetCompose(
                 item,
                 accountViewModel = accountViewModel,
@@ -230,14 +237,18 @@ private fun RenderCardItem(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
             )
-        is BadgeCard ->
+        }
+
+        is BadgeCard -> {
             BadgeCompose(
                 item,
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
             )
-        is MessageSetCard ->
+        }
+
+        is MessageSetCard -> {
             MessageSetCompose(
                 messageSetCard = item,
                 routeForLastRead = routeForLastRead,
@@ -245,6 +256,7 @@ private fun RenderCardItem(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+        }
     }
 }
 

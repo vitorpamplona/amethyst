@@ -971,9 +971,11 @@ private suspend fun zapNote(
                         is NwcPaymentHandler.PaymentResult.Success -> {
                             ZapFeedback.Success(amountSats)
                         }
+
                         is NwcPaymentHandler.PaymentResult.Error -> {
                             ZapFeedback.Error(paymentResult.message)
                         }
+
                         is NwcPaymentHandler.PaymentResult.Timeout -> {
                             ZapFeedback.Timeout
                         }
@@ -984,6 +986,7 @@ private suspend fun zapNote(
                     ZapFeedback.ExternalWallet(amountSats)
                 }
             }
+
             is ZapAction.ZapResult.Error -> {
                 ZapFeedback.Error(result.message)
             }

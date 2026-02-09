@@ -97,6 +97,7 @@ class ZapPaymentHandler(
                                 weight = setup.weight,
                             )
                         }
+
                         is ZapSplitSetup -> {
                             val user = LocalCache.checkGetOrCreateUser(setup.pubKeyHex)
                             UnverifiedZapSplitSetup(

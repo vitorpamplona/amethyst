@@ -111,16 +111,23 @@ class LnZapRequestEvent(
             }
 
             return when (zapType) {
-                LnZapEvent.ZapType.PUBLIC -> signer.sign(createdAt, KIND, tags.toTypedArray(), message)
+                LnZapEvent.ZapType.PUBLIC -> {
+                    signer.sign(createdAt, KIND, tags.toTypedArray(), message)
+                }
+
                 LnZapEvent.ZapType.ANONYMOUS -> {
                     tags = tags + listOf(arrayOf("anon"))
                     NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags.toTypedArray(), message)
                 }
+
                 LnZapEvent.ZapType.PRIVATE -> {
                     tags = tags + listOf(arrayOf("anon", ""))
                     signer.sign(createdAt, KIND, tags.toTypedArray(), message)
                 }
-                LnZapEvent.ZapType.NONZAP -> throw IllegalArgumentException("Invalid zap type")
+
+                LnZapEvent.ZapType.NONZAP -> {
+                    throw IllegalArgumentException("Invalid zap type")
+                }
             }
         }
 
@@ -139,16 +146,23 @@ class LnZapRequestEvent(
                 )
 
             return when (zapType) {
-                LnZapEvent.ZapType.PUBLIC -> signer.sign(createdAt, KIND, tags, message)
+                LnZapEvent.ZapType.PUBLIC -> {
+                    signer.sign(createdAt, KIND, tags, message)
+                }
+
                 LnZapEvent.ZapType.ANONYMOUS -> {
                     tags += arrayOf(arrayOf("anon", ""))
                     NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags, message)
                 }
+
                 LnZapEvent.ZapType.PRIVATE -> {
                     tags += arrayOf(arrayOf("anon", ""))
                     signer.sign(createdAt, KIND, tags, message)
                 }
-                LnZapEvent.ZapType.NONZAP -> throw IllegalArgumentException("Invalid zap type")
+
+                LnZapEvent.ZapType.NONZAP -> {
+                    throw IllegalArgumentException("Invalid zap type")
+                }
             }
         }
     }

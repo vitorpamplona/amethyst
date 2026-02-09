@@ -74,7 +74,10 @@ class Nip11CachedRetriever(
         val doc = relayInformationDocumentCache.get(relay)
         if (doc != null) {
             when (doc) {
-                is RetrieveResult.Success -> onInfo(doc.data)
+                is RetrieveResult.Success -> {
+                    onInfo(doc.data)
+                }
+
                 is RetrieveResult.Loading -> {
                     if (doc.isValid()) {
                         // just wait.
@@ -82,6 +85,7 @@ class Nip11CachedRetriever(
                         retrieve(relay, onInfo, onError)
                     }
                 }
+
                 is RetrieveResult.Error -> {
                     if (doc.isValid()) {
                         onError(relay, doc.error, null)
@@ -89,7 +93,10 @@ class Nip11CachedRetriever(
                         retrieve(relay, onInfo, onError)
                     }
                 }
-                is RetrieveResult.Empty -> retrieve(relay, onInfo, onError)
+
+                is RetrieveResult.Empty -> {
+                    retrieve(relay, onInfo, onError)
+                }
             }
         } else {
             retrieve(relay, onInfo, onError)

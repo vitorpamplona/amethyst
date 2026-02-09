@@ -38,8 +38,14 @@ class VerificationStateCache(
 
     suspend fun cacheVerify(event: OtsEvent): VerificationState =
         when (val verif = cache[event.id]) {
-            is VerificationState.Verifying -> verif
-            is VerificationState.Verified -> verif
+            is VerificationState.Verifying -> {
+                verif
+            }
+
+            is VerificationState.Verified -> {
+                verif
+            }
+
             is VerificationState.NetworkError -> {
                 // try again in 5 mins
                 if (verif.time < TimeUtils.fiveMinutesAgo()) {
@@ -48,7 +54,11 @@ class VerificationStateCache(
                     verif
                 }
             }
-            is VerificationState.Error -> verif
+
+            is VerificationState.Error -> {
+                verif
+            }
+
             else -> {
                 verify(event)
             }

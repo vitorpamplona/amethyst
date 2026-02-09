@@ -139,7 +139,7 @@ fun ZoomableContentView(
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
     when (content) {
-        is MediaUrlImage ->
+        is MediaUrlImage -> {
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
                     val mainImageModifier =
@@ -150,7 +150,9 @@ fun ZoomableContentView(
                     UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
                 }
             }
-        is MediaUrlVideo ->
+        }
+
+        is MediaUrlVideo -> {
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     VideoView(
@@ -171,7 +173,9 @@ fun ZoomableContentView(
                     )
                 }
             }
-        is MediaLocalImage ->
+        }
+
+        is MediaLocalImage -> {
             TwoSecondController(content) { controllerVisible ->
                 val mainImageModifier =
                     Modifier
@@ -181,7 +185,9 @@ fun ZoomableContentView(
 
                 LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
             }
-        is MediaLocalVideo ->
+        }
+
+        is MediaLocalVideo -> {
             content.localFile?.let {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     VideoView(
@@ -198,6 +204,7 @@ fun ZoomableContentView(
                     )
                 }
             }
+        }
     }
 
     if (dialogOpen) {
@@ -286,9 +293,11 @@ fun LocalImageView(
                                 }
                             }
                         }
+
                         is AsyncImagePainter.State.Error -> {
                             BlankNote(loadedImageModifier)
                         }
+
                         is AsyncImagePainter.State.Success -> {
                             SubcomposeAsyncImageContent(loadedImageModifier)
 
@@ -310,6 +319,7 @@ fun LocalImageView(
                                 }
                             }
                         }
+
                         else -> {}
                     }
                 }
@@ -405,9 +415,11 @@ fun UrlImageView(
                             }
                         }
                     }
+
                     is AsyncImagePainter.State.Error -> {
                         ClickableUrl(urlText = "${content.url} ", url = content.url)
                     }
+
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(loadedImageModifier)
 
@@ -418,6 +430,7 @@ fun UrlImageView(
                             MediaAspectRatioCache.add(content.url, drawable.width, drawable.height)
                         }
                     }
+
                     else -> {}
                 }
             }
@@ -794,6 +807,7 @@ fun ShareMediaAction(
                         }
                     }
                 }
+
                 is MediaUrlVideo -> {
                     videoUri?.let {
                         if (videoUri.isNotEmpty()) {
@@ -832,6 +846,7 @@ fun ShareMediaAction(
                         }
                     }
                 }
+
                 is MediaLocalVideo -> {
                     content.localFile?.let { localFile ->
                         DropdownMenuItem(
@@ -843,6 +858,7 @@ fun ShareMediaAction(
                         )
                     }
                 }
+
                 else -> { /* No share option for other types */ }
             }
         }
