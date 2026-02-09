@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.utils.Hex
  * Creates a new sub for each Search Screen. The StateFlow of the text field
  * that has the search ter is the id of the sub.
  */
-class SearchWatcherSubAssembler(
+class SearchUserWatcherSubAssembler(
     val cache: LocalCache,
     client: INostrClient,
     allKeys: () -> Set<SearchQueryState>,
@@ -65,7 +65,7 @@ class SearchWatcherSubAssembler(
             runCatching {
                 if (Hex.isHex(mySearchString)) {
                     val hexKey = Hex.decode(mySearchString).toHexKey()
-                    filterByAuthor(hexKey, indexRelays, defaultRelaysWithSearch) + filterByEvent(hexKey, defaultRelaysWithSearch)
+                    filterByAuthor(hexKey, indexRelays, defaultRelaysWithSearch)
                 } else {
                     val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
                     if (parsed != null) {
@@ -75,11 +75,11 @@ class SearchWatcherSubAssembler(
                             is NSec -> filterByAuthor(parsed.toPubKeyHex(), indexRelays, defaultRelaysWithSearch)
                             is NPub -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch)
                             is NProfile -> filterByAuthor(parsed.hex, indexRelays, defaultRelaysWithSearch)
-                            is NNote -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
-                            is NEvent -> filterByEvent(parsed.hex, defaultRelaysWithSearch)
+                            is NNote -> emptyList()
+                            is NEvent -> emptyList()
                             is NEmbed -> emptyList()
                             is NRelay -> emptyList()
-                            is NAddress -> filterByAddress(parsed, defaultRelaysWithSearch)
+                            is NAddress -> emptyList()
                             else -> emptyList()
                         }
                     } else {
@@ -91,10 +91,7 @@ class SearchWatcherSubAssembler(
         val searchFilters =
             key.account.searchRelayList.flow.value.flatMap {
                 searchPeopleByName(mySearchString, it)
-            } +
-                key.account.searchRelayList.flow.value.flatMap {
-                    searchPostsByText(mySearchString, it)
-                }
+            }
 
         return directFilters + searchFilters
     }
