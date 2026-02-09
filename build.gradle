@@ -31,7 +31,7 @@ allprojects {
                 target 'src/**/*.kt'
 
                 ktlint()
-                licenseHeaderFile rootProject.file('spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
+                licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "package|import|class|object|sealed|open|interface|abstract "
             }
 
             groovyGradle {
@@ -59,8 +59,8 @@ subprojects {
 }
 
 tasks.register('installGitHook', Copy) {
-    from new File(rootProject.rootDir, 'git-hooks/pre-commit')
-    from new File(rootProject.rootDir, 'git-hooks/pre-push')
+    from new File(rootProject.rootDir, '.git-hooks/pre-commit')
+    from new File(rootProject.rootDir, '.git-hooks/pre-push')
     into { new File(rootProject.rootDir, '.git/hooks') }
     filePermissions { unix(0777) }
 }
