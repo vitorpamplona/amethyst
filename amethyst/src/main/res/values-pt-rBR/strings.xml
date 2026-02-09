@@ -1197,6 +1197,9 @@
     <string name="group_relay_explanation">O relé a qual todos os usuários deste chat se conectam</string>
     <string name="share_image">Compartilhar imagem…</string>
     <string name="unable_to_share_image">Não é possível compartilhar a imagem, por favor tente novamente mais tarde…</string>
+    <string name="share_video">Compartilhar vídeo…</string>
+    <string name="unable_to_share_video">Não foi possível compartilhar o vídeo, tente novamente mais tarde…</string>
+    <string name="downloading_video_for_sharing">Baixando vídeo…</string>
     <string name="search_by_hashtag">Pesquisar hashtag: #%1$s</string>
     <string name="dont_translate_from">Não Traduzir de</string>
     <string name="dont_translate_from_description">Os idiomas mostrados aqui não serão traduzidos. Selecione um idioma para removê-lo e traduzi-lo novamente.</string>
