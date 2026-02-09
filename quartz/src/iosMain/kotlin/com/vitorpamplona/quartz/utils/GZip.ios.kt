@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.utils
 
 import com.ditchoom.buffer.PlatformBuffer
-import com.ditchoom.buffer.ReadBuffer
 import com.ditchoom.buffer.compression.CompressionAlgorithm
 import com.ditchoom.buffer.compression.getOrThrow
 import com.ditchoom.buffer.toByteArray
@@ -35,13 +34,13 @@ actual object GZip {
         val contentBuffer = content.toReadBuffer()
         val compressedContent = compressData(contentBuffer, algorithm = CompressionAlgorithm.Gzip).getOrThrow().toByteArray()
         return compressedContent
-
     }
 
     actual fun decompress(content: ByteArray): String {
         val contentBuffer = PlatformBuffer.wrap(content)
-        val decompressedContentBuffer = decompressData(contentBuffer, algorithm = CompressionAlgorithm.Gzip)
-            .getOrThrow()
+        val decompressedContentBuffer =
+            decompressData(contentBuffer, algorithm = CompressionAlgorithm.Gzip)
+                .getOrThrow()
         val content = decompressedContentBuffer.toByteArray().decodeToString()
         return content
     }
