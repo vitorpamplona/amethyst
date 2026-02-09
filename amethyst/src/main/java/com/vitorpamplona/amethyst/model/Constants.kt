@@ -44,7 +44,9 @@ object Constants {
     val purplepages = RelayUrlNormalizer.normalize("wss://purplepag.es")
     val coracle = RelayUrlNormalizer.normalize("wss://indexer.coracle.social")
     val userkinds = RelayUrlNormalizer.normalize("wss://user.kindpag.es")
+    val yabu = RelayUrlNormalizer.normalize("wss://directory.yabu.me")
+    val nostr1 = RelayUrlNormalizer.normalize("wss://profiles.nostr1.com")
 
-    val bootstrapInbox = setOf(damus, primal, mom, nos, bitcoiner, oxtr)
+    val bootstrapInbox = setOf(damus, primal, mom, nos, bitcoiner, oxtr, yabu)
     val eventFinderRelays = setOf(wine, damus, primal, mom, nos, bitcoiner, oxtr)
 }
