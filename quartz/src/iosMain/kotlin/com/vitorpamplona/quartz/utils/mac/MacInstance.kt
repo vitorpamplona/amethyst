@@ -20,37 +20,60 @@
  */
 package com.vitorpamplona.quartz.utils.mac
 
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.algorithms.HMAC
+import dev.whyoleg.cryptography.algorithms.SHA256
+import dev.whyoleg.cryptography.algorithms.SHA512
+import dev.whyoleg.cryptography.providers.apple.Apple
+
 actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
+    private val cryptoProvider = CryptographyProvider.Apple
+
+    private var internalMacInstance: HMAC.Key =
+        cryptoProvider
+            .get(HMAC)
+            .keyDecoder(digestForAlgorithm(algorithm))
+            .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
+
+    private val hmacSignFunction = internalMacInstance.signatureGenerator().createSignFunction()
+
     actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
-        TODO("Not yet implemented")
+        internalMacInstance =
+            cryptoProvider
+                .get(HMAC)
+                .keyDecoder(digestForAlgorithm(algorithm))
+                .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
     }
 
-    actual fun getMacLength(): Int {
-        TODO("Not yet implemented")
-    }
+    actual fun getMacLength(): Int = hmacSignFunction.signIntoByteArray(internalMacInstance.encodeToByteArrayBlocking(HMAC.Key.Format.RAW))
 
     actual fun update(array: ByteArray) {
-        TODO("Not yet implemented")
+        hmacSignFunction.update(array)
     }
 
     actual fun update(byte: Byte) {
-        TODO("Not yet implemented")
+        hmacSignFunction.update(byteArrayOf(byte))
     }
 
-    actual fun doFinal(): ByteArray {
-        TODO("Not yet implemented")
-    }
+    actual fun doFinal(): ByteArray = hmacSignFunction.signToByteArray()
 
     actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {
-        TODO("Not yet implemented")
+        hmacSignFunction.signIntoByteArray(output, offset)
     }
+
+    private fun digestForAlgorithm(algorithm: String) =
+        when (algorithm) {
+            "HmacSHA256" -> SHA256
+            "HmacSHA512" -> SHA512
+            else -> error("Algorithm is not yet supported.")
+        }
 }
