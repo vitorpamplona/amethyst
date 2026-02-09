@@ -119,7 +119,7 @@ class AccountStateViewModel : ViewModel() {
                 is NEmbed -> null
                 is NRelay -> null
                 is NAddress -> null
-                else -> runCatching { if (loginWithExternalSigner) Hex.decode(key) else null }
+                else -> runCatching { if (loginWithExternalSigner) Hex.decode(key) else null }.getOrNull()
             }
 
         if (loginWithExternalSigner && pubKeyParsed == null) {
