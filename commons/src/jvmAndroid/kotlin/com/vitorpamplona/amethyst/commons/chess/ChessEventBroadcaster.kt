@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -67,21 +67,19 @@ class ChessEventBroadcaster(
         val targetRelays = ChessConfig.CHESS_RELAYS.map { NormalizedRelayUrl(it) }.toSet()
         val subId = newSubId()
 
-        println("[ChessEventBroadcaster] Broadcasting event ${event.id.take(8)} to ${targetRelays.size} relays")
-
         // Step 1: Check which relays are already connected
         val initialConnected = client.connectedRelaysFlow().value
         val alreadyConnected = targetRelays.intersect(initialConnected)
         val needsConnection = targetRelays - alreadyConnected
 
-        println("[ChessEventBroadcaster] Already connected: ${alreadyConnected.size}, needs connection: ${needsConnection.size}")
-
         // Step 2: If some relays need connection, open a subscription to trigger it
         if (needsConnection.isNotEmpty()) {
+            // Use a valid filter with recent since timestamp to trigger connection
+            // without expecting real results
             val dummyFilter =
                 Filter(
                     kinds = listOf(JesterProtocol.KIND),
-                    ids = listOf("trigger_connection_${System.currentTimeMillis()}"),
+                    since = (System.currentTimeMillis() / 1000) + 3600, // 1 hour in future = no results
                     limit = 1,
                 )
 
@@ -97,9 +95,7 @@ class ChessEventBroadcaster(
                     override fun onEose(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
-                    ) {
-                        println("[ChessEventBroadcaster] EOSE from ${relay.url}")
-                    }
+                    ) { }
                 }
 
             // Open subscription to all target relays (triggers connection)
@@ -107,23 +103,21 @@ class ChessEventBroadcaster(
             client.openReqSubscription(subId, filterMap, listener)
 
             // Wait for relays to connect (poll with timeout)
-            val connected = waitForRelays(targetRelays, 5000L)
-            println("[ChessEventBroadcaster] After waiting: ${connected.size}/${targetRelays.size} connected")
+            waitForRelays(targetRelays, 5000L)
 
             // Close the dummy subscription
             client.close(subId)
         }
 
         // Step 3: Send the event and wait for OK responses
-        println("[ChessEventBroadcaster] Sending event with sendAndWaitForResponse...")
         val success = client.sendAndWaitForResponse(event, targetRelays, timeoutSeconds)
 
-        println("[ChessEventBroadcaster] Broadcast complete: success=$success")
-
+        // Note: sendAndWaitForResponse only returns aggregate success (any relay accepted)
+        // We don't have per-relay results, so relayResults is empty
         return BroadcastResult(
             success = success,
-            relayResults = targetRelays.associateWith { success },
-            message = if (success) "Event accepted by relay(s)" else "No relay accepted the event",
+            relayResults = emptyMap(),
+            message = if (success) "Event accepted by at least one relay" else "No relay accepted the event",
         )
     }
 

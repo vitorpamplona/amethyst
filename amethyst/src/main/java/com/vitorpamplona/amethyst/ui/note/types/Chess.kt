@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -107,8 +107,12 @@ fun RenderLiveChessChallenge(
 
     val borderColor =
         when {
-            isOpenChallenge -> Color(0xFF4CAF50) // Green for open
-            isIncomingChallenge -> Color(0xFFFFA726) // Orange for incoming
+            isOpenChallenge -> Color(0xFF4CAF50)
+
+            // Green for open
+            isIncomingChallenge -> Color(0xFFFFA726)
+
+            // Orange for incoming
             else -> MaterialTheme.colorScheme.outline // Gray for sent
         }
 
@@ -191,7 +195,7 @@ fun RenderLiveChessChallenge(
                                     gameId = gameId,
                                     challengerPubkey = challengerPubkey,
                                     challengerDisplayName = note.author?.toBestDisplayName(),
-                                    challengerAvatarUrl = note.author?.info?.profilePicture(),
+                                    challengerAvatarUrl = note.author?.profilePicture(),
                                     opponentPubkey = event.opponentPubkey(),
                                     challengerColor = event.playerColor() ?: ChessColor.WHITE,
                                     createdAt = event.createdAt,

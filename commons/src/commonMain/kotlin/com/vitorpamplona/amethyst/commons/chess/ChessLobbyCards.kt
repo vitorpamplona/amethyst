@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -301,7 +301,10 @@ fun CompletedGameCard(
     val resultColor =
         when {
             isDraw -> MaterialTheme.colorScheme.onSurfaceVariant
-            didUserWin -> Color(0xFF4CAF50) // Green
+
+            didUserWin -> Color(0xFF4CAF50)
+
+            // Green
             else -> Color(0xFFF44336) // Red
         }
 

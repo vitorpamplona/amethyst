@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,19 +29,29 @@ package com.vitorpamplona.amethyst.commons.chess
  */
 object AcceptedGamesRegistry {
     private val acceptedGameIds = mutableSetOf<String>()
+    private val lock = Any()
 
     fun markAsAccepted(gameId: String) {
-        acceptedGameIds.add(gameId)
+        synchronized(lock) {
+            acceptedGameIds.add(gameId)
+        }
     }
 
-    fun wasAccepted(gameId: String): Boolean = acceptedGameIds.contains(gameId)
+    fun wasAccepted(gameId: String): Boolean =
+        synchronized(lock) {
+            acceptedGameIds.contains(gameId)
+        }
 
     fun clear() {
-        acceptedGameIds.clear()
+        synchronized(lock) {
+            acceptedGameIds.clear()
+        }
     }
 
     /** Remove old entries - call periodically to prevent memory leak */
     fun clearOldEntries(keepGameIds: Set<String>) {
-        acceptedGameIds.retainAll(keepGameIds)
+        synchronized(lock) {
+            acceptedGameIds.retainAll(keepGameIds)
+        }
     }
 }

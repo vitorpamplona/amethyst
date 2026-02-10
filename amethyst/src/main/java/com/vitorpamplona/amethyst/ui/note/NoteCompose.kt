@@ -925,6 +925,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is LiveChessGameChallengeEvent -> {
             RenderLiveChessChallenge(
                 baseNote,
@@ -933,6 +934,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is LiveChessGameEndEvent -> {
             RenderLiveChessGameEnd(
                 baseNote,
@@ -941,6 +943,7 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,

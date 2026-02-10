@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -398,12 +398,11 @@ class AndroidRelayFetcher(
 class AndroidMetadataProvider : IUserMetadataProvider {
     override fun getDisplayName(pubkey: String): String {
         val user = LocalCache.getOrCreateUser(pubkey)
-        return user.info?.bestName()
-            ?: user.pubkeyDisplayHex()
+        return user.toBestDisplayName()
     }
 
     override fun getPictureUrl(pubkey: String): String? {
         val user = LocalCache.getOrCreateUser(pubkey)
-        return user.info?.profilePicture()
+        return user.profilePicture()
     }
 }

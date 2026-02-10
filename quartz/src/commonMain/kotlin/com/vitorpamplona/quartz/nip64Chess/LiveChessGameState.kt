@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -464,6 +464,7 @@ class LiveChessGameState(
                 _gameStatus.value = GameStatus.Finished(GameResult.getResultForWinner(winner))
                 // In a real implementation, you'd publish GameEnd event here
             }
+
             engine.isStalemate() -> {
                 _gameStatus.value = GameStatus.Finished(GameResult.DRAW)
                 // In a real implementation, you'd publish GameEnd event here

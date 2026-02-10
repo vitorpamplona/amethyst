@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -213,9 +213,11 @@ fun ChessGameScreen(
                             is ChessBroadcastStatus.Failed -> {
                                 // Could implement retry logic here
                             }
+
                             is ChessBroadcastStatus.Desynced -> {
                                 chessViewModel.forceRefresh()
                             }
+
                             else -> { }
                         }
                     },
@@ -240,6 +242,7 @@ fun ChessGameScreen(
                     }
                 }
             }
+
             gameState == null -> {
                 // Game not found - show error with back button
                 Column(
@@ -286,6 +289,7 @@ fun ChessGameScreen(
                     }
                 }
             }
+
             else -> {
                 // Resolve opponent display name
                 val opponentDisplayName =

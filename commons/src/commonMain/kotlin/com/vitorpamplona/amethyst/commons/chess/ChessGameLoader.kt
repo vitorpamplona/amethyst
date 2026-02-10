@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -126,7 +126,10 @@ object ChessGameLoader {
                     LoadGameResult.Error("Failed to convert reconstructed state to live state")
                 }
             }
-            is ReconstructionResult.Error -> LoadGameResult.Error(result.message)
+
+            is ReconstructionResult.Error -> {
+                LoadGameResult.Error(result.message)
+            }
         }
     }
 

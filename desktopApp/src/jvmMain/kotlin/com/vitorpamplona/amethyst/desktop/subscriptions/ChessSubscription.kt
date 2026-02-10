@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -104,10 +104,7 @@ class DesktopChessSubscriptionController(
                     ) {
                         // Add chess events to local cache for persistence
                         if (event.kind in CHESS_EVENT_KINDS) {
-                            val isNew = DesktopChessEventCache.add(event)
-                            if (isNew) {
-                                println("[ChessSubscription] Cached new event: kind=${event.kind}, id=${event.id.take(8)}")
-                            }
+                            DesktopChessEventCache.add(event)
                         }
                         onEvent(event, isLive, relay, forFilters)
                     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -177,13 +177,19 @@ data class ChessPosition(
         if (other !is ChessPosition) return false
         return board.contentDeepEquals(other.board) &&
             activeColor == other.activeColor &&
-            moveNumber == other.moveNumber
+            moveNumber == other.moveNumber &&
+            castlingRights == other.castlingRights &&
+            enPassantSquare == other.enPassantSquare &&
+            halfMoveClock == other.halfMoveClock
     }
 
     override fun hashCode(): Int {
         var result = board.contentDeepHashCode()
         result = 31 * result + activeColor.hashCode()
         result = 31 * result + moveNumber
+        result = 31 * result + castlingRights.hashCode()
+        result = 31 * result + (enPassantSquare?.hashCode() ?: 0)
+        result = 31 * result + halfMoveClock
         return result
     }
 }

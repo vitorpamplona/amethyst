@@ -250,9 +250,11 @@ fun HomeScreenFloatingButton(
                 is LocationState.LocationResult.Loading -> { }
             }
         }
+
         CHESS -> {
             NewChessGameButton(accountViewModel, nav)
         }
+
         else -> {
             NewNoteButton(nav)
         }

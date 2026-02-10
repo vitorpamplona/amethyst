@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -155,14 +155,21 @@ object ChessStateReconstructor {
                     val result = parseGameResult(gameResult)
                     GameStatus.Finished(result)
                 }
+
                 engine.isCheckmate() -> {
                     val winner = engine.getSideToMove().opposite()
                     GameStatus.Finished(
                         if (winner == Color.WHITE) GameResult.WHITE_WINS else GameResult.BLACK_WINS,
                     )
                 }
-                engine.isStalemate() -> GameStatus.Finished(GameResult.DRAW)
-                else -> GameStatus.InProgress
+
+                engine.isStalemate() -> {
+                    GameStatus.Finished(GameResult.DRAW)
+                }
+
+                else -> {
+                    GameStatus.InProgress
+                }
             }
 
         // Get the head event ID (for linking next move)

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -258,11 +258,13 @@ object PGNParser {
                             val kingSide = move.toSquare.contains("g")
                             current.makeCastlingMove(kingSide)
                         }
+
                         move.fromSquare != null -> {
                             // Move with disambiguation (we can infer full source)
                             // For now, just use simplified move
                             makeSimplifiedMove(current, move)
                         }
+
                         else -> {
                             // Regular move
                             makeSimplifiedMove(current, move)

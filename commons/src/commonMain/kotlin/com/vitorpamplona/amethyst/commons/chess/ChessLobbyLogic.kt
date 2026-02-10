@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -389,6 +389,7 @@ class ChessLobbyLogic(
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
                     state.setError(null)
                 }
+
                 is LoadGameResult.Error -> {
                     state.setError("Failed to load game: ${result.message}")
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
@@ -518,6 +519,7 @@ class ChessLobbyLogic(
                     // Auto-select the game for Desktop (Android uses route navigation)
                     state.selectGame(startEventId)
                 }
+
                 is LoadGameResult.Error -> {
                     state.setError("Failed to load game: ${result.message}")
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
@@ -549,6 +551,7 @@ class ChessLobbyLogic(
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
                     state.setError(null)
                 }
+
                 is LoadGameResult.Error -> {
                     // Check again if game was added while we were fetching
                     // (e.g., by acceptChallenge completing in parallel)
@@ -582,6 +585,7 @@ class ChessLobbyLogic(
             is LoadGameResult.Success -> {
                 state.replaceGameState(startEventId, result.liveState)
             }
+
             is LoadGameResult.Error -> {
                 // Don't overwrite error for periodic refresh failures
             }
@@ -754,6 +758,7 @@ class ChessLobbyLogic(
                         pollingDelegate.addGameId(startEventId)
                     }
                 }
+
                 is LoadGameResult.Error -> {
                     // Failed to load game - continue with others
                 }

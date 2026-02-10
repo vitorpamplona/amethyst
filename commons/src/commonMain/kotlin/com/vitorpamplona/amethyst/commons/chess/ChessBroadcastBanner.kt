@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -149,12 +149,17 @@ fun ChessBroadcastBanner(
 @Composable
 private fun getStatusBackgroundColor(status: ChessBroadcastStatus): Color =
     when (status) {
-        is ChessBroadcastStatus.Failed, is ChessBroadcastStatus.Desynced ->
+        is ChessBroadcastStatus.Failed, is ChessBroadcastStatus.Desynced -> {
             MaterialTheme.colorScheme.errorContainer
-        is ChessBroadcastStatus.Success ->
+        }
+
+        is ChessBroadcastStatus.Success -> {
             MaterialTheme.colorScheme.primaryContainer
-        else ->
+        }
+
+        else -> {
             MaterialTheme.colorScheme.surfaceContainer
+        }
     }
 
 private fun getStatusIcon(status: ChessBroadcastStatus): ImageVector =
@@ -171,14 +176,21 @@ private fun getStatusIcon(status: ChessBroadcastStatus): ImageVector =
 @Composable
 private fun getStatusIconColor(status: ChessBroadcastStatus): Color =
     when (status) {
-        is ChessBroadcastStatus.Failed, is ChessBroadcastStatus.Desynced ->
+        is ChessBroadcastStatus.Failed, is ChessBroadcastStatus.Desynced -> {
             MaterialTheme.colorScheme.error
-        is ChessBroadcastStatus.Success ->
+        }
+
+        is ChessBroadcastStatus.Success -> {
             MaterialTheme.colorScheme.primary
-        is ChessBroadcastStatus.WaitingForOpponent ->
+        }
+
+        is ChessBroadcastStatus.WaitingForOpponent -> {
             MaterialTheme.colorScheme.secondary
-        else ->
+        }
+
+        else -> {
             MaterialTheme.colorScheme.primary
+        }
     }
 
 private fun getStatusText(status: ChessBroadcastStatus): String =
@@ -205,10 +217,13 @@ private fun getStatusDetail(status: ChessBroadcastStatus): String =
 @Composable
 private fun getStatusDetailColor(status: ChessBroadcastStatus): Color =
     when (status) {
-        is ChessBroadcastStatus.Failed, is ChessBroadcastStatus.Desynced ->
+        is ChessBroadcastStatus.Failed, is ChessBroadcastStatus.Desynced -> {
             MaterialTheme.colorScheme.error
-        else ->
+        }
+
+        else -> {
             MaterialTheme.colorScheme.primary
+        }
     }
 
 private fun getStatusProgress(status: ChessBroadcastStatus): Float? =

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -266,15 +266,25 @@ fun LiveChessGameScreen(
 
                 // Show appropriate controls based on game state
                 when {
-                    gameStatus is GameStatus.Finished ->
+                    gameStatus is GameStatus.Finished -> {
                         GameEndInfo(
                             result = (gameStatus as GameStatus.Finished).result,
                             playerColor = gameState.playerColor,
                             isSpectator = isSpectator,
                         )
-                    gameState.isPendingChallenge -> PendingChallengeInfo()
-                    isSpectator -> SpectatorInfo()
-                    else -> GameControls(onResign = onResign)
+                    }
+
+                    gameState.isPendingChallenge -> {
+                        PendingChallengeInfo()
+                    }
+
+                    isSpectator -> {
+                        SpectatorInfo()
+                    }
+
+                    else -> {
+                        GameControls(onResign = onResign)
+                    }
                 }
             }
         }
@@ -422,6 +432,7 @@ private fun GameInfoHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
             isSpectator -> {
                 Text(
                     text = "Spectating",
@@ -437,6 +448,7 @@ private fun GameInfoHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
             else -> {
                 Text(
                     text = "vs $opponentName",
@@ -456,17 +468,26 @@ private fun GameInfoHeader(
                         val resultText =
                             when {
                                 result == GameResult.DRAW -> "Draw"
+
                                 (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
                                     (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> "You won!"
+
                                 else -> "You lost"
                             }
                         val resultColor =
                             when {
-                                result == GameResult.DRAW -> MaterialTheme.colorScheme.secondary
+                                result == GameResult.DRAW -> {
+                                    MaterialTheme.colorScheme.secondary
+                                }
+
                                 (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
-                                    (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) ->
+                                    (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> {
                                     ComposeColor(0xFF4CAF50)
-                                else -> MaterialTheme.colorScheme.error
+                                }
+
+                                else -> {
+                                    MaterialTheme.colorScheme.error
+                                }
                             }
                         Text(
                             text = resultText,
@@ -475,6 +496,7 @@ private fun GameInfoHeader(
                             fontWeight = FontWeight.Bold,
                         )
                     }
+
                     else -> {
                         val turnText =
                             if (currentTurn == playerColor) {
@@ -685,27 +707,33 @@ private fun GameEndOverlay(
                     }
                 Quadruple("", "Game Over", winnerText, MaterialTheme.colorScheme.surfaceVariant)
             }
-            playerWon ->
+
+            playerWon -> {
                 Quadruple(
                     "",
                     "Victory!",
                     "Congratulations!",
                     ComposeColor(0xFF4CAF50).copy(alpha = 0.95f),
                 )
-            isDraw ->
+            }
+
+            isDraw -> {
                 Quadruple(
                     "",
                     "Draw",
                     "Game ended in a draw",
                     MaterialTheme.colorScheme.surfaceVariant,
                 )
-            else ->
+            }
+
+            else -> {
                 Quadruple(
                     "",
                     "Defeat",
                     "Better luck next time!",
                     ComposeColor(0xFFE57373).copy(alpha = 0.95f),
                 )
+            }
         }
 
     // Animated visibility
@@ -828,27 +856,47 @@ private fun GameEndInfo(
 ) {
     val resultText =
         when {
-            isSpectator ->
+            isSpectator -> {
                 when (result) {
                     GameResult.WHITE_WINS -> "White wins"
                     GameResult.BLACK_WINS -> "Black wins"
                     GameResult.DRAW -> "Draw"
                     GameResult.IN_PROGRESS -> "In progress"
                 }
-            result == GameResult.DRAW -> "Game drawn"
+            }
+
+            result == GameResult.DRAW -> {
+                "Game drawn"
+            }
+
             (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
-                (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> "You won!"
-            else -> "You lost"
+                (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> {
+                "You won!"
+            }
+
+            else -> {
+                "You lost"
+            }
         }
 
     val backgroundColor =
         when {
-            isSpectator -> MaterialTheme.colorScheme.surfaceVariant
-            result == GameResult.DRAW -> MaterialTheme.colorScheme.secondaryContainer
+            isSpectator -> {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+
+            result == GameResult.DRAW -> {
+                MaterialTheme.colorScheme.secondaryContainer
+            }
+
             (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
-                (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) ->
+                (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> {
                 ComposeColor(0xFF4CAF50).copy(alpha = 0.3f)
-            else -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+            }
+
+            else -> {
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+            }
         }
 
     Box(

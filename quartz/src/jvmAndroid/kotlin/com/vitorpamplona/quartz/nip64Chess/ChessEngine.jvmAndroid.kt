@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -231,8 +231,14 @@ actual class ChessEngine {
                 val sameFile = ambiguous.any { it.from.file == fromSquare.file }
                 val sameRank = ambiguous.any { it.from.rank == fromSquare.rank }
                 when {
-                    !sameFile -> sb.append(fileChar(fromSquare))
-                    !sameRank -> sb.append(rankChar(fromSquare))
+                    !sameFile -> {
+                        sb.append(fileChar(fromSquare))
+                    }
+
+                    !sameRank -> {
+                        sb.append(rankChar(fromSquare))
+                    }
+
                     else -> {
                         sb.append(fileChar(fromSquare))
                         sb.append(rankChar(fromSquare))

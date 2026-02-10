@@ -89,6 +89,7 @@ class FeedTopNavFilterState(
             CHESS -> {
                 ChessFeedFlow(followsRelays, proxyRelays)
             }
+
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {

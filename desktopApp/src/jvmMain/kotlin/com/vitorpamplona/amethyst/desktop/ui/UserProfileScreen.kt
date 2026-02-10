@@ -201,21 +201,25 @@ fun UserProfileScreen(
                 relays = configuredRelays,
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
-                    try {
-                        val content = event.content
-                        displayName = extractJsonField(content, "display_name") ?: extractJsonField(content, "name")
-                        about = extractJsonField(content, "about")
-                        picture = extractJsonField(content, "picture")
-
-                        // Store MetadataEvent for editing (only for own profile)
-                        if (isOwnProfile && event is MetadataEvent) {
-                            val current = latestMetadataEvent
-                            if (current == null || event.createdAt > current.createdAt) {
-                                latestMetadataEvent = event
+                    if (event is MetadataEvent) {
+                        try {
+                            val metadata = event.contactMetaData()
+                            if (metadata != null) {
+                                displayName = metadata.displayName ?: metadata.name
+                                about = metadata.about
+                                picture = metadata.picture
                             }
+
+                            // Store MetadataEvent for editing (only for own profile)
+                            if (isOwnProfile) {
+                                val current = latestMetadataEvent
+                                if (current == null || event.createdAt > current.createdAt) {
+                                    latestMetadataEvent = event
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Ignore parse errors
                         }
-                    } catch (e: Exception) {
-                        // Ignore parse errors
                     }
                 },
             )
@@ -686,17 +690,6 @@ fun UserProfileScreen(
             },
         )
     }
-}
-
-/**
- * Simple JSON field extractor (not production-ready, just for demo).
- */
-private fun extractJsonField(
-    json: String,
-    field: String,
-): String? {
-    val regex = """"$field"\s*:\s*"([^"]*)"""".toRegex()
-    return regex.find(json)?.groupValues?.get(1)
 }
 
 /**
