@@ -70,41 +70,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.RelayResult
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 private const val MAX_EXPANDED_SECTIONS = 2
-
-/**
- * Modal bottom sheet showing detailed relay results for broadcasts.
- * Shows up to 2 expanded sections, with a summary for additional broadcasts.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BroadcastDetailsSheet(
-    broadcast: BroadcastEvent,
-    onDismiss: () -> Unit,
-    onRetryRelay: (NormalizedRelayUrl) -> Unit,
-    onRetryAllFailed: () -> Unit,
-    sheetState: SheetState =
-        rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-        ),
-) {
-    MultiBroadcastDetailsSheet(
-        broadcasts = listOf(broadcast),
-        onDismiss = onDismiss,
-        onRetryRelay = { _, relay -> onRetryRelay(relay) },
-        onRetryAllFailed = { onRetryAllFailed() },
-        sheetState = sheetState,
-    )
-}
 
 /**
  * Modal bottom sheet showing detailed relay results for multiple broadcasts.
@@ -164,7 +142,7 @@ fun MultiBroadcastDetailsSheet(
         ) {
             // Header
             Text(
-                text = if (broadcasts.size == 1) "Broadcast Results" else "Broadcasts (${broadcasts.size})",
+                text = if (broadcasts.size == 1) stringRes(R.string.broadcast_results) else stringRes(R.string.broadcasts_number, broadcasts.size),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -220,7 +198,7 @@ fun MultiBroadcastDetailsSheet(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Dismiss")
+                Text(stringRes(R.string.dismiss))
             }
         }
     }
@@ -259,22 +237,17 @@ private fun BroadcastSection(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = "kind ${broadcast.kind}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
 
                 Text(
-                    text = "${broadcast.successCount}/${broadcast.totalRelays}",
+                    text = stringResource(R.string.share_of, broadcast.successCount, broadcast.totalRelays),
                     style = MaterialTheme.typography.labelLarge,
                     color = statusColor(broadcast.status),
                 )
 
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    contentDescription = if (isExpanded) stringRes(R.string.collapse) else stringRes(R.string.expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )
@@ -315,7 +288,7 @@ private fun BroadcastSection(
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text("Retry Failed (${broadcast.failedRelays.size})")
+                        Text(stringRes(R.string.retry_failed_number, broadcast.failedRelays.size))
                     }
                 }
             }
@@ -349,16 +322,16 @@ private fun OverflowSummary(broadcasts: List<BroadcastEvent>) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "+${broadcasts.size} more broadcasts",
+                    text = stringRes(R.string.more_broadcasts_number, broadcasts.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text =
                         buildString {
-                            append("$totalSuccess/$totalRelays relays")
+                            append(stringResource(R.string.share_of_relays, totalSuccess, totalRelays))
                             if (inProgressCount > 0) {
-                                append(" ($inProgressCount in progress)")
+                                append(stringResource(R.string.number_in_progress, inProgressCount))
                             }
                         },
                     style = MaterialTheme.typography.bodySmall,
@@ -479,7 +452,7 @@ private fun RelayResultRow(
 
                 is RelayResult.Timeout -> {
                     Text(
-                        text = "Timeout",
+                        text = stringRes(R.string.timeout),
                         style = MaterialTheme.typography.bodySmall,
                         color = warningColor,
                     )
@@ -487,7 +460,7 @@ private fun RelayResultRow(
 
                 is RelayResult.Retrying -> {
                     Text(
-                        text = "Retrying...",
+                        text = stringRes(R.string.retrying),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -498,14 +471,14 @@ private fun RelayResultRow(
         }
 
         // Retry button for failed relays (not when already retrying)
-        if ((result is RelayResult.Error || result is RelayResult.Timeout) && result !is RelayResult.Retrying) {
+        if (result is RelayResult.Error || result is RelayResult.Timeout) {
             IconButton(
                 onClick = onRetry,
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Retry",
+                    contentDescription = stringResource(R.string.retry),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )

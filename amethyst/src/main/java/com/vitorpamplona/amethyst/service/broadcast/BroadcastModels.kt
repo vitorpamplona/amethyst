@@ -141,7 +141,4 @@ data class BroadcastEvent(
 data class BroadcastResult(
     val broadcast: BroadcastEvent,
     val isSuccess: Boolean,
-) {
-    val successCount: Int get() = broadcast.successCount
-    val totalRelays: Int get() = broadcast.totalRelays
-}
+)

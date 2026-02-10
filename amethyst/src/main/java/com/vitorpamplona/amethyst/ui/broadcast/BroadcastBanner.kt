@@ -51,7 +51,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Banner showing active broadcast progress.
@@ -102,7 +104,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
     ) {
         Icon(
             imageVector = Icons.Default.Sync,
-            contentDescription = "Broadcasting",
+            contentDescription = stringRes(R.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )
@@ -113,7 +115,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Broadcasting ${broadcast.eventName} (kind ${broadcast.kind})",
+                    text = stringRes(R.string.broadcasting_name, broadcast.eventName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -124,7 +126,7 @@ private fun SingleBroadcastContent(broadcast: BroadcastEvent) {
                 Spacer(Modifier.width(8.dp))
 
                 Text(
-                    text = "[${broadcast.results.size}/${broadcast.totalRelays}]",
+                    text = stringRes(R.string.share_of, broadcast.results.size, broadcast.totalRelays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -160,7 +162,7 @@ private fun MultipleBroadcastsContent(broadcasts: List<BroadcastEvent>) {
     ) {
         Icon(
             imageVector = Icons.Default.Sync,
-            contentDescription = "Broadcasting",
+            contentDescription = stringRes(R.string.broadcasting),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )
@@ -171,13 +173,13 @@ private fun MultipleBroadcastsContent(broadcasts: List<BroadcastEvent>) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Broadcasting ${broadcasts.size} events...",
+                    text = stringRes(R.string.broadcasting_number_events, broadcasts.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Text(
-                    text = "[$completedResponses/$totalRelays]",
+                    text = stringRes(R.string.share_of, completedResponses, totalRelays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )

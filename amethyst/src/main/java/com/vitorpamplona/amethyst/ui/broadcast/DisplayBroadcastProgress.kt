@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -58,10 +59,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -80,7 +83,6 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
     // Only show in COMPLETE UI mode
     if (!accountViewModel.settings.isCompleteUIMode()) return
 
-    val scope = rememberCoroutineScope()
     val activeBroadcasts by accountViewModel.broadcastTracker.activeBroadcasts.collectAsStateWithLifecycle()
 
     // State for completed broadcast (with auto-dismiss)
@@ -116,11 +118,13 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
                 Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 56.dp),
+                    .navigationBarsPadding()
+                    .padding(bottom = 50.dp),
         )
 
         // Completed broadcast indicator (when no active broadcasts)
         if (activeBroadcasts.isEmpty()) {
+            val scope = rememberCoroutineScope()
             CompletedBroadcastIndicator(
                 broadcast = completedBroadcast,
                 onTap = { broadcast ->
@@ -142,13 +146,15 @@ fun DisplayBroadcastProgress(accountViewModel: AccountViewModel) {
                     Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 56.dp),
+                        .navigationBarsPadding()
+                        .padding(bottom = 50.dp),
             )
         }
     }
 
     // Details sheet - show all broadcasts when opened
     if (selectedBroadcast != null) {
+        val scope = rememberCoroutineScope()
         // Combine active broadcasts with the selected/completed one
         val allBroadcasts =
             (activeBroadcasts + listOfNotNull(completedBroadcast))
@@ -238,7 +244,7 @@ private fun CompletedBroadcastIndicator(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = "${b.eventName} sent",
+                                text = stringRes(R.string.event_sent, b.eventName),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
@@ -247,7 +253,7 @@ private fun CompletedBroadcastIndicator(
                             )
 
                             Text(
-                                text = "[${b.successCount}/${b.totalRelays}]",
+                                text = stringRes(R.string.share_of, b.successCount, b.totalRelays),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = iconTint,
                             )
@@ -255,7 +261,7 @@ private fun CompletedBroadcastIndicator(
 
                         if (b.failedRelays.isNotEmpty()) {
                             Text(
-                                text = "Tap to view details",
+                                text = stringRes(R.string.tap_to_view_details),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -270,7 +276,7 @@ private fun CompletedBroadcastIndicator(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Retry failed",
+                                contentDescription = stringRes(R.string.retry_failed),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp),
                             )
