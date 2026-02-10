@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
  * @param boardSize Total size of the board in dp
  * @param flipped If true, renders from black's perspective (rank 1 at top)
  * @param playerColor The color the player is playing as (only allows moving these pieces)
+ * @param isSpectator If true, disables all interaction (spectator/watch mode)
  * @param onMoveMade Callback when a valid move is made, receives (from, to, san)
  *                   NOTE: This callback should make the actual move - this component only validates
  */
@@ -73,6 +74,7 @@ fun InteractiveChessBoard(
     boardSize: Dp = 400.dp,
     flipped: Boolean = false,
     playerColor: ChessColor? = null, // null = allow both (for local play)
+    isSpectator: Boolean = false,
     positionVersion: Int = 0, // External trigger for position refresh (e.g. moveHistory.size)
     onMoveMade: (from: String, to: String, san: String) -> Unit = { _, _, _ -> },
 ) {
@@ -94,8 +96,8 @@ fun InteractiveChessBoard(
         pendingPromotion = null
     }
 
-    // Can only interact if it's your turn (or playerColor is null for local play)
-    val canInteract = playerColor == null || sideToMove == playerColor
+    // Can only interact if not spectating and it's your turn (or playerColor is null for local play)
+    val canInteract = !isSpectator && (playerColor == null || sideToMove == playerColor)
 
     val squareSize = boardSize / 8
 

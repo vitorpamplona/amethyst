@@ -18,24 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.model.Account
+package com.vitorpamplona.amethyst.commons.profile
 
 /**
- * Factory for creating ChessViewModelNew instances.
- * Uses the slim ViewModel that delegates to shared ChessLobbyLogic.
+ * Status of profile metadata broadcast to relays.
  */
-class ChessViewModelFactory(
-    private val account: Account,
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChessViewModelNew::class.java)) {
-            return ChessViewModelNew(account) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+sealed class ProfileBroadcastStatus {
+    data object Idle : ProfileBroadcastStatus()
+
+    data class Broadcasting(
+        val fieldName: String,
+        val successCount: Int,
+        val totalRelays: Int,
+    ) : ProfileBroadcastStatus() {
+        val progress: Float get() = if (totalRelays > 0) successCount.toFloat() / totalRelays else 0f
     }
+
+    data class Success(
+        val fieldName: String,
+        val relayCount: Int,
+    ) : ProfileBroadcastStatus()
+
+    data class Failed(
+        val fieldName: String,
+        val error: String,
+    ) : ProfileBroadcastStatus()
 }

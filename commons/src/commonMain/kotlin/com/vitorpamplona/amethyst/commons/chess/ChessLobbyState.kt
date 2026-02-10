@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Challenge expiry: 24 hours
@@ -101,6 +102,63 @@ data class CompletedGame(
 }
 
 /**
+ * Individual relay status during sync
+ */
+@Immutable
+data class RelaySyncState(
+    val url: String,
+    val displayName: String,
+    val status: RelaySyncStatus,
+    val eventsReceived: Int = 0,
+)
+
+@Immutable
+enum class RelaySyncStatus {
+    CONNECTING,
+    WAITING,
+    RECEIVING,
+    EOSE_RECEIVED,
+    FAILED,
+}
+
+/**
+ * Sync status for incoming events (subscription-side)
+ */
+@Immutable
+sealed class ChessSyncStatus {
+    data object Idle : ChessSyncStatus()
+
+    data class Syncing(
+        val phase: String,
+        val relayStates: List<RelaySyncState>,
+        val totalEventsReceived: Int,
+    ) : ChessSyncStatus() {
+        val connectedCount: Int get() = relayStates.count { it.status != RelaySyncStatus.FAILED }
+        val eoseCount: Int get() = relayStates.count { it.status == RelaySyncStatus.EOSE_RECEIVED }
+        val totalCount: Int get() = relayStates.size
+    }
+
+    data class Synced(
+        val relayStates: List<RelaySyncState>,
+        val challengeCount: Int,
+        val gameCount: Int,
+        val totalEventsReceived: Int,
+    ) : ChessSyncStatus() {
+        val successCount: Int get() = relayStates.count { it.status == RelaySyncStatus.EOSE_RECEIVED }
+        val totalCount: Int get() = relayStates.size
+    }
+
+    data class PartialSync(
+        val relayStates: List<RelaySyncState>,
+        val message: String,
+    ) : ChessSyncStatus() {
+        val successCount: Int get() = relayStates.count { it.status == RelaySyncStatus.EOSE_RECEIVED }
+        val failedCount: Int get() = relayStates.count { it.status == RelaySyncStatus.FAILED }
+        val totalCount: Int get() = relayStates.size
+    }
+}
+
+/**
  * Chess status for UI feedback
  */
 @Immutable
@@ -163,6 +221,9 @@ class ChessLobbyState(
     private val _completedGames = MutableStateFlow<List<CompletedGame>>(emptyList())
     val completedGames: StateFlow<List<CompletedGame>> = _completedGames.asStateFlow()
 
+    // Game IDs that user has accepted - uses global singleton to share across ViewModel instances
+    // This is critical because lobby and game screen may have different ViewModel instances
+
     // Broadcast status
     private val _broadcastStatus = MutableStateFlow<ChessBroadcastStatus>(ChessBroadcastStatus.Idle)
     val broadcastStatus: StateFlow<ChessBroadcastStatus> = _broadcastStatus.asStateFlow()
@@ -171,9 +232,23 @@ class ChessLobbyState(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Loading/refreshing state
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    // Sync status for subscription banner
+    private val _syncStatus = MutableStateFlow<ChessSyncStatus>(ChessSyncStatus.Idle)
+    val syncStatus: StateFlow<ChessSyncStatus> = _syncStatus.asStateFlow()
+
     // Selected game ID for navigation
     private val _selectedGameId = MutableStateFlow<String?>(null)
     val selectedGameId: StateFlow<String?> = _selectedGameId.asStateFlow()
+
+    // State version counter - increments on every game state update
+    // UI can observe this to force recomposition when internal state changes
+    private val stateVersionCounter = AtomicLong(0)
+    private val _stateVersion = MutableStateFlow(0L)
+    val stateVersion: StateFlow<Long> = _stateVersion.asStateFlow()
 
     // Badge count (incoming challenges + your turn games)
     val badgeCount: Int
@@ -228,7 +303,20 @@ class ChessLobbyState(
         gameId: String,
         state: LiveChessGameState,
     ) {
-        _activeGames.update { it + (gameId to state) }
+        _activeGames.update { current ->
+            val existing = current[gameId]
+            if (existing != null) {
+                // Only replace if new state has at least as many moves
+                val existingMoves = existing.moveHistory.value.size
+                val newMoves = state.moveHistory.value.size
+                if (newMoves < existingMoves) {
+                    return@update current
+                }
+            }
+            current + (gameId to state)
+        }
+        // Track as accepted to prevent refresh from re-adding as optimistic challenge
+        AcceptedGamesRegistry.markAsAccepted(gameId)
         // Remove from challenges if present
         removeChallenge(gameId)
     }
@@ -251,15 +339,55 @@ class ChessLobbyState(
     /**
      * Replace game state entirely after full reconstruction from relays.
      * Preserves game location (active vs spectating).
+     *
+     * IMPORTANT: Only replaces if new state has >= moves than current state.
+     * This prevents race conditions where polling refresh could revert
+     * a user's move before it propagates to relays.
+     *
+     * IMPORTANT: Never replace a participant game with a spectator state.
+     * This prevents the race where relay fetch returns before acceptance propagates,
+     * which would incorrectly mark an accepted game as spectating.
      */
     fun replaceGameState(
         gameId: String,
         newState: LiveChessGameState,
     ) {
-        if (_activeGames.value.containsKey(gameId)) {
-            _activeGames.update { it + (gameId to newState) }
-        } else if (_spectatingGames.value.containsKey(gameId)) {
-            _spectatingGames.update { it + (gameId to newState) }
+        val inActiveGames = _activeGames.value.containsKey(gameId)
+        val inSpectatingGames = _spectatingGames.value.containsKey(gameId)
+
+        val currentState = _activeGames.value[gameId] ?: _spectatingGames.value[gameId]
+        val currentMoveCount = currentState?.moveHistory?.value?.size ?: 0
+        val newMoveCount = newState.moveHistory.value.size
+
+        // Only replace if new state has at least as many moves
+        // This prevents reverting user's local moves during refresh
+        if (newMoveCount < currentMoveCount) {
+            return
+        }
+
+        // Handle case where new state incorrectly has isSpectator=true but current is participant
+        // This happens with open challenges where opponent can't be determined from relay events alone
+        // Solution: Apply moves from new state while preserving participant status from current
+        val stateToUse =
+            if (currentState != null && !currentState.isSpectator && newState.isSpectator && newMoveCount > currentMoveCount) {
+                // Apply opponent's moves to current state's engine
+                currentState.applyMovesFrom(newState)
+                currentState // Keep using current state with updated engine
+            } else if (currentState != null && !currentState.isSpectator && newState.isSpectator) {
+                return
+            } else {
+                newState
+            }
+
+        if (inActiveGames) {
+            _activeGames.update { it + (gameId to stateToUse) }
+            // Increment version to force UI recomposition even if map equals() returns true
+            val newVersion = stateVersionCounter.incrementAndGet()
+            _stateVersion.value = newVersion
+        } else if (inSpectatingGames) {
+            _spectatingGames.update { it + (gameId to stateToUse) }
+            val newVersion = stateVersionCounter.incrementAndGet()
+            _stateVersion.value = newVersion
         }
     }
 
@@ -329,6 +457,12 @@ class ChessLobbyState(
         gameId: String,
         state: LiveChessGameState,
     ) {
+        // Never add to spectating if this game was accepted - user is a participant
+        if (AcceptedGamesRegistry.wasAccepted(gameId)) {
+            // Add to active games instead
+            _activeGames.update { it + (gameId to state) }
+            return
+        }
         _spectatingGames.update { it + (gameId to state) }
     }
 
@@ -344,6 +478,14 @@ class ChessLobbyState(
         _error.value = error
     }
 
+    fun setRefreshing(refreshing: Boolean) {
+        _isRefreshing.value = refreshing
+    }
+
+    fun setSyncStatus(status: ChessSyncStatus) {
+        _syncStatus.value = status
+    }
+
     fun selectGame(gameId: String?) {
         _selectedGameId.value = gameId
     }
@@ -354,12 +496,21 @@ class ChessLobbyState(
 
     fun isSpectating(gameId: String): Boolean = _spectatingGames.value.containsKey(gameId)
 
+    /** Whether a game ID was accepted (prevents refresh from re-adding as challenge) */
+    fun wasAccepted(gameId: String): Boolean = AcceptedGamesRegistry.wasAccepted(gameId)
+
+    /** Mark a game as accepted synchronously (call before async game creation) */
+    fun markAsAccepted(gameId: String) {
+        AcceptedGamesRegistry.markAsAccepted(gameId)
+    }
+
     fun clearAll() {
         _activeGames.value = emptyMap()
         _publicGames.value = emptyList()
         _challenges.value = emptyList()
         _spectatingGames.value = emptyMap()
         _completedGames.value = emptyList()
+        AcceptedGamesRegistry.clear()
         _broadcastStatus.value = ChessBroadcastStatus.Idle
         _error.value = null
         _selectedGameId.value = null

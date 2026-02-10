@@ -41,17 +41,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessGameViewer
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
  * Render NIP-64 Chess Game event (Kind 64)
@@ -94,9 +96,9 @@ fun RenderLiveChessChallenge(
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
     val gameId = event.gameId() ?: return
 
-    val chessViewModel: ChessViewModel =
+    val chessViewModel: ChessViewModelNew =
         viewModel(
-            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
+            key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
             factory = ChessViewModelFactory(accountViewModel.account),
         )
 
@@ -181,15 +183,21 @@ fun RenderLiveChessChallenge(
                         onClick = {
                             // Accept challenge and navigate to game
                             val challengerPubkey = note.author?.pubkeyHex ?: return@Button
-                            val playerColor =
-                                event.playerColor()?.opposite() ?: com.vitorpamplona.quartz.nip64Chess.Color.WHITE
 
-                            chessViewModel.acceptChallenge(
-                                challengeEventId = note.idHex,
-                                gameId = gameId,
-                                challengerPubkey = challengerPubkey,
-                                playerColor = playerColor,
-                            )
+                            // Create ChessChallenge from Note data
+                            val challenge =
+                                ChessChallenge(
+                                    eventId = note.idHex,
+                                    gameId = gameId,
+                                    challengerPubkey = challengerPubkey,
+                                    challengerDisplayName = note.author?.toBestDisplayName(),
+                                    challengerAvatarUrl = note.author?.info?.profilePicture(),
+                                    opponentPubkey = event.opponentPubkey(),
+                                    challengerColor = event.playerColor() ?: ChessColor.WHITE,
+                                    createdAt = event.createdAt,
+                                )
+
+                            chessViewModel.acceptChallenge(challenge)
 
                             // Navigate to game
                             nav.nav(Route.ChessGame(gameId))

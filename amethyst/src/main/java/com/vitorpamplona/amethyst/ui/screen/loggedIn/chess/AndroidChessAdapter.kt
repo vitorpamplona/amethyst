@@ -20,216 +20,374 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
+import com.vitorpamplona.amethyst.commons.chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.chess.ChessEventBroadcaster
 import com.vitorpamplona.amethyst.commons.chess.ChessEventPublisher
+import com.vitorpamplona.amethyst.commons.chess.ChessRelayFetchHelper
 import com.vitorpamplona.amethyst.commons.chess.ChessRelayFetcher
 import com.vitorpamplona.amethyst.commons.chess.IUserMetadataProvider
+import com.vitorpamplona.amethyst.commons.chess.RelayFetchProgress
 import com.vitorpamplona.amethyst.commons.chess.RelayGameSummary
+import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
-import com.vitorpamplona.quartz.nip64Chess.ChessGameEvents
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.JesterProtocol
+import com.vitorpamplona.quartz.nip64Chess.toJesterEvent
 
 /**
- * Android implementation of ChessEventPublisher.
+ * Android implementation of ChessEventPublisher using Jester protocol.
  * Wraps account.signAndComputeBroadcast() for event publishing.
+ *
+ * Jester Protocol:
+ * - All chess events use kind 30
+ * - publishStart creates a start event (content.kind=0)
+ * - publishMove creates a move event (content.kind=1) with full history
+ * - publishGameEnd creates a move event with result in content
  */
 class AndroidChessPublisher(
     private val account: Account,
 ) : ChessEventPublisher {
-    override suspend fun publishChallenge(
-        gameId: String,
+    private val broadcaster = ChessEventBroadcaster(account.client)
+
+    /**
+     * Broadcast an event to the dedicated chess relays with reliable delivery.
+     * Uses ChessEventBroadcaster to ensure relay connections before sending.
+     */
+    private suspend fun broadcastToChessRelays(event: com.vitorpamplona.quartz.nip01Core.core.Event): Boolean {
+        println("[AndroidChessPublisher] Broadcasting event ${event.id.take(8)} via ChessEventBroadcaster")
+        val result = broadcaster.broadcast(event)
+        println("[AndroidChessPublisher] Broadcast result: ${result.message}")
+        return result.success
+    }
+
+    /**
+     * Publish a game start event (challenge).
+     * Returns the startEventId (event ID) if successful.
+     */
+    override suspend fun publishStart(
         playerColor: Color,
         opponentPubkey: String?,
-        timeControl: String?,
-    ): Boolean =
+    ): String? =
         try {
             val template =
-                LiveChessGameChallengeEvent.build(
-                    gameId = gameId,
-                    playerColor = playerColor,
-                    opponentPubkey = opponentPubkey,
-                    timeControl = timeControl,
-                )
-            account.signAndComputeBroadcast(template)
-            true
+                if (opponentPubkey != null) {
+                    JesterEvent.buildPrivateStart(
+                        opponentPubkey = opponentPubkey,
+                        playerColor = playerColor,
+                    )
+                } else {
+                    JesterEvent.buildStart(
+                        playerColor = playerColor,
+                    )
+                }
+            val signedEvent = account.signer.sign(template)
+            // Broadcast to chess relays with reliable delivery
+            val success = broadcastToChessRelays(signedEvent)
+            // Also add to local cache
+            account.cache.justConsumeMyOwnEvent(signedEvent)
+            if (success) signedEvent.id else null
         } catch (e: Exception) {
-            false
+            println("[AndroidChessPublisher] publishStart failed: ${e.message}")
+            null
         }
 
-    override suspend fun publishAccept(
-        gameId: String,
-        challengeEventId: String,
-        challengerPubkey: String,
-    ): Boolean =
+    /**
+     * Publish a move event.
+     * Returns the move event ID if successful.
+     */
+    override suspend fun publishMove(move: ChessMoveEvent): String? =
         try {
             val template =
-                LiveChessGameAcceptEvent.build(
-                    gameId = gameId,
-                    challengeEventId = challengeEventId,
-                    challengerPubkey = challengerPubkey,
-                )
-            account.signAndComputeBroadcast(template)
-            true
-        } catch (e: Exception) {
-            false
-        }
-
-    override suspend fun publishMove(move: ChessMoveEvent): Boolean =
-        try {
-            val template =
-                LiveChessMoveEvent.build(
-                    gameId = move.gameId,
-                    moveNumber = move.moveNumber,
-                    san = move.san,
+                JesterEvent.buildMove(
+                    startEventId = move.startEventId,
+                    headEventId = move.headEventId,
+                    move = move.san,
                     fen = move.fen,
+                    history = move.history,
                     opponentPubkey = move.opponentPubkey,
                 )
-            account.signAndComputeBroadcast(template)
-            true
+            val signedEvent = account.signer.sign(template)
+            // Broadcast to chess relays with reliable delivery
+            val success = broadcastToChessRelays(signedEvent)
+            // Also add to local cache
+            account.cache.justConsumeMyOwnEvent(signedEvent)
+            if (success) signedEvent.id else null
         } catch (e: Exception) {
-            false
+            println("[AndroidChessPublisher] publishMove failed: ${e.message}")
+            null
         }
 
+    /**
+     * Publish a game end event (includes result in content).
+     */
     override suspend fun publishGameEnd(gameEnd: ChessGameEnd): Boolean =
         try {
             val template =
-                LiveChessGameEndEvent.build(
-                    gameId = gameEnd.gameId,
+                JesterEvent.buildEndMove(
+                    startEventId = gameEnd.startEventId,
+                    headEventId = gameEnd.headEventId,
+                    move = gameEnd.lastMove,
+                    fen = gameEnd.fen,
+                    history = gameEnd.history,
+                    opponentPubkey = gameEnd.opponentPubkey,
                     result = gameEnd.result,
                     termination = gameEnd.termination,
-                    winnerPubkey = gameEnd.winnerPubkey,
-                    opponentPubkey = gameEnd.opponentPubkey,
-                    pgn = gameEnd.pgn ?: "",
                 )
-            account.signAndComputeBroadcast(template)
-            true
+            val signedEvent = account.signer.sign(template)
+            // Broadcast to chess relays with reliable delivery
+            val success = broadcastToChessRelays(signedEvent)
+            // Also add to local cache
+            account.cache.justConsumeMyOwnEvent(signedEvent)
+            success
         } catch (e: Exception) {
+            println("[AndroidChessPublisher] publishGameEnd failed: ${e.message}")
             false
         }
 
-    override suspend fun publishDrawOffer(
-        gameId: String,
-        opponentPubkey: String,
-        message: String?,
-    ): Boolean =
-        try {
-            val template =
-                LiveChessDrawOfferEvent.build(
-                    gameId = gameId,
-                    opponentPubkey = opponentPubkey,
-                    message = message ?: "",
-                )
-            account.signAndComputeBroadcast(template)
-            true
-        } catch (e: Exception) {
-            false
-        }
-
-    override fun getWriteRelayCount(): Int = account.outboxRelays.flow.value.size
+    override fun getWriteRelayCount(): Int = ChessConfig.CHESS_RELAYS.size
 }
 
 /**
- * Android implementation of ChessRelayFetcher.
- * Uses LocalCache for game state (hybrid approach during migration).
+ * Android implementation of ChessRelayFetcher using Jester protocol.
+ *
+ * Uses direct one-shot relay fetching for reliability:
+ * - fetchGameEvents: fetches all events for a specific game
+ * - fetchChallenges: fetches start events (challenges)
+ * - fetchUserGameIds: discovers games where user is a participant
+ * - fetchRecentGames: fetches recent games for spectating
+ *
+ * Each fetch opens a temporary subscription, waits for EOSE, and returns results.
  */
 class AndroidRelayFetcher(
     private val account: Account,
 ) : ChessRelayFetcher {
-    override suspend fun fetchGameEvents(gameId: String): ChessGameEvents {
-        // Query LocalCache for all game events
-        val challengeNotes =
-            LocalCache.addressables.filterIntoSet(LiveChessGameChallengeEvent.KIND) { _, note ->
-                val event = note.event as? LiveChessGameChallengeEvent ?: return@filterIntoSet false
-                event.gameId() == gameId
-            }
-        val challengeEvent = challengeNotes.firstOrNull()?.event as? LiveChessGameChallengeEvent
+    private val fetchHelper = ChessRelayFetchHelper(account.client)
+    private val userPubkey = account.userProfile().pubkeyHex
 
-        val acceptNotes =
-            LocalCache.addressables.filterIntoSet(LiveChessGameAcceptEvent.KIND) { _, note ->
-                val event = note.event as? LiveChessGameAcceptEvent ?: return@filterIntoSet false
-                event.gameId() == gameId
-            }
-        val acceptEvent = acceptNotes.firstOrNull()?.event as? LiveChessGameAcceptEvent
+    /**
+     * Get the normalized chess relay URLs.
+     * Always uses the 3 dedicated chess relays from ChessConfig.
+     */
+    private fun chessRelayUrls(): List<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl> =
+        ChessConfig.CHESS_RELAYS.map {
+            com.vitorpamplona.quartz.nip01Core.relay.normalizer
+                .NormalizedRelayUrl(it)
+        }
 
-        val moveNotes =
-            LocalCache.addressables.filterIntoSet(LiveChessMoveEvent.KIND) { _, note ->
-                val event = note.event as? LiveChessMoveEvent ?: return@filterIntoSet false
-                event.gameId() == gameId
-            }
-        val moveEvents = moveNotes.mapNotNull { it.event as? LiveChessMoveEvent }
+    override fun getRelayUrls(): List<String> {
+        println("[AndroidRelayFetcher] getRelayUrls: using ${ChessConfig.CHESS_RELAYS.size} chess relays")
+        return ChessConfig.CHESS_RELAYS
+    }
 
-        val endNotes =
-            LocalCache.addressables.filterIntoSet(LiveChessGameEndEvent.KIND) { _, note ->
-                val event = note.event as? LiveChessGameEndEvent ?: return@filterIntoSet false
-                event.gameId() == gameId
-            }
-        val endEvent = endNotes.firstOrNull()?.event as? LiveChessGameEndEvent
+    /**
+     * Fetch game events directly from relays.
+     * Uses one-shot fetch for reliability.
+     *
+     * Uses TWO filters:
+     * 1. Fetch start event by ID (start events don't have #e tag to themselves)
+     * 2. Fetch moves that reference the start event via #e tag
+     */
+    override suspend fun fetchGameEvents(startEventId: String): JesterGameEvents {
+        println("[AndroidRelayFetcher] fetchGameEvents: fetching from relays for startEventId=$startEventId")
 
-        return ChessGameEvents(
-            challenge = challengeEvent,
-            accept = acceptEvent,
-            moves = moveEvents,
-            end = endEvent,
-            drawOffers = emptyList(), // TODO: Fetch draw offers
+        // Filter 1: Fetch the start event by its ID
+        val startEventFilter =
+            com.vitorpamplona.quartz.nip01Core.relay.filters.Filter(
+                ids = listOf(startEventId),
+                kinds = listOf(JesterProtocol.KIND),
+            )
+
+        // Filter 2: Fetch moves that reference the start event
+        val movesFilter = ChessFilterBuilder.gameEventsFilter(startEventId)
+
+        // Combine both filters
+        val relayFilters = chessRelayUrls().associateWith { listOf(startEventFilter, movesFilter) }
+        val events = fetchHelper.fetchEvents(relayFilters)
+
+        var startEvent: JesterEvent? = null
+        val moves = mutableListOf<JesterEvent>()
+
+        events.forEach { event ->
+            if (event.kind != JesterProtocol.KIND) return@forEach
+            val jesterEvent = event.toJesterEvent() ?: return@forEach
+
+            if (jesterEvent.isStartEvent() && jesterEvent.id == startEventId) {
+                startEvent = jesterEvent
+            } else if (jesterEvent.isMoveEvent() && jesterEvent.startEventId() == startEventId) {
+                moves.add(jesterEvent)
+            }
+        }
+
+        println("[AndroidRelayFetcher] fetchGameEvents: found start=${startEvent != null}, moves=${moves.size}")
+
+        return JesterGameEvents(
+            startEvent = startEvent,
+            moves = moves,
         )
     }
 
-    override suspend fun fetchChallenges(): List<LiveChessGameChallengeEvent> {
-        val challengeNotes =
-            LocalCache.addressables.filterIntoSet(LiveChessGameChallengeEvent.KIND) { _, note ->
-                note.event is LiveChessGameChallengeEvent
+    /**
+     * Fetch challenges (start events) directly from relays.
+     * Uses one-shot fetch for reliability.
+     */
+    override suspend fun fetchChallenges(onProgress: ((RelayFetchProgress) -> Unit)?): List<JesterEvent> {
+        val relays = chessRelayUrls()
+        println("[AndroidRelayFetcher] fetchChallenges: fetching from ${relays.size} relays: $relays")
+
+        if (relays.isEmpty()) {
+            println("[AndroidRelayFetcher] fetchChallenges: WARNING - no connected relays!")
+            return emptyList()
+        }
+
+        val filter = ChessFilterBuilder.challengesFilter(userPubkey)
+        println("[AndroidRelayFetcher] fetchChallenges: filter kinds=${filter.kinds}, tags=${filter.tags}, since=${filter.since}, limit=${filter.limit}")
+        println("[AndroidRelayFetcher] fetchChallenges: filter JSON=${filter.toJson()}")
+
+        val relayFilters = relays.associateWith { listOf(filter) }
+        val events = fetchHelper.fetchEvents(relayFilters, onProgress = onProgress)
+        println("[AndroidRelayFetcher] fetchChallenges: received ${events.size} raw events")
+
+        // Debug: If no events, also try without #e filter to see if relays have ANY kind 30 events
+        if (events.isEmpty()) {
+            println("[AndroidRelayFetcher] DEBUG: No events with #e filter, trying without tag filter...")
+            val debugFilter = ChessFilterBuilder.recentGamesFilter()
+            val debugFilters = relays.associateWith { listOf(debugFilter) }
+            val debugEvents = fetchHelper.fetchEvents(debugFilters, timeoutMs = 10_000)
+            println("[AndroidRelayFetcher] DEBUG: recentGamesFilter (no #e) returned ${debugEvents.size} events")
+            debugEvents.take(5).forEach { e ->
+                println("[AndroidRelayFetcher] DEBUG: kind=${e.kind}, id=${e.id.take(8)}, tags=${e.tags.take(3).map { it.toList() }}")
             }
-        return challengeNotes.mapNotNull { it.event as? LiveChessGameChallengeEvent }
+        }
+
+        val challenges = mutableListOf<JesterEvent>()
+
+        events.forEach { event ->
+            if (event.kind != JesterProtocol.KIND) return@forEach
+            val jesterEvent = event.toJesterEvent() ?: return@forEach
+
+            if (!jesterEvent.isStartEvent()) return@forEach
+
+            // Include challenges that are:
+            // 1. Open challenges (no specific opponent)
+            // 2. Directed at us
+            // 3. Created by us
+            val isRelevant =
+                jesterEvent.opponentPubkey() == null ||
+                    jesterEvent.opponentPubkey() == userPubkey ||
+                    jesterEvent.pubKey == userPubkey
+
+            if (isRelevant) {
+                challenges.add(jesterEvent)
+            }
+        }
+
+        println("[AndroidRelayFetcher] fetchChallenges: found ${challenges.size} challenges from ${events.size} events")
+        return challenges
     }
 
+    /**
+     * Fetch recent games for spectating.
+     */
     override suspend fun fetchRecentGames(): List<RelayGameSummary> {
-        // Query LocalCache for recent active games
-        // Group moves by game ID and create summaries
-        val moveNotes =
-            LocalCache.addressables.filterIntoSet(LiveChessMoveEvent.KIND) { _, note ->
-                note.event is LiveChessMoveEvent
-            }
-        val gameIds = moveNotes.mapNotNull { (it.event as? LiveChessMoveEvent)?.gameId() }.distinct()
+        val filter = ChessFilterBuilder.recentGamesFilter()
+        val relayFilters = chessRelayUrls().associateWith { listOf(filter) }
+        val events = fetchHelper.fetchEvents(relayFilters)
 
-        return gameIds.mapNotNull { gameId ->
-            val events = fetchGameEvents(gameId)
-            val challenge = events.challenge ?: return@mapNotNull null
-            val accept = events.accept
+        // Convert to JesterEvents
+        val jesterEvents =
+            events
+                .filter { it.kind == JesterProtocol.KIND }
+                .mapNotNull { it.toJesterEvent() }
 
-            // Determine white/black pubkeys
-            val challengerColor = challenge.playerColor() ?: Color.WHITE
-            val whitePubkey =
+        // Group by game (startEventId for moves, id for start events)
+        val startEventsById =
+            jesterEvents
+                .filter { it.isStartEvent() }
+                .associateBy { it.id }
+
+        val movesByGameId =
+            jesterEvents
+                .filter { it.isMoveEvent() }
+                .groupBy { it.startEventId() ?: "" }
+                .filterKeys { it.isNotEmpty() }
+
+        // Get all game IDs (from start events and moves)
+        val allGameIds = startEventsById.keys + movesByGameId.keys
+
+        return allGameIds.mapNotNull { startEventId ->
+            val startEvent = startEventsById[startEventId] ?: return@mapNotNull null
+            val moves = movesByGameId[startEventId] ?: emptyList()
+
+            val challengerColor = startEvent.playerColor() ?: Color.WHITE
+
+            // Determine players from start event and moves
+            val challengerPubkey = startEvent.pubKey
+            val opponentFromMoves = moves.firstOrNull { it.pubKey != challengerPubkey }?.pubKey
+            val opponentPubkey = startEvent.opponentPubkey() ?: opponentFromMoves ?: return@mapNotNull null
+
+            val (whitePubkey, blackPubkey) =
                 if (challengerColor == Color.WHITE) {
-                    challenge.pubKey
+                    challengerPubkey to opponentPubkey
                 } else {
-                    accept?.pubKey ?: return@mapNotNull null
-                }
-            val blackPubkey =
-                if (challengerColor == Color.BLACK) {
-                    challenge.pubKey
-                } else {
-                    accept?.pubKey ?: return@mapNotNull null
+                    opponentPubkey to challengerPubkey
                 }
 
-            val lastMove = events.moves.maxByOrNull { it.createdAt }
+            val lastMove = moves.maxByOrNull { it.history().size }
+            val hasEnded = lastMove?.result() != null
 
             RelayGameSummary(
-                gameId = gameId,
+                startEventId = startEventId,
                 whitePubkey = whitePubkey,
                 blackPubkey = blackPubkey,
-                moveCount = events.moves.size,
-                lastMoveTime = lastMove?.createdAt ?: challenge.createdAt,
-                isActive = events.end == null,
+                moveCount = lastMove?.history()?.size ?: 0,
+                lastMoveTime = lastMove?.createdAt ?: startEvent.createdAt,
+                isActive = !hasEnded,
             )
         }
+    }
+
+    /**
+     * Fetch user's game IDs directly from relays.
+     * Uses one-shot fetch for reliability.
+     */
+    override suspend fun fetchUserGameIds(onProgress: ((RelayFetchProgress) -> Unit)?): Set<String> {
+        println("[AndroidRelayFetcher] fetchUserGameIds: fetching from relays")
+
+        // Fetch events authored by user AND events tagging user
+        val authoredFilter = ChessFilterBuilder.userGamesFilter(userPubkey)
+        val taggedFilter = ChessFilterBuilder.userTaggedFilter(userPubkey)
+
+        val relayFilters =
+            chessRelayUrls().associateWith {
+                listOf(authoredFilter, taggedFilter)
+            }
+
+        val events = fetchHelper.fetchEvents(relayFilters, onProgress = onProgress)
+
+        val gameIds = mutableSetOf<String>()
+
+        events.forEach { event ->
+            if (event.kind != JesterProtocol.KIND) return@forEach
+            val jesterEvent = event.toJesterEvent() ?: return@forEach
+
+            // Check if user is involved (author or tagged)
+            val isUserInvolved = jesterEvent.pubKey == userPubkey || jesterEvent.opponentPubkey() == userPubkey
+            if (!isUserInvolved) return@forEach
+
+            if (jesterEvent.isStartEvent()) {
+                gameIds.add(jesterEvent.id)
+            } else if (jesterEvent.isMoveEvent()) {
+                jesterEvent.startEventId()?.let { gameIds.add(it) }
+            }
+        }
+
+        println("[AndroidRelayFetcher] fetchUserGameIds: found ${gameIds.size} game IDs from ${events.size} events")
+        return gameIds
     }
 }
 

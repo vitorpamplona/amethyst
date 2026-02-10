@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.chess
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,23 +34,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,8 +65,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
+import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
+import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
+import com.vitorpamplona.amethyst.commons.chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
+import com.vitorpamplona.amethyst.commons.chess.CompletedGame
 import com.vitorpamplona.amethyst.commons.chess.InteractiveChessBoard
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
+import com.vitorpamplona.amethyst.commons.chess.PublicGame
 import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -73,7 +82,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createChessSubscriptionW
 import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
  * Desktop chess screen with challenge list and game view
@@ -87,41 +96,52 @@ fun ChessScreen(
     val scope = rememberCoroutineScope()
     val viewModel =
         remember(account.pubKeyHex) {
-            DesktopChessViewModel(account, relayManager, scope)
+            DesktopChessViewModelNew(account, relayManager, scope)
         }
     val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val refreshKey by viewModel.refreshKey.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val broadcastStatus by viewModel.broadcastStatus.collectAsState()
     val activeGames by viewModel.activeGames.collectAsState()
+    // Observe state version to force recomposition when game state changes
+    val stateVersion by viewModel.stateVersion.collectAsState()
 
-    // Extract opponent pubkeys from active games for move filtering
+    // Ensure chess relays are added to the relay manager for broadcasting
+    LaunchedEffect(Unit) {
+        ChessConfig.CHESS_RELAYS.forEach { relayUrl ->
+            relayManager.addRelay(relayUrl)
+        }
+        println("[ChessScreen] Added ${ChessConfig.CHESS_RELAYS.size} chess relays to relay manager")
+    }
+
+    // Derive stable keys to avoid recomposition from LiveChessGameState identity changes
+    val activeGameIds = remember(activeGames.keys) { activeGames.keys.toSet() }
     val opponentPubkeys =
-        remember(activeGames) {
-            val pubkeys = activeGames.values.map { it.opponentPubkey }.toSet()
-            println("[ChessScreen] Active games: ${activeGames.keys}, Opponent pubkeys: $pubkeys")
-            pubkeys
+        remember(activeGameIds) {
+            activeGames.values.map { it.opponentPubkey }.toSet()
         }
 
-    // Subscribe to chess events from relays
-    // Re-subscribes when relays, refreshKey, or active games change
-    rememberSubscription(relayStatuses, account, refreshKey, activeGames.keys, opponentPubkeys, relayManager = relayManager) {
-        val configuredRelays = relayStatuses.keys
-        if (configuredRelays.isNotEmpty()) {
-            createChessSubscriptionWithGames(
-                relays = configuredRelays,
-                userPubkey = account.pubKeyHex,
-                activeGameIds = activeGames.keys,
-                opponentPubkeys = opponentPubkeys,
-                onEvent = { event, _, _, _ ->
-                    viewModel.handleIncomingEvent(event)
-                },
-                onEose = { _, _ ->
-                    viewModel.onLoadComplete()
-                },
-            )
-        } else {
-            null
+    // Subscribe to chess events from dedicated chess relays
+    // Re-subscribes when active games change
+    val chessRelays =
+        remember {
+            ChessConfig.CHESS_RELAYS
+                .map {
+                    com.vitorpamplona.quartz.nip01Core.relay.normalizer
+                        .NormalizedRelayUrl(it)
+                }.toSet()
         }
+    rememberSubscription(chessRelays, account, activeGameIds, opponentPubkeys, relayManager = relayManager) {
+        createChessSubscriptionWithGames(
+            relays = chessRelays,
+            userPubkey = account.pubKeyHex,
+            activeGameIds = activeGameIds,
+            opponentPubkeys = opponentPubkeys,
+            onEvent = { event, _, _, _ ->
+                viewModel.handleIncomingEvent(event)
+            },
+            onEose = { _, _ ->
+                // ChessLobbyLogic handles loading state internally
+            },
+        )
     }
 
     // Subscribe to user metadata for pubkeys that need it
@@ -142,11 +162,15 @@ fun ChessScreen(
     }
 
     val challenges by viewModel.challenges.collectAsState()
+    val spectatingGames by viewModel.spectatingGames.collectAsState()
+    val publicGames by viewModel.publicGames.collectAsState()
     val completedGames by viewModel.completedGames.collectAsState()
     // Observe metadata changes to trigger recomposition
     val userMetadata by viewModel.userMetadataCache.metadata.collectAsState()
     val selectedGameId by viewModel.selectedGameId.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
     var showNewGameDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -176,18 +200,8 @@ fun ChessScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Refresh button
-                    IconButton(
-                        onClick = { viewModel.refresh() },
-                        enabled = !isLoading,
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, "Refresh")
-                        }
+                    IconButton(onClick = { viewModel.forceRefresh() }) {
+                        Icon(Icons.Default.Refresh, "Refresh")
                     }
 
                     // New Game button
@@ -201,6 +215,19 @@ fun ChessScreen(
                 }
             }
         }
+
+        // Sync status banner (shown in both lobby and game views)
+        ChessSyncBanner(
+            status = syncStatus,
+            onRetry = { viewModel.forceRefresh() },
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        // Broadcast status banner (shows when publishing moves)
+        ChessBroadcastBanner(
+            status = broadcastStatus,
+            onTap = { viewModel.forceRefresh() },
+        )
 
         // Error display
         error?.let { errorMsg ->
@@ -223,31 +250,64 @@ fun ChessScreen(
 
         // Main content
         if (selectedGameId != null) {
-            val gameState = viewModel.getGameState(selectedGameId!!)
+            // Set focused game mode - only poll this game, not others
+            LaunchedEffect(selectedGameId) {
+                viewModel.setFocusedGame(selectedGameId!!)
+            }
+
+            // Use stateVersion to ensure recomposition when game state changes
+            val gameState =
+                remember(selectedGameId, stateVersion) {
+                    viewModel.getGameState(selectedGameId!!)
+                }
             if (gameState != null) {
+                // Determine spectator status:
+                // 1. If game was accepted locally, user is definitely NOT a spectator
+                // 2. Otherwise, check which map the game is in
+                val wasAccepted = viewModel.wasAccepted(selectedGameId!!)
+                val isSpectating = !wasAccepted && spectatingGames.containsKey(selectedGameId)
+
                 DesktopChessGameLayout(
                     gameState = gameState,
                     opponentName = viewModel.userMetadataCache.getDisplayName(gameState.opponentPubkey),
                     opponentPicture = viewModel.userMetadataCache.getPictureUrl(gameState.opponentPubkey),
                     onMoveMade = { from, to, _ ->
-                        viewModel.publishMove(gameState.gameId, from, to)
+                        viewModel.publishMove(gameState.startEventId, from, to)
                     },
-                    onResign = { viewModel.resign(gameState.gameId) },
-                    onOfferDraw = { viewModel.offerDraw(gameState.gameId) },
-                    onAcceptDraw = { viewModel.acceptDraw(gameState.gameId) },
-                    onDeclineDraw = { viewModel.declineDraw(gameState.gameId) },
+                    onResign = { viewModel.resign(gameState.startEventId) },
+                    isSpectatorOverride = isSpectating,
                 )
             }
         } else {
+            // Clear focused game mode when returning to lobby - poll all games
+            LaunchedEffect(Unit) {
+                viewModel.clearFocusedGame()
+            }
+
+            // Track outgoing challenges to scroll to top when a new one is created
+            val outgoingChallengesCount = challenges.count { it.isFrom(account.pubKeyHex) }
+            val listState = rememberLazyListState()
+
+            // Scroll to top when user creates a new challenge
+            LaunchedEffect(outgoingChallengesCount) {
+                if (outgoingChallengesCount > 0) {
+                    listState.animateScrollToItem(0)
+                }
+            }
+
             ChessLobby(
                 challenges = challenges,
                 activeGames = activeGames,
+                spectatingGames = spectatingGames,
+                publicGames = publicGames,
                 completedGames = completedGames,
                 userPubkey = account.pubKeyHex,
-                isLoading = isLoading,
                 metadataCache = viewModel.userMetadataCache,
                 onAcceptChallenge = { viewModel.acceptChallenge(it) },
+                onOpenOwnChallenge = { viewModel.openOwnChallenge(it) },
+                onWatchGame = { viewModel.loadGameAsSpectator(it) },
                 onSelectGame = { viewModel.selectGame(it) },
+                listState = listState,
             )
         }
     }
@@ -269,23 +329,57 @@ fun ChessScreen(
  */
 @Composable
 private fun ChessLobby(
-    challenges: List<LiveChessGameChallengeEvent>,
+    challenges: List<ChessChallenge>,
     activeGames: Map<String, com.vitorpamplona.quartz.nip64Chess.LiveChessGameState>,
+    spectatingGames: Map<String, com.vitorpamplona.quartz.nip64Chess.LiveChessGameState>,
+    publicGames: List<PublicGame>,
     completedGames: List<CompletedGame>,
-    isLoading: Boolean,
     userPubkey: String,
     metadataCache: UserMetadataCache,
-    onAcceptChallenge: (LiveChessGameChallengeEvent) -> Unit,
+    onAcceptChallenge: (ChessChallenge) -> Unit,
+    onOpenOwnChallenge: (ChessChallenge) -> Unit,
+    onWatchGame: (String) -> Unit,
     onSelectGame: (String) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
 ) {
+    val hasContent =
+        activeGames.isNotEmpty() || spectatingGames.isNotEmpty() ||
+            publicGames.isNotEmpty() || challenges.isNotEmpty() || completedGames.isNotEmpty()
+
+    if (!hasContent) {
+        // Empty state
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    "No games or challenges",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Create a new game or refresh to load from relays",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        return
+    }
+
     LazyColumn(
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Active games section
+        // Active games section (user is participant)
         if (activeGames.isNotEmpty()) {
             item {
                 Text(
-                    "Active Games",
+                    "Your Games",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -293,43 +387,24 @@ private fun ChessLobby(
             }
 
             items(activeGames.entries.toList(), key = { "active-${it.key}" }) { (gameId, state) ->
-                ActiveGameCard(
+                com.vitorpamplona.amethyst.commons.chess.ActiveGameCard(
                     gameId = gameId,
-                    opponentPubkey = state.opponentPubkey,
                     opponentName = metadataCache.getDisplayName(state.opponentPubkey),
-                    opponentPicture = metadataCache.getPictureUrl(state.opponentPubkey),
                     isYourTurn = state.isPlayerTurn(),
                     onClick = { onSelectGame(gameId) },
+                    avatar = {
+                        UserAvatar(
+                            userHex = state.opponentPubkey,
+                            pictureUrl = metadataCache.getPictureUrl(state.opponentPubkey),
+                            size = 40.dp,
+                        )
+                    },
                 )
             }
         }
 
-        // Incoming challenges
-        val incomingChallenges = challenges.filter { it.opponentPubkey() == userPubkey }
-        if (incomingChallenges.isNotEmpty()) {
-            item {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    "Incoming Challenges",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
-
-            items(incomingChallenges, key = { it.id }) { challenge ->
-                ChallengeCard(
-                    challenge = challenge,
-                    challengerName = metadataCache.getDisplayName(challenge.pubKey),
-                    challengerPicture = metadataCache.getPictureUrl(challenge.pubKey),
-                    isIncoming = true,
-                    onAccept = { onAcceptChallenge(challenge) },
-                )
-            }
-        }
-
-        // User's outgoing challenges
-        val outgoingChallenges = challenges.filter { it.pubKey == userPubkey }
+        // User's outgoing challenges (right after active games - user wants to see their new challenges)
+        val outgoingChallenges = challenges.filter { it.isFrom(userPubkey) }
         if (outgoingChallenges.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(16.dp))
@@ -341,18 +416,78 @@ private fun ChessLobby(
                 )
             }
 
-            items(outgoingChallenges, key = { it.id }) { challenge ->
-                val opponentPubkey = challenge.opponentPubkey()
-                OutgoingChallengeCard(
-                    challenge = challenge,
-                    opponentName = opponentPubkey?.let { metadataCache.getDisplayName(it) },
-                    opponentPicture = opponentPubkey?.let { metadataCache.getPictureUrl(it) },
+            items(outgoingChallenges, key = { "outgoing-${it.eventId}" }) { challenge ->
+                com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard(
+                    opponentName = challenge.opponentPubkey?.let { metadataCache.getDisplayName(it) },
+                    userPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
+                    onClick = { onOpenOwnChallenge(challenge) },
+                    avatar =
+                        challenge.opponentPubkey?.let { pubkey ->
+                            {
+                                UserAvatar(
+                                    userHex = pubkey,
+                                    pictureUrl = metadataCache.getPictureUrl(pubkey),
+                                    size = 40.dp,
+                                )
+                            }
+                        },
                 )
             }
         }
 
-        // Open challenges from others
-        val openChallenges = challenges.filter { it.opponentPubkey() == null && it.pubKey != userPubkey }
+        // Games user is spectating
+        if (spectatingGames.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Watching",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+
+            items(spectatingGames.entries.toList(), key = { "spectating-${it.key}" }) { (gameId, state) ->
+                val moveCount by state.moveHistory.collectAsState()
+                com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard(
+                    moveCount = moveCount.size,
+                    onClick = { onSelectGame(gameId) },
+                )
+            }
+        }
+
+        // Incoming challenges (directed at user)
+        val incomingChallenges = challenges.filter { it.isDirectedAt(userPubkey) }
+        if (incomingChallenges.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Incoming Challenges",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+
+            items(incomingChallenges, key = { "incoming-${it.eventId}" }) { challenge ->
+                com.vitorpamplona.amethyst.commons.chess.ChallengeCard(
+                    challengerName = challenge.challengerDisplayName ?: metadataCache.getDisplayName(challenge.challengerPubkey),
+                    challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
+                    isIncoming = true,
+                    onAccept = { onAcceptChallenge(challenge) },
+                    avatar = {
+                        UserAvatar(
+                            userHex = challenge.challengerPubkey,
+                            pictureUrl = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
+                            size = 40.dp,
+                        )
+                    },
+                )
+            }
+        }
+
+        // Open challenges from others (can join)
+        val openChallenges = challenges.filter { it.isOpen && !it.isFrom(userPubkey) }
         if (openChallenges.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(16.dp))
@@ -364,13 +499,41 @@ private fun ChessLobby(
                 )
             }
 
-            items(openChallenges, key = { it.id }) { challenge ->
-                ChallengeCard(
-                    challenge = challenge,
-                    challengerName = metadataCache.getDisplayName(challenge.pubKey),
-                    challengerPicture = metadataCache.getPictureUrl(challenge.pubKey),
+            items(openChallenges, key = { "open-${it.eventId}" }) { challenge ->
+                com.vitorpamplona.amethyst.commons.chess.ChallengeCard(
+                    challengerName = challenge.challengerDisplayName ?: metadataCache.getDisplayName(challenge.challengerPubkey),
+                    challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = false,
                     onAccept = { onAcceptChallenge(challenge) },
+                    avatar = {
+                        UserAvatar(
+                            userHex = challenge.challengerPubkey,
+                            pictureUrl = challenge.challengerAvatarUrl ?: metadataCache.getPictureUrl(challenge.challengerPubkey),
+                            size = 40.dp,
+                        )
+                    },
+                )
+            }
+        }
+
+        // Live games to watch (public games user is not part of)
+        if (publicGames.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Live Games",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+
+            items(publicGames, key = { "public-${it.gameId}" }) { game ->
+                com.vitorpamplona.amethyst.commons.chess.PublicGameCard(
+                    whiteName = game.whiteDisplayName ?: metadataCache.getDisplayName(game.whitePubkey),
+                    blackName = game.blackDisplayName ?: metadataCache.getDisplayName(game.blackPubkey),
+                    moveCount = game.moveCount,
+                    onWatch = { onWatchGame(game.gameId) },
                 )
             }
         }
@@ -391,283 +554,38 @@ private fun ChessLobby(
                 completedGames.distinctBy { it.gameId }.take(10),
                 key = { "completed-${it.gameId}-${it.completedAt}" },
             ) { game ->
-                CompletedGameCard(
-                    game = game,
-                    userPubkey = userPubkey,
-                    opponentName = metadataCache.getDisplayName(game.opponentPubkey),
-                    opponentPicture = metadataCache.getPictureUrl(game.opponentPubkey),
-                )
-            }
-        }
-
-        // Empty state or loading
-        if (activeGames.isEmpty() && challenges.isEmpty()) {
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator()
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Loading games from relays...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Derive opponent pubkey based on who the user is
+                val opponentPubkey =
+                    if (game.whitePubkey == userPubkey) game.blackPubkey else game.whitePubkey
+                com.vitorpamplona.amethyst.commons.chess.CompletedGameCard(
+                    opponentName = game.blackDisplayName ?: game.whiteDisplayName ?: metadataCache.getDisplayName(opponentPubkey),
+                    result = game.result,
+                    didUserWin = game.didUserWin(userPubkey),
+                    isDraw = game.isDraw,
+                    moveCount = game.moveCount,
+                    avatar = {
+                        UserAvatar(
+                            userHex = opponentPubkey,
+                            pictureUrl = metadataCache.getPictureUrl(opponentPubkey),
+                            size = 40.dp,
                         )
-                    } else {
-                        Text(
-                            "No games or challenges",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Create a new game or refresh to load from relays",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActiveGameCard(
-    gameId: String,
-    opponentPubkey: String,
-    opponentName: String,
-    opponentPicture: String?,
-    isYourTurn: Boolean,
-    onClick: () -> Unit,
-) {
-    // Extract human-readable game name if available
-    val gameName =
-        remember(gameId) {
-            ChessGameNameGenerator.extractDisplayName(gameId) ?: gameId.take(12)
-        }
-
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        border =
-            if (isYourTurn) {
-                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-            } else {
-                null
-            },
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                UserAvatar(
-                    userHex = opponentPubkey,
-                    pictureUrl = opponentPicture,
-                    size = 40.dp,
+                    },
                 )
-                Column {
-                    Text(
-                        gameName,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        "vs $opponentName",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-
-            Text(
-                if (isYourTurn) "Your turn" else "Waiting...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isYourTurn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (isYourTurn) FontWeight.Bold else FontWeight.Normal,
-            )
-        }
-    }
-}
-
-@Composable
-private fun OutgoingChallengeCard(
-    challenge: LiveChessGameChallengeEvent,
-    opponentName: String?,
-    opponentPicture: String?,
-) {
-    val opponentPubkey = challenge.opponentPubkey()
-    val playerColor = challenge.playerColor()
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (opponentPubkey != null) {
-                    UserAvatar(
-                        userHex = opponentPubkey,
-                        pictureUrl = opponentPicture,
-                        size = 40.dp,
-                    )
-                }
-                Column {
-                    Text(
-                        if (opponentName != null) {
-                            "Challenge to $opponentName"
-                        } else {
-                            "Open challenge (awaiting opponent)"
-                        },
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        "You play ${if (playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Text(
-                "Waiting...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ChallengeCard(
-    challenge: LiveChessGameChallengeEvent,
-    challengerName: String,
-    challengerPicture: String?,
-    isIncoming: Boolean,
-    onAccept: () -> Unit,
-) {
-    val borderColor =
-        if (isIncoming) {
-            Color(0xFFFF9800) // Orange for incoming
-        } else {
-            Color(0xFF4CAF50) // Green for open
-        }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        border = BorderStroke(2.dp, borderColor),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                UserAvatar(
-                    userHex = challenge.pubKey,
-                    pictureUrl = challengerPicture,
-                    size = 40.dp,
-                )
-                Column {
-                    Text(
-                        if (isIncoming) "Challenge from $challengerName" else "Open challenge by $challengerName",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    val playerColor = challenge.playerColor()
-                    Text(
-                        "Challenger plays ${if (playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Button(onClick = onAccept) {
-                Text("Accept")
             }
         }
-    }
-}
 
-@Composable
-private fun CompletedGameCard(
-    game: CompletedGame,
-    userPubkey: String,
-    opponentName: String,
-    opponentPicture: String?,
-) {
-    val resultColor =
-        when (game.didWin(userPubkey)) {
-            true -> Color(0xFF4CAF50) // Green for win
-            false -> Color(0xFFF44336) // Red for loss
-            null -> Color(0xFF9E9E9E) // Gray for draw
-        }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            ),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                UserAvatar(
-                    userHex = game.opponentPubkey,
-                    pictureUrl = opponentPicture,
-                    size = 40.dp,
-                )
-                Column {
-                    Text(
-                        "vs $opponentName",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        "${game.moveCount} moves - ${game.termination}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Text(
-                game.resultText(userPubkey),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = resultColor,
-            )
+        // Bottom padding
+        item {
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 /**
  * Desktop-optimized chess game layout with board on left, info/controls on right
+ *
+ * @param isSpectatorOverride If non-null, overrides gameState.isSpectator. Use when spectator
+ *        status is determined by which map the game is in (activeGames vs spectatingGames).
  */
 @Composable
 private fun DesktopChessGameLayout(
@@ -676,266 +594,230 @@ private fun DesktopChessGameLayout(
     opponentPicture: String?,
     onMoveMade: (from: String, to: String, san: String) -> Unit,
     onResign: () -> Unit,
-    onOfferDraw: () -> Unit,
-    onAcceptDraw: () -> Unit,
-    onDeclineDraw: () -> Unit,
+    isSpectatorOverride: Boolean? = null,
 ) {
     // Collect state flows to trigger recomposition on changes
     val currentPosition by gameState.currentPosition.collectAsState()
     val moveHistory by gameState.moveHistory.collectAsState()
-    val pendingDrawOffer by gameState.pendingDrawOffer.collectAsState()
 
     val engine = gameState.engine
     val playerColor = gameState.playerColor
-    val gameId = gameState.gameId
+    val startEventId = gameState.startEventId
     val opponentPubkey = gameState.opponentPubkey
-    val hasOpponentDrawOffer = pendingDrawOffer == opponentPubkey
-    val hasOurDrawOffer = pendingDrawOffer == gameState.playerPubkey
+    val isSpectator = isSpectatorOverride ?: gameState.isSpectator
 
-    Row(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        // Left side: Chess board
-        Box(
-            modifier = Modifier.fillMaxHeight(),
-            contentAlignment = Alignment.Center,
-        ) {
-            InteractiveChessBoard(
-                engine = engine,
-                boardSize = 520.dp,
-                flipped = playerColor == com.vitorpamplona.quartz.nip64Chess.Color.BLACK,
-                playerColor = playerColor,
-                positionVersion = moveHistory.size,
-                onMoveMade = onMoveMade,
-            )
-        }
+        // Calculate board size based on available space
+        // Leave room for the info panel (300dp + 24dp spacing)
+        val infoPanelWidth = 300.dp + 24.dp
+        val availableWidth = maxWidth - infoPanelWidth
+        val availableHeight = maxHeight
+        // Board should fit within available space, maintaining square aspect ratio
+        val boardSize = min(availableWidth, availableHeight).coerceIn(200.dp, 520.dp)
 
-        // Right side: Game info, moves, controls
-        Column(
-            modifier =
-                Modifier
-                    .width(300.dp)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            // Extract human-readable game name
-            val gameName =
-                remember(gameId) {
-                    ChessGameNameGenerator.extractDisplayName(gameId)
-                }
-
-            // Game info card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
+            // Left side: Chess board
+            Box(
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Show readable game name if available
-                    if (gameName != null) {
-                        Text(
-                            gameName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    } else {
-                        Text(
-                            "Game Info",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
+                InteractiveChessBoard(
+                    engine = engine,
+                    boardSize = boardSize,
+                    flipped = if (isSpectator) false else playerColor == com.vitorpamplona.quartz.nip64Chess.Color.BLACK,
+                    playerColor = playerColor,
+                    isSpectator = isSpectator,
+                    positionVersion = moveHistory.size,
+                    onMoveMade = onMoveMade,
+                )
+            }
+
+            // Right side: Game info, moves, controls
+            Column(
+                modifier =
+                    Modifier
+                        .width(300.dp)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Extract human-readable game name
+                val gameName =
+                    remember(startEventId) {
+                        ChessGameNameGenerator.extractDisplayName(startEventId)
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                // Game info card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        UserAvatar(
-                            userHex = opponentPubkey,
-                            pictureUrl = opponentPicture,
-                            size = 48.dp,
-                        )
-                        Column {
+                        // Show readable game name if available
+                        if (gameName != null) {
                             Text(
-                                "vs $opponentName",
-                                style = MaterialTheme.typography.bodyLarge,
+                                gameName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
                             )
+                        } else {
                             Text(
-                                "You play ${if (playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}",
+                                "Game Info",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            UserAvatar(
+                                userHex = opponentPubkey,
+                                pictureUrl = opponentPicture,
+                                size = 48.dp,
+                            )
+                            Column {
+                                if (isSpectator) {
+                                    Text(
+                                        "Spectating",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                    )
+                                } else {
+                                    Text(
+                                        "vs $opponentName",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                    Text(
+                                        "You play ${if (playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Use currentPosition to derive turn (triggers recomposition on move)
+                        val currentTurn = currentPosition.activeColor
+
+                        if (isSpectator) {
+                            Text(
+                                "${if (currentTurn == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}'s turn",
                                 style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            val isYourTurn = currentTurn == playerColor
+                            Text(
+                                if (isYourTurn) "Your turn" else "Opponent's turn",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isYourTurn) FontWeight.Bold else FontWeight.Normal,
+                                color =
+                                    if (isYourTurn) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                            )
+                        }
+                    }
+                }
+
+                // Move history card
+                if (moveHistory.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                "Move History",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+
+                            // Format moves as numbered pairs
+                            val moveText =
+                                moveHistory
+                                    .chunked(2)
+                                    .mapIndexed { index, pair ->
+                                        "${index + 1}. ${pair.joinToString(" ")}"
+                                    }.joinToString("\n")
+
+                            Text(
+                                moveText,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-
-                    // Use currentPosition to derive turn (triggers recomposition on move)
-                    val currentTurn = currentPosition.activeColor
-                    val isYourTurn = currentTurn == playerColor
-
-                    Text(
-                        if (isYourTurn) "Your turn" else "Opponent's turn",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isYourTurn) FontWeight.Bold else FontWeight.Normal,
-                        color =
-                            if (isYourTurn) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                    )
                 }
-            }
 
-            // Move history card
-            if (moveHistory.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                // Game controls card (only for participants, not spectators)
+                if (!isSpectator) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(
-                            "Move History",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                "Actions",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
 
-                        // Format moves as numbered pairs
-                        val moveText =
-                            moveHistory
-                                .chunked(2)
-                                .mapIndexed { index, pair ->
-                                    "${index + 1}. ${pair.joinToString(" ")}"
-                                }.joinToString("\n")
-
-                        Text(
-                            moveText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                            OutlinedButton(
+                                onClick = onResign,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Resign")
+                            }
+                        }
                     }
-                }
-            }
-
-            // Draw offer notification (if opponent offered)
-            if (hasOpponentDrawOffer) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = Color(0xFFFF9800).copy(alpha = 0.15f),
-                        ),
-                    border = BorderStroke(2.dp, Color(0xFFFF9800)),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                } else {
+                    // Spectator info card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                            ),
                     ) {
-                        Text(
-                            "Draw Offered",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFF9800),
-                        )
-                        Text(
-                            "$opponentName has offered a draw",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Button(
-                                onClick = onAcceptDraw,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("Accept")
-                            }
-                            OutlinedButton(
-                                onClick = onDeclineDraw,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("Decline")
-                            }
+                            Icon(Icons.Default.Visibility, contentDescription = null)
+                            Text(
+                                "Watching game - spectator mode",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                     }
                 }
+
+                // Game ID (small footer)
+                Text(
+                    "Game: ${startEventId.take(16)}...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-
-            // Our draw offer pending notification
-            if (hasOurDrawOffer) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        ),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            "Draw offer sent",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            "Waiting for $opponentName to respond...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            // Game controls card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        "Actions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        OutlinedButton(
-                            onClick = onOfferDraw,
-                            modifier = Modifier.weight(1f),
-                            enabled = !hasOurDrawOffer && !hasOpponentDrawOffer,
-                        ) {
-                            Text(if (hasOurDrawOffer) "Offer Sent" else "Offer Draw")
-                        }
-
-                        OutlinedButton(
-                            onClick = onResign,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Resign")
-                        }
-                    }
-                }
-            }
-
-            // Game ID (small footer)
-            Text(
-                "Game: ${gameId.take(16)}...",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

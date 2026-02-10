@@ -33,8 +33,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
 
 /**
  * Floating action button for creating new chess game challenges
@@ -46,9 +46,9 @@ fun NewChessGameButton(
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
-    val chessViewModel: ChessViewModel =
+    val chessViewModel: ChessViewModelNew =
         viewModel(
-            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
+            key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
             factory = ChessViewModelFactory(accountViewModel.account),
         )
 

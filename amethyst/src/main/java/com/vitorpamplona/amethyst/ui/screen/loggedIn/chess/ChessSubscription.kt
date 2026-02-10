@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
 import com.vitorpamplona.amethyst.commons.chess.subscription.ChessSubscriptionState
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -38,22 +39,22 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 /**
  * Subscribe to chess events when the Chess screen is active.
  *
- * Always uses global relays to ensure we see all chess events,
- * regardless of the user's feed filter setting (Global/Follows).
+ * Uses Amethyst's subscription system to fetch events into LocalCache,
+ * then triggers ViewModel refresh to process them.
  */
 @Composable
 fun ChessSubscription(
     accountViewModel: AccountViewModel,
-    chessViewModel: ChessViewModel,
+    chessViewModel: ChessViewModelNew,
 ) {
     // Get active game IDs from the view model for game-specific subscriptions
     val activeGames by chessViewModel.activeGames.collectAsStateWithLifecycle()
     val spectatingGames by chessViewModel.spectatingGames.collectAsStateWithLifecycle()
     val activeGameIds = activeGames.keys + spectatingGames.keys
 
-    // Extract opponent pubkeys for move filtering
+    // Extract opponent pubkeys using stable keys (avoid recomposition from LiveChessGameState identity)
     val opponentPubkeys =
-        remember(activeGames) {
+        remember(activeGameIds) {
             activeGames.values.map { it.opponentPubkey }.toSet()
         }
 
@@ -72,14 +73,15 @@ fun ChessSubscription(
             )
         }
 
-    // Note: Chess subscription is now managed internally by ChessLobbyLogic.
-    // This composable is kept for backward compatibility but the actual
-    // subscription is handled by the ViewModel's ChessLobbyLogic instance.
-    // TODO: Step 7 will integrate this with the new ChessSubscriptionController
+    // Register subscription with Amethyst's subscription system
+    KeyDataSourceSubscription(state, accountViewModel.dataSources().chess)
+
+    // Trigger ViewModel refresh when subscription state changes
+    // This fetches challenges from LocalCache after events arrive
     DisposableEffect(state) {
-        chessViewModel.refreshChallenges()
+        chessViewModel.forceRefresh()
         onDispose {
-            // Subscription cleanup handled by ViewModel
+            // Subscription cleanup handled by KeyDataSourceSubscription
         }
     }
 }

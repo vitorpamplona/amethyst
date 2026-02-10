@@ -20,84 +20,94 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
-import com.vitorpamplona.quartz.nip64Chess.ChessGameEvents
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /**
- * Interface for platform-specific chess event publishing
+ * Interface for platform-specific chess event publishing using Jester protocol.
+ *
+ * All chess events use kind 30 with JSON content:
+ * - Start events: content.kind=0
+ * - Move events: content.kind=1 with full history
  */
 interface ChessEventPublisher {
-    suspend fun publishChallenge(
-        gameId: String,
+    /**
+     * Publish a game start event (challenge).
+     * Returns the startEventId (event ID) if successful.
+     */
+    suspend fun publishStart(
         playerColor: Color,
         opponentPubkey: String?,
-        timeControl: String?,
-    ): Boolean
+    ): String?
 
-    suspend fun publishAccept(
-        gameId: String,
-        challengeEventId: String,
-        challengerPubkey: String,
-    ): Boolean
+    /**
+     * Publish a move event.
+     * Move events include full history and link to previous move.
+     */
+    suspend fun publishMove(move: ChessMoveEvent): String?
 
-    suspend fun publishMove(move: ChessMoveEvent): Boolean
-
+    /**
+     * Publish a game end event (includes result in content).
+     */
     suspend fun publishGameEnd(gameEnd: ChessGameEnd): Boolean
 
-    suspend fun publishDrawOffer(
-        gameId: String,
-        opponentPubkey: String,
-        message: String?,
-    ): Boolean
-
+    /**
+     * Get count of write relays for UI feedback.
+     */
     fun getWriteRelayCount(): Int
 }
 
 /**
- * Relay-first fetcher interface. Platforms provide one-shot relay queries.
+ * Relay-first fetcher interface for Jester protocol.
+ * Platforms provide one-shot relay queries.
  *
  * Every fetch does: one-shot REQ → collect events → EOSE → close.
  * No caching — relays are the single source of truth.
  */
 interface ChessRelayFetcher {
-    /** Fetch all events for a specific game */
-    suspend fun fetchGameEvents(gameId: String): ChessGameEvents
+    /** Fetch all events for a specific game by startEventId */
+    suspend fun fetchGameEvents(startEventId: String): JesterGameEvents
 
-    /** Fetch recent challenge events */
-    suspend fun fetchChallenges(): List<LiveChessGameChallengeEvent>
+    /** Fetch recent start/challenge events with optional progress callback */
+    suspend fun fetchChallenges(onProgress: ((RelayFetchProgress) -> Unit)? = null): List<JesterEvent>
 
     /** Fetch recent public game summaries for spectating */
     suspend fun fetchRecentGames(): List<RelayGameSummary>
+
+    /** Fetch game IDs (startEventIds) where user is a participant */
+    suspend fun fetchUserGameIds(onProgress: ((RelayFetchProgress) -> Unit)? = null): Set<String>
+
+    /** Get the list of relay URLs that will be used for fetching */
+    fun getRelayUrls(): List<String>
 }
 
 /**
  * Summary of a game found on relays (for lobby display / spectating)
  */
 data class RelayGameSummary(
-    val gameId: String,
+    val startEventId: String,
     val whitePubkey: String,
     val blackPubkey: String,
     val moveCount: Int,
     val lastMoveTime: Long,
     val isActive: Boolean,
-)
+) {
+    // Legacy compatibility
+    @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
+    val gameId: String get() = startEventId
+}
 
 /**
- * Shared chess lobby logic — relay-first architecture.
+ * Shared chess lobby logic — relay-first architecture with Jester protocol.
  *
  * Both Android and Desktop use this identically.
  * Platform-specific code only implements:
@@ -128,38 +138,67 @@ class ChessLobbyLogic(
     // Lifecycle
     // ========================================
 
-    fun startPolling() = pollingDelegate.start()
+    fun startPolling() {
+        pollingDelegate.start()
+    }
 
-    fun stopPolling() = pollingDelegate.stop()
+    fun stopPolling() {
+        pollingDelegate.stop()
+    }
 
-    fun forceRefresh() = pollingDelegate.refreshNow()
+    /**
+     * Ensure a game ID is being polled for updates.
+     * Call this when entering a game screen to guarantee polling is active for that game.
+     */
+    fun ensureGamePolling(gameId: String) {
+        pollingDelegate.addGameId(gameId)
+    }
+
+    /**
+     * Set focused game mode - only poll this specific game.
+     * Call this when entering a game screen to avoid refreshing unrelated games.
+     * Also ensures the game is in the polling set.
+     */
+    fun setFocusedGame(gameId: String) {
+        pollingDelegate.addGameId(gameId)
+        pollingDelegate.setFocusedGame(gameId)
+    }
+
+    /**
+     * Clear focused game mode - return to lobby mode (poll all games).
+     * Call this when returning to the lobby screen.
+     */
+    fun clearFocusedGame() {
+        pollingDelegate.setFocusedGame(null)
+    }
+
+    fun forceRefresh() {
+        pollingDelegate.refreshNow()
+    }
 
     // ========================================
     // Incoming event routing (real-time / optimistic)
     // ========================================
 
     /**
-     * Route an incoming relay event to the appropriate handler.
+     * Route an incoming Jester event to the appropriate handler.
      * Called by platform subscription callbacks for real-time updates.
      */
-    fun handleIncomingEvent(event: Event) {
-        when (event) {
-            is LiveChessGameChallengeEvent -> handleChallenge(event)
-            is LiveChessGameAcceptEvent -> handleAccept(event)
-            is LiveChessMoveEvent -> handleMove(event)
-            is LiveChessGameEndEvent -> handleGameEnd(event)
-            is LiveChessDrawOfferEvent -> handleDrawOffer(event)
+    fun handleIncomingEvent(event: JesterEvent) {
+        when {
+            event.isStartEvent() -> handleStartEvent(event)
+            event.isMoveEvent() -> handleMoveEvent(event)
         }
     }
 
-    private fun handleChallenge(event: LiveChessGameChallengeEvent) {
-        val gameId = event.gameId() ?: return
+    private fun handleStartEvent(event: JesterEvent) {
+        val startEventId = event.id
         val challengerColor = event.playerColor() ?: Color.WHITE
 
         val challenge =
             ChessChallenge(
                 eventId = event.id,
-                gameId = gameId,
+                gameId = startEventId, // In Jester, gameId = startEventId
                 challengerPubkey = event.pubKey,
                 challengerDisplayName = metadataProvider.getDisplayName(event.pubKey),
                 challengerAvatarUrl = metadataProvider.getPictureUrl(event.pubKey),
@@ -170,54 +209,51 @@ class ChessLobbyLogic(
         state.addChallenge(challenge)
     }
 
-    private fun handleAccept(event: LiveChessGameAcceptEvent) {
-        val gameId = event.gameId() ?: return
-
-        // If this is an accept for our challenge, auto-load the game
-        val ourChallenge = state.outgoingChallenges().find { it.gameId == gameId }
-        if (ourChallenge != null) {
-            handleGameAccepted(gameId)
-        }
-    }
-
-    private fun handleMove(event: LiveChessMoveEvent) {
-        val gameId = event.gameId() ?: return
-        val san = event.san() ?: return
+    private fun handleMoveEvent(event: JesterEvent) {
+        val startEventId = event.startEventId() ?: return
+        val san = event.move() ?: return
         val fen = event.fen() ?: return
-        val moveNumber = event.moveNumber()
+        val history = event.history()
+        val moveNumber = history.size
 
-        val gameState = state.getGameState(gameId) ?: return
+        // Check if this is our game (we're either the author or tagged as opponent)
+        val opponentFromTag = event.opponentPubkey()
+        val isOurGame = event.pubKey == userPubkey || opponentFromTag == userPubkey
+
+        var gameState = state.getGameState(startEventId)
+
+        // If this is our game but we haven't loaded it yet, load it now
+        // This happens when someone accepts our challenge (makes first move)
+        if (gameState == null && isOurGame) {
+            handleGameAccepted(startEventId)
+            return // handleGameAccepted will load the game and poll for events
+        }
+
+        if (gameState == null) return
+
+        // Check for game end
+        val result = event.result()
+        if (result != null) {
+            val gameResult =
+                when (result) {
+                    "1-0" -> com.vitorpamplona.quartz.nip64Chess.GameResult.WHITE_WINS
+                    "0-1" -> com.vitorpamplona.quartz.nip64Chess.GameResult.BLACK_WINS
+                    "1/2-1/2" -> com.vitorpamplona.quartz.nip64Chess.GameResult.DRAW
+                    else -> null
+                }
+            if (gameResult != null) {
+                gameState.markAsFinished(gameResult)
+                state.moveToCompleted(startEventId, result, event.termination())
+                pollingDelegate.removeGameId(startEventId)
+                return
+            }
+        }
 
         // Only apply opponent moves optimistically
         if (event.pubKey != userPubkey) {
             gameState.applyOpponentMove(san, fen, moveNumber)
-        }
-    }
-
-    private fun handleGameEnd(event: LiveChessGameEndEvent) {
-        val gameId = event.gameId() ?: return
-        val gameState = state.getGameState(gameId) ?: return
-
-        val resultStr = event.result()
-        val result =
-            when (resultStr) {
-                "1-0" -> com.vitorpamplona.quartz.nip64Chess.GameResult.WHITE_WINS
-                "0-1" -> com.vitorpamplona.quartz.nip64Chess.GameResult.BLACK_WINS
-                "1/2-1/2" -> com.vitorpamplona.quartz.nip64Chess.GameResult.DRAW
-                else -> return
-            }
-
-        gameState.markAsFinished(result)
-        state.moveToCompleted(gameId, result.notation, event.termination())
-        pollingDelegate.removeGameId(gameId)
-    }
-
-    private fun handleDrawOffer(event: LiveChessDrawOfferEvent) {
-        val gameId = event.gameId() ?: return
-        val gameState = state.getGameState(gameId) ?: return
-
-        if (event.pubKey != userPubkey) {
-            gameState.receiveDrawOffer(event.pubKey)
+            // Update head event ID for move linking
+            gameState.updateHeadEventId(event.id)
         }
     }
 
@@ -228,10 +264,8 @@ class ChessLobbyLogic(
     fun createChallenge(
         opponentPubkey: String? = null,
         playerColor: Color = Color.WHITE,
-        timeControl: String? = null,
+        timeControl: String? = null, // Not supported in Jester, kept for API compatibility
     ) {
-        val gameId = generateGameId()
-
         scope.launch(Dispatchers.Default) {
             state.setBroadcastStatus(
                 ChessBroadcastStatus.Broadcasting(
@@ -241,9 +275,24 @@ class ChessLobbyLogic(
                 ),
             )
 
-            val success = retryWithBackoff { publisher.publishChallenge(gameId, playerColor, opponentPubkey, timeControl) }
+            val startEventId = retryWithBackoffResult { publisher.publishStart(playerColor, opponentPubkey) }
 
-            if (success) {
+            if (startEventId != null) {
+                // Add challenge to local state - shows in "Your Challenges" section
+                val challenge =
+                    ChessChallenge(
+                        eventId = startEventId,
+                        gameId = startEventId,
+                        challengerPubkey = userPubkey,
+                        challengerDisplayName = metadataProvider.getDisplayName(userPubkey),
+                        challengerAvatarUrl = metadataProvider.getPictureUrl(userPubkey),
+                        opponentPubkey = opponentPubkey,
+                        challengerColor = playerColor,
+                        createdAt = TimeUtils.now(),
+                    )
+                state.addChallenge(challenge)
+                pollingDelegate.addGameId(startEventId)
+
                 state.setBroadcastStatus(
                     ChessBroadcastStatus.Success("Challenge", publisher.getWriteRelayCount()),
                 )
@@ -259,51 +308,84 @@ class ChessLobbyLogic(
         }
     }
 
+    /**
+     * Accept a challenge by loading the game and making the first move (if we're black)
+     * or waiting for opponent's move (if we're white).
+     *
+     * In Jester protocol, acceptance is implicit - we just track the game locally.
+     */
     fun acceptChallenge(challenge: ChessChallenge) {
-        scope.launch(Dispatchers.Default) {
-            val success =
-                retryWithBackoff {
-                    publisher.publishAccept(
-                        gameId = challenge.gameId,
-                        challengeEventId = challenge.eventId,
-                        challengerPubkey = challenge.challengerPubkey,
-                    )
-                }
+        // Mark as accepted SYNCHRONOUSLY before launching coroutine
+        // This prevents race where navigation happens before coroutine runs,
+        // which would cause loadGame() to incorrectly mark as spectator
+        state.markAsAccepted(challenge.gameId)
 
-            if (success) {
-                val playerColor = challenge.challengerColor.opposite()
-                val gameState =
-                    ChessGameLoader.createNewGame(
-                        gameId = challenge.gameId,
-                        playerPubkey = userPubkey,
-                        opponentPubkey = challenge.challengerPubkey,
-                        playerColor = playerColor,
-                    )
-                state.addActiveGame(challenge.gameId, gameState)
-                pollingDelegate.addGameId(challenge.gameId)
-                state.selectGame(challenge.gameId)
-                state.setError(null)
-            } else {
-                state.setError("Failed to accept challenge")
-            }
+        state.removeChallenge(challenge.gameId)
+
+        // Add to polling delegate FIRST - before adding to activeGames
+        // This prevents race where Compose sees the game but forceRefresh() doesn't include it
+        pollingDelegate.addGameId(challenge.gameId)
+
+        scope.launch(Dispatchers.Default) {
+            val playerColor = challenge.challengerColor.opposite()
+            val gameState =
+                ChessGameLoader.createNewGame(
+                    startEventId = challenge.gameId, // gameId = startEventId in Jester
+                    playerPubkey = userPubkey,
+                    opponentPubkey = challenge.challengerPubkey,
+                    playerColor = playerColor,
+                )
+            state.addActiveGame(challenge.gameId, gameState)
+            state.selectGame(challenge.gameId)
+            state.setError(null)
+
+            // Immediately fetch game from relays to load any existing moves
+            // This ensures moves are loaded without waiting for polling interval
+            refreshGame(challenge.gameId)
         }
     }
 
     /**
-     * When we detect our challenge was accepted, load game from relays.
+     * Open user's own outgoing challenge to view the board and make moves.
+     * Creates game state and navigates to game view.
      */
-    fun handleGameAccepted(gameId: String) {
+    fun openOwnChallenge(challenge: ChessChallenge) {
+        // Add to polling delegate FIRST - before adding to activeGames
+        pollingDelegate.addGameId(challenge.gameId)
+
+        // Create game state with user's chosen color
+        val gameState =
+            ChessGameLoader.createNewGame(
+                startEventId = challenge.gameId,
+                playerPubkey = userPubkey,
+                opponentPubkey = challenge.opponentPubkey ?: "",
+                playerColor = challenge.challengerColor,
+                isPendingChallenge = true,
+            )
+
+        state.addActiveGame(challenge.gameId, gameState)
+        state.selectGame(challenge.gameId)
+
+        // Fetch from relays in case opponent has already made moves
+        scope.launch(Dispatchers.Default) {
+            refreshGame(challenge.gameId)
+        }
+    }
+
+    /**
+     * When we detect our challenge was accepted (opponent made first move), load game from relays.
+     */
+    fun handleGameAccepted(startEventId: String) {
         scope.launch(Dispatchers.Default) {
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))
 
-            val events = fetcher.fetchGameEvents(gameId)
+            val events = fetcher.fetchGameEvents(startEventId)
             val result = ChessGameLoader.loadGame(events, userPubkey)
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    state.addActiveGame(gameId, result.liveState)
-                    pollingDelegate.addGameId(gameId)
-                    state.selectGame(gameId)
+                    state.addActiveGame(startEventId, result.liveState)
+                    pollingDelegate.addGameId(startEventId)
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
                     state.setError(null)
                 }
@@ -320,18 +402,21 @@ class ChessLobbyLogic(
     // ========================================
 
     fun publishMove(
-        gameId: String,
+        startEventId: String,
         from: String,
         to: String,
     ) {
-        val gameState = state.getGameState(gameId) ?: return
+        val gameState = state.getGameState(startEventId) ?: return
 
-        if (state.isSpectating(gameId)) {
+        if (state.isSpectating(startEventId)) {
             state.setError("Cannot move while spectating")
             return
         }
 
-        val moveResult = gameState.makeMove(from, to) ?: return
+        // Parse promotion suffix from `to` if present (e.g., "e8q" -> "e8" + QUEEN)
+        val (actualTo, promotion) = parsePromotionFromTo(to)
+
+        val moveResult = gameState.makeMove(from, actualTo, promotion) ?: return
 
         scope.launch(Dispatchers.Default) {
             state.setBroadcastStatus(
@@ -342,15 +427,18 @@ class ChessLobbyLogic(
                 ),
             )
 
-            val success = retryWithBackoff { publisher.publishMove(moveResult) }
+            val newEventId = retryWithBackoffResult { publisher.publishMove(moveResult) }
 
-            if (success) {
+            if (newEventId != null) {
+                // Update head event ID for next move linking
+                gameState.updateHeadEventId(newEventId)
+
                 state.setBroadcastStatus(
                     ChessBroadcastStatus.Success(moveResult.san, publisher.getWriteRelayCount()),
                 )
                 delay(3000)
 
-                val currentState = state.getGameState(gameId)
+                val currentState = state.getGameState(startEventId)
                 state.setBroadcastStatus(
                     if (currentState?.isPlayerTurn() == false) {
                         ChessBroadcastStatus.WaitingForOpponent
@@ -360,18 +448,21 @@ class ChessLobbyLogic(
                 )
                 state.setError(null)
             } else {
+                // Revert the move since publishing failed
+                gameState.undoLastMove()
+
                 state.setBroadcastStatus(
                     ChessBroadcastStatus.Failed(moveResult.san, "Failed to publish move"),
                 )
-                state.setError("Failed to publish move")
+                state.setError("Failed to publish move - move reverted")
             }
         }
     }
 
-    fun resign(gameId: String) {
-        val gameState = state.getGameState(gameId) ?: return
+    fun resign(startEventId: String) {
+        val gameState = state.getGameState(startEventId) ?: return
 
-        if (state.isSpectating(gameId)) {
+        if (state.isSpectating(startEventId)) {
             state.setError("Cannot resign while spectating")
             return
         }
@@ -381,8 +472,8 @@ class ChessLobbyLogic(
             val success = retryWithBackoff { publisher.publishGameEnd(endData) }
 
             if (success) {
-                state.moveToCompleted(gameId, endData.result.notation, endData.termination.name.lowercase())
-                pollingDelegate.removeGameId(gameId)
+                state.moveToCompleted(startEventId, endData.result.notation, endData.termination.name.lowercase())
+                pollingDelegate.removeGameId(startEventId)
                 state.setError(null)
             } else {
                 state.setError("Failed to resign")
@@ -390,65 +481,16 @@ class ChessLobbyLogic(
         }
     }
 
-    fun offerDraw(gameId: String) {
-        val gameState = state.getGameState(gameId) ?: return
-
-        if (state.isSpectating(gameId)) {
-            state.setError("Cannot offer draw while spectating")
-            return
-        }
-
-        scope.launch(Dispatchers.Default) {
-            val drawOffer = gameState.offerDraw()
-            val success =
-                retryWithBackoff {
-                    publisher.publishDrawOffer(
-                        gameId = drawOffer.gameId,
-                        opponentPubkey = drawOffer.opponentPubkey,
-                        message = drawOffer.message,
-                    )
-                }
-
-            if (success) {
-                state.setError(null)
-            } else {
-                state.setError("Failed to offer draw")
-            }
-        }
-    }
-
-    fun acceptDraw(gameId: String) {
-        val gameState = state.getGameState(gameId) ?: return
-        val endData = gameState.acceptDraw() ?: return
-
-        scope.launch(Dispatchers.Default) {
-            val success = retryWithBackoff { publisher.publishGameEnd(endData) }
-
-            if (success) {
-                state.moveToCompleted(gameId, endData.result.notation, "draw_agreement")
-                pollingDelegate.removeGameId(gameId)
-                state.setError(null)
-            } else {
-                state.setError("Failed to accept draw")
-            }
-        }
-    }
-
-    fun declineDraw(gameId: String) {
-        val gameState = state.getGameState(gameId) ?: return
-        gameState.declineDraw()
-    }
-
-    fun claimAbandonmentVictory(gameId: String) {
-        val gameState = state.getGameState(gameId) ?: return
+    fun claimAbandonmentVictory(startEventId: String) {
+        val gameState = state.getGameState(startEventId) ?: return
         val endData = gameState.claimAbandonmentVictory() ?: return
 
         scope.launch(Dispatchers.Default) {
             val success = retryWithBackoff { publisher.publishGameEnd(endData) }
 
             if (success) {
-                state.moveToCompleted(gameId, endData.result.notation, "abandonment")
-                pollingDelegate.removeGameId(gameId)
+                state.moveToCompleted(startEventId, endData.result.notation, "abandonment")
+                pollingDelegate.removeGameId(startEventId)
                 state.setError(null)
             } else {
                 state.setError("Failed to claim abandonment victory")
@@ -460,20 +502,21 @@ class ChessLobbyLogic(
     // Spectator mode
     // ========================================
 
-    fun loadGameAsSpectator(gameId: String) {
+    fun loadGameAsSpectator(startEventId: String) {
         scope.launch(Dispatchers.Default) {
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))
 
-            val events = fetcher.fetchGameEvents(gameId)
+            val events = fetcher.fetchGameEvents(startEventId)
             val result = ChessGameLoader.loadGame(events, userPubkey)
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    state.addSpectatingGame(gameId, result.liveState)
-                    pollingDelegate.addGameId(gameId)
-                    state.selectGame(gameId)
+                    state.addSpectatingGame(startEventId, result.liveState)
+                    pollingDelegate.addGameId(startEventId)
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
                     state.setError(null)
+                    // Auto-select the game for Desktop (Android uses route navigation)
+                    state.selectGame(startEventId)
                 }
                 is LoadGameResult.Error -> {
                     state.setError("Failed to load game: ${result.message}")
@@ -483,31 +526,36 @@ class ChessLobbyLogic(
         }
     }
 
-    fun loadGame(gameId: String) {
+    fun loadGame(startEventId: String) {
         scope.launch(Dispatchers.Default) {
-            if (state.getGameState(gameId) != null) {
-                state.selectGame(gameId)
+            // Don't load if game already exists or was accepted (acceptChallenge will handle it)
+            if (state.getGameState(startEventId) != null || state.wasAccepted(startEventId)) {
                 return@launch
             }
 
             state.setBroadcastStatus(ChessBroadcastStatus.Syncing(0f))
 
-            val events = fetcher.fetchGameEvents(gameId)
+            val events = fetcher.fetchGameEvents(startEventId)
             val result = ChessGameLoader.loadGame(events, userPubkey)
 
             when (result) {
                 is LoadGameResult.Success -> {
                     if (result.liveState.isSpectator) {
-                        state.addSpectatingGame(gameId, result.liveState)
+                        state.addSpectatingGame(startEventId, result.liveState)
                     } else {
-                        state.addActiveGame(gameId, result.liveState)
+                        state.addActiveGame(startEventId, result.liveState)
                     }
-                    pollingDelegate.addGameId(gameId)
-                    state.selectGame(gameId)
+                    pollingDelegate.addGameId(startEventId)
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
                     state.setError(null)
                 }
                 is LoadGameResult.Error -> {
+                    // Check again if game was added while we were fetching
+                    // (e.g., by acceptChallenge completing in parallel)
+                    if (state.getGameState(startEventId) != null) {
+                        state.setBroadcastStatus(ChessBroadcastStatus.Idle)
+                        return@launch
+                    }
                     state.setError("Failed to load game: ${result.message}")
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
                 }
@@ -519,23 +567,20 @@ class ChessLobbyLogic(
     // Relay-first refresh (periodic reconstruction)
     // ========================================
 
-    /**
-     * Full reconstruction refresh for active games.
-     * One-shot REQ → transient collector → reconstruct → diff + update.
-     */
     private suspend fun refreshGames(gameIds: Set<String>) {
         for (gameId in gameIds) {
             refreshGame(gameId)
         }
     }
 
-    private suspend fun refreshGame(gameId: String) {
-        val events = fetcher.fetchGameEvents(gameId)
+    private suspend fun refreshGame(startEventId: String) {
+        val events = fetcher.fetchGameEvents(startEventId)
+
         val result = ChessGameLoader.loadGame(events, userPubkey)
 
         when (result) {
             is LoadGameResult.Success -> {
-                state.replaceGameState(gameId, result.liveState)
+                state.replaceGameState(startEventId, result.liveState)
             }
             is LoadGameResult.Error -> {
                 // Don't overwrite error for periodic refresh failures
@@ -544,16 +589,72 @@ class ChessLobbyLogic(
     }
 
     private suspend fun refreshChallenges() {
-        val challengeEvents = fetcher.fetchChallenges()
+        state.setRefreshing(true)
+        try {
+            refreshChallengesInternal()
+        } finally {
+            state.setRefreshing(false)
+        }
+    }
 
-        val challenges =
-            challengeEvents.mapNotNull { event ->
-                val gameId = event.gameId() ?: return@mapNotNull null
+    private suspend fun refreshChallengesInternal() {
+        val relayUrls = fetcher.getRelayUrls()
+        val relayStatesMap = mutableMapOf<String, RelaySyncState>()
+        relayUrls.forEach { url ->
+            val displayName = url.substringAfter("://").substringBefore("/")
+            relayStatesMap[url] = RelaySyncState(url, displayName, RelaySyncStatus.CONNECTING, 0)
+        }
+        var totalEvents = 0
+
+        state.setSyncStatus(
+            ChessSyncStatus.Syncing(
+                phase = "challenges",
+                relayStates = relayStatesMap.values.toList(),
+                totalEventsReceived = 0,
+            ),
+        )
+
+        val startEvents =
+            fetcher.fetchChallenges { progress ->
+                val relayUrl = progress.relay.url
+                val displayName = relayUrl.substringAfter("://").substringBefore("/")
+                val status =
+                    when (progress.status) {
+                        RelayFetchStatus.WAITING -> RelaySyncStatus.WAITING
+                        RelayFetchStatus.RECEIVING -> RelaySyncStatus.RECEIVING
+                        RelayFetchStatus.EOSE_RECEIVED -> RelaySyncStatus.EOSE_RECEIVED
+                        RelayFetchStatus.TIMEOUT -> RelaySyncStatus.FAILED
+                    }
+                relayStatesMap[relayUrl] =
+                    RelaySyncState(
+                        relayUrl,
+                        displayName,
+                        status,
+                        progress.eventCount,
+                    )
+                totalEvents = relayStatesMap.values.sumOf { it.eventsReceived }
+                state.setSyncStatus(
+                    ChessSyncStatus.Syncing(
+                        phase = "challenges",
+                        relayStates = relayStatesMap.values.toList(),
+                        totalEventsReceived = totalEvents,
+                    ),
+                )
+            }
+
+        val fetchedChallenges =
+            startEvents.mapNotNull { event ->
+                if (!event.isStartEvent()) return@mapNotNull null
+                val startEventId = event.id
+
+                // Skip challenges that user has already accepted
+                if (state.wasAccepted(startEventId)) return@mapNotNull null
+
                 val challengerColor = event.playerColor() ?: Color.WHITE
 
                 ChessChallenge(
                     eventId = event.id,
-                    gameId = gameId,
+                    gameId = startEventId,
                     challengerPubkey = event.pubKey,
                     challengerDisplayName = metadataProvider.getDisplayName(event.pubKey),
                     challengerAvatarUrl = metadataProvider.getPictureUrl(event.pubKey),
@@ -563,14 +664,38 @@ class ChessLobbyLogic(
                 )
             }
 
-        state.updateChallenges(challenges)
+        // Merge only RECENT optimistic challenges (created in last 5 minutes, not yet propagated)
+        // This prevents stale challenges from accumulating across sessions
+        // Also exclude challenges that user has accepted (tracked in _acceptedGameIds)
+        val now = TimeUtils.now()
+        val recentThreshold = 5 * 60L // 5 minutes
+        val fetchedGameIds = fetchedChallenges.map { it.gameId }.toSet()
+        val optimisticChallenges =
+            state.challenges.value.filter { challenge ->
+                val isRecent = (now - challenge.createdAt) < recentThreshold
+                val notFetched = challenge.gameId !in fetchedGameIds
+                val notAccepted = !state.wasAccepted(challenge.gameId)
+                isRecent && notFetched && notAccepted
+            }
+        val mergedChallenges = fetchedChallenges + optimisticChallenges
 
-        // Also refresh public games
+        state.updateChallenges(mergedChallenges)
+
+        state.setSyncStatus(
+            ChessSyncStatus.Syncing(
+                phase = "games",
+                relayStates = relayStatesMap.values.toList(),
+                totalEventsReceived = totalEvents,
+            ),
+        )
+
+        discoverUserGames()
+
         val recentGames = fetcher.fetchRecentGames()
         val publicGames =
             recentGames.map { summary ->
                 PublicGame(
-                    gameId = summary.gameId,
+                    gameId = summary.startEventId,
                     whitePubkey = summary.whitePubkey,
                     whiteDisplayName = metadataProvider.getDisplayName(summary.whitePubkey),
                     blackPubkey = summary.blackPubkey,
@@ -581,6 +706,59 @@ class ChessLobbyLogic(
                 )
             }
         state.updatePublicGames(publicGames)
+
+        val failedCount = relayStatesMap.values.count { it.status == RelaySyncStatus.FAILED }
+        val activeGamesCount = state.activeGames.value.size
+
+        if (failedCount > 0 && failedCount < relayStatesMap.size) {
+            state.setSyncStatus(
+                ChessSyncStatus.PartialSync(
+                    relayStates = relayStatesMap.values.toList(),
+                    message = "$failedCount relay(s) timed out",
+                ),
+            )
+        } else if (failedCount == relayStatesMap.size) {
+            state.setSyncStatus(
+                ChessSyncStatus.PartialSync(
+                    relayStates = relayStatesMap.values.toList(),
+                    message = "All relays failed",
+                ),
+            )
+        } else {
+            state.setSyncStatus(
+                ChessSyncStatus.Synced(
+                    relayStates = relayStatesMap.values.toList(),
+                    challengeCount = mergedChallenges.size,
+                    gameCount = activeGamesCount,
+                    totalEventsReceived = totalEvents,
+                ),
+            )
+        }
+    }
+
+    private suspend fun discoverUserGames() {
+        val discoveredGameIds = fetcher.fetchUserGameIds()
+        val currentActiveIds = state.activeGames.value.keys
+        val currentSpectatingIds = state.spectatingGames.value.keys
+
+        val newGameIds = discoveredGameIds - currentActiveIds - currentSpectatingIds
+
+        for (startEventId in newGameIds) {
+            val events = fetcher.fetchGameEvents(startEventId)
+            val result = ChessGameLoader.loadGame(events, userPubkey)
+
+            when (result) {
+                is LoadGameResult.Success -> {
+                    if (!result.liveState.isSpectator) {
+                        state.addActiveGame(startEventId, result.liveState)
+                        pollingDelegate.addGameId(startEventId)
+                    }
+                }
+                is LoadGameResult.Error -> {
+                    // Failed to load game - continue with others
+                }
+            }
+        }
     }
 
     private fun cleanupExpiredChallenges() {
@@ -596,16 +774,6 @@ class ChessLobbyLogic(
     // Utilities
     // ========================================
 
-    private fun generateGameId(): String {
-        val timestamp = TimeUtils.now()
-        val random = UUID.randomUUID().toString().take(8)
-        return "chess-$timestamp-$random"
-    }
-
-    /**
-     * Retry a publish operation with exponential backoff.
-     * Returns true if any attempt succeeds.
-     */
     private suspend fun retryWithBackoff(
         maxRetries: Int = 3,
         initialDelayMs: Long = 1000,
@@ -622,6 +790,23 @@ class ChessLobbyLogic(
         return false
     }
 
+    private suspend fun <T> retryWithBackoffResult(
+        maxRetries: Int = 3,
+        initialDelayMs: Long = 1000,
+        action: suspend () -> T?,
+    ): T? {
+        var delayMs = initialDelayMs
+        repeat(maxRetries) { attempt ->
+            val result = action()
+            if (result != null) return result
+            if (attempt < maxRetries - 1) {
+                delay(delayMs)
+                delayMs *= 2
+            }
+        }
+        return null
+    }
+
     fun clearError() {
         state.setError(null)
     }
@@ -629,4 +814,27 @@ class ChessLobbyLogic(
     fun selectGame(gameId: String?) {
         state.selectGame(gameId)
     }
+}
+
+/**
+ * Parse promotion piece from a "to" square string.
+ * For example: "e8q" -> Pair("e8", PieceType.QUEEN)
+ * Regular moves: "e4" -> Pair("e4", null)
+ */
+private fun parsePromotionFromTo(to: String): Pair<String, PieceType?> {
+    if (to.length == 3) {
+        val square = to.take(2)
+        val promotion =
+            when (to.last().lowercaseChar()) {
+                'q' -> PieceType.QUEEN
+                'r' -> PieceType.ROOK
+                'b' -> PieceType.BISHOP
+                'n' -> PieceType.KNIGHT
+                else -> null
+            }
+        if (promotion != null) {
+            return square to promotion
+        }
+    }
+    return to to null
 }

@@ -59,13 +59,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
+import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
+import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
+import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
 /**
  * Wrapper screen for live chess game
@@ -83,9 +88,12 @@ fun ChessGameScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val chessViewModel: ChessViewModel =
+    // Scope ViewModel to Activity so it's shared between lobby and game screens
+    val activity = LocalContext.current as FragmentActivity
+    val chessViewModel: ChessViewModelNew =
         viewModel(
-            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
+            viewModelStoreOwner = activity,
+            key = "ChessViewModelNew-${accountViewModel.account.userProfile().pubkeyHex}",
             factory =
                 ChessViewModelFactory(
                     accountViewModel.account,
@@ -95,11 +103,17 @@ fun ChessGameScreen(
     val activeGames by chessViewModel.activeGames.collectAsState()
     val spectatingGames by chessViewModel.spectatingGames.collectAsState()
     val error by chessViewModel.error.collectAsState()
-    val chessStatus by chessViewModel.chessStatus.collectAsState()
+    val broadcastStatus by chessViewModel.broadcastStatus.collectAsState()
+    val syncStatus by chessViewModel.syncStatus.collectAsState()
+    // Observe state version to force recomposition when game state changes internally
+    val stateVersion by chessViewModel.stateVersion.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
-    var loadedGameState by remember { mutableStateOf<LiveChessGameState?>(null) }
     var loadAttempted by remember { mutableStateOf(false) }
     var showRelaySettings by remember { mutableStateOf(false) }
+
+    // Always read directly from maps for auto-refresh support
+    // stateVersion changes force recomposition, then we get latest from maps
+    val gameState = activeGames[gameId] ?: spectatingGames[gameId]
 
     // Get relay information
     val outboxRelays by accountViewModel.account.outboxRelays.flow
@@ -113,44 +127,60 @@ fun ChessGameScreen(
     // This is critical - without it, no new events will arrive from relays
     ChessSubscription(accountViewModel, chessViewModel)
 
-    // Try to load game from cache if not in activeGames or spectatingGames
-    LaunchedEffect(gameId, activeGames, spectatingGames) {
-        val existingState = activeGames[gameId] ?: spectatingGames[gameId]
-        if (existingState != null) {
-            loadedGameState = existingState
+    // Handle initial game loading
+    // Once game is in maps, gameState above will always have the latest
+    LaunchedEffect(gameId, gameState) {
+        if (gameState != null) {
+            // Game found in maps - done loading
             isLoading = false
             loadAttempted = true
         } else if (!loadAttempted) {
-            // Try to load from LocalCache
-            loadAttempted = true
-            val loaded = chessViewModel.loadGameFromCache(gameId)
-            loadedGameState = loaded
-            isLoading = false
+            // Check if this game was accepted locally (prevents incorrect spectator detection)
+            val wasAccepted = chessViewModel.wasAccepted(gameId)
+
+            // Brief delay to allow acceptChallenge coroutine to complete
+            // This handles the race condition where navigation happens before
+            // the game state is fully propagated to StateFlow collectors
+            kotlinx.coroutines.delay(150)
+
+            // Check again after delay - game may have been added by acceptChallenge
+            val stateAfterDelay = chessViewModel.getGameState(gameId)
+            if (stateAfterDelay != null) {
+                isLoading = false
+                loadAttempted = true
+            } else if (wasAccepted) {
+                // Game was accepted but not yet in StateFlow - keep waiting, don't fetch from relays
+                // The state will propagate and trigger this LaunchedEffect again
+                isLoading = true
+            } else {
+                // Game not found locally and not accepted, try to load from relays
+                loadAttempted = true
+                chessViewModel.loadGame(gameId)
+                isLoading = false
+            }
         }
     }
 
-    // Update state when games change (e.g., after refresh loads new moves)
-    LaunchedEffect(activeGames[gameId], spectatingGames[gameId]) {
-        (activeGames[gameId] ?: spectatingGames[gameId])?.let {
-            loadedGameState = it
-        }
-    }
-
-    // Start polling when screen is visible
-    DisposableEffect(Unit) {
-        chessViewModel.startPolling()
+    // Set focused game mode when screen is visible (only poll this game)
+    // ViewModel already starts polling in init, so no need to start here
+    DisposableEffect(gameId) {
+        chessViewModel.setFocusedGame(gameId) // Focus on just this game
         onDispose {
-            // Don't stop polling - let ViewModel manage it
+            // Don't clear focus here - let lobby handle it when we navigate back
         }
     }
 
-    val gameState = loadedGameState ?: activeGames[gameId] ?: spectatingGames[gameId]
+    // Extract human-readable game name
+    val gameName =
+        remember(gameId) {
+            ChessGameNameGenerator.extractDisplayName(gameId) ?: "Chess Game"
+        }
 
     Scaffold(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Chess Game") },
+                    title = { Text(gameName) },
                     navigationIcon = {
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
@@ -169,15 +199,21 @@ fun ChessGameScreen(
                     },
                 )
 
-                // Status banner below top bar
-                ChessStatusBanner(
-                    status = chessStatus,
+                // Sync status banner
+                ChessSyncBanner(
+                    status = syncStatus,
+                    onRetry = { chessViewModel.forceRefresh() },
+                )
+
+                // Broadcast status banner (shows when publishing moves)
+                ChessBroadcastBanner(
+                    status = broadcastStatus,
                     onTap = {
-                        when (chessStatus) {
-                            is ChessStatus.MoveFailed -> {
+                        when (broadcastStatus) {
+                            is ChessBroadcastStatus.Failed -> {
                                 // Could implement retry logic here
                             }
-                            is ChessStatus.Desynced -> {
+                            is ChessBroadcastStatus.Desynced -> {
                                 chessViewModel.forceRefresh()
                             }
                             else -> { }
@@ -251,17 +287,30 @@ fun ChessGameScreen(
                 }
             }
             else -> {
+                // Resolve opponent display name
+                val opponentDisplayName =
+                    remember(gameState.opponentPubkey) {
+                        accountViewModel.checkGetOrCreateUser(gameState.opponentPubkey)?.toBestDisplayName()
+                            ?: gameState.opponentPubkey.take(8)
+                    }
+
+                // Determine spectator status:
+                // 1. If game was accepted locally, user is definitely NOT a spectator
+                // 2. Otherwise, check which map the game is in
+                val wasAccepted = chessViewModel.wasAccepted(gameId)
+                val isSpectating = !wasAccepted && spectatingGames.containsKey(gameId)
+
                 // Show game with proper padding for status bar
                 // Use state-observing version for automatic refresh on polling updates
                 LiveChessGameScreen(
                     modifier = Modifier.padding(paddingValues),
                     gameState = gameState,
-                    opponentName = gameState.opponentPubkey.take(8), // TODO: Resolve to display name
+                    opponentName = opponentDisplayName,
                     onMoveMade = { from, to, san ->
                         chessViewModel.publishMove(gameId, from, to)
                     },
                     onResign = { chessViewModel.resign(gameId) },
-                    onOfferDraw = { chessViewModel.offerDraw(gameId) },
+                    isSpectatorOverride = isSpectating,
                 )
             }
         }

@@ -23,115 +23,163 @@ package com.vitorpamplona.quartz.nip64Chess
 /*
  * Live chess game state and move events
  *
- * For real-time chess games, we use a different event structure than NIP-64.
- * NIP-64 is for completed games in PGN format. Live games need individual
- * move events that can be published and subscribed to in real-time.
+ * Uses Jester protocol (kind 30) for compatibility with jesterui.
+ * See: https://github.com/jesterui/jesterui/blob/devel/FLOW.md
  *
- * Event Structure:
- * - Game Challenge (Kind 30064): Challenge another player or open challenge
- * - Game Accept (Kind 30065): Accept a challenge
- * - Chess Move (Kind 30066): Individual move in a live game
- * - Game End (Kind 30067): Game result (checkmate, resignation, draw, etc.)
+ * Key features of Jester protocol:
+ * - Single event kind (30) for all chess messages
+ * - Content is JSON with: version, kind (0=start, 1=move), fen, move, history
+ * - Full move history included in every move event
+ * - Event linking via e-tags: [startId] or [startId, headId]
  *
- * All events use 'd' tag with game_id to group moves from the same game
+ * This enables:
+ * - Easy game reconstruction from any single move event
+ * - Tolerance for missing intermediate moves
+ * - Compatibility with jesterui and other Jester clients
  */
 
 /**
- * Game challenge event - start a new game
- * Kind: 30064
+ * Game start/challenge data for publishing
  *
- * Tags:
- * - d: game_id (unique identifier)
- * - p: opponent pubkey (optional, if challenging specific player)
- * - player_color: white|black (color challenger wants to play)
- * - time_control: time control format (e.g., "10+0", "5+3")
+ * Jester protocol (kind 30) start event:
+ * - e-tag: reference to standard start position hash
+ * - p-tag: opponent pubkey (for private/direct challenges)
+ * - Content JSON with: version, kind=0, fen, history=[], nonce, playerColor
+ *
+ * @param opponentPubkey Opponent's pubkey for direct challenge (null = open challenge)
+ * @param playerColor Color the challenger wants to play
+ * @param nonce Unique identifier for this game
  */
 data class ChessGameChallenge(
-    val gameId: String,
     val opponentPubkey: String? = null, // null = open challenge
     val playerColor: Color,
-    val timeControl: String? = null,
-)
+    val nonce: String = generateNonce(),
+) {
+    companion object {
+        private fun generateNonce(): String {
+            val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+            return (1..8).map { chars.random() }.joinToString("")
+        }
+    }
+
+    // Legacy compatibility - gameId is now derived from start event ID after signing
+    @Deprecated("gameId is determined after event creation", ReplaceWith("startEventId"))
+    val gameId: String get() = nonce
+}
 
 /**
- * Game acceptance event - accept a challenge
- * Kind: 30065
+ * Game acceptance data
  *
- * Tags:
- * - d: game_id (same as challenge)
- * - e: challenge event ID
- * - p: challenger pubkey
+ * In Jester protocol, accepting a game is implicit - the opponent
+ * simply makes the first move (if challenger chose white) or waits
+ * for challenger's first move (if challenger chose black).
+ *
+ * This data class is kept for internal state tracking.
+ *
+ * @param startEventId ID of the game start event to accept
+ * @param challengerPubkey Pubkey of the challenger
  */
 data class ChessGameAccept(
-    val gameId: String,
-    val challengeEventId: String,
+    val startEventId: String,
     val challengerPubkey: String,
-)
+) {
+    // Legacy compatibility
+    @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
+    val gameId: String get() = startEventId
+
+    @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
+    val challengeEventId: String get() = startEventId
+}
 
 /**
- * Chess move event - individual move in a live game
- * Kind: 30066
+ * Chess move data for publishing
  *
- * Tags:
- * - d: game_id
- * - move_number: move number (1-based)
- * - san: move in Standard Algebraic Notation
- * - fen: resulting position in FEN notation
- * - p: opponent pubkey (for notifications)
+ * Jester protocol (kind 30) requires:
+ * - Full move history in every move event
+ * - e-tags linking: [startEventId, headEventId]
+ * - Content JSON with: version, kind=1, fen, move, history
  *
- * Content: Optional move comment or time remaining
+ * @param startEventId ID of the game start event
+ * @param headEventId ID of the previous move (or startEventId for first move)
+ * @param san Move in Standard Algebraic Notation (e.g., "e4", "Nf3")
+ * @param fen Resulting board position in FEN notation
+ * @param history Complete move history including this move
+ * @param opponentPubkey Opponent's pubkey for p-tag notification
  */
 data class ChessMoveEvent(
-    val gameId: String,
-    val moveNumber: Int,
+    val startEventId: String,
+    val headEventId: String,
     val san: String,
     val fen: String,
+    val history: List<String>,
     val opponentPubkey: String,
-    val comment: String? = null,
-)
+) {
+    /** Move number (1-based, derived from history length) */
+    val moveNumber: Int get() = history.size
+
+    // Legacy compatibility - some code still uses gameId
+    @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
+    val gameId: String get() = startEventId
+}
 
 /**
- * Game end event - final game result
- * Kind: 30067
+ * Game end data for publishing
  *
- * Tags:
- * - d: game_id
- * - result: 1-0|0-1|1/2-1/2 (white wins, black wins, draw)
- * - termination: checkmate|resignation|draw_agreement|stalemate|timeout|abandonment
- * - winner: pubkey of winner (if applicable)
- * - p: opponent pubkey
+ * In Jester protocol, game end is a move event with result/termination
+ * fields in the content JSON.
  *
- * Content: Optional game summary or final PGN
+ * @param startEventId ID of the game start event
+ * @param headEventId ID of the previous move
+ * @param lastMove The final move (null for resignation without move)
+ * @param fen Final board position
+ * @param history Complete move history
+ * @param result Game result (1-0, 0-1, 1/2-1/2)
+ * @param termination How the game ended
+ * @param opponentPubkey Opponent's pubkey for notification
  */
 data class ChessGameEnd(
-    val gameId: String,
+    val startEventId: String,
+    val headEventId: String,
+    val lastMove: String?,
+    val fen: String,
+    val history: List<String>,
     val result: GameResult,
     val termination: GameTermination,
-    val winnerPubkey: String? = null,
     val opponentPubkey: String,
-    val pgn: String? = null,
-)
+) {
+    // Legacy compatibility
+    @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
+    val gameId: String get() = startEventId
+
+    val winnerPubkey: String? get() = null // Determined from result
+}
 
 /**
- * Draw offer event - offer a draw to opponent
- * Kind: 30068
+ * Draw offer data
  *
- * Tags:
- * - d: game_id
- * - p: opponent pubkey
- *
- * Content: Optional message
+ * In Jester protocol, draw offers can be communicated via:
+ * - Chat message (kind=2 in content)
+ * - Special field in move content
  *
  * Opponent can:
- * - Accept by sending a GameEnd event with DRAW_AGREEMENT
+ * - Accept by sending a game end with DRAW_AGREEMENT
  * - Decline implicitly by making their next move
- * - Decline explicitly (optional, no event needed)
+ *
+ * @param startEventId ID of the game start event
+ * @param headEventId ID of the current head move
+ * @param opponentPubkey Opponent's pubkey for notification
+ * @param message Optional message with the draw offer
  */
 data class ChessDrawOffer(
-    val gameId: String,
+    val startEventId: String,
+    val headEventId: String,
     val opponentPubkey: String,
     val message: String? = null,
-)
+) {
+    // Legacy compatibility
+    @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
+    val gameId: String get() = startEventId
+}
 
 /**
  * Game termination reason
@@ -146,12 +194,31 @@ enum class GameTermination {
 }
 
 /**
- * Event kind constants for live chess
+ * Event kind constants for live chess (Jester protocol)
+ *
+ * Jester uses a single kind (30) for all chess events.
+ * The event type is determined by the content.kind field:
+ * - 0: Game start/challenge
+ * - 1: Move
+ * - 2: Chat
  */
 object LiveChessEventKinds {
-    const val GAME_CHALLENGE = 30064
-    const val GAME_ACCEPT = 30065
-    const val CHESS_MOVE = 30066
-    const val GAME_END = 30067
-    const val DRAW_OFFER = 30068
+    /** Jester protocol uses kind 30 for all chess events */
+    const val JESTER = 30
+
+    // Legacy constants - deprecated, use JESTER instead
+    @Deprecated("Jester uses single kind 30", ReplaceWith("JESTER"))
+    const val GAME_CHALLENGE = 30
+
+    @Deprecated("Jester uses single kind 30", ReplaceWith("JESTER"))
+    const val GAME_ACCEPT = 30
+
+    @Deprecated("Jester uses single kind 30", ReplaceWith("JESTER"))
+    const val CHESS_MOVE = 30
+
+    @Deprecated("Jester uses single kind 30", ReplaceWith("JESTER"))
+    const val GAME_END = 30
+
+    @Deprecated("Jester uses single kind 30", ReplaceWith("JESTER"))
+    const val DRAW_OFFER = 30
 }

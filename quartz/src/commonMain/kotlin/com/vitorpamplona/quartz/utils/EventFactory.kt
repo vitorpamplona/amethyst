@@ -113,6 +113,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
@@ -190,6 +191,7 @@ class EventFactory {
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
+                JesterEvent.KIND -> JesterEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessGameChallengeEvent.KIND -> LiveChessGameChallengeEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessGameAcceptEvent.KIND -> LiveChessGameAcceptEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessMoveEvent.KIND -> LiveChessMoveEvent(id, pubKey, createdAt, tags, content, sig)

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessLobbyLogic
 import com.vitorpamplona.amethyst.commons.chess.ChessPollingDefaults
+import com.vitorpamplona.amethyst.commons.chess.ChessSyncStatus
 import com.vitorpamplona.amethyst.commons.chess.CompletedGame
 import com.vitorpamplona.amethyst.commons.chess.PublicGame
 import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
@@ -31,7 +32,9 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
+import com.vitorpamplona.quartz.nip64Chess.toJesterEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
@@ -80,6 +83,9 @@ class DesktopChessViewModelNew(
     val broadcastStatus: StateFlow<ChessBroadcastStatus> = logic.state.broadcastStatus
     val error: StateFlow<String?> = logic.state.error
     val selectedGameId: StateFlow<String?> = logic.state.selectedGameId
+    val isRefreshing: StateFlow<Boolean> = logic.state.isRefreshing
+    val syncStatus: StateFlow<ChessSyncStatus> = logic.state.syncStatus
+    val stateVersion: StateFlow<Long> = logic.state.stateVersion
 
     /** Badge count (incoming challenges + your turn games) - computed property */
     val badgeCount: Int get() = logic.state.badgeCount
@@ -98,11 +104,33 @@ class DesktopChessViewModelNew(
 
     fun forceRefresh() = logic.forceRefresh()
 
+    /**
+     * Ensure a game ID is being polled for updates.
+     * Call this when viewing a game.
+     */
+    fun ensureGamePolling(gameId: String) = logic.ensureGamePolling(gameId)
+
+    /**
+     * Set focused game mode - only poll this specific game.
+     * Call this when viewing a game to avoid refreshing unrelated games.
+     */
+    fun setFocusedGame(gameId: String) = logic.setFocusedGame(gameId)
+
+    /**
+     * Clear focused game mode - return to lobby mode (poll all games).
+     * Call this when returning to the lobby view.
+     */
+    fun clearFocusedGame() = logic.clearFocusedGame()
+
     // ============================================
     // Incoming event routing (from relay subscriptions)
     // ============================================
 
-    fun handleIncomingEvent(event: Event) = logic.handleIncomingEvent(event)
+    fun handleIncomingEvent(event: Event) {
+        if (event.kind != JesterProtocol.KIND) return
+        val jesterEvent = event.toJesterEvent() ?: return
+        logic.handleIncomingEvent(jesterEvent)
+    }
 
     // ============================================
     // Challenge operations
@@ -115,6 +143,8 @@ class DesktopChessViewModelNew(
     ) = logic.createChallenge(opponentPubkey, playerColor, timeControl)
 
     fun acceptChallenge(challenge: ChessChallenge) = logic.acceptChallenge(challenge)
+
+    fun openOwnChallenge(challenge: ChessChallenge) = logic.openOwnChallenge(challenge)
 
     // ============================================
     // Game operations
@@ -129,12 +159,6 @@ class DesktopChessViewModelNew(
     ) = logic.publishMove(gameId, from, to)
 
     fun resign(gameId: String) = logic.resign(gameId)
-
-    fun offerDraw(gameId: String) = logic.offerDraw(gameId)
-
-    fun acceptDraw(gameId: String) = logic.acceptDraw(gameId)
-
-    fun declineDraw(gameId: String) = logic.declineDraw(gameId)
 
     fun claimAbandonmentVictory(gameId: String) = logic.claimAbandonmentVictory(gameId)
 
@@ -155,6 +179,9 @@ class DesktopChessViewModelNew(
     fun clearError() = logic.clearError()
 
     fun getGameState(gameId: String): LiveChessGameState? = logic.state.getGameState(gameId)
+
+    /** Check if a game was accepted (prevents loading as spectator during race) */
+    fun wasAccepted(gameId: String): Boolean = logic.state.wasAccepted(gameId)
 
     /** Helper for derived challenge lists */
     fun incomingChallenges(): List<ChessChallenge> = logic.state.incomingChallenges()

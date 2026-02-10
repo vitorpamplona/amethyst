@@ -49,19 +49,19 @@ data class ChessPollingConfig(
  * Platform-specific defaults
  */
 object ChessPollingDefaults {
-    /** Android: shorter intervals, no background polling */
+    /** Android: moderate intervals, no background polling */
     val android =
         ChessPollingConfig(
-            activeGamePollInterval = 10_000L,
-            challengePollInterval = 30_000L,
+            activeGamePollInterval = 5_000L, // 5 seconds for responsive gameplay
+            challengePollInterval = 15_000L, // 15 seconds for challenges
             pollInBackground = false,
         )
 
-    /** Desktop: can poll in background */
+    /** Desktop: fast polling for responsive gameplay */
     val desktop =
         ChessPollingConfig(
-            activeGamePollInterval = 10_000L,
-            challengePollInterval = 30_000L,
+            activeGamePollInterval = 2_000L, // 2 seconds for fast updates
+            challengePollInterval = 10_000L, // 10 seconds for challenges
             pollInBackground = true,
         )
 }
@@ -94,11 +94,52 @@ class ChessPollingDelegate(
     private var gamePollingJob: Job? = null
     private var challengePollingJob: Job? = null
     private var cleanupJob: Job? = null
+    private var manualRefreshJob: Job? = null
 
     private val _isPolling = MutableStateFlow(false)
     val isPolling: StateFlow<Boolean> = _isPolling.asStateFlow()
 
-    private val activeGameIdsFlow = MutableStateFlow<Set<String>>(emptySet())
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    internal val activeGameIdsFlow = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Focused game ID - when set, only this game is polled for updates.
+     * Used when viewing a specific game screen to avoid refreshing unrelated games.
+     * When null, all games in activeGameIdsFlow are polled (lobby mode).
+     */
+    private val _focusedGameId = MutableStateFlow<String?>(null)
+
+    /**
+     * Set focused game mode - only poll this specific game.
+     * Call this when entering a game screen.
+     * Pass null to return to lobby mode (poll all games).
+     */
+    fun setFocusedGame(gameId: String?) {
+        _focusedGameId.value = gameId
+    }
+
+    /**
+     * Get current focused game ID (null = lobby mode, polls all games)
+     */
+    fun getFocusedGameId(): String? = _focusedGameId.value
+
+    /**
+     * Get the effective game IDs to poll based on focused mode.
+     * In focused mode: only the focused game.
+     * In lobby mode: all active games.
+     */
+    private fun getEffectiveGameIds(): Set<String> {
+        val focused = _focusedGameId.value
+        return if (focused != null) {
+            // Focused mode - only poll this game
+            setOf(focused)
+        } else {
+            // Lobby mode - poll all games
+            activeGameIdsFlow.value
+        }
+    }
 
     /**
      * Update the set of game IDs to poll for
@@ -125,30 +166,41 @@ class ChessPollingDelegate(
      * Start polling for chess events
      */
     fun start() {
-        if (_isPolling.value) return
+        if (_isPolling.value) {
+            return
+        }
         _isPolling.value = true
 
         // Poll for active games
         gamePollingJob =
             scope.launch {
                 while (isActive) {
-                    val gameIds = activeGameIdsFlow.value
+                    val gameIds = getEffectiveGameIds()
                     if (gameIds.isNotEmpty()) {
-                        onRefreshGames(gameIds)
+                        try {
+                            onRefreshGames(gameIds)
+                        } catch (_: Exception) {
+                            // Error during refresh - continue polling
+                        }
                     }
                     delay(config.activeGamePollInterval)
                 }
             }
 
-        // Poll for challenges
+        // Poll for challenges (only in lobby mode)
         challengePollingJob =
             scope.launch {
-                // Initial fetch
-                onRefreshChallenges()
+                // Initial fetch (only if not in focused mode)
+                if (_focusedGameId.value == null) {
+                    onRefreshChallenges()
+                }
 
                 while (isActive) {
                     delay(config.challengePollInterval)
-                    onRefreshChallenges()
+                    // Skip challenge polling in focused mode - game screen doesn't need it
+                    if (_focusedGameId.value == null) {
+                        onRefreshChallenges()
+                    }
                 }
             }
 
@@ -194,16 +246,34 @@ class ChessPollingDelegate(
     }
 
     /**
-     * Force an immediate refresh
+     * Force an immediate refresh (debounced - ignores calls if refresh already in progress)
      */
     fun refreshNow() {
-        scope.launch {
-            onRefreshChallenges()
-            val gameIds = activeGameIdsFlow.value
-            if (gameIds.isNotEmpty()) {
-                onRefreshGames(gameIds)
-            }
+        // Debounce: skip if already refreshing
+        if (_isRefreshing.value) {
+            return
         }
+
+        // Cancel any pending manual refresh
+        manualRefreshJob?.cancel()
+
+        manualRefreshJob =
+            scope.launch {
+                _isRefreshing.value = true
+                try {
+                    // In focused mode, skip challenge refresh (game screen doesn't need it)
+                    val focusedId = _focusedGameId.value
+                    if (focusedId == null) {
+                        onRefreshChallenges()
+                    }
+                    val gameIds = getEffectiveGameIds()
+                    if (gameIds.isNotEmpty()) {
+                        onRefreshGames(gameIds)
+                    }
+                } finally {
+                    _isRefreshing.value = false
+                }
+            }
     }
 }
 

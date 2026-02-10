@@ -31,6 +31,22 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 
 /**
+ * Progress callback for relay fetch operations
+ */
+data class RelayFetchProgress(
+    val relay: NormalizedRelayUrl,
+    val status: RelayFetchStatus,
+    val eventCount: Int,
+)
+
+enum class RelayFetchStatus {
+    WAITING,
+    RECEIVING,
+    EOSE_RECEIVED,
+    TIMEOUT,
+}
+
+/**
  * One-shot relay fetch helper for chess events.
  *
  * Follows the existing INostrClient + IRequestListener + Channel pattern
@@ -47,20 +63,29 @@ class ChessRelayFetchHelper(
      * Fetch events matching filters from relays, waiting for EOSE.
      *
      * @param filters Map of relay → filter list (same format as INostrClient.openReqSubscription)
-     * @param timeoutMs Max time to wait for all relays to send EOSE
+     * @param timeoutMs Max time to wait for relays to respond (default from ChessConfig)
+     * @param onProgress Optional callback for progress updates per relay
      * @return Deduplicated list of events received before timeout/EOSE
      */
     suspend fun fetchEvents(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        timeoutMs: Long = 30_000,
+        timeoutMs: Long = ChessConfig.FETCH_TIMEOUT_MS,
+        onProgress: ((RelayFetchProgress) -> Unit)? = null,
     ): List<Event> {
         if (filters.isEmpty()) return emptyList()
 
         val events = ConcurrentHashMap<String, Event>()
         val relayCount = filters.keys.size
         val eoseReceived = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+        val relayEventCounts = ConcurrentHashMap<NormalizedRelayUrl, Int>()
         val allEose = CompletableDeferred<Unit>()
         val subId = newSubId()
+
+        // Initialize all relays as WAITING
+        filters.keys.forEach { relay ->
+            relayEventCounts[relay] = 0
+            onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.WAITING, 0))
+        }
 
         val listener =
             object : IRequestListener {
@@ -71,6 +96,8 @@ class ChessRelayFetchHelper(
                     forFilters: List<Filter>?,
                 ) {
                     events[event.id] = event
+                    val count = relayEventCounts.compute(relay) { _, v -> (v ?: 0) + 1 } ?: 1
+                    onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 
                 override fun onEose(
@@ -78,6 +105,9 @@ class ChessRelayFetchHelper(
                     forFilters: List<Filter>?,
                 ) {
                     eoseReceived.add(relay)
+                    val count = relayEventCounts[relay] ?: 0
+                    onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.EOSE_RECEIVED, count))
+                    // Complete when all relays respond
                     if (eoseReceived.size >= relayCount) {
                         allEose.complete(Unit)
                     }
@@ -85,7 +115,18 @@ class ChessRelayFetchHelper(
             }
 
         client.openReqSubscription(subId, filters, listener)
-        withTimeoutOrNull(timeoutMs) { allEose.await() }
+        val eoseResult = withTimeoutOrNull(timeoutMs) { allEose.await() }
+
+        // Mark timed-out relays
+        if (eoseResult == null) {
+            filters.keys.forEach { relay ->
+                if (relay !in eoseReceived) {
+                    val count = relayEventCounts[relay] ?: 0
+                    onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.TIMEOUT, count))
+                }
+            }
+        }
+
         client.close(subId)
 
         return events.values.toList()
