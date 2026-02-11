@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -136,6 +136,7 @@ class PoolCounts {
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
+
             is ClosedMessage -> {
                 subState(msg.subId).onClosed(relay.url)
                 sendToRelayIfChanged(msg.subId, relay.url) { cmd ->

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,17 +21,21 @@
 package com.vitorpamplona.quartz.nip02FollowList
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.json.JsonNull.content
 
 @Stable
 class ContactListEvent(
@@ -41,7 +45,7 @@ class ContactListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
 
@@ -56,7 +60,11 @@ class ContactListEvent(
 
     fun follows() = tags.mapNotNull(ContactTag::parseValid)
 
-    fun relays(): Map<NormalizedRelayUrl, ReadWrite>? {
+    fun isFollowing(pubKey: HexKey) = tags.any(ContactTag::isTagged, pubKey)
+
+    fun followCount() = tags.count(ContactTag::isTagged)
+
+    fun relays(): Map<NormalizedRelayUrl, ReadWrite> {
         val regular = RelaySet.parse(content)
 
         val normalized = mutableMapOf<NormalizedRelayUrl, ReadWrite>()
@@ -74,6 +82,12 @@ class ContactListEvent(
     companion object {
         const val KIND = 3
         const val ALT = "Follow List"
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey)
+
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey)
+
+        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey)
 
         fun blockListFor(pubKeyHex: HexKey): String = "3:$pubKeyHex:"
 

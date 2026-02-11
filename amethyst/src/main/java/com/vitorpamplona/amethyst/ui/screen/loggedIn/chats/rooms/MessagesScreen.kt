@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -47,9 +47,11 @@ fun MessagesScreen(
         derivedStateOf {
             when (windowSizeClass.widthSizeClass) {
                 WindowWidthSizeClass.Compact -> false
+
                 WindowWidthSizeClass.Expanded,
                 WindowWidthSizeClass.Medium,
                 -> true
+
                 else -> false
             }
         }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -170,6 +170,7 @@ class PoolRequests {
                     forFilters = cmd.filters,
                 )
             }
+
             is CloseCmd -> {
                 subState(cmd.subId).onCloseReq(relay)
                 desiredSubListeners.get(cmd.subId)?.onCloseReq(
@@ -197,6 +198,7 @@ class PoolRequests {
                     forFilters = state?.lastKnownFilterStates(relay.url),
                 )
             }
+
             is EoseMessage -> {
                 val state = relayState.get(msg.subId)
                 state?.onEose(relay.url)
@@ -210,6 +212,7 @@ class PoolRequests {
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
+
             is ClosedMessage -> {
                 val state = relayState.get(msg.subId)
                 state?.onClosed(relay.url)

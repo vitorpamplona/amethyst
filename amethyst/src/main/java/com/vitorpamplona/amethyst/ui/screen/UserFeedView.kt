@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -64,12 +64,15 @@ fun UserFeedView(
             is UserFeedState.Empty -> {
                 FeedEmpty { viewModel.invalidateData() }
             }
+
             is UserFeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is UserFeedState.Loaded -> {
                 FeedLoaded(state, accountViewModel, nav)
             }
+
             is UserFeedState.Loading -> {
                 LoadingFeed()
             }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -286,14 +286,17 @@ class VoiceReplyViewModel : ViewModel() {
 
                         onSuccess()
                     }
+
                     is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
                         accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceNip95NotSupported)
                     }
                 }
             }
+
             is UploadingState.Error -> {
                 accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
             }
+
             else -> {
                 accountViewModel.toastManager.toast(uploadErrorTitle, uploadVoiceFailed)
             }

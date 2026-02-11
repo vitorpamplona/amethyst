@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -34,8 +34,14 @@ fun DisplayExternalId(
     nav: INav,
 ) {
     when (externalId) {
-        is GeohashId -> DisplayGeohashExternalId(externalId, accountViewModel, nav)
-        is HashtagId -> DisplayHashtagExternalId(externalId, accountViewModel, nav)
+        is GeohashId -> {
+            DisplayGeohashExternalId(externalId, accountViewModel, nav)
+        }
+
+        is HashtagId -> {
+            DisplayHashtagExternalId(externalId, accountViewModel, nav)
+        }
+
         else -> {}
     }
 }

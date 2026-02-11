@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -68,6 +68,6 @@ fun TabRelays(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
+        RelayFeedView(feedViewModel, accountViewModel, nav = nav)
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -91,17 +91,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserContactCardsFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
@@ -122,7 +123,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -196,9 +196,9 @@ fun ProfileContent(
 
     ProfileContentTemplate(
         profilePubHex = baseAccountUser.pubkeyHex,
-        profileBanner = userInfo?.banner,
-        profilePicture = userInfo?.profilePicture(),
-        bestDisplayName = userInfo?.bestName(),
+        profileBanner = userInfo?.info?.banner,
+        profilePicture = userInfo?.info?.profilePicture(),
+        bestDisplayName = userInfo?.info?.bestName(),
         tags = userInfo?.tags,
         modifier = modifier,
         accountViewModel = accountViewModel,
@@ -274,15 +274,15 @@ private fun EditStatusBoxes(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadStatuses(user = baseAccountUser, accountViewModel) { statuses ->
-        if (statuses.isEmpty()) {
-            StatusEditBar(accountViewModel = accountViewModel, nav = nav)
-        } else {
-            statuses.forEach {
-                val noteStatus by observeNote(it, accountViewModel)
+    val statuses by observeUserStatuses(baseAccountUser, accountViewModel)
 
-                StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
-            }
+    if (statuses.isEmpty()) {
+        StatusEditBar(accountViewModel = accountViewModel, nav = nav)
+    } else {
+        statuses.forEach {
+            val noteStatus by observeNote(it, accountViewModel)
+
+            StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
         }
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -155,11 +155,11 @@ open class ChannelNewMessageViewModel :
     var wantsZapraiser by mutableStateOf(false)
     var zapRaiserAmount by mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
-    fun user(): User? = account.userProfile()
+    fun user(): User = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM

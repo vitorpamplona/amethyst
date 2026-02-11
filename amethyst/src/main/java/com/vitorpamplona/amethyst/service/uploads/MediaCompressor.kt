@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -60,11 +60,16 @@ class MediaCompressor {
             contentType?.startsWith("video", ignoreCase = true) == true -> {
                 VideoCompressionHelper.compressVideo(uri, contentType, applicationContext, mediaQuality, useH265)
             }
+
             contentType?.startsWith("image", ignoreCase = true) == true &&
                 !contentType.contains("gif") &&
-                !contentType.contains("svg") ->
+                !contentType.contains("svg") -> {
                 compressImage(uri, contentType, applicationContext, mediaQuality)
-            else -> MediaCompressorResult(uri, contentType, null)
+            }
+
+            else -> {
+                MediaCompressorResult(uri, contentType, null)
+            }
         }
     }
 

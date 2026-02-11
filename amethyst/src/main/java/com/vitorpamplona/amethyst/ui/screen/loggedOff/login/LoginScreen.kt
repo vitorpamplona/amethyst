@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -155,18 +155,22 @@ fun LoginPage(
 
         loginViewModel.errorManager.error?.let { error ->
             when (error) {
-                is LoginErrorManager.SingleErrorMsg ->
+                is LoginErrorManager.SingleErrorMsg -> {
                     Text(
                         text = stringRes(error.errorResId),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
-                is LoginErrorManager.ParamsErrorMsg ->
+                }
+
+                is LoginErrorManager.ParamsErrorMsg -> {
                     Text(
                         text = stringRes(error.errorResId, *error.params),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
+                }
+
                 else -> {}
             }
         }

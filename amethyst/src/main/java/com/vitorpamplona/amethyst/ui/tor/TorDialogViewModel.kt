@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 
+@Stable
 class TorDialogViewModel : ViewModel() {
     val torType = mutableStateOf(TorType.INTERNAL)
     val socksPortStr = mutableStateOf("9050")
@@ -102,7 +104,7 @@ class TorDialogViewModel : ViewModel() {
             TorPresetType.ONLY_WHEN_NEEDED -> resetOnlyFlags(torOnlyWhenNeededPreset)
             TorPresetType.SMALL_PAYLOADS -> resetOnlyFlags(torSmallPayloadsPreset)
             TorPresetType.FULL_PRIVACY -> resetOnlyFlags(torFullyPrivate)
-            TorPresetType.CUSTOM -> { }
+            TorPresetType.CUSTOM -> Unit
         }
     }
 

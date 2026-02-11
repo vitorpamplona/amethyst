@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -81,9 +81,9 @@ val DefaultNIP65List =
 
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
-val DefaultSearchRelayList = setOf(Constants.band, Constants.wine, Constants.where, Constants.nostoday)
+val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal)
 
-val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds)
+val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
 
 val DefaultSignerPermissions =
     listOf(
@@ -122,7 +122,7 @@ class AccountSettings(
     val defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     val defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     val defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var zapPaymentRequest: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?> = MutableStateFlow(null),
+    val zapPaymentRequest: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
@@ -144,7 +144,7 @@ class AccountSettings(
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
-    var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
+    val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
 ) : EphemeralChatRepository,

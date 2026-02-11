@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -184,10 +184,8 @@ class NostrSignerExternal(
             is SignerResult.RequestAddressed.Successful<*> -> IllegalStateException("$title: This should not happen. There is a bug on Quartz.")
             is SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult<*> -> IllegalStateException("$title: Failed to parse event: ${result.eventJson}.")
             is SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent<*> -> IllegalStateException("$title: Failed to verify event: ${result.invalidEvent.toJson()}.")
-
             is SignerResult.RequestAddressed.ReceivedButCouldNotPerform<*> -> SignerExceptions.CouldNotPerformException("$title: ${result.message}")
             is SignerResult.RequestAddressed.SignerNotFound<*> -> SignerExceptions.SignerNotFoundException("$title: Signer app was not found.")
-
             is SignerResult.RequestAddressed.AutomaticallyRejected<*> -> SignerExceptions.AutomaticallyUnauthorizedException("$title: User has rejected the request.")
             is SignerResult.RequestAddressed.ManuallyRejected<*> -> SignerExceptions.ManuallyUnauthorizedException("$title: User has rejected the request.")
             is SignerResult.RequestAddressed.TimedOut<*> -> SignerExceptions.TimedOutException("$title: User didn't accept or reject in time.")

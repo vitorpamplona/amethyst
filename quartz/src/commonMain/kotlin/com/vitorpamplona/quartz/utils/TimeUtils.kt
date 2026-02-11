@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -44,6 +44,8 @@ object TimeUtils {
     fun oneMinuteAgo() = now() - ONE_MINUTE
 
     fun fiveMinutesAgo() = now() - FIVE_MINUTES
+
+    fun fiveMinutesAhead() = now() + FIVE_MINUTES
 
     fun fifteenMinutesAgo() = now() - FIFTEEN_MINUTES
 

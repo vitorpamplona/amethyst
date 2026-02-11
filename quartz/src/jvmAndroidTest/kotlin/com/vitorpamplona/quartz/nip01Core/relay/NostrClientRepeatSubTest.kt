@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -64,14 +64,17 @@ class NostrClientRepeatSubTest : BaseNostrClientTest() {
                     ) {
                         Log.d("Test", "Receiving message: $msgStr")
                         when (msg) {
-                            is EventMessage ->
+                            is EventMessage -> {
                                 if (mySubId == msg.subId) {
                                     resultChannel.trySend(msg.event.id)
                                 }
-                            is EoseMessage ->
+                            }
+
+                            is EoseMessage -> {
                                 if (mySubId == msg.subId) {
                                     resultChannel.trySend("EOSE")
                                 }
+                            }
                         }
                     }
                 }

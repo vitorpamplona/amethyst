@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -43,9 +43,7 @@ fun <T : Event> TagArrayBuilder<T>.quote(entity: Entity) =
         is NEmbed -> add(entity.toQuoteTagArray())
         is NPub -> add(entity.toQuoteTagArray())
         is NProfile -> add(entity.toQuoteTagArray())
-        else -> {
-            this
-        }
+        else -> this
     }
 
 fun <T : Event> TagArrayBuilder<T>.quotes(entities: List<Entity>) = entities.forEach { quote(it) }

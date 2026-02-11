@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -235,10 +235,13 @@ fun NonClickableUserPictures(
     Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
         when (room.users.size) {
             0 -> {}
-            1 ->
+
+            1 -> {
                 LoadUser(baseUserHex = room.users.first(), accountViewModel) {
                     it?.let { BaseUserPicture(it, size, accountViewModel, outerModifier = Modifier) }
                 }
+            }
+
             2 -> {
                 val userList = room.users.toList()
 
@@ -263,6 +266,7 @@ fun NonClickableUserPictures(
                     }
                 }
             }
+
             3 -> {
                 val userList = room.users.toList()
 
@@ -297,6 +301,7 @@ fun NonClickableUserPictures(
                     }
                 }
             }
+
             else -> {
                 val userList = room.users.toList()
 
@@ -354,7 +359,7 @@ fun BaseUserPicture(
     outerModifier: Modifier = Modifier.size(size),
 ) {
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        LoadUserProfilePicture(baseUser, accountViewModel) { userProfilePicture, userName ->
+        WatchProfilePicture(baseUser, accountViewModel) { userProfilePicture, userName ->
             InnerUserPicture(
                 userHex = baseUser.pubkeyHex,
                 userPicture = userProfilePicture,
@@ -420,8 +425,8 @@ fun ObserveAndDrawInnerUserPicture(
 
     InnerUserPicture(
         userHex = user.pubkeyHex,
-        userPicture = userProfile?.profilePicture(),
-        userName = userProfile?.bestName(),
+        userPicture = userProfile?.info?.profilePicture(),
+        userName = userProfile?.info?.bestName(),
         size = size,
         modifier = innerModifier,
         accountViewModel = accountViewModel,
@@ -582,31 +587,14 @@ fun ScoreTagSmallest(
 }
 
 @Composable
-fun LoadUserProfilePicture(
+fun WatchProfilePicture(
     baseUser: User,
     accountViewModel: AccountViewModel,
     innerContent: @Composable (String?, String?) -> Unit,
 ) {
     val userProfile by observeUserInfo(baseUser, accountViewModel)
 
-    innerContent(userProfile?.profilePicture(), userProfile?.bestName())
-}
-
-@Composable
-fun LoadUserProfilePicture(
-    baseUserHex: HexKey,
-    accountViewModel: AccountViewModel,
-    innerContent: @Composable (String?, String?) -> Unit,
-) {
-    LoadUser(baseUserHex, accountViewModel) {
-        if (it != null) {
-            val userProfile by observeUserInfo(it, accountViewModel)
-
-            innerContent(userProfile?.profilePicture(), userProfile?.bestName())
-        } else {
-            innerContent(null, null)
-        }
-    }
+    innerContent(userProfile?.info?.profilePicture(), userProfile?.info?.bestName())
 }
 
 @Composable

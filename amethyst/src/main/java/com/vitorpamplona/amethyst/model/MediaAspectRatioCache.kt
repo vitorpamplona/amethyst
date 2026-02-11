@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.LruCache
+import androidx.collection.LruCache
 
 interface MutableMediaAspectRatioCache {
     fun get(url: String): Float?

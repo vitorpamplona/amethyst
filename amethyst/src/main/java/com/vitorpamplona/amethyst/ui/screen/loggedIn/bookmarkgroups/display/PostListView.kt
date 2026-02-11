@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -52,7 +52,7 @@ fun RenderPostList(
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {
-            0 ->
+            0 -> {
                 PostList(
                     modifier = Modifier.fillMaxSize(),
                     posts = publicPosts,
@@ -66,7 +66,9 @@ fun RenderPostList(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            1 ->
+            }
+
+            1 -> {
                 PostList(
                     modifier = Modifier.fillMaxSize(),
                     posts = privatePosts,
@@ -80,6 +82,7 @@ fun RenderPostList(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            }
         }
     }
 }

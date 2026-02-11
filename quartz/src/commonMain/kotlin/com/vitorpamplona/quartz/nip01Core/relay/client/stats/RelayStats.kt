@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -83,14 +83,23 @@ class RelayStats(
                 stat.addBytesReceived(msgStr.bytesUsedInMemory())
 
                 when (msg) {
-                    is NoticeMessage -> stat.newNotice(msg.message)
-                    is NotifyMessage -> stat.newNotice("Notify user: " + msg.message)
+                    is NoticeMessage -> {
+                        stat.newNotice(msg.message)
+                    }
+
+                    is NotifyMessage -> {
+                        stat.newNotice("Notify user: " + msg.message)
+                    }
+
                     is OkMessage -> {
                         if (!msg.success) {
                             stat.newNotice("Rejected event ${msg.eventId}: ${msg.message}")
                         }
                     }
-                    is ClosedMessage -> stat.newNotice("Subscription closed: ${msg.subId} ${msg.message}")
+
+                    is ClosedMessage -> {
+                        stat.newNotice("Subscription closed: ${msg.subId} ${msg.message}")
+                    }
                 }
             }
         }

@@ -1475,4 +1475,24 @@
     <string name="follow_set_delete">Delete List</string>
     <string name="follow_pack_delete">Delete Pack</string>
     <string name="kinds">Kinds</string>
+    <string name="retry_failed">Retry failed</string>
+    <string name="tap_to_view_details">Tap to view details</string>
+    <string name="event_sent">%1$s sent</string>
+    <string name="broadcast_results">Broadcast Results</string>
+    <string name="broadcasts_number">Broadcasts (%1$d)</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="retry_failed_number">Retry Failed (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d more broadcasts</string>
+    <string name="number_in_progress">" (%1$d in progress)"</string>
+    <string name="share_of_relays">%1$d/%2$d relays</string>
+    <string name="timeout">Timeout</string>
+    <string name="retrying">Retrying…</string>
+    <string name="retry">Retry</string>
+    <string name="view">View</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">Broadcasting</string>
+    <string name="broadcasting_name">Broadcasting %1$s</string>
+    <string name="broadcasting_number_events">Broadcasting %1$d events...</string>
 </resources>

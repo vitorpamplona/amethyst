@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -399,7 +399,7 @@ class Timestamp(
     }
 
     val isTimestampComplete: Boolean
-        /**
+        /*
          * Determine if timestamp is complete and can be verified.
          *
          * @return True if the timestamp is complete, False otherwise.

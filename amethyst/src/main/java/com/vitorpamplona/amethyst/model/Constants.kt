@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -28,7 +28,6 @@ object Constants {
     val primal = RelayUrlNormalizer.normalize("wss://relay.primal.net")
     val damus = RelayUrlNormalizer.normalize("wss://relay.damus.io")
     val wine = RelayUrlNormalizer.normalize("wss://nostr.wine")
-    val band = RelayUrlNormalizer.normalize("wss://relay.nostr.band")
 
     val where = RelayUrlNormalizer.normalize("wss://relay.noswhere.com")
     val elites = RelayUrlNormalizer.normalize("wss://nostrelites.org")
@@ -37,6 +36,7 @@ object Constants {
     val oxtr = RelayUrlNormalizer.normalize("wss://nostr.oxtr.dev")
 
     val nostoday = RelayUrlNormalizer.normalize("wss://search.nos.today")
+    val antiprimal = RelayUrlNormalizer.normalize("wss://antiprimal.net")
 
     val auth = RelayUrlNormalizer.normalize("wss://auth.nostr1.com")
     val oxchat = RelayUrlNormalizer.normalize("wss://relay.0xchat.com")
@@ -44,9 +44,9 @@ object Constants {
     val purplepages = RelayUrlNormalizer.normalize("wss://purplepag.es")
     val coracle = RelayUrlNormalizer.normalize("wss://indexer.coracle.social")
     val userkinds = RelayUrlNormalizer.normalize("wss://user.kindpag.es")
+    val yabu = RelayUrlNormalizer.normalize("wss://directory.yabu.me")
+    val nostr1 = RelayUrlNormalizer.normalize("wss://profiles.nostr1.com")
 
-    val bootstrapInbox = setOf(band, damus, primal, mom, nos, bitcoiner, oxtr)
-    val eventFinderRelays = setOf(band, wine, damus, primal, mom, nos, bitcoiner, oxtr)
-
-    val defaultSearchRelaySet = setOf(band, wine, where)
+    val bootstrapInbox = setOf(damus, primal, mom, nos, bitcoiner, oxtr, yabu)
+    val eventFinderRelays = setOf(wine, damus, primal, mom, nos, bitcoiner, oxtr)
 }

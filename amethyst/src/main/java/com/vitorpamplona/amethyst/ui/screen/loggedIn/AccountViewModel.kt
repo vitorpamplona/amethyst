@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
@@ -54,11 +55,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
@@ -92,7 +91,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
@@ -101,6 +99,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -297,16 +296,6 @@ class AccountViewModel(
     fun isWriteable(): Boolean = account.isWriteable()
 
     fun userProfile(): User = account.userProfile()
-
-    fun <T : Event> observeByETag(
-        kind: Int,
-        eTag: HexKey,
-    ): StateFlow<T?> = LocalCache.observeETag<T>(kind = kind, eventId = eTag, viewModelScope).latest
-
-    fun <T : Event> observeByAuthor(
-        kind: Int,
-        pubkeyHex: HexKey,
-    ): StateFlow<T?> = LocalCache.observeAuthor<T>(kind = kind, pubkey = pubkeyHex, viewModelScope).latest
 
     fun reactToOrDelete(
         note: Note,
@@ -769,6 +758,8 @@ class AccountViewModel(
 
     fun removeFromMediaGallery(note: Note) = launchSigner { account.removeFromGallery(note) }
 
+    fun follows(user: User): Note = LocalCache.getOrCreateAddressableNote(ContactListEvent.createAddress(user.pubkeyHex))
+
     fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
@@ -1047,45 +1038,7 @@ class AccountViewModel(
         return note.getReactionBy(userProfile())
     }
 
-    fun verifyNip05(
-        userMetadata: UserMetadata,
-        pubkeyHex: String,
-        onResult: (Boolean) -> Unit,
-    ) {
-        val nip05 = userMetadata.nip05?.ifBlank { null } ?: return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            Nip05NostrAddressVerifier
-                .verifyNip05(
-                    nip05,
-                    okHttpClient = httpClientBuilder::okHttpClientForNip05,
-                    onSuccess = {
-                        // Marks user as verified
-                        if (it == pubkeyHex) {
-                            userMetadata.nip05Verified = true
-                            userMetadata.nip05LastVerificationTime = TimeUtils.now()
-
-                            onResult(userMetadata.nip05Verified)
-                        } else {
-                            userMetadata.nip05Verified = false
-                            userMetadata.nip05LastVerificationTime = 0
-
-                            onResult(userMetadata.nip05Verified)
-                        }
-                    },
-                    onError = {
-                        userMetadata.nip05LastVerificationTime = 0
-                        userMetadata.nip05Verified = false
-
-                        Log.d("NIP05 Error", it)
-
-                        onResult(userMetadata.nip05Verified)
-                    },
-                )
-        }
-    }
-
-    fun runOnIO(runOnIO: () -> Unit) {
+    fun runOnIO(runOnIO: suspend () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
@@ -1361,7 +1314,14 @@ class AccountViewModel(
         context: Context,
         onDone: (String, String) -> Unit,
     ) {
-        val lud16 = account.userProfile().info?.lud16
+        val lud16 =
+            account
+                .userProfile()
+                .metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+                ?.lud16
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
@@ -1677,19 +1637,24 @@ class AccountViewModel(
 
                     when (val parsed = it.entity) {
                         is NSec -> {}
+
                         is NPub -> {}
+
                         is NProfile -> {}
+
                         is NNote -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
                         }
+
                         is NEvent -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
                         }
-                        is NEmbed ->
+
+                        is NEmbed -> {
                             withContext(Dispatchers.IO) {
                                 val baseNote = LocalCache.getOrCreateNote(parsed.event)
                                 if (baseNote.event == null) {
@@ -1700,13 +1665,16 @@ class AccountViewModel(
 
                                 returningNote = baseNote
                             }
+                        }
 
                         is NRelay -> {}
+
                         is NAddress -> {
                             LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
                                 returningNote = note
                             }
                         }
+
                         else -> {}
                     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -46,7 +46,6 @@ class MemoryTrimmingService(
 
         val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
         cache.pruneOldMessages()
-        cache.pruneContactLists(accounts)
         cache.pruneRepliesAndReactions(accounts)
         cache.prunePastVersionsOfReplaceables()
         cache.pruneExpiredEvents()

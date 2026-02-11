@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -88,7 +88,7 @@ class DesktopLocalCache : ICacheProvider {
         // Search by name/displayName/nip05/lud16
         return users.values
             .filter { user ->
-                user.anyNameStartsWith(prefix) ||
+                user.metadataOrNull()?.anyNameStartsWith(prefix) == true ||
                     user.pubkeyHex.startsWith(prefix, ignoreCase = true) ||
                     user.pubkeyNpub().startsWith(prefix, ignoreCase = true)
             }.sortedWith(
@@ -107,11 +107,11 @@ class DesktopLocalCache : ICacheProvider {
     fun consumeMetadata(event: MetadataEvent) {
         val user = getOrCreateUser(event.pubKey)
 
-        // Only update if newer
-        val currentMetadata = user.latestMetadata
-        if (currentMetadata == null || event.createdAt > currentMetadata.createdAt) {
-            user.latestMetadata = event
-            user.info = event.contactMetaData()
+        if (user.metadata().shouldUpdateWith(event)) {
+            val newUserMetadata = event.contactMetaData()
+            if (newUserMetadata != null) {
+                user.updateUserInfo(newUserMetadata, event)
+            }
         }
     }
 

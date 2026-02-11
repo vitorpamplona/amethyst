@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -28,12 +28,14 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
+import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
+import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
-import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
@@ -62,6 +64,9 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isAddressable
+import com.vitorpamplona.quartz.nip01Core.core.isRegular
+import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -72,13 +77,12 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.forEachTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
@@ -129,7 +133,6 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
-import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
@@ -194,19 +197,22 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.SortedSet
 import java.util.concurrent.ConcurrentHashMap
 
 interface ILocalCache {
@@ -234,76 +240,103 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     val deletionIndex = DeletionIndex()
 
-    val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>>(10)
-    val observablesByKindAndAuthor = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindAndAuthor<Event>>>(10)
+    val observables = ConcurrentHashMap<Observable, Observable>(10)
 
-    fun <T : Event> observeETag(
-        kind: Int,
-        eventId: HexKey,
-        scope: CoroutineScope,
-    ): LatestByKindWithETag<T> {
-        var eTagList = observablesByKindAndETag.get(kind)
-
-        if (eTagList == null) {
-            eTagList = ConcurrentHashMap<HexKey, LatestByKindWithETag<T>>(1) as ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>
-            observablesByKindAndETag.put(kind, eTagList)
-        }
-
-        val value = eTagList.get(eventId)
-
-        return if (value != null) {
-            value
+    fun Filter.match(note: Note): Boolean {
+        val event = note.event
+        return if (event != null) {
+            match(event)
         } else {
-            val newObject = LatestByKindWithETag<T>(kind, eventId) as LatestByKindWithETag<Event>
-            val obj = eTagList.putIfAbsent(eventId, newObject) ?: newObject
-            if (obj == newObject) {
-                // initialize
-                scope.launch(Dispatchers.IO) {
-                    obj.init()
+            false
+        }
+    }
+
+    fun filter(filter: Filter): SortedSet<Note> {
+        val byKinds = filter.kinds?.filter { it.isAddressable() || it.isReplaceable() }
+
+        val addressableMatches =
+            if (!byKinds.isNullOrEmpty()) {
+                val byAuthors = filter.authors
+                if (!byAuthors.isNullOrEmpty()) {
+                    // optimized
+                    byKinds.flatMap { kind ->
+                        byAuthors.flatMap { pubkey ->
+                            addressables.filter(kind, pubkey) { _, note ->
+                                filter.match(note)
+                            }
+                        }
+                    }
+                } else {
+                    // optimized
+                    byKinds.flatMap { kind ->
+                        addressables.filter(kind) { _, note ->
+                            filter.match(note)
+                        }
+                    }
+                }
+            } else {
+                addressables.filter { _, note ->
+                    filter.match(note)
                 }
             }
-            obj
-        } as LatestByKindWithETag<T>
-    }
 
-    fun <T : Event> observeAuthor(
-        kind: Int,
-        pubkey: HexKey,
-        scope: CoroutineScope,
-    ): LatestByKindAndAuthor<T> {
-        var authorObsList = observablesByKindAndAuthor.get(kind)
-
-        if (authorObsList == null) {
-            authorObsList = ConcurrentHashMap<HexKey, LatestByKindAndAuthor<T>>(1) as ConcurrentHashMap<HexKey, LatestByKindAndAuthor<Event>>
-            observablesByKindAndAuthor.put(kind, authorObsList)
-        }
-
-        val value = authorObsList.get(pubkey)
-
-        return if (value != null) {
-            value
-        } else {
-            val newObject = LatestByKindAndAuthor<T>(kind, pubkey) as LatestByKindAndAuthor<Event>
-            val obj = authorObsList.putIfAbsent(pubkey, newObject) ?: newObject
-            if (obj == newObject) {
-                // initialize
-                scope.launch(Dispatchers.IO) {
-                    obj.init()
+        val noteMatches =
+            notes.filter { _, note ->
+                val event = note.event
+                if (event != null && event.kind.isRegular()) {
+                    filter.match(event)
+                } else {
+                    false
                 }
             }
-            obj
-        } as LatestByKindAndAuthor<T>
-    }
 
-    private fun updateObservables(event: Event) {
-        observablesByKindAndETag[event.kind]?.let { observablesOfKind ->
-            event.forEachTaggedEventId {
-                observablesOfKind[it]?.updateIfMatches(event)
+        val limit = filter.limit
+
+        val limitedSet =
+            if (limit != null) {
+                (addressableMatches + noteMatches).take(limit)
+            } else {
+                (addressableMatches + noteMatches)
             }
-        }
 
-        observablesByKindAndAuthor[event.kind]?.get(event.pubKey)?.updateIfMatches(event)
+        return limitedSet.toSortedSet(CreatedAtIdHexComparator)
     }
+
+    fun observeNotes(filter: Filter): Flow<List<Note>> =
+        callbackFlow {
+            val newFilter =
+                NoteListMatchingFilter(filter, this@LocalCache::filter) {
+                    trySend(it)
+                }
+
+            newFilter.init()
+
+            observables.put(newFilter, newFilter)
+
+            awaitClose {
+                observables.remove(newFilter)
+            }
+        }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+
+    fun observeEvents(filter: Filter): Flow<List<Event>> =
+        callbackFlow {
+            val cachedFilter =
+                EventListMatchingFilter(filter, this@LocalCache::filter) {
+                    trySend(it)
+                }
+
+            cachedFilter.init()
+
+            observables.put(cachedFilter, cachedFilter)
+
+            awaitClose {
+                observables.remove(cachedFilter)
+            }
+        }.buffer(kotlinx.coroutines.channels.Channel.CONFLATED)
+
+    fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents(filter).map { it.firstNotNullOfOrNull { it as? T } }
+
+    fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
     fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
@@ -330,6 +363,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         var count = 0
         users.forEach { key, user ->
             if (predicate(key, user)) count++
+        }
+        return count
+    }
+
+    fun countContactLists(predicate: (ContactListEvent) -> Boolean): Int {
+        var count = 0
+        addressables.filter(ContactListEvent.KIND).forEach { note ->
+            val event = note.event as? ContactListEvent
+            if (event != null && predicate(event)) count++
         }
         return count
     }
@@ -490,20 +532,16 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         // new event
-        val oldUser = getOrCreateUser(event.pubKey)
-        val currentMetadata = oldUser.latestMetadata
+        consumeBaseReplaceable(event, relay, wasVerified)
 
-        if (currentMetadata == null || event.createdAt > currentMetadata.createdAt) {
-            oldUser.latestMetadata = event
+        val user = getOrCreateUser(event.pubKey)
 
+        if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
             if (newUserMetadata != null && (wasVerified || justVerify(event))) {
-                oldUser.updateUserInfo(newUserMetadata, event)
+                user.updateUserInfo(newUserMetadata, event)
                 if (relay != null) {
-                    oldUser.addRelayBeingUsed(relay, event.createdAt)
-                    if (!relay.isLocalHost()) {
-                        oldUser.latestMetadataRelay = relay
-                    }
+                    user.addRelayBeingUsed(relay, event.createdAt)
                 }
 
                 return true
@@ -517,25 +555,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         event: ContactListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val user = getOrCreateUser(event.pubKey)
-
-        // avoids processing empty contact lists.
-        if (event.createdAt > (user.latestContactList?.createdAt ?: 0) && !event.tags.isEmpty() && (wasVerified || justVerify(event))) {
-            val needsToUpdateFollowers = user.updateContactList(event)
-            // Log.d("CL", "Consumed contact list ${user.toNostrUri()} ${event.relays()?.size}")
-
-            needsToUpdateFollowers.forEach {
-                getUserIfExists(it)?.flowSet?.followers?.invalidateData()
-            }
-
-            updateObservables(event)
-
-            return true
-        }
-
-        return false
-    }
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: BookmarkListEvent,
@@ -878,59 +898,101 @@ object LocalCache : ILocalCache, ICacheProvider {
     @Suppress("DEPRECATION")
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
-            is PollNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
-            is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
-            is CommentEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is PollNoteEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            is VoiceReplyEvent -> event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
+            is LongTextNoteEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
-            is ChatMessageEncryptedFileHeaderEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is GitReplyEvent -> {
+                event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            is LnZapEvent ->
+            is TextNoteEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is CommentEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is VoiceReplyEvent -> {
+                event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is ChatMessageEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is LnZapEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
                     (event.zapRequest?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptyList())
-            is LnZapRequestEvent ->
+            }
+
+            is LnZapRequestEvent -> {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
-            is BadgeProfilesEvent ->
+            }
+
+            is BadgeProfilesEvent -> {
                 event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
-            is BadgeAwardEvent -> event.awardDefinition().map { getOrCreateAddressableNote(it) }
-            is PrivateDmEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
-            is RepostEvent ->
+            }
+
+            is BadgeAwardEvent -> {
+                event.awardDefinition().map { getOrCreateAddressableNote(it) }
+            }
+
+            is PrivateDmEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is RepostEvent -> {
                 listOfNotNull(
                     event.boostedEventId()?.let { checkGetOrCreateNote(it) },
                     event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
                 )
-            is GenericRepostEvent ->
+            }
+
+            is GenericRepostEvent -> {
                 listOfNotNull(
                     event.boostedEventId()?.let { checkGetOrCreateNote(it) },
                     event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
                 )
-            is CommunityPostApprovalEvent ->
+            }
+
+            is CommunityPostApprovalEvent -> {
                 event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.approvedAddresses().map { getOrCreateAddressableNote(it) }
-            is ReactionEvent ->
+            }
+
+            is ReactionEvent -> {
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
-            is ChannelMessageEvent ->
-                event
-                    .tagsWithoutCitations()
-                    .filter { it != event.channelId() }
-                    .mapNotNull { checkGetOrCreateNote(it) }
-            is LiveActivitiesChatMessageEvent ->
-                event
-                    .tagsWithoutCitations()
-                    .filter { it != event.activity()?.toTag() }
-                    .mapNotNull { checkGetOrCreateNote(it) }
-            is TorrentCommentEvent ->
-                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
 
-            else -> emptyList()
+            is ChannelMessageEvent -> {
+                event.tagsWithoutCitations().filter { it != event.channelId() }.mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is LiveActivitiesChatMessageEvent -> {
+                event.tagsWithoutCitations().filter { it != event.activity()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            is TorrentCommentEvent -> {
+                event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            }
+
+            else -> {
+                emptyList()
+            }
         }
 
     fun consume(
@@ -1183,33 +1245,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
+        val note = event.toAddressableNote()
+        val new = consumeBaseReplaceable(event, relay, wasVerified)
 
-        val isVerified =
-            if (version.event == null && (wasVerified || justVerify(event))) {
-                version.loadEvent(event, author, emptyList())
-                version.moveAllReferencesTo(note)
-                true
-            } else {
-                wasVerified
-            }
-
-        // Already processed this event.
-        if (note.event?.id == event.id) return false
-
-        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
-            note.loadEvent(event, author, emptyList())
-
-            author.flowSet?.statuses?.invalidateData()
-
-            refreshNewNoteObservers(note)
-
-            return true
+        if (new) {
+            author.statusState().addStatus(note)
         }
 
-        return false
+        return new
     }
 
     fun Event.toNote() = getOrCreateNote(id)
@@ -1470,6 +1514,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (deleteNote is AddressableNote && deletedEvent is ContactCardEvent) {
             getUserIfExists(deletedEvent.aboutUser())?.cardsOrNull()?.removeCard(deleteNote)
+        }
+
+        if (deleteNote is AddressableNote && deletedEvent is StatusEvent) {
+            deleteNote.author?.statusStateOrNull()?.removeStatus(deleteNote)
         }
 
         if (deletedEvent is TorrentCommentEvent) {
@@ -1838,13 +1886,11 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
             val author = getOrCreateUser(event.pubKey)
-            val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
             val repliesTo = computeReplyTo(event)
 
             note.loadEvent(event, author, repliesTo)
 
             repliesTo.forEach { it.addZap(zapRequest, note) }
-            mentions.forEach { it.addZap(zapRequest, note) }
 
             refreshNewNoteObservers(note)
 
@@ -1872,7 +1918,6 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.loadEvent(event, author, repliesTo)
 
             repliesTo.forEach { it.addZap(note, null) }
-            mentions.forEach { it.addZap(note, null) }
 
             refreshNewNoteObservers(note)
 
@@ -2125,7 +2170,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         val finds =
             users.filter { _, user: User ->
                 (
-                    (user.anyNameStartsWith(username)) ||
+                    (user.metadataOrNull()?.anyNameStartsWith(username) == true) ||
                         user.pubkeyHex.startsWith(username, true) ||
                         user.pubkeyNpub().startsWith(username, true)
                 ) &&
@@ -2154,7 +2199,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event is ReactionEvent ||
                 note.event is LnZapEvent ||
                 note.event is LnZapRequestEvent ||
-                note.event is FileHeaderEvent
+                note.event is FileHeaderEvent ||
+                note.event is MetadataEvent ||
+                note.event is ContactListEvent
         )
 
     fun findNotesStartingWith(
@@ -2265,23 +2312,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
 
-    fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
-        checkNotInMainThread()
-
-        return addressables
-            .filter { _, it ->
-                val noteEvent = it.event
-                (
-                    noteEvent is StatusEvent &&
-                        noteEvent.pubKey == user.pubkeyHex &&
-                        !noteEvent.isExpired() &&
-                        noteEvent.content.isNotBlank()
-                )
-            }.sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt }, { it.idHex }))
-            .reversed()
-            .toImmutableList()
-    }
-
     suspend fun findEarliestOtsForNote(
         note: Note,
         otsVerifCache: VerificationStateCache,
@@ -2366,23 +2396,6 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun cleanObservers() {
         notes.forEach { _, it -> it.clearFlow() }
         addressables.forEach { _, it -> it.clearFlow() }
-        users.forEach { _, it -> it.clearFlow() }
-
-        observablesByKindAndETag.forEach { _, list ->
-            list.forEach { key, value ->
-                if (value.canDelete()) {
-                    list.remove(key)
-                }
-            }
-        }
-
-        observablesByKindAndAuthor.forEach { _, list ->
-            list.forEach { key, value ->
-                if (value.canDelete()) {
-                    list.remove(key)
-                }
-            }
-        }
     }
 
     fun pruneHiddenMessagesChannel(
@@ -2576,18 +2589,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         val noteEvent = note.event
 
-        if (noteEvent is LnZapEvent) {
-            noteEvent.zappedAuthor().forEach {
-                val author = getUserIfExists(it)
-                author?.removeZap(note)
-            }
-        }
-        if (noteEvent is LnZapRequestEvent) {
-            noteEvent.zappedAuthor().mapNotNull {
-                val author = getUserIfExists(it)
-                author?.removeZap(note)
-            }
-        }
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
                 getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(note)
@@ -2601,8 +2602,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 getAddressableNoteIfExists(it.address)?.removeReport(note)
             }
         }
+
         if (note is AddressableNote && noteEvent is ContactCardEvent) {
             getUserIfExists(noteEvent.aboutUser())?.cardsOrNull()?.removeCard(note)
+        }
+
+        if (note is AddressableNote && noteEvent is StatusEvent) {
+            note.author?.statusStateOrNull()?.removeStatus(note)
         }
 
         note.clearFlow()
@@ -2663,24 +2669,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
 
-    fun pruneContactLists(loggedIn: Set<HexKey>) {
-        checkNotInMainThread()
-
-        var removingContactList = 0
-        users.forEach { _, user ->
-            if (
-                user.pubkeyHex !in loggedIn &&
-                (user.flowSet == null || user.flowSet?.isInUse() == false) &&
-                user.latestContactList != null
-            ) {
-                user.latestContactList = null
-                removingContactList++
-            }
-        }
-
-        println("PRUNE: $removingContactList contact lists")
-    }
-
     override fun markAsSeen(
         eventId: String,
         relay: NormalizedRelayUrl,
@@ -2701,11 +2689,23 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     private fun refreshNewNoteObservers(newNote: Note) {
         val event = newNote.event as Event
-        updateObservables(event)
+
+        val observableBiConsumer =
+            java.util.function.BiConsumer<Observable, Observable> { t, u ->
+                u.new(event, newNote)
+            }
+
+        observables.forEach(observableBiConsumer)
         live.newNote(newNote)
     }
 
     private fun refreshDeletedNoteObservers(newNote: Note) {
+        val observableBiConsumer =
+            java.util.function.BiConsumer<Observable, Observable> { t, u ->
+                u.remove(newNote)
+            }
+
+        observables.forEach(observableBiConsumer)
         live.removedNote(newNote)
     }
 
@@ -2733,27 +2733,38 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(nip19: Entity) {
         when (nip19) {
-            is NSec -> getOrCreateUser(nip19.toPubKeyHex())
-            is NPub -> getOrCreateUser(nip19.hex)
+            is NSec -> {
+                getOrCreateUser(nip19.toPubKeyHex())
+            }
+
+            is NPub -> {
+                getOrCreateUser(nip19.hex)
+            }
+
             is NProfile -> {
                 nip19.relay.forEach { relayHint ->
                     relayHints.addKey(nip19.hex, relayHint)
                 }
                 getOrCreateUser(nip19.hex)
             }
+
             is NNote -> {
                 getOrCreateNote(nip19.hex)
             }
+
             is NEvent -> {
                 nip19.relay.forEach { relayHint ->
                     relayHints.addEvent(nip19.hex, relayHint)
                 }
                 getOrCreateNote(nip19.hex)
             }
+
             is NEmbed -> {
                 justConsume(nip19.event, null, false)
             }
+
             is NRelay -> {}
+
             is NAddress -> {
                 val aTag = nip19.aTag()
                 nip19.relay.forEach { relayHint ->
@@ -2761,6 +2772,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
                 getOrCreateAddressableNote(nip19.address())
             }
+
             else -> { }
         }
     }
@@ -2810,7 +2822,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
     }
 
-    private fun checkDeletionAndConsume(
+    fun checkDeletionAndConsume(
         event: Event,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -3008,10 +3020,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 is PaymentTargetsEvent -> consume(event, relay, wasVerified)
-                else -> {
-                    Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}")
-                    false
-                }
+                else -> Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}").let { false }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

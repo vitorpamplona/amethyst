@@ -1202,6 +1202,9 @@
     <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
     <string name="share_image">चित्र बाँटें…</string>
     <string name="unable_to_share_image">चित्र बाँटने में असफल। कृपया कुछ समय पश्चात पुनःप्रयास करें…</string>
+    <string name="share_video">चलचित्र बाँटें…</string>
+    <string name="unable_to_share_video">चलचित्र बाँटने में असफल। कृपया कुछ समय पश्चात पुनः प्रयास करें…</string>
+    <string name="downloading_video_for_sharing">चलचित्र अवरोहण चालू…</string>
     <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
     <string name="dont_translate_from">अनुवाद ना करें</string>
     <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>

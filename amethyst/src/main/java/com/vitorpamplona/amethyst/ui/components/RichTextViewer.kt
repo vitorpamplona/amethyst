@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
@@ -107,8 +109,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.nip01Core.core.EmptyTagList
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -160,7 +160,9 @@ fun RenderStrangeNamePreview() {
                         )
                     }
 
-                    is RegularTextSegment -> Text(word.segmentText)
+                    is RegularTextSegment -> {
+                        Text(word.segmentText)
+                    }
                 }
             }
         }
@@ -180,12 +182,21 @@ fun RenderRegularPreview() {
                 when (word) {
                     // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                     // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
-                    is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+                    is EmojiSegment -> {
+                        RenderCustomEmoji(word.segmentText, state)
+                    }
+
                     // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
                     // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                     // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-                    is EmailSegment -> ClickableEmail(word.segmentText)
-                    is PhoneSegment -> ClickablePhone(word.segmentText)
+                    is EmailSegment -> {
+                        ClickableEmail(word.segmentText)
+                    }
+
+                    is PhoneSegment -> {
+                        ClickablePhone(word.segmentText)
+                    }
+
                     is BechSegment -> {
                         CreateClickableText(
                             word.segmentText.substring(0, 10),
@@ -196,11 +207,19 @@ fun RenderRegularPreview() {
                         )
                     }
 
-                    is HashTagSegment -> HashTag(word, EmptyNav())
+                    is HashTagSegment -> {
+                        HashTag(word, EmptyNav())
+                    }
+
                     // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                     // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
-                    is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
-                    is RegularTextSegment -> Text(word.segmentText)
+                    is SchemelessUrlSegment -> {
+                        NoProtocolUrlRenderer(word)
+                    }
+
+                    is RegularTextSegment -> {
+                        Text(word.segmentText)
+                    }
                 }
             }
         }
@@ -219,16 +238,21 @@ fun RenderRegularPreview2() {
                 // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                 // is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, accountViewModel)
                 is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+
                 // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
                 // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                 // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
                 is EmailSegment -> ClickableEmail(word.segmentText)
+
                 is PhoneSegment -> ClickablePhone(word.segmentText)
+
                 // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
                 is HashTagSegment -> HashTag(word, EmptyNav())
+
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+
                 is RegularTextSegment -> Text(word.segmentText)
             }
         }
@@ -260,17 +284,23 @@ fun RenderRegularPreview3() {
             when (word) {
                 // is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
                 is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, null, accountViewModel)
+
                 is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+
                 // is InvoiceSegment -> MayBeInvoicePreview(word.segmentText)
                 // is WithdrawSegment -> MayBeWithdrawal(word.segmentText)
                 // is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
                 is EmailSegment -> ClickableEmail(word.segmentText)
+
                 is PhoneSegment -> ClickablePhone(word.segmentText)
+
                 // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
                 is HashTagSegment -> HashTag(word, EmptyNav())
+
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+
                 is RegularTextSegment -> Text(word.segmentText)
             }
         }
@@ -415,23 +445,38 @@ private fun RenderWordWithoutPreview(
     when (word) {
         // Don't preview Images
         is ImageSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         // Don't preview Videos
         is VideoSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
+
         // Don't offer to pay invoices
         is InvoiceSegment -> Text(word.segmentText)
+
         // Don't offer to withdraw
         is WithdrawSegment -> Text(word.segmentText)
+
         is CashuSegment -> Text(word.segmentText)
+
         is EmailSegment -> ClickableEmail(word.segmentText)
+
         is SecretEmoji -> Text(word.segmentText)
+
         is PhoneSegment -> ClickablePhone(word.segmentText)
+
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
+
         is HashTagSegment -> HashTag(word, nav)
+
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
+
         is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
+
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
+
         is RegularTextSegment -> Text(word.segmentText)
     }
 }
@@ -848,7 +893,7 @@ private fun DisplayUserFromTag(
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {
             CreateClickableTextWithEmoji(
-                clickablePart = remember(meta) { it?.bestName() ?: baseUser.pubkeyDisplayHex() },
+                clickablePart = remember(meta) { it?.info?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
                 route = remember(baseUser) { routeFor(baseUser) },
                 nav = nav,

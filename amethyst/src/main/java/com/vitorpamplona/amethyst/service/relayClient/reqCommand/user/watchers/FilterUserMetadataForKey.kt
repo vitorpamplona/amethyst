@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -51,7 +51,7 @@ fun filterUserMetadataForKey(
             authors.forEach { key ->
                 val relays =
                     key.outboxRelays()
-                        ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
+                        ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
 
                 relays.forEach {
                     add(it, key)
@@ -68,7 +68,7 @@ fun filterUserMetadataForKey(
 
             users.forEach { user ->
                 val time = since.since(user)?.get(relay)?.time
-                if (time == null || user.latestMetadata == null) {
+                if (time == null || user.metadataOrNull()?.flow?.value == null) {
                     firstTimers.add(user.pubkeyHex)
                 } else {
                     updates.add(user.pubkeyHex)

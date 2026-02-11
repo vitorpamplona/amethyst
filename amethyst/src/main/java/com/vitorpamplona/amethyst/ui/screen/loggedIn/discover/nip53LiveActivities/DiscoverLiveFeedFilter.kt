@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -124,9 +124,18 @@ open class DiscoverLiveFeedFilter(
                     2
                 }
             }
-            StatusTag.STATUS.PLANNED -> 1
-            StatusTag.STATUS.ENDED -> 0
-            else -> 0
+
+            StatusTag.STATUS.PLANNED -> {
+                1
+            }
+
+            StatusTag.STATUS.ENDED -> {
+                0
+            }
+
+            else -> {
+                0
+            }
         }
     }
 }

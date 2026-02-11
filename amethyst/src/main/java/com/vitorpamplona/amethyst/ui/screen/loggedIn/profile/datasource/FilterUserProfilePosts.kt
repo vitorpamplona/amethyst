@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -72,7 +72,7 @@ fun filterUserProfilePosts(
 ): List<RelayBasedFilter> {
     val relays =
         user.outboxRelays()?.ifEmpty { null }
-            ?: (user.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
+            ?: (user.allUsedRelays() + LocalCache.relayHints.hintsForKey(user.pubkeyHex))
 
     return relays
         .map { relay ->

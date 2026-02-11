@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -84,10 +84,11 @@ class CommandDeserializer : StdDeserializer<Command>(Command::class.java) {
                     )
                 }
 
-                CloseCmd.LABEL ->
+                CloseCmd.LABEL -> {
                     CloseCmd(
                         subId = jp.nextTextValue(),
                     )
+                }
 
                 AuthCmd.LABEL -> {
                     jp.nextToken()

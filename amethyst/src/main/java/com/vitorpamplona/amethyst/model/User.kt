@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -22,5 +22,3 @@ package com.vitorpamplona.amethyst.model
 
 // Re-export from commons for backwards compatibility
 typealias User = com.vitorpamplona.amethyst.commons.model.User
-typealias RelayInfo = com.vitorpamplona.amethyst.commons.model.RelayInfo
-typealias UserState = com.vitorpamplona.amethyst.commons.model.UserState

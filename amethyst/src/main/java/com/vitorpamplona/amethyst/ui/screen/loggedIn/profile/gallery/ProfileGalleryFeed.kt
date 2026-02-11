@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -61,9 +61,11 @@ fun RenderGalleryFeed(
             is FeedState.Empty -> {
                 FeedEmpty { viewModel.invalidateData() }
             }
+
             is FeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is FeedState.Loaded -> {
                 GalleryFeedLoaded(
                     state,
@@ -72,6 +74,7 @@ fun RenderGalleryFeed(
                     nav,
                 )
             }
+
             is FeedState.Loading -> {
                 LoadingFeed()
             }

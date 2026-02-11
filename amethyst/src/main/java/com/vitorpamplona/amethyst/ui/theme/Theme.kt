@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -540,12 +540,16 @@ fun AmethystTheme(
                 uiManager.nightMode = UiModeManager.MODE_NIGHT_YES
                 true
             }
+
             ThemeType.LIGHT -> {
                 val uiManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
                 uiManager.nightMode = UiModeManager.MODE_NIGHT_NO
                 false
             }
-            else -> isSystemInDarkTheme()
+
+            else -> {
+                isSystemInDarkTheme()
+            }
         }
     val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 

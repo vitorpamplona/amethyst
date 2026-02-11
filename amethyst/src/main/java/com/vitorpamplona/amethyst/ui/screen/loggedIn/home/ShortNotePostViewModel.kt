@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -261,9 +261,9 @@ open class ShortNotePostViewModel :
     var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().lnAddress()
 
-    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().lnAddress() != null
 
     fun user(): User = account.userProfile()
 
@@ -332,8 +332,8 @@ open class ShortNotePostViewModel :
 
             val user = account.userProfile()
 
-            canAddInvoice = user.info?.lnAddress() != null
-            canAddZapRaiser = user.info?.lnAddress() != null
+            canAddInvoice = user.lnAddress() != null
+            canAddZapRaiser = user.lnAddress() != null
             canUsePoll = originalNote == null
             multiOrchestrator = null
 
@@ -418,8 +418,8 @@ open class ShortNotePostViewModel :
     }
 
     private fun loadFromDraft(draftEvent: TextNoteEvent) {
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
 
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
@@ -581,10 +581,22 @@ open class ShortNotePostViewModel :
                 val quotes = event.taggedQuotes()
                 if (quotes.isNotEmpty()) "Quote" else "Post"
             }
-            is PollNoteEvent -> "Poll"
-            is VoiceEvent -> "Voice"
-            is VoiceReplyEvent -> "Voice Reply"
-            else -> "Post"
+
+            is PollNoteEvent -> {
+                "Poll"
+            }
+
+            is VoiceEvent -> {
+                "Voice"
+            }
+
+            is VoiceReplyEvent -> {
+                "Voice Reply"
+            }
+
+            else -> {
+                "Post"
+            }
         }
 
     suspend fun sendDraftSync() {
@@ -1115,6 +1127,7 @@ open class ShortNotePostViewModel :
                             voiceLocalFile = null
                             voiceRecording = null
                         }
+
                         is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
                             // For NIP95, we need to create the event and get the nevent URL
                             // This is handled differently - skip for now
@@ -1122,6 +1135,7 @@ open class ShortNotePostViewModel :
                         }
                     }
                 }
+
                 is UploadingState.Error -> {
                     onError(uploadErrorTitle, uploadVoiceFailed)
                     voiceRecording = null

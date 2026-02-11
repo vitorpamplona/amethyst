@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -250,7 +250,7 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
-    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings)
+    override val nip47SignerState = NwcSignerState(signer, nwcFilterAssembler, cache, scope, settings.zapPaymentRequest)
 
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
@@ -740,7 +740,7 @@ class Account(
                             outboxRelays.flow.value
                         } else {
                             replyToAuthor.inboxRelays()?.ifEmpty { null }?.toSet()
-                                ?: replyToAuthor.relaysBeingUsed.keys.ifEmpty { null }
+                                ?: replyToAuthor.allUsedRelaysOrNull()
                                 ?: cache.relayHints
                                     .hintsForKey(replyToAuthor.pubkeyHex)
                                     .ifEmpty { null }
@@ -767,7 +767,7 @@ class Account(
             notificationRelays.flow.value
         } else {
             user.inboxRelays()?.ifEmpty { null }?.toSet()
-                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.relaysBeingUsed.keys)
+                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.allUsedRelays())
         }
 
     private fun computeRelayListForLinkedUser(pubkey: HexKey): Set<NormalizedRelayUrl> =
@@ -822,7 +822,7 @@ class Account(
             } else {
                 val relays =
                     author.outboxRelays()?.ifEmpty { null }
-                        ?: author.relaysBeingUsed.keys.ifEmpty { null }
+                        ?: author.allUsedRelaysOrNull()
                         ?: cache.relayHints.hintsForKey(author.pubkeyHex)
 
                 relayList.addAll(relays)
@@ -1741,7 +1741,7 @@ class Account(
 
         val relayList =
             dvmPublicKey.inboxRelays()?.toSet()?.ifEmpty { null }
-                ?: (dvmPublicKey.relaysBeingUsed.keys + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
+                ?: (dvmPublicKey.allUsedRelays() + cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex))
 
         cache.justConsumeMyOwnEvent(request)
         onReady(request)

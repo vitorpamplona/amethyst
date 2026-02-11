@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -239,8 +239,12 @@ fun HomeScreenFloatingButton(
             .collectAsStateWithLifecycle()
 
         when (val myLocation = location) {
-            is LocationState.LocationResult.Success -> NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+            is LocationState.LocationResult.Success -> {
+                NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+            }
+
             is LocationState.LocationResult.LackPermission -> { }
+
             is LocationState.LocationResult.Loading -> { }
         }
     } else {

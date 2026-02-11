@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -53,7 +53,7 @@ fun RenderArticleList(
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {
-            0 ->
+            0 -> {
                 ArticleList(
                     modifier = Modifier.fillMaxSize(),
                     articles = publicArticles,
@@ -67,7 +67,9 @@ fun RenderArticleList(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-            1 ->
+            }
+
+            1 -> {
                 ArticleList(
                     modifier = Modifier.fillMaxSize(),
                     articles = privateArticles,
@@ -81,6 +83,7 @@ fun RenderArticleList(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -72,15 +72,18 @@ fun DisplayZapSplits(
         FlowRow {
             list.forEach {
                 when (it) {
-                    is ZapSplitSetupLnAddress ->
+                    is ZapSplitSetupLnAddress -> {
                         ClickableTextPrimary(it.lnAddress) { }
-                    is ZapSplitSetup ->
+                    }
+
+                    is ZapSplitSetup -> {
                         UserPicture(
                             userHex = it.pubKeyHex,
                             size = Size25dp,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
+                    }
                 }
             }
         }

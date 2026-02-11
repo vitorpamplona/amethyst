@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -157,6 +157,7 @@ class EventNotificationConsumer(
                     null
                 }
             }
+
             is SealedRumorEvent -> {
                 if (LocalCache.justConsume(event, null, false)) {
                     // new event
@@ -174,6 +175,7 @@ class EventNotificationConsumer(
                     null
                 }
             }
+
             else -> {
                 LocalCache.justConsume(event, null, false)
                 event

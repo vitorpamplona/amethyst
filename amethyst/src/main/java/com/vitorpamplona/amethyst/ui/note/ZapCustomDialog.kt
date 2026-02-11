@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -238,9 +238,11 @@ fun ZapCustomDialog(
                                 LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
                                     Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
                                 }
+
                                 LnZapEvent.ZapType.PRIVATE -> {
                                     Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
                                 }
+
                                 LnZapEvent.ZapType.NONZAP -> {
                                     Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
                                 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -39,7 +39,7 @@ fun filterByAuthor(
         mapOfSet {
             val relays =
                 key.authorRelayList()?.writeRelaysNorm()
-                    ?: (key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
+                    ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays).ifEmpty { null }
                     ?: defaultRelays.toList()
 
             relays.forEach {

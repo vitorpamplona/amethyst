@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -150,9 +150,18 @@ fun uriToRoute(
 
         val route =
             when (nip19) {
-                is NPub -> Route.Profile(nip19.hex)
-                is NProfile -> Route.Profile(nip19.hex)
-                is NNote -> Route.Note(nip19.hex)
+                is NPub -> {
+                    Route.Profile(nip19.hex)
+                }
+
+                is NProfile -> {
+                    Route.Profile(nip19.hex)
+                }
+
+                is NNote -> {
+                    Route.Note(nip19.hex)
+                }
+
                 is NEvent -> {
                     routeFor(
                         note = LocalCache.getOrCreateNote(nip19.hex),
@@ -182,7 +191,9 @@ fun uriToRoute(
                     }
                 }
 
-                else -> null
+                else -> {
+                    null
+                }
             }
 
         if (route != null) {

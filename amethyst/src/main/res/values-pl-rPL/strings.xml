@@ -499,7 +499,7 @@
     <string name="no">Nie</string>
     <string name="follow_list_selection">Lista obserwowanych</string>
     <string name="follow_list_kind3follows">Obserwowane</string>
-    <string name="follow_list_kind3follows_users_only">Obserwowane kontakty</string>
+    <string name="follow_list_kind3follows_users_only">Wszystkie obserwowane</string>
     <string name="follow_list_kind3_follows_users_only">Domyślna lista obserwowanych</string>
     <string name="follow_list_kind3follows_proxy">Obserwuje przez proxy</string>
     <string name="follow_list_aroundme">W pobliżu</string>
