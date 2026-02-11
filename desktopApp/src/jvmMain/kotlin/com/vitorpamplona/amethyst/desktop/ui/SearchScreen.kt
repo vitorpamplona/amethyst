@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -384,13 +384,25 @@ private fun SearchResultCard(
                 .fillMaxWidth()
                 .clickable {
                     when (result) {
-                        is SearchResult.UserResult -> onNavigateToProfile(result.pubKeyHex)
-                        is SearchResult.CachedUserResult -> onNavigateToProfile(result.user.pubkeyHex)
-                        is SearchResult.NoteResult -> onNavigateToThread(result.noteIdHex)
+                        is SearchResult.UserResult -> {
+                            onNavigateToProfile(result.pubKeyHex)
+                        }
+
+                        is SearchResult.CachedUserResult -> {
+                            onNavigateToProfile(result.user.pubkeyHex)
+                        }
+
+                        is SearchResult.NoteResult -> {
+                            onNavigateToThread(result.noteIdHex)
+                        }
+
                         is SearchResult.AddressResult -> {
                             onNavigateToThread("${result.kind}:${result.pubKeyHex}:${result.dTag}")
                         }
-                        is SearchResult.HashtagResult -> onNavigateToHashtag(result.hashtag)
+
+                        is SearchResult.HashtagResult -> {
+                            onNavigateToHashtag(result.hashtag)
+                        }
                     }
                 },
         colors =

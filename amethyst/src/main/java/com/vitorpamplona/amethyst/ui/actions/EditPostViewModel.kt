@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -102,7 +102,7 @@ open class EditPostViewModel : ViewModel() {
         edit: Note,
         versionLookingAt: Note?,
     ) {
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
 
         message = TextFieldValue(versionLookingAt?.event?.content ?: edit.event?.content ?: "")

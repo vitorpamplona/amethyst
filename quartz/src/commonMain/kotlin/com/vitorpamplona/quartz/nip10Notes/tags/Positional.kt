@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -41,10 +41,19 @@ fun List<ETag>.positionalMarkedTags(
     sortedWith { o1, o2 ->
         when {
             o1.eventId == o2.eventId -> 0
-            o1.eventId == root?.eventId -> -1 // root goes first
-            o2.eventId == root?.eventId -> 1 // root goes first
-            o1.eventId == replyingTo?.eventId -> 1 // reply event being responded to goes last
-            o2.eventId == replyingTo?.eventId -> -1 // reply event being responded to goes last
+
+            o1.eventId == root?.eventId -> -1
+
+            // root goes first
+            o2.eventId == root?.eventId -> 1
+
+            // root goes first
+            o1.eventId == replyingTo?.eventId -> 1
+
+            // reply event being responded to goes last
+            o2.eventId == replyingTo?.eventId -> -1
+
+            // reply event being responded to goes last
             else -> 0 // keep the relative order for any other tag
         }
     }.map {

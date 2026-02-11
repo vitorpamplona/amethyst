@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -64,11 +64,26 @@ class FeedTopNavFilterState(
 ) {
     fun loadFlowsFor(listName: String): IFeedFlowsType =
         when (listName) {
-            GLOBAL_FOLLOWS -> GlobalFeedFlow(followsRelays, proxyRelays)
-            ALL_FOLLOWS -> AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
-            ALL_USER_FOLLOWS -> AllUserFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
-            KIND3_FOLLOWS -> Kind3UserFollowsFeedFlow(kind3Follows, followsRelays, blockedRelays, proxyRelays)
-            AROUND_ME -> AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
+            GLOBAL_FOLLOWS -> {
+                GlobalFeedFlow(followsRelays, proxyRelays)
+            }
+
+            ALL_FOLLOWS -> {
+                AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+            }
+
+            ALL_USER_FOLLOWS -> {
+                AllUserFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+            }
+
+            KIND3_FOLLOWS -> {
+                Kind3UserFollowsFeedFlow(kind3Follows, followsRelays, blockedRelays, proxyRelays)
+            }
+
+            AROUND_ME -> {
+                AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
+            }
+
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {

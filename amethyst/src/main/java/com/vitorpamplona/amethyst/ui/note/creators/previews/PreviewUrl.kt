@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -235,6 +235,7 @@ private fun MyLoadUrlPreviewDirect(
                     }
                 }
             }
+
             else -> {
                 Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.aspectRatio(1f)) {
                     ClickableUrl(urlText, url)
@@ -288,11 +289,13 @@ private fun MyLoadUrlPreviewDirectFillWidth(
                     UrlPreviewCard(url, previewInfo = state.previewInfo)
                 }
             }
+
             is UrlPreviewState.Loading -> {
                 WaitAndDisplay {
                     DisplayUrlWithLoadingSymbol(url)
                 }
             }
+
             else -> {
                 ClickableUrl(urlText, url)
             }

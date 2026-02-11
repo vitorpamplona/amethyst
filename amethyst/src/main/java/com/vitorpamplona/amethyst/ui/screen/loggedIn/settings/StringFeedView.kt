@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -59,12 +59,15 @@ fun StringFeedView(
             is StringFeedState.Empty -> {
                 StringFeedEmpty(pre, post) { viewModel.invalidateData() }
             }
+
             is StringFeedState.FeedError -> {
                 FeedError(state.errorMessage) { viewModel.invalidateData() }
             }
+
             is StringFeedState.Loaded -> {
                 FeedLoaded(state, pre, post, inner)
             }
+
             is StringFeedState.Loading -> {
                 LoadingFeed()
             }

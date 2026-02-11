@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -176,26 +176,31 @@ fun FollowPackFeedScreen(
             state = pagerState,
         ) { page ->
             when (page) {
-                0 ->
+                0 -> {
                     RefresheableFeedView(
                         newThreadFeedViewModel,
                         null,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
-                1 ->
+                }
+
+                1 -> {
                     RefresheableFeedView(
                         conversationsFeedViewModel,
                         null,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
-                2 ->
+                }
+
+                2 -> {
                     UserFeedView(
                         membersFeedViewModel,
                         accountViewModel,
                         nav,
                     )
+                }
             }
         }
     }

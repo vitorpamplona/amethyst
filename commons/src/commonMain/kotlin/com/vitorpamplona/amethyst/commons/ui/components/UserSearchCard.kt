@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -78,7 +78,7 @@ fun UserSearchCard(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                val nip05 = user.nip05()
+                val nip05 = user.metadataOrNull()?.nip05()
                 if (nip05 != null) {
                     Text(
                         nip05,

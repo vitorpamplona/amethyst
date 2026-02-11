@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -84,8 +84,8 @@ fun LongFormCard(
     onAuthorClick: (String) -> Unit = {},
     onClick: () -> Unit = {},
 ) {
-    val author = localCache.getUserIfExists(event.pubKey)
-    val authorName = author?.info?.bestName() ?: event.pubKey.take(8)
+    val author = localCache.getOrCreateUser(event.pubKey)
+    val authorName = author.toBestDisplayName()
     val publishedAt = event.publishedAt() ?: event.createdAt
 
     Card(
@@ -237,6 +237,7 @@ fun ReadsScreen(
                     },
                 )
             }
+
             FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingLongFormFeedSubscription(
@@ -322,12 +323,15 @@ fun ReadsScreen(
             connectedRelays.isEmpty() -> {
                 LoadingState("Connecting to relays...")
             }
+
             feedMode == FeedMode.FOLLOWING && followedUsers.isEmpty() -> {
                 LoadingState("Loading followed users...")
             }
+
             events.isEmpty() && !initialLoadComplete -> {
                 LoadingState("Loading articles...")
             }
+
             events.isEmpty() && initialLoadComplete -> {
                 EmptyState(
                     title =
@@ -345,6 +349,7 @@ fun ReadsScreen(
                     onRefresh = { relayManager.connect() },
                 )
             }
+
             else -> {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),

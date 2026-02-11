@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -54,7 +54,12 @@ data class ContactTag(
     companion object {
         const val TAG_NAME = "p"
 
-        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].length == 64
+
+        fun isTagged(
+            tag: Array<String>,
+            pubkey: HexKey,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == pubkey
 
         fun parse(tag: Array<String>): ContactTag? {
             ensure(tag.has(1)) { return null }

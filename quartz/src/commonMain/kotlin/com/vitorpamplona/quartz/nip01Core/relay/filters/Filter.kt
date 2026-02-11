@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -80,8 +80,8 @@ class Filter(
         (ids == null || ids.isEmpty()) &&
             (authors == null || authors.isEmpty()) &&
             (kinds == null || kinds.isEmpty()) &&
-            (tags == null || tags.isEmpty() && tags.values.all { it.isNotEmpty() }) &&
-            (tagsAll == null || tagsAll.isEmpty() && tagsAll.values.all { it.isNotEmpty() }) &&
+            (tags == null || tags.isEmpty() || tags.values.all { it.isEmpty() }) &&
+            (tagsAll == null || tagsAll.isEmpty() || tagsAll.values.all { it.isEmpty() }) &&
             (since == null) &&
             (until == null) &&
             (limit == null) &&

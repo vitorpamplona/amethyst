@@ -20,8 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--dontobfuscate
-
 -ignorewarnings
 
 -keepattributes *Annotation*

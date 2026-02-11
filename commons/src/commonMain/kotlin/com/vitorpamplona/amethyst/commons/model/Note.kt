@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -33,16 +33,11 @@ import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -103,13 +98,11 @@ class AddressableNote(
     fun dTag(): String = address.dTag
 
     fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
-
-    fun toATag() = ATag(address, relayHintUrl())
 }
 
 @Stable
 open class Note(
-    val idHex: String,
+    val idHex: HexKey,
 ) : NotesGatherer {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
@@ -198,7 +191,10 @@ open class Note(
     fun relayHintUrl(): NormalizedRelayUrl? {
         // checks Community Events first
         when (val noteEvent = event) {
-            is CommunityDefinitionEvent -> noteEvent.relayUrls().firstOrNull()?.let { return it }
+            is CommunityDefinitionEvent -> {
+                noteEvent.relayUrls().firstOrNull()?.let { return it }
+            }
+
             is IsInPublicChatChannel -> {
                 inGatherers?.forEach {
                     if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
@@ -206,9 +202,11 @@ open class Note(
                     }
                 }
             }
+
             is LiveActivitiesEvent -> {
                 noteEvent.relays().ifEmpty { null }?.toSet()
             }
+
             is LiveActivitiesChatMessageEvent -> {
                 inGatherers?.forEach {
                     if (it is com.vitorpamplona.amethyst.commons.model.Channel) {
@@ -216,7 +214,10 @@ open class Note(
                     }
                 }
             }
-            is EphemeralChatEvent -> noteEvent.roomId()?.let { return it.relayUrl }
+
+            is EphemeralChatEvent -> {
+                noteEvent.roomId()?.let { return it.relayUrl }
+            }
         }
 
         val currentOutbox = author?.outboxRelays()?.toSet()
@@ -231,7 +232,7 @@ open class Note(
 
             return relays.firstOrNull()
         } else {
-            currentOutbox?.firstOrNull() ?: author?.latestMetadataRelay
+            currentOutbox?.firstOrNull() ?: author?.mostUsedNonLocalRelay()
         }
     }
 
@@ -916,40 +917,12 @@ open class Note(
         }
     }
 
-    fun toETag(): ETag {
-        val noteEvent = event
-        return if (noteEvent != null) {
-            ETag(noteEvent.id, relayHintUrl(), noteEvent.pubKey)
-        } else {
-            ETag(idHex, relayHintUrl(), author?.pubkeyHex)
-        }
-    }
-
-    fun toEId(): EventReference {
-        val noteEvent = event
-        return if (noteEvent != null) {
-            // uses the confirmed event id if available
-            EventReference(noteEvent.id, noteEvent.pubKey, relayHintUrl())
-        } else {
-            EventReference(idHex, author?.pubkeyHex, relayHintUrl())
-        }
-    }
-
     inline fun <reified T : Event> toEventHint(): EventHintBundle<T>? {
         val safeEvent = event
         return if (safeEvent is T) {
             EventHintBundle(safeEvent, relayHintUrl(), author?.bestRelayHint())
         } else {
             null
-        }
-    }
-
-    fun toMarkedETag(marker: MarkedETag.MARKER): MarkedETag {
-        val noteEvent = event
-        return if (noteEvent != null) {
-            MarkedETag(noteEvent.id, relayHintUrl(), marker, noteEvent.pubKey)
-        } else {
-            MarkedETag(idHex, relayHintUrl(), marker, author?.pubkeyHex)
         }
     }
 }
@@ -973,9 +946,8 @@ class NoteFlowSet(
     fun author() =
         metadata.stateFlow.flatMapLatest {
             it.note.author
-                ?.flow()
-                ?.metadata
-                ?.stateFlow ?: MutableStateFlow(null)
+                ?.metadata()
+                ?.flow ?: MutableStateFlow(null)
         }
 
     fun isInUse(): Boolean =

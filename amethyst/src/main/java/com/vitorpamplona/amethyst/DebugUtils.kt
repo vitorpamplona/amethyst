@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -98,9 +98,7 @@ fun debugState(context: Context) {
     Log.d(
         STATE_DUMP_TAG,
         "Users: " +
-            LocalCache.users.filter { _, it -> it.flowSet != null }.size +
-            " / " +
-            LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
+            LocalCache.users.filter { _, it -> it.metadataOrNull() != null }.size +
             " / " +
             LocalCache.users.size(),
     )
@@ -147,10 +145,8 @@ fun debugState(context: Context) {
     )
     Log.d(
         STATE_DUMP_TAG,
-        "Observable Events: " +
-            LocalCache.observablesByKindAndETag.size +
-            " / " +
-            LocalCache.observablesByKindAndAuthor.size,
+        "Observables: " +
+            LocalCache.observables.size,
     )
 
     Log.d(

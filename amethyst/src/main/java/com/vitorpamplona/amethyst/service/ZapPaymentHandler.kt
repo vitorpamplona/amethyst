@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -97,10 +97,11 @@ class ZapPaymentHandler(
                                 weight = setup.weight,
                             )
                         }
+
                         is ZapSplitSetup -> {
                             val user = LocalCache.checkGetOrCreateUser(setup.pubKeyHex)
                             UnverifiedZapSplitSetup(
-                                lnAddress = user?.info?.lnAddress(),
+                                lnAddress = user?.lnAddress(),
                                 weight = setup.weight,
                                 relay = setup.relay,
                                 user = user,
@@ -111,7 +112,7 @@ class ZapPaymentHandler(
             } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
                 noteEvent.hosts().map {
                     val user = LocalCache.checkGetOrCreateUser(it.pubKey)
-                    val lnAddress = user?.info?.lnAddress()
+                    val lnAddress = user?.lnAddress()
                     UnverifiedZapSplitSetup(lnAddress, relay = it.relayHint, user = user)
                 }
             } else if (noteEvent is AppDefinitionEvent) {
@@ -119,11 +120,16 @@ class ZapPaymentHandler(
                 if (appLud16 != null) {
                     listOf(UnverifiedZapSplitSetup(appLud16))
                 } else {
-                    val lud16 = note.author?.info?.lnAddress()
+                    val lud16 =
+                        note.author?.lnAddress()
                     listOf(UnverifiedZapSplitSetup(lud16))
                 }
             } else {
-                listOf(UnverifiedZapSplitSetup(note.author?.info?.lnAddress()))
+                listOf(
+                    UnverifiedZapSplitSetup(
+                        note.author?.lnAddress(),
+                    ),
+                )
             }
 
         if (showErrorIfNoLnAddress) {

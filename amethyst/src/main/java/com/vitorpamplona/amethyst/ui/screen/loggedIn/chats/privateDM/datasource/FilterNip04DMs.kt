@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -49,15 +49,17 @@ fun filterNip04DMs(
 
         val outbox =
             authorHomeRelayEvent?.writeRelaysNorm()
+                ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+                ?: emptyList()
 
         groupOutboxRelays.addAll(outbox)
 
         val inbox =
             authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
+                ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+                ?: emptyList()
 
         groupInboxRelays.addAll(inbox)
     }

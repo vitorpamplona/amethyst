@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -45,7 +45,9 @@ object FlexibleIntListSerializer : KSerializer<List<String>?> {
 
         return when (val element = decoder.decodeJsonElement()) {
             // Handle JSON null
-            is JsonNull -> null
+            is JsonNull -> {
+                null
+            }
 
             // Handle array format (spec-compliant): [1, 2, 3]
             is JsonArray -> {
@@ -72,7 +74,9 @@ object FlexibleIntListSerializer : KSerializer<List<String>?> {
             }
 
             // Unsupported format (strings, objects, etc.)
-            else -> null
+            else -> {
+                null
+            }
         }
     }
 

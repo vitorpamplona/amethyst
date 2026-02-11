@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -102,7 +102,9 @@ object Nip44 {
                 v2.decrypt(encryptedInfo, privateKey, pubKey)
             }
 
-            else -> throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${info.v}")
+            else -> {
+                throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${info.v}")
+            }
         }
     }
 

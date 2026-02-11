@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -268,7 +268,7 @@ private fun PeopleListPager(
     selectedSetState.value?.let { selectedSet ->
         HorizontalPager(state = pagerState, modifier) { page ->
             when (page) {
-                0 ->
+                0 -> {
                     PeopleListView(
                         memberList = selectedSet.publicMembersList,
                         onDeleteUser = { user ->
@@ -278,8 +278,9 @@ private fun PeopleListPager(
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                }
 
-                1 ->
+                1 -> {
                     PeopleListView(
                         memberList = selectedSet.privateMembersList,
                         onDeleteUser = { user ->
@@ -289,6 +290,7 @@ private fun PeopleListPager(
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -306,7 +306,10 @@ class VoiceAnonymizer {
                     val randomShift = 0.9 + (Math.random() * 0.2)
                     baseFactor * randomShift
                 }
-                else -> baseFactor
+
+                else -> {
+                    baseFactor
+                }
             }
         val totalSamples = pcmData.size
         val processedSamples = ArrayList<Float>(totalSamples)

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -257,7 +257,7 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
                 dialogViewModel.moneyOperationsViaTor,
             )
 
-            /**
+            /*
              * Too hard to separate Coil into regular images and profile pics
              SwitchSettingsRow(
              R.string.tor_use_profile_pictures,

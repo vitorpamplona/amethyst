@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -58,9 +58,11 @@ class TorManager(
                 TorType.INTERNAL -> {
                     emitAll(service.status)
                 }
+
                 TorType.OFF -> {
                     emit(TorServiceStatus.Off)
                 }
+
                 TorType.EXTERNAL -> {
                     if (externalSocksPort > 0) {
                         emit(TorServiceStatus.Active(externalSocksPort))

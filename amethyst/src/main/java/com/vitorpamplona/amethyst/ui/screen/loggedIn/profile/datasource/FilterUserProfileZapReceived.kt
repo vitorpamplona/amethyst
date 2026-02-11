@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -35,7 +35,7 @@ fun filterUserProfileZapsReceived(
 ): List<RelayBasedFilter> {
     val relays =
         user.inboxRelays()?.ifEmpty { null }
-            ?: user.relaysBeingUsed.keys.ifEmpty { null }
+            ?: user.allUsedRelaysOrNull()
             ?: LocalCache.relayHints.hintsForKey(user.pubkeyHex)
 
     return relays.map { relay ->
@@ -45,7 +45,7 @@ fun filterUserProfileZapsReceived(
                 Filter(
                     kinds = UserProfileZapReceiverKinds,
                     tags = mapOf("p" to listOf(user.pubkeyHex)),
-                    limit = 200,
+                    limit = 1000,
                     since = since?.get(relay)?.time,
                 ),
         )

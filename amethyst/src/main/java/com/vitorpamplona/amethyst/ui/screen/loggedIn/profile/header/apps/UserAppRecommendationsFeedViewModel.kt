@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
+@Stable
 class UserAppRecommendationsFeedViewModel(
     val user: User,
 ) : AndroidFeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {

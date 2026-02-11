@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -171,9 +171,11 @@ class NwcPaymentHandler(
             is PayInvoiceSuccessResponse -> {
                 PaymentResult.Success(response.result?.preimage)
             }
+
             is PayInvoiceErrorResponse -> {
                 PaymentResult.Error(response.error?.message ?: "Unknown error")
             }
+
             else -> {
                 PaymentResult.Error("Unexpected response type: ${response.resultType}")
             }

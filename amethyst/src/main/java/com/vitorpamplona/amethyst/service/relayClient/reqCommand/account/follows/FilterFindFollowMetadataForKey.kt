@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -103,7 +103,7 @@ fun pickRelaysToLoadUsers(
                 }
             } else {
                 // if not, tries hints first.
-                val hints = key.relaysBeingUsed.keys + LocalCache.relayHints.hintsForKey(key.pubkeyHex)
+                val hints = key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex)
 
                 val leftToTryOnHints = hints - tried
 

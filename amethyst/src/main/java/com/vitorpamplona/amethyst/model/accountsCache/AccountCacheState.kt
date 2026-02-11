@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -68,13 +68,17 @@ class AccountCacheState(
                     NostrSignerInternal(accountSettings.keyPair)
                 } else {
                     when (val packageName = accountSettings.externalSignerPackageName) {
-                        null -> NostrSignerInternal(accountSettings.keyPair)
-                        else ->
+                        null -> {
+                            NostrSignerInternal(accountSettings.keyPair)
+                        }
+
+                        else -> {
                             NostrSignerExternal(
                                 pubKey = accountSettings.keyPair.pubKey.toHexKey(),
                                 packageName = packageName,
                                 contentResolver = contentResolverFn(),
                             )
+                        }
                     }
                 },
             accountSettings = accountSettings,

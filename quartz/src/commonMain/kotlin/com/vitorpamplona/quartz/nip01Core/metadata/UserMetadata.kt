@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.metadata
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip01Core.core.ImmutableListOfLists
+import com.vitorpamplona.quartz.lightning.Lud06
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -38,20 +38,12 @@ class UserMetadata {
     var about: String? = null
     var bot: Boolean? = null
     var pronouns: String? = null
-
     var nip05: String? = null
-    var nip05Verified: Boolean = false
-    var nip05LastVerificationTime: Long? = 0
-
     var domain: String? = null
     var lud06: String? = null
     var lud16: String? = null
 
     var twitter: String? = null
-
-    @kotlinx.serialization.Transient
-    @kotlin.jvm.Transient
-    var tags: ImmutableListOfLists<String>? = null
 
     fun anyName(): String? = displayName ?: name
 
@@ -63,6 +55,22 @@ class UserMetadata {
     fun lnAddress(): String? = lud16 ?: lud06
 
     fun bestName(): String? = displayName ?: name
+
+    fun firstName(): String? {
+        val fullName = bestName() ?: return null
+
+        val names = fullName.split(' ')
+
+        val firstName =
+            if (names[0].length <= 3) {
+                // too short. Remove Dr.
+                "${names[0]} ${names.getOrNull(1) ?: ""}"
+            } else {
+                names[0]
+            }
+
+        return firstName
+    }
 
     fun nip05(): String? = nip05
 
@@ -94,5 +102,15 @@ class UserMetadata {
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
+    }
+
+    fun convertLud06toLud16IfNeeded() {
+        if (lud16.isNullOrBlank()) {
+            lud06?.let {
+                if (it.lowercase().startsWith("lnurl")) {
+                    lud16 = Lud06().toLud16(it)
+                }
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -141,7 +141,4 @@ data class BroadcastEvent(
 data class BroadcastResult(
     val broadcast: BroadcastEvent,
     val isSuccess: Boolean,
-) {
-    val successCount: Int get() = broadcast.successCount
-    val totalRelays: Int get() = broadcast.totalRelays
-}
+)

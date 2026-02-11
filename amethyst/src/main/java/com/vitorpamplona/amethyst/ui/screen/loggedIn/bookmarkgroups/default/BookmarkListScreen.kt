@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -118,21 +118,23 @@ private fun RenderBookmarkScreen(
         Column(Modifier.padding(it).fillMaxHeight()) {
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
-                    0 ->
+                    0 -> {
                         RefresheableFeedView(
                             privateFeedViewModel,
                             null,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
+                    }
 
-                    1 ->
+                    1 -> {
                         RefresheableFeedView(
                             publicFeedViewModel,
                             null,
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
+                    }
                 }
             }
         }

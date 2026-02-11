@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -584,9 +584,15 @@ fun authenticate(
                     super.onAuthenticationError(errorCode, errString)
 
                     when (errorCode) {
-                        BiometricPrompt.ERROR_NEGATIVE_BUTTON -> keyguardPrompt()
-                        BiometricPrompt.ERROR_LOCKOUT -> keyguardPrompt()
-                        else ->
+                        BiometricPrompt.ERROR_NEGATIVE_BUTTON -> {
+                            keyguardPrompt()
+                        }
+
+                        BiometricPrompt.ERROR_LOCKOUT -> {
+                            keyguardPrompt()
+                        }
+
+                        else -> {
                             onError(
                                 stringRes(context, R.string.biometric_authentication_failed),
                                 stringRes(
@@ -595,6 +601,7 @@ fun authenticate(
                                     errString.toString(),
                                 ),
                             )
+                        }
                     }
                 }
 

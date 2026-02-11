@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -81,7 +81,7 @@ class BlockPeopleListState(
             )
         } else {
             PeopleListEvent.create(
-                name = PeopleListEvent.BLOCK_LIST_D_TAG,
+                title = PeopleListEvent.BLOCK_LIST_D_TAG,
                 person = UserTag(pubkeyHex),
                 isPrivate = true,
                 signer = signer,

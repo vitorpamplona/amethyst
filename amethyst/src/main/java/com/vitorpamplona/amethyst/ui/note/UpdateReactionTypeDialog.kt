@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -326,12 +326,15 @@ private fun RenderReactionOption(
                         )
                     }
                 }
-                "-" ->
+
+                "-" -> {
                     Text(
                         text = "\uD83D\uDC4E ✖",
                         color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
+                }
+
                 else -> {
                     if (EmojiCoder.isCoded(reactionType)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

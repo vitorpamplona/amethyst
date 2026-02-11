@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -25,7 +25,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchWatcherSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchPostWatcherSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchUserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -46,7 +47,8 @@ class SearchFilterAssembler(
 ) : MutableComposeSubscriptionManager<SearchQueryState>(scope) {
     val group =
         listOf(
-            SearchWatcherSubAssembler(cache, client, ::allKeys),
+            SearchUserWatcherSubAssembler(cache, client, ::allKeys),
+            SearchPostWatcherSubAssembler(cache, client, ::allKeys),
         )
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

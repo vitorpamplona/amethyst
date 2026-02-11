@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -93,6 +93,7 @@ class EnsureTest {
             (args[1].length == KEY_SIZE),
             (args[1].isHex()),
             -> null
+
             else -> args[0] + args[1]
         }
 

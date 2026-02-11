@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -316,7 +316,7 @@ class PeopleListName(
     override fun name(): String {
         val noteEvent = note.event
         return if (noteEvent is PeopleListEvent) {
-            noteEvent.nameOrTitle() ?: note.dTag()
+            noteEvent.titleOrName() ?: note.dTag()
         } else if (noteEvent is FollowListEvent) {
             noteEvent.title() ?: note.dTag()
         } else {

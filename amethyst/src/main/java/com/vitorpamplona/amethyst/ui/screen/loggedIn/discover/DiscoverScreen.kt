@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -305,9 +305,11 @@ private fun RenderDiscoverFeed(
             is FeedState.Empty -> {
                 FeedEmpty(feedContentState::invalidateData)
             }
+
             is FeedState.FeedError -> {
                 FeedError(state.errorMessage, feedContentState::invalidateData)
             }
+
             is FeedState.Loaded -> {
                 DiscoverFeedColumnsLoaded(
                     state,
@@ -318,6 +320,7 @@ private fun RenderDiscoverFeed(
                     nav,
                 )
             }
+
             is FeedState.Loading -> {
                 LoadingFeed()
             }
@@ -368,9 +371,11 @@ private fun RenderDiscoverFeed(
             is FeedState.Empty -> {
                 FeedEmpty(feedContentState::invalidateData)
             }
+
             is FeedState.FeedError -> {
                 FeedError(state.errorMessage, feedContentState::invalidateData)
             }
+
             is FeedState.Loaded -> {
                 DiscoverFeedLoaded(
                     state,
@@ -381,6 +386,7 @@ private fun RenderDiscoverFeed(
                     nav,
                 )
             }
+
             is FeedState.Loading -> {
                 LoadingFeed()
             }

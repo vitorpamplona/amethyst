@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -52,6 +52,7 @@ fun DisplayLocationObserver(viewModel: ILocationGrabber) {
                 lineHeight = 12.sp,
             )
         }
+
         LocationState.LocationResult.Loading -> {
             Text(
                 text = stringRes(R.string.loading_location),

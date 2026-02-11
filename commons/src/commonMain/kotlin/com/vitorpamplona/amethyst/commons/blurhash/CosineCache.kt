@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -60,6 +60,7 @@ object CosineCache {
                 cacheCosinesY.put(height * numCompY, it)
             }
         }
+
         else -> {
             cacheCosinesY[height * numCompY]!!
         }
@@ -77,6 +78,9 @@ object CosineCache {
                 cos(PI * x * i / width)
             }.also { cacheCosinesX.put(width * numCompX, it) }
         }
-        else -> cacheCosinesX[width * numCompX]!!
+
+        else -> {
+            cacheCosinesX[width * numCompX]!!
+        }
     }
 }

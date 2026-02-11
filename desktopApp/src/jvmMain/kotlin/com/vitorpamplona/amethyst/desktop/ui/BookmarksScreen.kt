@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -266,6 +266,7 @@ fun BookmarksScreen(
             isLoading && !hasReceivedEose -> {
                 LoadingState(message = "Loading bookmarks...")
             }
+
             currentBookmarkIds.isEmpty() && hasReceivedEose -> {
                 EmptyState(
                     title = if (selectedTab == BookmarkTab.PUBLIC) "No public bookmarks" else "No private bookmarks",
@@ -277,6 +278,7 @@ fun BookmarksScreen(
                         },
                 )
             }
+
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

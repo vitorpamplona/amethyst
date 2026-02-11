@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -118,7 +118,7 @@ class PeopleListsState(
     suspend fun PeopleListEvent.toUI() =
         PeopleList(
             identifierTag = this.dTag(),
-            title = this.nameOrTitle() ?: this.dTag(),
+            title = this.titleOrName() ?: this.dTag(),
             description = this.description(),
             image = this.image(),
             privateMembers = cache.load(decryptionCache.privateUserIdSet(this)),
@@ -197,7 +197,7 @@ class PeopleListsState(
         val newListTemplate =
             PeopleListEvent.build(
                 dTag = dTag,
-                name = listName,
+                title = listName,
                 publicMembers = if (!isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
                 privateMembers = if (isPrivate && member != null) listOf(member.toUserTag()) else emptyList(),
                 signer = account.signer,

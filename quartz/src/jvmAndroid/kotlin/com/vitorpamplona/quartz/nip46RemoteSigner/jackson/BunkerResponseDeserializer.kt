@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -50,8 +50,14 @@ class BunkerResponseDeserializer : StdDeserializer<BunkerResponse>(BunkerRespons
 
         if (result != null) {
             when (result) {
-                BunkerResponseAck.RESULT -> return BunkerResponseAck.parse(id, result, error)
-                BunkerResponsePong.RESULT -> return BunkerResponsePong.parse(id, result, error)
+                BunkerResponseAck.RESULT -> {
+                    return BunkerResponseAck.parse(id, result, error)
+                }
+
+                BunkerResponsePong.RESULT -> {
+                    return BunkerResponsePong.parse(id, result, error)
+                }
+
                 else -> {
                     if (result.length == 64 && Hex.isHex(result)) {
                         return BunkerResponsePublicKey.parse(id, result)

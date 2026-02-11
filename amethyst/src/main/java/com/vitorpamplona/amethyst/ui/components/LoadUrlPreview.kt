@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -73,11 +73,13 @@ fun LoadUrlPreviewDirect(
             is UrlPreviewState.Loaded -> {
                 RenderLoaded(state, url, callbackUri, accountViewModel)
             }
+
             is UrlPreviewState.Loading -> {
                 WaitAndDisplay {
                     DisplayUrlWithLoadingSymbol(url)
                 }
             }
+
             else -> {
                 ClickableUrl(urlText, url)
             }

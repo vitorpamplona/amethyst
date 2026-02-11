@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -268,6 +268,7 @@ fun FeedScreen(
                     },
                 )
             }
+
             FeedMode.FOLLOWING -> {
                 if (followedUsers.isNotEmpty()) {
                     createFollowingFeedSubscription(
@@ -333,7 +334,11 @@ fun FeedScreen(
         // Only fetch metadata for users we don't have yet
         val missingPubkeys =
             zapSenderPubkeys.filter { pubkey ->
-                localCache.getUserIfExists(pubkey)?.info == null
+                localCache
+                    .getUserIfExists(pubkey)
+                    ?.metadataOrNull()
+                    ?.flow
+                    ?.value == null
             }
         if (missingPubkeys.isEmpty()) {
             return@rememberSubscription null
@@ -449,7 +454,11 @@ fun FeedScreen(
         // Only fetch metadata for users we don't have yet
         val missingPubkeys =
             authorPubkeys.filter { pubkey ->
-                localCache.getUserIfExists(pubkey)?.info == null
+                localCache
+                    .getUserIfExists(pubkey)
+                    ?.metadataOrNull()
+                    ?.flow
+                    ?.value == null
             }
         if (missingPubkeys.isEmpty()) {
             return@rememberSubscription null

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -65,7 +65,9 @@ class CommandSerializer : StdSerializer<Command>(Command::class.java) {
                 }
             }
 
-            else -> null
+            else -> {
+                null
+            }
         }
 
         gen.writeEndArray()
