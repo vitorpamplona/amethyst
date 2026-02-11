@@ -28,16 +28,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,51 +54,38 @@ import java.util.UUID
 class BroadcastTracker {
     companion object {
         private const val TAG = "BroadcastTracker"
-        private const val TIMEOUT_SECONDS = 15L
-        const val COMPLETED_DISPLAY_DURATION_MS = 10_000L // SnackbarDuration.Long equivalent
+        const val TIMEOUT_SECONDS = 10L
     }
 
-    private val _activeBroadcasts = MutableStateFlow<List<BroadcastEvent>>(emptyList())
-    val activeBroadcasts: StateFlow<List<BroadcastEvent>> = _activeBroadcasts.asStateFlow()
-
-    private val _completedBroadcast = MutableSharedFlow<BroadcastEvent>(extraBufferCapacity = 10)
-    val completedBroadcast: SharedFlow<BroadcastEvent> = _completedBroadcast.asSharedFlow()
-
-    // Event cache for retries - maps tracking ID to original Event
-    private val eventCache = mutableMapOf<String, Event>()
+    private val _activeBroadcasts = MutableStateFlow<ImmutableList<BroadcastEvent>>(persistentListOf())
+    val activeBroadcasts: StateFlow<ImmutableList<BroadcastEvent>> = _activeBroadcasts.asStateFlow()
 
     /**
      * Tracks an event broadcast to relays with live progress updates.
      *
      * @param event The Nostr event to broadcast
-     * @param eventName Human-readable name (e.g., "Boost", "Reaction")
      * @param relays Target relays to send to
      * @param client The Nostr client for sending
-     * @return BroadcastResult with final status
      */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun trackBroadcast(
         event: Event,
-        eventName: String,
         relays: Set<NormalizedRelayUrl>,
         client: INostrClient,
-    ): BroadcastResult {
+    ) {
         val trackingId = UUID.randomUUID().toString()
 
         val broadcast =
             BroadcastEvent(
                 id = trackingId,
-                eventId = event.id,
-                eventName = eventName,
-                kind = event.kind,
+                event = event,
                 targetRelays = relays.toList(),
             )
 
         // Add to active broadcasts and cache event for retries
-        _activeBroadcasts.update { it + broadcast }
-        eventCache[trackingId] = event
+        _activeBroadcasts.update { (it + broadcast).toImmutableList() }
 
-        Log.d(TAG, "Starting broadcast $trackingId: $eventName (kind ${event.kind}) to ${relays.size} relays")
+        Log.d(TAG, "Starting broadcast $trackingId (kind ${event.kind}) to ${relays.size} relays")
 
         val resultChannel = Channel<RelayResponse>(UNLIMITED)
 
@@ -112,7 +99,7 @@ class BroadcastTracker {
                         resultChannel.trySend(
                             RelayResponse(
                                 relay = relay.url,
-                                result = RelayResult.Error("CONNECTION_ERROR", errorMessage),
+                                result = RelayResult.Error(errorMessage),
                             ),
                         )
                         Log.d(TAG, "[$trackingId] Cannot connect to ${relay.url}: $errorMessage")
@@ -124,7 +111,7 @@ class BroadcastTracker {
                         resultChannel.trySend(
                             RelayResponse(
                                 relay = relay.url,
-                                result = RelayResult.Error("DISCONNECTED", "Relay disconnected"),
+                                result = RelayResult.Error("Relay disconnected before completion"),
                             ),
                         )
                         Log.d(TAG, "[$trackingId] Disconnected from ${relay.url}")
@@ -145,8 +132,7 @@ class BroadcastTracker {
                                     if (msg.success) {
                                         RelayResult.Success
                                     } else {
-                                        val (code, message) = parseOkError(msg.message)
-                                        RelayResult.Error(code, message)
+                                        RelayResult.Error(msg.message)
                                     }
                                 resultChannel.trySend(RelayResponse(relay.url, result))
                                 Log.d(TAG, "[$trackingId] Response from ${relay.url}: success=${msg.success} message=${msg.message}")
@@ -177,7 +163,7 @@ class BroadcastTracker {
 
                                 // Update active broadcasts with new progress
                                 _activeBroadcasts.update { list ->
-                                    list.map { if (it.id == trackingId) currentBroadcast else it }
+                                    list.map { if (it.id == trackingId) currentBroadcast else it }.toImmutableList()
                                 }
                             }
                         }
@@ -200,15 +186,11 @@ class BroadcastTracker {
         resultChannel.close()
 
         // Remove from active, emit to completed
-        _activeBroadcasts.update { list -> list.filter { it.id != trackingId } }
-        _completedBroadcast.emit(finalBroadcast)
+        _activeBroadcasts.update { list ->
+            list.map { if (it.id == trackingId) finalBroadcast else it }.toImmutableList()
+        }
 
         Log.d(TAG, "Broadcast $trackingId complete: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
-
-        return BroadcastResult(
-            broadcast = finalBroadcast,
-            isSuccess = finalBroadcast.successCount > 0,
-        )
     }
 
     /**
@@ -220,17 +202,18 @@ class BroadcastTracker {
         relays: Set<NormalizedRelayUrl>,
     ) {
         _activeBroadcasts.update { list ->
-            list.map { broadcast ->
-                if (broadcast.id == broadcastId) {
-                    var updated = broadcast
-                    relays.forEach { relay ->
-                        updated = updated.withResult(relay, RelayResult.Retrying)
+            list
+                .map { broadcast ->
+                    if (broadcast.id == broadcastId) {
+                        var updated = broadcast
+                        relays.forEach { relay ->
+                            updated = updated.withResult(relay, RelayResult.Retrying)
+                        }
+                        updated.copy(status = BroadcastStatus.IN_PROGRESS)
+                    } else {
+                        broadcast
                     }
-                    updated.copy(status = BroadcastStatus.IN_PROGRESS)
-                } else {
-                    broadcast
-                }
-            }
+                }.toImmutableList()
         }
     }
 
@@ -248,8 +231,8 @@ class BroadcastTracker {
         broadcast: BroadcastEvent,
         client: INostrClient,
         specificRelay: NormalizedRelayUrl? = null,
-    ): BroadcastEvent? {
-        val event = eventCache[broadcast.id] ?: return null
+    ): BroadcastEvent {
+        val event = broadcast.event
 
         val relaysToRetry =
             if (specificRelay != null) {
@@ -272,7 +255,7 @@ class BroadcastTracker {
                 relaysToRetry.forEach { relay ->
                     updated = updated.withResult(relay, RelayResult.Retrying)
                 }
-                list + updated.copy(status = BroadcastStatus.IN_PROGRESS)
+                (list + updated.copy(status = BroadcastStatus.IN_PROGRESS)).toImmutableList()
             }
         }
 
@@ -289,7 +272,7 @@ class BroadcastTracker {
                         resultChannel.trySend(
                             RelayResponse(
                                 relay = relay.url,
-                                result = RelayResult.Error("CONNECTION_ERROR", errorMessage),
+                                result = RelayResult.Error(errorMessage),
                             ),
                         )
                         Log.d(TAG, "[${broadcast.id}] Retry cannot connect to ${relay.url}: $errorMessage")
@@ -301,7 +284,7 @@ class BroadcastTracker {
                         resultChannel.trySend(
                             RelayResponse(
                                 relay = relay.url,
-                                result = RelayResult.Error("DISCONNECTED", "Relay disconnected"),
+                                result = RelayResult.Error("Relay disconnected before completion"),
                             ),
                         )
                         Log.d(TAG, "[${broadcast.id}] Retry disconnected from ${relay.url}")
@@ -322,8 +305,7 @@ class BroadcastTracker {
                                     if (msg.success) {
                                         RelayResult.Success
                                     } else {
-                                        val (code, message) = parseOkError(msg.message)
-                                        RelayResult.Error(code, message)
+                                        RelayResult.Error(msg.message)
                                     }
                                 resultChannel.trySend(RelayResponse(relay.url, result))
                                 Log.d(TAG, "[${broadcast.id}] Retry response from ${relay.url}: success=${msg.success}")
@@ -353,7 +335,7 @@ class BroadcastTracker {
                                 currentBroadcast = currentBroadcast.withResult(response.relay, response.result)
 
                                 _activeBroadcasts.update { list ->
-                                    list.map { if (it.id == broadcast.id) currentBroadcast else it }
+                                    list.map { if (it.id == broadcast.id) currentBroadcast else it }.toImmutableList()
                                 }
                             }
                         }
@@ -395,12 +377,7 @@ class BroadcastTracker {
 
         // Update in active broadcasts
         _activeBroadcasts.update { list ->
-            list.map { if (it.id == broadcast.id) finalBroadcast else it }
-        }
-
-        // Emit to completed if all done
-        if (finalBroadcast.status != BroadcastStatus.IN_PROGRESS) {
-            _completedBroadcast.emit(finalBroadcast)
+            list.map { if (it.id == broadcast.id) finalBroadcast else it }.toImmutableList()
         }
 
         Log.d(TAG, "Retry complete for ${broadcast.id}: ${finalBroadcast.successCount}/${finalBroadcast.totalRelays} success")
@@ -409,42 +386,10 @@ class BroadcastTracker {
     }
 
     /**
-     * Gets details for a specific broadcast by tracking ID.
-     */
-    fun getActiveBroadcast(trackingId: String): BroadcastEvent? = _activeBroadcasts.value.find { it.id == trackingId }
-
-    /**
-     * Gets the cached event for a broadcast (for retries).
-     */
-    fun getCachedEvent(trackingId: String): Event? = eventCache[trackingId]
-
-    /**
-     * Removes a broadcast from cache (call after COMPLETED_DISPLAY_DURATION_MS expires).
-     */
-    fun expireBroadcast(trackingId: String) {
-        eventCache.remove(trackingId)
-        Log.d(TAG, "Expired broadcast $trackingId from cache")
-    }
-
-    /**
      * Clears all active broadcasts and cache (e.g., on logout).
      */
     fun clear() {
-        _activeBroadcasts.update { emptyList() }
-        eventCache.clear()
-    }
-
-    /**
-     * Parses NIP-20 OK error message into code and description.
-     * Format: "prefix: message" or just "message"
-     */
-    private fun parseOkError(message: String): Pair<String, String?> {
-        val parts = message.split(":", limit = 2)
-        return if (parts.size == 2) {
-            parts[0].trim().uppercase() to parts[1].trim()
-        } else {
-            "ERROR" to message.takeIf { it.isNotBlank() }
-        }
+        _activeBroadcasts.update { persistentListOf() }
     }
 
     private data class RelayResponse(

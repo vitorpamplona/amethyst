@@ -1495,4 +1495,13 @@
     <string name="broadcasting">Broadcasting</string>
     <string name="broadcasting_name">Broadcasting %1$s</string>
     <string name="broadcasting_number_events">Broadcasting %1$d events...</string>
+    <string name="sent_number_events">%1$d events sent</string>
+
+    <string name="bradcasting_result_partial">Some events failed</string>
+    <string name="bradcasting_result_success">All events succeeded</string>
+    <string name="bradcasting_result_failure">All events failed</string>
+
+    <string name="reaction">Reaction</string>
+    <string name="voice_post">Voice Post</string>
+    <string name="voice_reply">Voice Reply</string>
 </resources>

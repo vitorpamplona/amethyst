@@ -31,6 +31,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,14 +74,22 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
 import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import java.util.UUID
 
 private const val MAX_EXPANDED_SECTIONS = 2
 
@@ -90,14 +99,36 @@ private const val MAX_EXPANDED_SECTIONS = 2
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MultiBroadcastDetailsSheet(
-    broadcasts: List<BroadcastEvent>,
-    onDismiss: () -> Unit,
-    onRetryRelay: (BroadcastEvent, NormalizedRelayUrl) -> Unit,
-    onRetryAllFailed: (BroadcastEvent) -> Unit,
+    broadcasts: ImmutableList<BroadcastEvent>,
+    onDismiss: () -> Unit = {},
+    onRetryRelay: (BroadcastEvent, NormalizedRelayUrl) -> Unit = { _, _ -> },
+    onRetryAllFailed: (BroadcastEvent) -> Unit = {},
     sheetState: SheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
         ),
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        MultiBroadcastDetailsSheetContent(
+            broadcasts = broadcasts,
+            onDismiss = onDismiss,
+            onRetryRelay = onRetryRelay,
+            onRetryAllFailed = onRetryAllFailed,
+        )
+    }
+}
+
+@Composable
+fun MultiBroadcastDetailsSheetContent(
+    broadcasts: ImmutableList<BroadcastEvent>,
+    onDismiss: () -> Unit = {},
+    onRetryRelay: (BroadcastEvent, NormalizedRelayUrl) -> Unit = { _, _ -> },
+    onRetryAllFailed: (BroadcastEvent) -> Unit = {},
 ) {
     // Synced rotation animation for all pending/retrying icons
     val infiniteTransition = rememberInfiniteTransition(label = "pendingRotation")
@@ -113,93 +144,68 @@ fun MultiBroadcastDetailsSheet(
     )
 
     // Track which sections are expanded (by broadcast ID)
-    var expandedSections by remember { mutableStateOf(setOf<String>()) }
-
-    // Sort: in-progress first, then by start time
-    val sortedBroadcasts =
-        broadcasts.sortedWith(
-            compareBy<BroadcastEvent> { it.status != BroadcastStatus.IN_PROGRESS }
-                .thenByDescending { it.startedAt },
-        )
-
-    // First 2 get shown expanded by default (unless completed)
-    val visibleBroadcasts = sortedBroadcasts.take(MAX_EXPANDED_SECTIONS)
-    val overflowBroadcasts = sortedBroadcasts.drop(MAX_EXPANDED_SECTIONS)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp)
-                    .verticalScroll(rememberScrollState()),
-        ) {
-            // Header
-            Text(
-                text = if (broadcasts.size == 1) stringRes(R.string.broadcast_results) else stringRes(R.string.broadcasts_number, broadcasts.size),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+    var expandedSections by remember {
+        // Sort: in-progress first, then by start time
+        val sortedBroadcasts =
+            broadcasts.sortedWith(
+                compareBy { it.startedAt },
             )
 
-            Spacer(Modifier.height(16.dp))
+        // First 2 get shown expanded by default (unless completed)
+        val visibleBroadcasts = sortedBroadcasts.take(MAX_EXPANDED_SECTIONS)
 
-            // Visible broadcast sections
-            visibleBroadcasts.forEachIndexed { index, broadcast ->
-                val isExpanded =
-                    broadcast.id in expandedSections ||
-                        (broadcast.status == BroadcastStatus.IN_PROGRESS && broadcast.id !in expandedSections)
+        mutableStateOf(visibleBroadcasts.map { it.id }.toSet())
+    }
 
-                // Auto-expand in-progress, auto-collapse completed (unless manually expanded)
-                val showExpanded =
-                    if (broadcast.status == BroadcastStatus.IN_PROGRESS) {
-                        true
-                    } else {
-                        broadcast.id in expandedSections
-                    }
+    Column(
+        verticalArrangement = spacedBy(8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+    ) {
+        // Header
+        Text(
+            text = if (broadcasts.size == 1) stringRes(R.string.broadcast_results) else stringRes(R.string.broadcasts_number, broadcasts.size),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
 
-                BroadcastSection(
-                    broadcast = broadcast,
-                    isExpanded = showExpanded,
-                    onToggleExpand = {
-                        expandedSections =
-                            if (broadcast.id in expandedSections) {
-                                expandedSections - broadcast.id
-                            } else {
-                                expandedSections + broadcast.id
-                            }
-                    },
-                    onRetryRelay = { relay -> onRetryRelay(broadcast, relay) },
-                    onRetryAllFailed = { onRetryAllFailed(broadcast) },
-                    rotationAngle = rotationAngle,
-                )
+        Spacer(Modifier.height(8.dp))
 
-                if (index < visibleBroadcasts.size - 1 || overflowBroadcasts.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(8.dp))
-                }
+        // Visible broadcast sections
+        broadcasts.forEachIndexed { index, broadcast ->
+            BroadcastSection(
+                broadcast = broadcast,
+                isExpanded = broadcast.id in expandedSections,
+                onToggleExpand = {
+                    expandedSections =
+                        if (broadcast.id in expandedSections) {
+                            expandedSections - broadcast.id
+                        } else {
+                            expandedSections + broadcast.id
+                        }
+                },
+                onRetryRelay = { relay -> onRetryRelay(broadcast, relay) },
+                onRetryAllFailed = { onRetryAllFailed(broadcast) },
+                rotationAngle = rotationAngle,
+            )
+
+            if (index < broadcasts.lastIndex) {
+                HorizontalDivider()
             }
+        }
 
-            // Overflow summary
-            if (overflowBroadcasts.isNotEmpty()) {
-                OverflowSummary(overflowBroadcasts)
-            }
+        Spacer(Modifier.height(8.dp))
 
-            Spacer(Modifier.height(16.dp))
-
-            // Dismiss button
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringRes(R.string.dismiss))
-            }
+        // Dismiss button
+        OutlinedButton(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringRes(R.string.dismiss))
         }
     }
 }
@@ -231,7 +237,7 @@ private fun BroadcastSection(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = broadcast.eventName,
+                        text = broadcast.event.toKindName(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -291,52 +297,6 @@ private fun BroadcastSection(
                         Text(stringRes(R.string.retry_failed_number, broadcast.failedRelays.size))
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun OverflowSummary(broadcasts: List<BroadcastEvent>) {
-    val totalSuccess = broadcasts.sumOf { it.successCount }
-    val totalRelays = broadcasts.sumOf { it.totalRelays }
-    val inProgressCount = broadcasts.count { it.status == BroadcastStatus.IN_PROGRESS }
-
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(12.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.HourglassEmpty,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-
-            Spacer(Modifier.width(8.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringRes(R.string.more_broadcasts_number, broadcasts.size),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text =
-                        buildString {
-                            append(stringResource(R.string.share_of_relays, totalSuccess, totalRelays))
-                            if (inProgressCount > 0) {
-                                append(stringResource(R.string.number_in_progress, inProgressCount))
-                            }
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }
@@ -404,7 +364,7 @@ private fun RelayResultRow(
             when (result) {
                 is RelayResult.Success -> Triple(Icons.Default.CheckCircle, successColor, false)
                 is RelayResult.Error -> Triple(Icons.Default.Error, errorColor, false)
-                is RelayResult.Timeout -> Triple(Icons.Default.HourglassEmpty, warningColor, false)
+                is RelayResult.Timeout -> Triple(Icons.Default.Error, warningColor, false)
                 is RelayResult.Pending -> Triple(Icons.Default.HourglassEmpty, MaterialTheme.colorScheme.onSurfaceVariant, true)
                 is RelayResult.Retrying -> Triple(Icons.Default.HourglassEmpty, MaterialTheme.colorScheme.primary, true)
             }
@@ -441,7 +401,7 @@ private fun RelayResultRow(
             when (result) {
                 is RelayResult.Error -> {
                     Text(
-                        text = "[${result.code}]${result.message?.let { " $it" } ?: ""}",
+                        text = result.message,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,
                         color = errorColor,
@@ -484,5 +444,395 @@ private fun RelayResultRow(
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerSingleEventSheetInProgressStartPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerSingleEventSheetInProgressOneSuccessPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results = mapOf(Constants.mom to RelayResult.Success),
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerSingleEventSheetSuccessPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Success,
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.SUCCESS,
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerSingleEventSheetPartialPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Error("code"),
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.PARTIAL,
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerSingleEventSheetErrorsPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Error("code"),
+                            Constants.mom to RelayResult.Error("code"),
+                            Constants.nos to RelayResult.Error("code"),
+                        ),
+                    status = BroadcastStatus.FAILED,
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerDoubleEventSheetInProgressStartPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                ),
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.mom, Constants.nos),
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerDoubleEventSheetInProgressMiddlePreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results = mapOf(Constants.mom to RelayResult.Success),
+                ),
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.mom, Constants.nos),
+                    results = mapOf(Constants.mom to RelayResult.Success),
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerDoubleEventSheetInProgressEndPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Success,
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                ),
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerDoubleEventSheetDoneAllGoodPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Success,
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.SUCCESS,
+                ),
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.SUCCESS,
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerDoubleEventSheetDoneOneGoodPreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Success,
+                            Constants.mom to RelayResult.Success,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.SUCCESS,
+                ),
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.mom to RelayResult.Error("code"),
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.PARTIAL,
+                ),
+            ),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(device = "spec:width=1500px,height=2340px,dpi=440")
+@Composable
+fun BroadcastBannerDoubleEventSheetDonePreview() {
+    val repost =
+        RepostEvent(
+            id = "",
+            pubKey = "",
+            createdAt = TimeUtils.now(),
+            tags = emptyArray(),
+            content = "",
+            sig = "",
+        )
+    ThemeComparisonRow {
+        MultiBroadcastDetailsSheetContent(
+            persistentListOf(
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.antiprimal, Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.antiprimal to RelayResult.Success,
+                            Constants.mom to RelayResult.Error("code"),
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.PARTIAL,
+                ),
+                BroadcastEvent(
+                    id = UUID.randomUUID().toString(),
+                    event = repost,
+                    targetRelays = listOf(Constants.mom, Constants.nos),
+                    results =
+                        mapOf(
+                            Constants.mom to RelayResult.Timeout,
+                            Constants.nos to RelayResult.Success,
+                        ),
+                    status = BroadcastStatus.PARTIAL,
+                ),
+            ),
+        )
     }
 }

@@ -309,17 +309,13 @@ class AccountViewModel(
                 if (settings.isCompleteUIMode()) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
-                        val result =
-                            broadcastTracker.trackBroadcast(
-                                event = event,
-                                eventName = "Reaction",
-                                relays = relays,
-                                client = account.client,
-                            )
-                        // Only consume event if at least one relay succeeded
-                        if (result.isSuccess) {
-                            account.consumeReactionEvent(event)
-                        }
+                        broadcastTracker.trackBroadcast(
+                            event = event,
+                            relays = relays,
+                            client = account.client,
+                        )
+
+                        account.consumeReactionEvent(event)
                     }
                 } else {
                     // Fire-and-forget (original behavior)
@@ -723,17 +719,12 @@ class AccountViewModel(
             // Tracked broadcasting with progress feedback
             launchSigner {
                 account.createBoostEvent(note)?.let { (event, relays) ->
-                    val result =
-                        broadcastTracker.trackBroadcast(
-                            event = event,
-                            eventName = "Boost",
-                            relays = relays,
-                            client = account.client,
-                        )
-                    // Only consume event if at least one relay succeeded
-                    if (result.isSuccess) {
-                        account.consumeBoostEvent(event)
-                    }
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumeBoostEvent(event)
                 }
             }
         } else {
@@ -768,16 +759,12 @@ class AccountViewModel(
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createAddBookmarkEvent(note, true)?.let { (event, relays) ->
-                    val result =
-                        broadcastTracker.trackBroadcast(
-                            event = event,
-                            eventName = "Bookmark",
-                            relays = relays,
-                            client = account.client,
-                        )
-                    if (result.isSuccess) {
-                        account.consumeBookmarkEvent(event)
-                    }
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumeBookmarkEvent(event)
                 }
             }
         } else {
@@ -789,16 +776,12 @@ class AccountViewModel(
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createAddBookmarkEvent(note, false)?.let { (event, relays) ->
-                    val result =
-                        broadcastTracker.trackBroadcast(
-                            event = event,
-                            eventName = "Bookmark",
-                            relays = relays,
-                            client = account.client,
-                        )
-                    if (result.isSuccess) {
-                        account.consumeBookmarkEvent(event)
-                    }
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumeBookmarkEvent(event)
                 }
             }
         } else {
@@ -810,16 +793,13 @@ class AccountViewModel(
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createRemoveBookmarkEvent(note, true)?.let { (event, relays) ->
-                    val result =
-                        broadcastTracker.trackBroadcast(
-                            event = event,
-                            eventName = "Remove Bookmark",
-                            relays = relays,
-                            client = account.client,
-                        )
-                    if (result.isSuccess) {
-                        account.consumeBookmarkEvent(event)
-                    }
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+
+                    account.consumeBookmarkEvent(event)
                 }
             }
         } else {
@@ -831,16 +811,12 @@ class AccountViewModel(
         if (settings.isCompleteUIMode()) {
             launchSigner {
                 account.createRemoveBookmarkEvent(note, false)?.let { (event, relays) ->
-                    val result =
-                        broadcastTracker.trackBroadcast(
-                            event = event,
-                            eventName = "Remove Bookmark",
-                            relays = relays,
-                            client = account.client,
-                        )
-                    if (result.isSuccess) {
-                        account.consumeBookmarkEvent(event)
-                    }
+                    broadcastTracker.trackBroadcast(
+                        event = event,
+                        relays = relays,
+                        client = account.client,
+                    )
+                    account.consumeBookmarkEvent(event)
                 }
             }
         } else {
