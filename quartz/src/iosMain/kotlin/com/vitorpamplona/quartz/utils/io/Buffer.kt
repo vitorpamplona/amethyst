@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.utils.io
 // Credits: skolson, from https://github.com/skolson/KmpIO
 
+@Suppress("ktlint")
 abstract class Buffer<Element, Array> internal constructor(
     markPosition: Int,
     pos: Int,
