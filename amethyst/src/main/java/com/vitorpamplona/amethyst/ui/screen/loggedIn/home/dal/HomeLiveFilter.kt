@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class HomeLiveFilter(
     val account: Account,
 ) : AdditiveComplexFeedFilter<Channel, Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean = false
 
