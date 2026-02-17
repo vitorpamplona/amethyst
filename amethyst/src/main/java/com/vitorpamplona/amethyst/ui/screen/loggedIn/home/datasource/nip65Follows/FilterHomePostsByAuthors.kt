@@ -40,6 +40,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
@@ -56,6 +58,7 @@ val HomePostsNewThreadKinds =
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,
         PollNoteEvent.KIND,
+        PollEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
     )
 
@@ -67,6 +70,7 @@ val HomePostsConversationKinds =
         EphemeralChatEvent.KIND,
         VoiceEvent.KIND,
         VoiceReplyEvent.KIND,
+        PollResponseEvent.KIND,
     )
 
 fun filterNewHomePostsByAuthors(

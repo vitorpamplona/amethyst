@@ -460,6 +460,7 @@
     <string name="poll_heading_required">Required fields:</string>
     <string name="poll_zap_recipients">Zap recipients</string>
     <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option">Option</string>
     <string name="poll_option_index">Option %s</string>
     <string name="poll_option_description">Poll option description</string>
     <string name="poll_heading_optional">Optional fields:</string>
@@ -467,6 +468,7 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>
     <string name="poll_unable_to_vote">Unable to vote</string>
@@ -1504,4 +1506,8 @@
     <string name="reaction">Reaction</string>
     <string name="voice_post">Voice Post</string>
     <string name="voice_reply">Voice Reply</string>
+    <string name="closing_time">Closing Time</string>
+    <string name="confirm">Confirm</string>
+    <string name="next">Next</string>
+    <string name="add_poll_option_button">Add poll option button</string>
 </resources>

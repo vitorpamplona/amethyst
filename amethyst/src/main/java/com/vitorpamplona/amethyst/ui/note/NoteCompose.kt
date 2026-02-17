@@ -131,6 +131,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -220,6 +221,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
@@ -967,12 +969,24 @@ private fun RenderNoteRow(
         }
 
         is PollNoteEvent -> {
-            RenderPoll(
+            RenderZapPoll(
                 baseNote,
                 makeItShort,
                 canPreview,
                 quotesLeft,
                 unPackReply,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is PollEvent -> {
+            RenderPoll(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,

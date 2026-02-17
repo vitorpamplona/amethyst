@@ -29,12 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 val PostsByGeohashKinds =
@@ -42,13 +42,13 @@ val PostsByGeohashKinds =
         TextNoteEvent.KIND,
         ChannelMessageEvent.KIND,
         LongTextNoteEvent.KIND,
+        PollEvent.KIND,
         PollNoteEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
         AudioTrackEvent.KIND,
         AudioHeaderEvent.KIND,
         WikiNoteEvent.KIND,
-        CommentEvent.KIND,
     )
 
 fun filterPostsByGeohash(

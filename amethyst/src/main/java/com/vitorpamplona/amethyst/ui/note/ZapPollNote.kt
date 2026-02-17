@@ -113,7 +113,7 @@ import kotlin.uuid.Uuid
 
 @Preview
 @Composable
-fun PollNotePreview() {
+fun ZapZapPollNotePreview() {
     val event =
         PollNoteEvent(
             id = "6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72",
@@ -171,7 +171,7 @@ fun PollNotePreview() {
                 Column(
                     Modifier.padding(10.dp),
                 ) {
-                    PollNote(
+                    ZapPollNote(
                         baseNote = baseNote,
                         true,
                         remember { mutableStateOf(color) },
@@ -186,7 +186,7 @@ fun PollNotePreview() {
 
 @Preview
 @Composable
-fun PollNotePreview2() {
+fun ZapZapPollNotePreview2() {
     val event =
         PollNoteEvent(
             id = "3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab",
@@ -223,7 +223,7 @@ fun PollNotePreview2() {
                 Column(
                     Modifier.padding(10.dp),
                 ) {
-                    PollNote(
+                    ZapPollNote(
                         baseNote = baseNote,
                         true,
                         remember { mutableStateOf(color) },
@@ -237,7 +237,7 @@ fun PollNotePreview2() {
 }
 
 @Composable
-fun PollNote(
+fun ZapPollNote(
     baseNote: Note,
     canPreview: Boolean,
     backgroundColor: MutableState<Color>,
@@ -249,7 +249,7 @@ fun PollNote(
     pollViewModel.init(accountViewModel.account)
     pollViewModel.load(baseNote)
 
-    PollNote(
+    ZapPollNote(
         baseNote = baseNote,
         pollViewModel = pollViewModel,
         canPreview = canPreview,
@@ -260,7 +260,7 @@ fun PollNote(
 }
 
 @Composable
-fun PollNote(
+fun ZapPollNote(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
     canPreview: Boolean,
@@ -426,7 +426,7 @@ private fun RenderOptionAfterVote(
 }
 
 @Composable
-fun DisplayProgress(
+private fun DisplayProgress(
     poolOption: PollOption,
     color: Color,
     modifier: Modifier,

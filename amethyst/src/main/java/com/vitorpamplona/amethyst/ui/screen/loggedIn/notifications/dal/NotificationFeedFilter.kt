@@ -66,6 +66,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
@@ -105,6 +106,7 @@ class NotificationFeedFilter(
                 LnZapEvent.KIND,
                 LiveActivitiesChatMessageEvent.KIND,
                 PictureEvent.KIND,
+                PollEvent.KIND,
                 PollNoteEvent.KIND,
                 PrivateDmEvent.KIND,
                 PublicMessageEvent.KIND,

@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
@@ -386,6 +387,7 @@ val DEFAULT_FEED_KINDS =
         ClassifiedsEvent.KIND,
         LongTextNoteEvent.KIND,
         PollNoteEvent.KIND,
+        PollEvent.KIND,
         HighlightEvent.KIND,
         AudioTrackEvent.KIND,
         AudioHeaderEvent.KIND,
@@ -406,6 +408,7 @@ val DEFAULT_COMMUNITY_FEEDS =
         HighlightEvent.KIND,
         AudioHeaderEvent.KIND,
         AudioTrackEvent.KIND,
+        PollEvent.KIND,
         PinListEvent.KIND,
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,

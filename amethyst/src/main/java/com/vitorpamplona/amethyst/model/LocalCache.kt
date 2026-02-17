@@ -180,6 +180,8 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
@@ -1520,6 +1522,12 @@ object LocalCache : ILocalCache, ICacheProvider {
             deleteNote.author?.statusStateOrNull()?.removeStatus(deleteNote)
         }
 
+        if (deletedEvent is PollResponseEvent) {
+            deletedEvent.poll()?.eventId?.let {
+                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(deleteNote)
+            }
+        }
+
         if (deletedEvent is TorrentCommentEvent) {
             deletedEvent.torrentIds()?.let {
                 getNoteIfExists(it)?.removeReply(deleteNote)
@@ -1997,6 +2005,32 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: PollEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: PollResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val pollId = event.poll()?.eventId
+        if (pollId != null) {
+            val pollNote = getOrCreateNote(pollId)
+            val responseNote = getOrCreateNote(event.id)
+
+            val new = consumeRegularEvent(event, relay, wasVerified)
+            if (new) {
+                pollNote.pollState().addResponse(responseNote)
+            }
+            return new
+        }
+
+        return false
+    }
 
     fun consume(
         event: FileStorageEvent,
@@ -2611,6 +2645,12 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.author?.statusStateOrNull()?.removeStatus(note)
         }
 
+        if (noteEvent is PollResponseEvent) {
+            noteEvent.poll()?.eventId?.let {
+                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(note)
+            }
+        }
+
         note.clearFlow()
 
         notes.remove(note.idHex)
@@ -2998,6 +3038,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)
+                is PollEvent -> consume(event, relay, wasVerified)
+                is PollResponseEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
                 is ContactCardEvent -> consume(event, relay, wasVerified)
                 is RelaySetEvent -> consume(event, relay, wasVerified)

@@ -192,6 +192,8 @@ import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -882,6 +884,10 @@ class Account(
             }
         }
 
+        if (event is PollEvent) {
+            relayList.addAll(event.relays())
+        }
+
         relayList.addAll(computeRelaysForChannels(event))
 
         return relayList
@@ -989,6 +995,23 @@ class Account(
     fun sendLiterallyEverywhere(event: Event) {
         client.send(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
         cache.justConsumeMyOwnEvent(event)
+    }
+
+    suspend fun pollRespond(
+        event: PollEvent,
+        responses: Set<String>,
+    ) {
+        val poll = cache.getOrCreateNote(event.id).toEventHint<PollEvent>()
+
+        if (poll != null) {
+            val template = PollResponseEvent.build(poll, responses)
+
+            val signedEvent = signer.sign(template)
+
+            cache.justConsumeMyOwnEvent(signedEvent)
+
+            client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+        }
     }
 
     suspend fun createNip95(

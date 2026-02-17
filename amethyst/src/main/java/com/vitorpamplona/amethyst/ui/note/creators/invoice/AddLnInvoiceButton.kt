@@ -20,18 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 
 @Composable
 fun AddLnInvoiceButton(
@@ -45,14 +43,14 @@ fun AddLnInvoiceButton(
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
                 contentDescription = stringRes(id = R.string.add_bitcoin_invoice),
-                modifier = Modifier.size(20.dp),
+                modifier = Size20Modifier,
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.CurrencyBitcoin,
                 contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
-                modifier = Modifier.size(20.dp),
+                modifier = Size20Modifier,
                 tint = BitcoinOrange,
             )
         }

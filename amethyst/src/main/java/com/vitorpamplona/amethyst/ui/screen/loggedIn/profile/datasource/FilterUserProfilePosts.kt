@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
@@ -48,7 +49,7 @@ val UserProfilePostKinds1 =
         GenericRepostEvent.KIND,
         RepostEvent.KIND,
         LongTextNoteEvent.KIND,
-        PollNoteEvent.KIND,
+        PollEvent.KIND,
         HighlightEvent.KIND,
         WikiNoteEvent.KIND,
         VoiceEvent.KIND,
@@ -63,6 +64,7 @@ val UserProfilePostKinds2 =
         InteractiveStoryPrologueEvent.KIND,
         CommentEvent.KIND,
         VoiceReplyEvent.KIND,
+        PollNoteEvent.KIND,
         PinListEvent.KIND,
     )
 

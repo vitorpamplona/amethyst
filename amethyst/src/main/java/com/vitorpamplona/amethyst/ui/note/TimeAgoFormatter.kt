@@ -115,6 +115,46 @@ fun timeAgoNoDot(
     }
 }
 
+fun timeAheadNoDot(
+    time: Long?,
+    context: Context,
+): String {
+    if (time == null) return " "
+    if (time == 0L) return " ${stringRes(context, R.string.never)}"
+
+    val timeDifference = time - TimeUtils.now()
+
+    return if (timeDifference > TimeUtils.ONE_YEAR) {
+        // Dec 12, 2022
+
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        }
+
+        yearFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_MONTH) {
+        // Dec 12
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        }
+
+        monthFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_DAY) {
+        // 2 days
+        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+    } else if (timeDifference > TimeUtils.ONE_HOUR) {
+        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
+        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+    } else {
+        stringRes(context, R.string.now)
+    }
+}
+
 fun dateFormatter(
     time: Long?,
     never: String,

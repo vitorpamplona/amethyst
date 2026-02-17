@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
@@ -37,6 +38,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +55,7 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -83,25 +87,24 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
+import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.zappolls.PollField
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -289,7 +292,7 @@ private fun NewPostScreenBody(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                     ) {
-                        PollField(postViewModel)
+                        PollOptionsField(postViewModel)
                     }
                 }
 
@@ -542,6 +545,17 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     }
 }
 
+@SuppressLint("ViewModelConstructorInComposable")
+@Preview
+@Composable
+private fun BottomRowActionsPreview() {
+    val model = ShortNotePostViewModel()
+    model.canUsePoll = true
+    ThemeComparisonColumn {
+        BottomRowActions(model)
+    }
+}
+
 @Composable
 private fun AddPollButton(
     isPollActive: Boolean,
@@ -552,17 +566,17 @@ private fun AddPollButton(
     ) {
         if (!isPollActive) {
             Icon(
-                painter = painterRes(R.drawable.ic_poll, 1),
+                imageVector = Icons.Outlined.Poll,
                 contentDescription = stringRes(id = R.string.poll),
-                modifier = Size20Modifier,
+                modifier = Modifier.height(22.dp),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         } else {
             Icon(
-                painter = painterRes(R.drawable.ic_lists, 1),
+                imageVector = Icons.Outlined.Poll,
                 contentDescription = stringRes(id = R.string.disable_poll),
-                modifier = Size20Modifier,
-                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.height(22.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }

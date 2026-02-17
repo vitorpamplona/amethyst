@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 val PostsByHashtagsKinds =
@@ -46,7 +47,7 @@ val PostsByHashtagsKinds =
         TextNoteEvent.KIND,
         ChannelMessageEvent.KIND,
         LongTextNoteEvent.KIND,
-        PollNoteEvent.KIND,
+        PollEvent.KIND,
         LiveActivitiesChatMessageEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
@@ -60,6 +61,7 @@ val PostsByHashtagKinds2 =
         AudioTrackEvent.KIND,
         AudioHeaderEvent.KIND,
         NipTextEvent.KIND,
+        PollNoteEvent.KIND,
     )
 
 fun filterPostsByHashtags(

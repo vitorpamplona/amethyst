@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -233,6 +234,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -668,7 +670,7 @@ private fun FullBleedNoteCompose(
                         nav,
                     )
                 } else if (noteEvent is PollNoteEvent) {
-                    RenderPoll(
+                    RenderZapPoll(
                         baseNote,
                         false,
                         canPreview,
@@ -677,6 +679,16 @@ private fun FullBleedNoteCompose(
                         backgroundColor,
                         accountViewModel,
                         nav,
+                    )
+                } else if (noteEvent is PollEvent) {
+                    RenderPoll(
+                        note = baseNote,
+                        makeItShort = false,
+                        canPreview = canPreview,
+                        quotesLeft = 3,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
                     )
                 } else if (noteEvent is PrivateDmEvent) {
                     RenderPrivateMessage(
