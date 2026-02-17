@@ -15,10 +15,15 @@
     <string name="could_not_decrypt_the_message">মেসেজটি ডিক্রিপ্ট করা যায় নি</string>
     <string name="group_picture">দলগত ছবি</string>
     <string name="explicit_content">খোলামেলা আধেয়</string>
+    <string name="relay_notice">রিলে নোটিশ</string>
+    <string name="duplicated_post">ডুপ্লিকেট পোস্ট</string>
     <string name="spam">স্প্যাম</string>
+    <string name="spam_description">এই রিলে থেকে আসা স্প্যামিং ইভেন্টের সংখ্যা</string>
     <string name="impersonation">ছদ্মবেশ</string>
     <string name="illegal_behavior">বেআইনী আচরণ</string>
     <string name="other">অন্যান্য</string>
+    <string name="harassment">হয়রানি</string>
+    <string name="violence">Violence</string>
     <string name="unknown">অচেনা</string>
     <string name="relay_icon">রিলে আইকন</string>
     <string name="unknown_author">অজ্ঞাত-পরিচয় লেখক</string>
@@ -26,6 +31,8 @@
     <string name="copy_user_pubkey">লেখক আইডি কপি করুন</string>
     <string name="copy_note_id">নোটের আইডি কপি করুন</string>
     <string name="broadcast">সম্প্রচার</string>
+    <string name="timestamp_it">টাইমস্ট্যাম্প করুন</string>
+    <string name="timestamp_pending">টাইমস্ট্যাম্প: নিশ্চিতকরণ মুলতুবি আছে</string>
     <string name="request_deletion">নোটটি মুছে ফেলার অনুরোধ করুন</string>
     <string name="block_report">ব্লক/অভিযুক্ত করুন</string>
     <string name="block_hide_user"><![CDATA[ব্লক করুন এবং ব্যবহারকারীকে আড়ালে রাখুন]]></string>
@@ -33,6 +40,9 @@
     <string name="report_impersonation">ছদ্মবেশ ধারণের অভিযোগ করুন</string>
     <string name="report_explicit_content">খোলামেলা আধেয় হিসেবে অভিযোগ করুন</string>
     <string name="report_illegal_behaviour">বেআইনী আচরণের অভিযোগ করুন</string>
+    <string name="report_malware">ম্যালওয়্যার রিপোর্ট করুন</string>
+    <string name="report_mod">রিপোর্ট মোড</string>
+    <string name="malware">ম্যালওয়্যার</string>
     <string name="mod">মোড</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">প্রতিউত্তর দিতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">পোস্টগুলি বুস্ট করতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
