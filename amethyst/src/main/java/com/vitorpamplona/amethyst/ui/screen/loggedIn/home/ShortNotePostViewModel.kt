@@ -123,6 +123,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -220,7 +221,7 @@ open class ShortNotePostViewModel :
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
-    var closedAt by mutableStateOf<Long?>(null)
+    var closedAt by mutableStateOf(TimeUtils.oneDayAhead())
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -539,9 +540,7 @@ open class ShortNotePostViewModel :
             pollOptions[index] = tag
         }
 
-        draftEvent.endsAt()?.let {
-            closedAt = it
-        }
+        closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
 
         message = TextFieldValue(draftEvent.content)
 
@@ -889,7 +888,7 @@ open class ShortNotePostViewModel :
 
         wantsPoll = false
         pollOptions = newStateMapPollOptions()
-        closedAt = null
+        closedAt = TimeUtils.oneDayAhead()
 
         wantsInvoice = false
         wantsZapRaiser = false
@@ -1018,7 +1017,8 @@ open class ShortNotePostViewModel :
             (
                 !wantsPoll ||
                     (
-                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() }
+                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() } &&
+                            closedAt > TimeUtils.oneMinuteFromNow()
                     )
             ) &&
             multiOrchestrator == null

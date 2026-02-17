@@ -469,6 +469,7 @@
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
+    <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>
     <string name="poll_unable_to_vote">Unable to vote</string>

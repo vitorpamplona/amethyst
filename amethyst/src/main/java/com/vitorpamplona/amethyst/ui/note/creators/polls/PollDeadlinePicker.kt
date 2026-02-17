@@ -56,11 +56,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,15 +68,12 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
     var showTimePicker by remember { mutableStateOf(false) }
 
     // Get current time details
-    val currentTime = LocalDateTime.now()
+    val currentTime = Instant.ofEpochMilli(model.closedAt * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
     val datePickerState =
         rememberDatePickerState(
-            initialSelectedDateMillis =
-                currentTime
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli(),
+            initialSelectedDateMillis = model.closedAt * 1000,
+            yearRange = currentTime.year..2050,
             selectableDates =
                 object : SelectableDates {
                     override fun isSelectableDate(utcTimeMillis: Long): Boolean {
@@ -106,11 +102,11 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
             Icon(Icons.Default.DateRange, contentDescription = null)
             Spacer(Modifier.width(12.dp))
 
-            if (model.closedAt == null) {
-                Text(stringRes(R.string.poll_closing_date_time), style = MaterialTheme.typography.bodyLarge)
+            if (model.closedAt < TimeUtils.oneMinuteFromNow()) {
+                Text(stringRes(R.string.poll_closing_date_time) + " " + model.closedAt, style = MaterialTheme.typography.bodyLarge)
             } else {
                 Text(
-                    text = timeAheadNoDot(model.closedAt, context),
+                    text = stringRes(R.string.poll_closing_in, timeAheadNoDot(model.closedAt, context)),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
@@ -140,28 +136,23 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
             },
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
-                TextButton(onClick = {
-                    val date =
-                        datePickerState.selectedDateMillis?.let {
-                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                        } ?: LocalDate.now()
+                TextButton(
+                    onClick = {
+                        val datetimeLocalTimeZone =
+                            datePickerState.selectedDateMillis?.let { localDayAtZeroHourMillis ->
+                                (localDayAtZeroHourMillis / 1000) +
+                                    (timePickerState.hour * TimeUtils.ONE_HOUR) +
+                                    (timePickerState.minute * TimeUtils.ONE_MINUTE)
+                            } ?: TimeUtils.oneDayAhead()
 
-                    val finalDateTime =
-                        LocalDateTime.of(
-                            date,
-                            LocalTime.of(timePickerState.hour, timePickerState.minute),
-                        )
+                        // Get the offset from UTC for the current instant in the local time zone
+                        val offset: ZoneOffset = ZoneId.systemDefault().rules.getOffset(Instant.now())
 
-                    // 2. Convert to Unix Timestamp (Seconds)
-                    val unixTimestamp =
-                        finalDateTime
-                            .atZone(ZoneId.systemDefault())
-                            .toInstant()
-                            .epochSecond
+                        model.closedAt = datetimeLocalTimeZone - offset.totalSeconds
 
-                    model.closedAt = unixTimestamp
-                    showTimePicker = false
-                }) { Text(stringResource(R.string.confirm)) }
+                        showTimePicker = false
+                    },
+                ) { Text(stringResource(R.string.confirm)) }
             },
         ) {
             TimePicker(state = timePickerState)
