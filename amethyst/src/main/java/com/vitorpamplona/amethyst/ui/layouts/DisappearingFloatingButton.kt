@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,19 +35,26 @@ fun DisappearingFloatingButton(
     scrollBehavior: BottomAppBarScrollBehavior,
     content: @Composable (BoxScope.() -> Unit),
 ) {
+    // We calculate the scale/alpha based on how much the bar is expanded
+    // 1.0 = fully visible, 0.0 = fully hidden
+    val progress = (1f - scrollBehavior.state.collapsedFraction).coerceAtLeast(0.001f)
+
     Box(
         modifier =
             Modifier
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(constraints)
-                    val height = placeable.height * (1 - scrollBehavior.state.collapsedFraction)
-                    layout(placeable.width, height.roundToInt().coerceAtLeast(0)) {
-                        placeable.place(0, 0)
+                    // Adjust the height of the layout so the FAB doesn't leave a "hole"
+                    val currentHeight = (placeable.height * progress).toInt()
+                    layout(placeable.width, currentHeight) {
+                        placeable.placeRelative(0, 0)
                     }
                 }.graphicsLayer {
-                    val percentage = 1 - scrollBehavior.state.collapsedFraction
-                    this.scaleX = percentage
-                    this.scaleY = percentage
+                    this.scaleX = progress
+                    this.scaleY = progress
+                    this.alpha = progress
+                    // Clip the content as it shrinks to prevent overflow
+                    clip = true
                 },
         content = content,
     )
