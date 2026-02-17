@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy10dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -176,7 +178,7 @@ fun InnerRenderPoll(
                 content = label,
                 canPreview = canPreview,
                 quotesLeft = 1,
-                modifier = Modifier,
+                modifier = Modifier.fillMaxWidth(),
                 tags = tags,
                 backgroundColor = backgroundColor,
                 id = note.idHex + code,
@@ -218,7 +220,7 @@ fun RenderPollCard(
     pollState: PollResponsesCache,
     accountViewModel: AccountViewModel,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable RowScope.(code: String, label: String) -> Unit,
+    labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     val card =
         remember(event) {
@@ -271,7 +273,7 @@ fun RenderPollCard(
     card: PollCard,
     onRespond: (Set<String>) -> Unit,
     resultContent: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable RowScope.(code: String, label: String) -> Unit,
+    labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     Column(
         verticalArrangement = SpacedBy5dp,
@@ -303,7 +305,7 @@ fun RenderPollCard(
 @Composable
 private fun ColumnScope.RenderSingleChoiceOptions(
     card: PollCard,
-    labelContent: @Composable (RowScope.(String, String) -> Unit),
+    labelContent: @Composable (ColumnScope.(String, String) -> Unit),
     onRespond: (Set<String>) -> Unit,
 ) {
     card.options.forEach {
@@ -325,7 +327,13 @@ private fun ColumnScope.RenderSingleChoiceOptions(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                labelContent(it.code, it.label)
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(),
+                ) {
+                    labelContent(it.code, it.label)
+                }
             }
         }
     }
@@ -334,7 +342,7 @@ private fun ColumnScope.RenderSingleChoiceOptions(
 @Composable
 private fun ColumnScope.RenderMultiChoiceOptions(
     card: PollCard,
-    labelContent: @Composable (RowScope.(String, String) -> Unit),
+    labelContent: @Composable (ColumnScope.(String, String) -> Unit),
     onRespond: (Set<String>) -> Unit,
 ) {
     var multichoice by
@@ -368,7 +376,11 @@ private fun ColumnScope.RenderMultiChoiceOptions(
                     },
                 )
 
-                labelContent(option.code, option.label)
+                Column(
+                    modifier = Modifier.weight(1f),
+                ) {
+                    labelContent(option.code, option.label)
+                }
             }
         }
     }
@@ -388,7 +400,7 @@ private fun ColumnScope.RenderMultiChoiceOptions(
 private fun RenderResults(
     card: PollCard,
     resultContent: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable (RowScope.(code: String, label: String) -> Unit),
+    labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
     card.options.forEach { pollItem ->
         RenderClosedItem(pollItem, resultContent) {
@@ -401,7 +413,7 @@ private fun RenderResults(
 private fun RenderClosedItem(
     item: PollItemCard,
     resultContent: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable RowScope.() -> Unit,
+    labelContent: @Composable ColumnScope.() -> Unit,
 ) {
     val tally by item.results.collectAsStateWithLifecycle(item.currentResults())
 
@@ -412,7 +424,7 @@ private fun RenderClosedItem(
 private fun RenderClosedItem(
     tally: TallyResults,
     resultContent: @Composable RowScope.(user: User) -> Unit,
-    labelContent: @Composable RowScope.() -> Unit,
+    labelContent: @Composable ColumnScope.() -> Unit,
 ) {
     Box(
         modifier =
@@ -463,7 +475,12 @@ private fun RenderClosedItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            labelContent()
+            Column(
+                modifier = Modifier.weight(1f),
+                content = labelContent,
+            )
+
+            Spacer(StdHorzSpacer)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -475,6 +492,7 @@ private fun RenderClosedItem(
                     text = "${(tally.percent * 100).toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
                 )
             }
         }
@@ -486,30 +504,32 @@ fun UserGallery(
     tally: TallyResults,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy((-10).dp),
-    ) {
-        tally.users.take(6).forEach {
-            key(it.pubkeyHex) {
-                galleryUser(it)
+    if (tally.users.isNotEmpty()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy((-10).dp),
+        ) {
+            tally.users.take(6).forEach {
+                key(it.pubkeyHex) {
+                    galleryUser(it)
+                }
             }
-        }
 
-        if (tally.users.size > 6) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .size(Size25dp)
-                        .clip(shape = CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-            ) {
-                Text(
-                    text = "+" + showCount(tally.users.size - 6),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+            if (tally.users.size > 6) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .size(Size25dp)
+                            .clip(shape = CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                ) {
+                    Text(
+                        text = "+" + showCount(tally.users.size - 6),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
     }
@@ -557,7 +577,6 @@ fun RenderPollManualPreview() {
             RenderPollCard(poll, {}, {}) { _, label ->
                 Text(
                     text = label,
-                    modifier = Modifier.weight(1f),
                 )
             }
         }
