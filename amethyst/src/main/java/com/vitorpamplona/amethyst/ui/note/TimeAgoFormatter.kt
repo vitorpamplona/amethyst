@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.round
 
 private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
 private const val MONTH_DATE_FORMAT = "MMM dd"
@@ -145,11 +146,11 @@ fun timeAheadNoDot(
         monthFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
-        (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
+        round(timeDifference / TimeUtils.ONE_DAY.toFloat()).toInt().toString() + stringRes(context, R.string.d)
     } else if (timeDifference > TimeUtils.ONE_HOUR) {
-        (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
+        round(timeDifference / TimeUtils.ONE_HOUR.toFloat()).toInt().toString() + stringRes(context, R.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
-        (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+        round(timeDifference / TimeUtils.ONE_MINUTE.toFloat()).toInt().toString() + stringRes(context, R.string.m)
     } else {
         stringRes(context, R.string.now)
     }
