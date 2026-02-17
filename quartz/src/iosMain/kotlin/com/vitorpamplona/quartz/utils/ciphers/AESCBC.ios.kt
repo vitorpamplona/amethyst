@@ -20,23 +20,48 @@
  */
 package com.vitorpamplona.quartz.utils.ciphers
 
+import com.vitorpamplona.quartz.utils.Log
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.DelicateCryptographyApi
+import dev.whyoleg.cryptography.algorithms.AES
+import dev.whyoleg.cryptography.providers.apple.Apple
+
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : NostrCipher {
-    actual override fun name(): String {
-        TODO("Not yet implemented")
-    }
+    private val cryptoProvider = CryptographyProvider.Apple
+    private val aesCbc = cryptoProvider.get(AES.CBC)
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
+    private val keyDecoder =
+        aesCbc
+            .keyDecoder()
+            .decodeFromByteArrayBlocking(format = AES.Key.Format.RAW, keyBytes)
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
+    private fun cipher() = keyDecoder.cipher()
 
-    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? {
-        TODO("Not yet implemented")
-    }
+    actual override fun name(): String = "aes-cbc"
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
+        with(cipher()) {
+            encryptWithIvBlocking(iv, bytesToEncrypt)
+        }
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
+        with(cipher()) {
+            decryptWithIvBlocking(iv, bytesToDecrypt)
+        }
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
+        try {
+            with(cipher()) {
+                decryptWithIvBlocking(iv, bytesToDecrypt)
+            }
+        } catch (e: Exception) {
+            Log.w("AESCBC", "Failed to decrypt", e)
+            null
+        }
 }
