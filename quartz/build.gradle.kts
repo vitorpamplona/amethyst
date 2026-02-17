@@ -122,6 +122,11 @@ kotlin {
                 // Websockets API
                 implementation(libs.okhttp)
                 implementation(libs.okhttpCoroutines)
+
+                // Chess engine for move validation and legal move generation
+                // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
+                // TODO: Test if 1.0.0 works, or fork library to fix
+                implementation("io.github.cvb941:kchesslib:1.0.0")
             }
         }
 

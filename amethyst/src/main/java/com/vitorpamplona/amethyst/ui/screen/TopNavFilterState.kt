@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.CHESS
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -52,6 +53,9 @@ import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -125,6 +129,20 @@ class TopNavFilterState(
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
             unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
+        )
+
+    val chessFollow =
+        GlobalFeedDefinition(
+            code = CHESS,
+            name = ResourceName(R.string.follow_list_chess),
+            type = CodeNameType.HARDCODED,
+            kinds =
+                listOf(
+                    ChessGameEvent.KIND, // Completed games (Kind 64)
+                    LiveChessGameChallengeEvent.KIND, // Challenges (Kind 30064)
+                    LiveChessGameEndEvent.KIND, // Game endings (Kind 30067)
+                    // Note: LiveChessMoveEvent (Kind 30066) intentionally excluded - too noisy
+                ),
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)

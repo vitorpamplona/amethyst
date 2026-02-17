@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
@@ -119,6 +121,8 @@ sealed class DesktopScreen {
     object Messages : DesktopScreen()
 
     object Notifications : DesktopScreen()
+
+    object Chess : DesktopScreen()
 
     object MyProfile : DesktopScreen()
 
@@ -416,6 +420,13 @@ fun MainContent(
                 )
 
                 NavigationRailItem(
+                    icon = { Icon(Icons.Default.Extension, contentDescription = "Chess") },
+                    label = { Text("Chess") },
+                    selected = currentScreen == DesktopScreen.Chess,
+                    onClick = { onScreenChange(DesktopScreen.Chess) },
+                )
+
+                NavigationRailItem(
                     icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                     label = { Text("Profile") },
                     selected = currentScreen == DesktopScreen.MyProfile || currentScreen is DesktopScreen.UserProfile,
@@ -512,6 +523,14 @@ fun MainContent(
 
                     DesktopScreen.Notifications -> {
                         NotificationsScreen(relayManager, account, subscriptionsCoordinator)
+                    }
+
+                    DesktopScreen.Chess -> {
+                        ChessScreen(
+                            relayManager = relayManager,
+                            account = account,
+                            onBack = { onScreenChange(DesktopScreen.Feed) },
+                        )
                     }
 
                     DesktopScreen.MyProfile -> {

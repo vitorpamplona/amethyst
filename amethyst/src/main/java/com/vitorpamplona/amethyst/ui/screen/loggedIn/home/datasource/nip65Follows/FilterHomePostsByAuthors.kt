@@ -39,6 +39,9 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -60,6 +63,9 @@ val HomePostsNewThreadKinds =
         PollNoteEvent.KIND,
         PollEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
+        ChessGameEvent.KIND,
+        LiveChessGameChallengeEvent.KIND,
+        LiveChessGameEndEvent.KIND,
     )
 
 val HomePostsConversationKinds =

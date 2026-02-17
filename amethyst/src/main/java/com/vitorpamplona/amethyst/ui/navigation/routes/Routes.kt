@@ -40,6 +40,8 @@ sealed class Route {
 
     @Serializable object Notification : Route()
 
+    @Serializable object Chess : Route()
+
     @Serializable object Search : Route()
 
     @Serializable object SecurityFilters : Route()
@@ -135,6 +137,10 @@ sealed class Route {
 
     @Serializable data class Geohash(
         val geohash: String,
+    ) : Route()
+
+    @Serializable data class ChessGame(
+        val gameId: String,
     ) : Route()
 
     @Serializable data class Community(
@@ -312,6 +318,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Video>() -> entry.toRoute<Route.Video>()
         dest.hasRoute<Route.Discover>() -> entry.toRoute<Route.Discover>()
         dest.hasRoute<Route.Notification>() -> entry.toRoute<Route.Notification>()
+        dest.hasRoute<Route.Chess>() -> entry.toRoute<Route.Chess>()
         dest.hasRoute<Route.Search>() -> entry.toRoute<Route.Search>()
         dest.hasRoute<Route.SecurityFilters>() -> entry.toRoute<Route.SecurityFilters>()
         dest.hasRoute<Route.PrivacyOptions>() -> entry.toRoute<Route.PrivacyOptions>()
