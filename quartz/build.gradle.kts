@@ -21,8 +21,14 @@ kotlin {
 
     androidLibrary {
         namespace = "com.vitorpamplona.quartz"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        compileSdk =
+            libs.versions.android.compileSdk
+                .get()
+                .toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
 
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
@@ -50,7 +56,6 @@ kotlin {
     // project can be found here:
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "quartz-kmpKit"
-
 
     iosX64 {
         binaries.framework {
@@ -106,48 +111,50 @@ kotlin {
         }
 
         // Must be defined before androidMain and jvmMain
-        val jvmAndroid = create("jvmAndroid") {
-            dependsOn(commonMain.get())
+        val jvmAndroid =
+            create("jvmAndroid") {
+                dependsOn(commonMain.get())
 
-            dependencies {
-                // Normalizes URLs
-                api(libs.rfc3986.normalizer)
+                dependencies {
+                    // Normalizes URLs
+                    api(libs.rfc3986.normalizer)
 
-                // Performant Parser of JSONs into Events
-                api(libs.jackson.module.kotlin)
+                    // Performant Parser of JSONs into Events
+                    api(libs.jackson.module.kotlin)
 
-                // Parses URLs from Text:
-                api(libs.url.detector)
+                    // Parses URLs from Text:
+                    api(libs.url.detector)
 
-                // Websockets API
-                implementation(libs.okhttp)
-                implementation(libs.okhttpCoroutines)
+                    // Websockets API
+                    implementation(libs.okhttp)
+                    implementation(libs.okhttpCoroutines)
 
-                // Chess engine for move validation and legal move generation
-                // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
-                // TODO: Test if 1.0.0 works, or fork library to fix
-                implementation("io.github.cvb941:kchesslib:1.0.0")
+                    // Chess engine for move validation and legal move generation
+                    // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
+                    // TODO: Test if 1.0.0 works, or fork library to fix
+                    implementation(libs.kchesslib)
+                }
             }
-        }
 
         // Must be defined before androidMain and jvmMain
-        val jvmAndroidTest = create("jvmAndroidTest") {
-            dependsOn(commonTest.get())
-            dependencies {
-                implementation(libs.kotlin.test)
-                implementation(libs.kotlinx.coroutines.test)
+        val jvmAndroidTest =
+            create("jvmAndroidTest") {
+                dependsOn(commonTest.get())
+                dependencies {
+                    implementation(libs.kotlin.test)
+                    implementation(libs.kotlinx.coroutines.test)
+                }
             }
-        }
 
         jvmMain {
             dependsOn(jvmAndroid)
             dependencies {
                 // Bitcoin secp256k1 bindings
-                implementation (libs.secp256k1.kmp.jni.jvm)
+                implementation(libs.secp256k1.kmp.jni.jvm)
 
                 // LibSodium for ChaCha encryption (NIP-44)
-                implementation (libs.lazysodium.java)
-                implementation (libs.jna)
+                implementation(libs.lazysodium.java)
+                implementation(libs.jna)
             }
         }
 
@@ -168,8 +175,8 @@ kotlin {
                 api(libs.secp256k1.kmp.jni.android)
 
                 // LibSodium for ChaCha encryption (NIP-44)
-                implementation ("com.goterl:lazysodium-android:5.2.0@aar")
-                implementation ("net.java.dev.jna:jna:5.18.1@aar")
+                implementation("com.goterl:lazysodium-android:5.2.0@aar")
+                implementation("net.java.dev.jna:jna:5.18.1@aar")
             }
         }
 
@@ -193,7 +200,6 @@ kotlin {
         iosMain {
             dependsOn(commonMain.get())
             dependencies {
-
             }
         }
 
@@ -212,7 +218,6 @@ kotlin {
         iosTest {
             dependsOn(commonTest.get())
             dependencies {
-
             }
         }
 
@@ -230,20 +235,19 @@ kotlin {
     }
 }
 
-
 mavenPublishing {
     // sources publishing is always enabled by the Kotlin Multiplatform plugin
     configure(
         KotlinMultiplatform(
             // whether to publish a sources jar
             sourcesJar = true,
-        )
+        ),
     )
 
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.05.1"
+        version = "1.05.1",
     )
 
     // Configure publishing to Maven Central

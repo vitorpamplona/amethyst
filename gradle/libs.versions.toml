@@ -26,6 +26,7 @@ javaKeyring = "1.0.4"
 jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
+kchesslib = "1.0.0"
 kotlin = "2.3.10"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
@@ -123,6 +124,7 @@ java-keyring = { group = "com.github.javakeyring", name = "java-keyring", versio
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
