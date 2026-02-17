@@ -503,16 +503,25 @@
     <string name="follow_list_selection">Liste des Abonnés</string>
     <string name="follow_list_kind3follows">Tous les abonnements</string>
     <string name="follow_list_kind3follows_users_only">Tous les abonnements de l\'utilisateur</string>
+    <string name="follow_list_kind3_follows_users_only">Liste de suivi par défaut</string>
     <string name="follow_list_kind3follows_proxy">Suivre via Proxy</string>
     <string name="follow_list_aroundme">Autour de moi</string>
     <string name="follow_list_global">Général</string>
     <string name="follow_list_mute_list">Liste en Sourdine</string>
+    <string name="follow_sets">Listes de suivi</string>
+    <string name="follow_sets_explainer">Ce sont des listes de suivi conçues pour votre propre utilisation. Vous pouvez suivre des utilisateurs en privé ou publiquement</string>
     <string name="labeled_bookmarks">Marque-pages étiquetés</string>
     <string name="general_bookmarks">Marque-pages généraux</string>
     <string name="follow_set_type_public">Public</string>
     <string name="follow_set_type_private">Privé</string>
     <string name="follow_set_type_mixed">Mixte</string>
+    <string name="follow_set_empty_feed_msg">        Il semble que vous n\'ayez pas encore de liste de suivi.
+        \n Appuyez ci-dessous pour actualiser, ou appuyez sur les boutons d\'ajout pour en créer un nouveau.
+    </string>
     <string name="follow_set_create_btn_label">Nouveau</string>
+    <string name="follow_set_add_author_from_note_action">Ajouter l\'auteur à la liste de suivi</string>
+    <string name="follow_set_profile_actions_menu_description">Ajouter ou supprimer un utilisateur des listes, ou créer une nouvelle liste avec cet utilisateur.</string>
+    <string name="follow_set_icon_description">Icône pour la liste de suivi</string>
     <string name="follow_set_public_presence_indicator">%1$s est un membre public</string>
     <string name="follow_set_private_presence_indicator">%1$s est un membre privé</string>
     <string name="follow_set_public_member_add_label">Ajouter en tant que membre public</string>
@@ -529,9 +538,14 @@
     <string name="follow_set_absence_indicator2">%1$s n\'est pas un membre</string>
     <string name="follow_set_man_dialog_title2">Vos listes et %1$s</string>
     <string name="follow_set_man_dialog_title">Vos listes</string>
+    <string name="follow_set_empty_dialog_msg">Aucune liste de suivi n\'a été trouvée, ou vous n\'avez aucune liste de suivi. Appuyez ci-dessous pour rafraîchir, ou utilisez le menu pour en créer une.</string>
     <string name="follow_set_error_dialog_msg">Un problème est survenu lors de la récupération : %1$s</string>
     <string name="follow_set_creation_menu_title">Créer une nouvelle liste</string>
     <string name="follow_set_creation_item_label">Nouvelle liste avec %1$s membres</string>
+    <string name="follow_set_creation_item_description">Crée une nouvele liste de suivi et ajoute %1$s en tant que membre %2$s.</string>
+    <string name="follow_set_creation_dialog_title">Nouvelle liste de suivi</string>
+    <string name="follow_pack_creation_dialog_title">Nouveau pack de suivi</string>
+    <string name="follow_set_copy_dialog_title">Copier/Cloner la liste de suivi</string>
     <string name="follow_set_desc_modify_label">Modifier la description</string>
     <string name="follow_set_empty_desc_label">Cette liste n\'a pas de description</string>
     <string name="follow_set_current_desc_label">Description actuelle :</string>
@@ -642,11 +656,17 @@
     <string name="read_from_relay_description">Le nombre d\'octets qui ont été reçus depuis ce relais, y compris les filtres et les événements</string>
     <string name="an_error_occurred_trying_to_get_relay_information">Une erreur s\'est produite en récupérant les informations du relay depuis %1$s</string>
     <string name="owner">Propriétaire</string>
+    <string name="self">Clé de service</string>
+    <string name="running_software">Exécution %1$s</string>
+    <string name="running_software_version">Exécution %1$s (%2$s)</string>
     <string name="version">Version</string>
     <string name="software">Logiciel</string>
     <string name="contact">Contact</string>
     <string name="supports">NIPs supportés</string>
+    <string name="supported_grasps">Grasps supportées</string>
     <string name="admission_fees">Frais d\'admission</string>
+    <string name="admission">Admission</string>
+    <string name="subscription">Souscription</string>
     <string name="publication">Publication</string>
     <string name="payment_link">Paiements %1$s</string>
     <string name="payments_url">URL de payments</string>
@@ -677,6 +697,9 @@
     <string name="accepts_up_to">Accepte jusqu\'à</string>
     <string name="time_in_the_future">%1$s dans le futur</string>
     <string name="time_in_the_past">Il y a %1$s</string>
+    <string name="amount_in_zeros">%1$s zeros</string>
+    <string name="amount_in_bits">%1$s bits</string>
+    <string name="event_retention">Rétention de l\'événement</string>
     <string name="content_size">Taille du contenu</string>
     <string name="connectivity">Connectivité</string>
     <string name="access_control">Contrôle d\'accès</string>
@@ -685,6 +708,11 @@
     <string name="auth_required">Authentification requise</string>
     <string name="payment">Paiement</string>
     <string name="payment_required">Paiement requis</string>
+    <string name="max_message_length">Longueur du message maximum</string>
+    <string name="max_subs">Souscription maximale</string>
+    <string name="max_filters_per_sub">Nombre maximum de filtres par sub</string>
+    <string name="max_limit_events_returning">Limite Max (Renvoi des Évènements)</string>
+    <string name="max_subid_length">Longueur maximale du SubID </string>
     <string name="cashu">Jeton Cashu</string>
     <string name="cashu_redeem">Échanger</string>
     <string name="cashu_redeem_to_zap">Envoyer vers le portefeuille Zap</string>
@@ -1152,6 +1180,7 @@
     <string name="torrent_failure">Échec de l\'ouverture du fichier</string>
     <string name="torrent_no_apps">Aucune application torrent installée pour ouvrir et télécharger le fichier.</string>
     <string name="torrent_no_info">L\'événement ne possède pas assez d\'informations pour construire un lien magnet</string>
+    <string name="my_lists_and_sets">Mes listes</string>
     <string name="my_lists">Mes listes</string>
     <string name="people_list_label">Utilisateurs</string>
     <string name="select_list_to_filter">Sélectionnez une liste pour filtrer le fil</string>
@@ -1162,6 +1191,8 @@
     <string name="group_relay_explanation">Le relais auquel tous les utilisateurs de ce chat se connectent</string>
     <string name="share_image">Partager l\'image…</string>
     <string name="unable_to_share_image">Impossible de partager l\'image, veuillez réessayer plus tard…</string>
+    <string name="unable_to_share_video">Impossible de partager l\'image, veuillez réessayer plus tard…</string>
+    <string name="downloading_video_for_sharing">Téléchargement de la vidéo…</string>
     <string name="search_by_hashtag">Hashtag de recherche : #%1$s</string>
     <string name="dont_translate_from">Ne pas traduire depuis</string>
     <string name="dont_translate_from_description">Les langues affichées ici ne seront pas traduites. Sélectionnez une langue pour la supprimer et l\'avoir traduite à nouveau.</string>
@@ -1175,6 +1206,7 @@
     <string name="would_you_like_to_send_the_recent_crash_report_to_amethyst_in_a_dm_no_personal_information_will_be_shared">Voulez-vous envoyer le rapport d\'erreur récent à Amethyst dans un MP ? Aucune information personnelle ne sera partagée</string>
     <string name="crashreport_found_send">Envoyer</string>
     <string name="this_message_will_disappear_in_days">Ce message disparaîtra dans %1$d jours</string>
+    <string name="select_signer">Sélectionner un signataire</string>
     <string name="in_the_list">Déjà dans la liste</string>
     <string name="private_members">Membres privés</string>
     <string name="public_members">Membres publics</string>
@@ -1182,7 +1214,10 @@
     <string name="public_members_count">Membres publics (%1$s)</string>
     <string name="add_user_to_the_list">Ajouter l\'utilisateur à la liste</string>
     <string name="remove_user_from_the_list">Supprimer l\'utilisateur de la liste</string>
+    <string name="follow_list_item_label">Pack de suivi</string>
     <string name="members">Membres</string>
+    <string name="follow_pack_title">Pack de suivi metadata</string>
+    <string name="follow_pack_edit_list_metadata">Modifier le Pack de Suivi</string>
     <string name="follow_pack_creation_name_label">Nom du pack</string>
     <string name="follow_pack_copy_name_label">Nom du nouveau pack</string>
     <string name="follow_pack_creation_desc_label">Description du pack</string>
@@ -1191,4 +1226,11 @@
     <string name="follow_pack_broadcast">Pack de diffusion</string>
     <string name="follow_set_delete">Supprimer la liste</string>
     <string name="follow_pack_delete">Supprimer le pack</string>
+    <string name="kinds">Kinds</string>
+    <string name="tap_to_view_details">Appuyer pour afficher les détails</string>
+    <string name="event_sent">%1$s envoyé</string>
+    <string name="broadcasts_number">Diffusions (%1$d)</string>
+    <string name="collapse">Réduire</string>
+    <string name="expand">Agrandir</string>
+    <string name="more_broadcasts_number">+%1$d diffusions supplémentaires</string>
 </resources>
