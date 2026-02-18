@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.crypto
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 
-object Nip01 {
+object Nip01Crypto {
     fun privKeyCreate() = RandomInstance.bytes(32)
 
     fun pubKeyCreate(privKey: ByteArray) = Secp256k1Instance.compressedPubKeyFor(privKey).copyOfRange(1, 33)

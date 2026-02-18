@@ -38,7 +38,7 @@ class EventAssembler {
             nonce: ByteArray? = RandomInstance.bytes(32),
         ): T {
             val id = EventHasher.hashIdBytes(pubKey, createdAt, kind, tags, content)
-            val sig = Nip01.sign(id, privKey, nonce).toHexKey()
+            val sig = Nip01Crypto.sign(id, privKey, nonce).toHexKey()
 
             return EventFactory.create(
                 id.toHexKey(),

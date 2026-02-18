@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
@@ -197,7 +197,7 @@ class NewMessageTagger(
                 val restOfWord = key.substring(63)
                 // Converts to npub
                 val pubkey =
-                    Nip19Parser.uriToRoute(Nip01.pubKeyCreate(keyB32.bechToBytes()).toNpub()) ?: return null
+                    Nip19Parser.uriToRoute(Nip01Crypto.pubKeyCreate(keyB32.bechToBytes()).toNpub()) ?: return null
 
                 return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
             } else if (key.startsWith("npub1", true)) {

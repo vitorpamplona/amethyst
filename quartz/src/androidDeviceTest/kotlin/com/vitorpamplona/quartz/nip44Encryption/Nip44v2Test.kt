@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertNotNull
@@ -68,8 +68,8 @@ class Nip44v2Test {
         val privateKeyA = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
         val privateKeyB = "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a".hexToByteArray()
 
-        val publicKeyA = Nip01.pubKeyCreate(privateKeyA)
-        val publicKeyB = Nip01.pubKeyCreate(privateKeyB)
+        val publicKeyA = Nip01Crypto.pubKeyCreate(privateKeyA)
+        val publicKeyB = Nip01Crypto.pubKeyCreate(privateKeyB)
 
         assertEquals(
             nip44v2.getConversationKey(privateKeyA, publicKeyB).toHexKey(),
@@ -82,8 +82,8 @@ class Nip44v2Test {
         val privateKeyA = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
         val privateKeyB = "e6159851715b4aa6190c22b899b0c792847de0a4435ac5b678f35738351c43b0".hexToByteArray()
 
-        val publicKeyA = Nip01.pubKeyCreate(privateKeyA)
-        val publicKeyB = Nip01.pubKeyCreate(privateKeyB)
+        val publicKeyA = Nip01Crypto.pubKeyCreate(privateKeyA)
+        val publicKeyB = Nip01Crypto.pubKeyCreate(privateKeyB)
 
         assertEquals(
             nip44v2.getConversationKey(privateKeyA, publicKeyB).toHexKey(),

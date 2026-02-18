@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
 import org.junit.Rule
 import org.junit.Test
@@ -37,8 +37,8 @@ class Nip44EncryptDecryptBenchmark {
         val nip44v2 = Nip44v2()
         val msg = "Hi, how are you? this is supposed to be representative of an average message on Nostr"
 
-        val privateKey = Nip01.privKeyCreate()
-        val publicKey = Nip01.pubKeyCreate(privateKey)
+        val privateKey = Nip01Crypto.privKeyCreate()
+        val publicKey = Nip01Crypto.pubKeyCreate(privateKey)
 
         val sharedKey = nip44v2.getConversationKey(privateKey, publicKey)
         val encrypted = nip44v2.encrypt(msg, sharedKey)

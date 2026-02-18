@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -175,7 +174,7 @@ object Nip19Parser {
 
 fun decodePublicKey(key: String): ByteArray =
     when (val parsed = Nip19Parser.uriToRoute(key)?.entity) {
-        is NSec -> Nip01.pubKeyCreate(parsed.hex.hexToByteArray())
+        is NSec -> parsed.toPubKey()
         is NPub -> parsed.hex.hexToByteArray()
         is NProfile -> parsed.hex.hexToByteArray()
         else -> Hex.decode(key) // crashes on purpose
@@ -202,7 +201,7 @@ fun decodePrivateKeyAsHexOrNull(key: String): HexKey? =
 fun decodePublicKeyAsHexOrNull(key: String): HexKey? =
     try {
         when (val parsed = Nip19Parser.uriToRoute(key)?.entity) {
-            is NSec -> Nip01.pubKeyCreate(parsed.hex.hexToByteArray()).toHexKey()
+            is NSec -> parsed.toPubKeyHex()
             is NPub -> parsed.hex
             is NProfile -> parsed.hex
             is NNote -> null

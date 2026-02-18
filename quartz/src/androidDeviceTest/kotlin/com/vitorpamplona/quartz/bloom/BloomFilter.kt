@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.bloom
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import org.junit.Assert.assertEquals
@@ -135,7 +135,7 @@ class BloomFilterTest {
 
         var failureCounter = 0
         for (seed in 0..1000000) {
-            if (bloomFilter.mightContains(Nip01.pubKeyCreate(Nip01.privKeyCreate()))) {
+            if (bloomFilter.mightContains(Nip01Crypto.pubKeyCreate(Nip01Crypto.privKeyCreate()))) {
                 failureCounter++
             }
         }

@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 
@@ -106,7 +106,7 @@ class PrivateZapRequestBuilder {
 
                 try {
                     if (altPubkeyToUse != null) {
-                        val altPubKeyFromPrivate = Nip01.pubKeyCreate(myPrivateKeyForThisEvent).toHexKey()
+                        val altPubKeyFromPrivate = Nip01Crypto.pubKeyCreate(myPrivateKeyForThisEvent).toHexKey()
 
                         if (altPubKeyFromPrivate == event.pubKey) {
                             // the sender is logged in.
