@@ -10,7 +10,6 @@ plugins {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.add("-Xstring-concat=inline")
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
@@ -22,8 +21,14 @@ kotlin {
 
     androidLibrary {
         namespace = "com.vitorpamplona.amethyst.commons"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        compileSdk =
+            libs.versions.android.compileSdk
+                .get()
+                .toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
 
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
@@ -75,13 +80,14 @@ kotlin {
         }
 
         // Shared JVM code for both Android and Desktop
-        val jvmAndroid = create("jvmAndroid") {
-            dependsOn(commonMain.get())
-            dependencies {
-                // URL detection (JVM library, works on both)
-                implementation(libs.url.detector)
+        val jvmAndroid =
+            create("jvmAndroid") {
+                dependsOn(commonMain.get())
+                dependencies {
+                    // URL detection (JVM library, works on both)
+                    implementation(libs.url.detector)
+                }
             }
-        }
 
         jvmMain {
             dependsOn(jvmAndroid)

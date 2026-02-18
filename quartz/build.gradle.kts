@@ -10,7 +10,6 @@ plugins {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.add("-Xstring-concat=inline")
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     jvm {

@@ -44,7 +44,6 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_21
-        freeCompilerArgs.add("-Xstring-concat=inline")
     }
 }
 
