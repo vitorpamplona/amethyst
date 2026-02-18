@@ -56,18 +56,20 @@ class HintIndexerTest {
                 )
             }
 
-        val relays =
-            TestResourceLoader()
-                .loadString("relayDB.txt")
-                .split('\n')
-                .mapNotNull {
-                    val relay = RelayUrlNormalizer.normalizeOrNull(it)
-                    if (relay == null || relay.isLocalHost()) {
-                        null
-                    } else {
-                        relay
+        val relays by
+            lazy {
+                TestResourceLoader()
+                    .loadString("relayDB.txt")
+                    .split('\n')
+                    .mapNotNull {
+                        val relay = RelayUrlNormalizer.normalizeOrNull(it)
+                        if (relay == null || relay.isLocalHost()) {
+                            null
+                        } else {
+                            relay
+                        }
                     }
-                }
+            }
 
         val indexer by lazy {
             val result = HintIndexer()
