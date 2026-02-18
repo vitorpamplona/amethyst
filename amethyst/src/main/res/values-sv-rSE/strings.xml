@@ -1236,4 +1236,44 @@
     <string name="follow_set_delete">Ta bort lista</string>
     <string name="follow_pack_delete">Ta bort rekommendationspaket</string>
     <string name="kinds">Typer</string>
+    <string name="poll_closing_in">Omröstningen stänger om %1$s</string>
+    <string name="poll_option">Alternativ</string>
+    <string name="poll_closing_date_time">Stängningsdatum och tid</string>
+    <string name="follow_list_chess">Schack</string>
+    <string name="route_chess">Schack</string>
+    <string name="sent_number_events">%1$d händelser skickade</string>
+
+    <string name="bradcasting_result_partial">Vissa händelser misslyckades</string>
+    <string name="bradcasting_result_success">Alla händelser lyckades</string>
+    <string name="bradcasting_result_failure">Alla händelser misslyckades</string>
+
+    <string name="reaction">Reaktion</string>
+    <string name="voice_post">Röstinlägg</string>
+    <string name="voice_reply">Röstsvar</string>
+    <string name="closing_time">Stängningstid</string>
+    <string name="confirm">Bekräfta</string>
+    <string name="next">Nästa</string>
+    <string name="add_poll_option_button">Lägg till omröstningsalternativ</string>
+
+    <string name="retry_failed">Försök igen misslyckades</string>
+    <string name="tap_to_view_details">Tryck för att visa detaljer</string>
+    <string name="event_sent">%1$s skickad</string>
+    <string name="broadcast_results">Sändningsresultat</string>
+    <string name="broadcasts_number">Sändningar (%1$d)</string>
+    <string name="collapse">Fäll ihop</string>
+    <string name="expand">Fäll ut</string>
+    <string name="retry_failed_number">Försök igen misslyckade (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d fler sändningar</string>
+    <string name="number_in_progress"> (%1$d pågår)</string>
+    <string name="share_of_relays">%1$d/%2$d reläer</string>
+    <string name="timeout">Tidsgräns överskriden</string>
+    <string name="retrying">Försöker igen…</string>
+    <string name="retry">Försök igen</string>
+    <string name="view">Visa</string>
+    <string name="dismiss">Avfärda</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">Sänder</string>
+    <string name="broadcasting_name">Sänder %1$s</string>
+    <string name="broadcasting_number_events">Sänder %1$d händelser…</string>
+
 </resources>

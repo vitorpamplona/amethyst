@@ -1237,4 +1237,44 @@
     <string name="follow_set_delete">Excluir lista</string>
     <string name="follow_pack_delete">Excluir pacote de recomendações</string>
     <string name="kinds">Tipos</string>
+
+    <string name="poll_closing_in">Enquete encerra em %1$s</string>
+    <string name="poll_option">Opção</string>
+    <string name="poll_closing_date_time">Data e hora de encerramento da enquete</string>
+    <string name="follow_list_chess">Xadrez</string>
+    <string name="route_chess">Xadrez</string>
+    <string name="sent_number_events">%1$d eventos enviados</string>
+
+    <string name="bradcasting_result_partial">Alguns eventos falharam</string>
+    <string name="bradcasting_result_success">Todos os eventos foram bem-sucedidos</string>
+    <string name="bradcasting_result_failure">Todos os eventos falharam</string>
+
+    <string name="reaction">Reação</string>
+    <string name="voice_post">Post de voz</string>
+    <string name="voice_reply">Resposta em voz</string>
+    <string name="closing_time">Hora de encerramento</string>
+    <string name="confirm">Confirmar</string>
+    <string name="next">Próximo</string>
+    <string name="add_poll_option_button">Adicionar opção à enquete</string>
+
+    <string name="retry_failed">Nova tentativa falhou</string>
+    <string name="tap_to_view_details">Toque para ver detalhes</string>
+    <string name="event_sent">%1$s enviado</string>
+    <string name="broadcast_results">Resultados do envio</string>
+    <string name="broadcasts_number">Envios (%1$d)</string>
+    <string name="collapse">Recolher</string>
+    <string name="expand">Expandir</string>
+    <string name="retry_failed_number">Tentar novamente falhas (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d envios adicionais</string>
+    <string name="number_in_progress"> (%1$d em andamento)</string>
+    <string name="share_of_relays">%1$d/%2$d relays</string>
+    <string name="timeout">Tempo esgotado</string>
+    <string name="retrying">Tentando novamente…</string>
+    <string name="retry">Tentar novamente</string>
+    <string name="view">Ver</string>
+    <string name="dismiss">Dispensar</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">Enviando</string>
+    <string name="broadcasting_name">Enviando %1$s</string>
+    <string name="broadcasting_number_events">Enviando %1$d eventos…</string>
 </resources>
