@@ -37,6 +37,7 @@ object Constants {
 
     val nostoday = RelayUrlNormalizer.normalize("wss://search.nos.today")
     val antiprimal = RelayUrlNormalizer.normalize("wss://antiprimal.net")
+    val ditto = RelayUrlNormalizer.normalize("wss://relay.ditto.pub")
 
     val auth = RelayUrlNormalizer.normalize("wss://auth.nostr1.com")
     val oxchat = RelayUrlNormalizer.normalize("wss://relay.0xchat.com")

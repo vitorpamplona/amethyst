@@ -81,7 +81,7 @@ val DefaultNIP65List =
 
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
-val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal)
+val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
 
 val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
 
