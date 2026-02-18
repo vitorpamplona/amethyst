@@ -424,6 +424,7 @@
     <string name="poll_heading_required">Povinná pole:</string>
     <string name="poll_zap_recipients">Příjemci zapsů</string>
     <string name="poll_primary_description">Hlavní popis hlasování…</string>
+    <string name="poll_option">Možnost</string>
     <string name="poll_option_index">Možnost %s</string>
     <string name="poll_option_description">Popis možnosti hlasování</string>
     <string name="poll_heading_optional">Volitelná pole:</string>
@@ -431,6 +432,8 @@
     <string name="poll_zap_value_max">Maximální zaps</string>
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Datum a čas ukončení ankety</string>
+    <string name="poll_closing_in">Anketa končí za %1$s</string>
     <string name="poll_closing_time">Uzavřít po</string>
     <string name="poll_closing_time_days">dnech</string>
     <string name="poll_unable_to_vote">Nebylo možné hlasovat</string>
@@ -505,6 +508,7 @@
     <string name="follow_list_kind3follows_proxy">Sleduje přes proxy</string>
     <string name="follow_list_aroundme">Kolem mě</string>
     <string name="follow_list_global">Globální</string>
+    <string name="follow_list_chess">Šachy</string>
     <string name="follow_list_mute_list">Seznam ztlumení</string>
     <string name="follow_sets">Seznamy sledování</string>
     <string name="follow_sets_explainer">Toto jsou follow seznamy určené pro vaše vlastní použití. Můžete sledovat uživatele soukromě nebo veřejně.</string>
@@ -1003,6 +1007,7 @@
     <string name="route_notifications">Upozornění</string>
     <string name="route_global">Globální</string>
     <string name="route_video">Krátké</string>
+    <string name="route_chess">Šachy</string>
     <string name="route_security_filters">Bezpečnostní filtry</string>
     <string name="new_post">Nový příspěvek</string>
     <string name="new_short">Nové Shorts: obrázky nebo videa</string>
@@ -1237,4 +1242,34 @@
     <string name="follow_set_delete">Smazat seznam</string>
     <string name="follow_pack_delete">Smazat sadu doporučení</string>
     <string name="kinds">Typy</string>
+    <string name="retry_failed">Opakování selhalo</string>
+    <string name="tap_to_view_details">Klepnutím zobrazíte podrobnosti</string>
+    <string name="event_sent">%1$s odesláno</string>
+    <string name="broadcast_results">Výsledky odesílání</string>
+    <string name="broadcasts_number">Odesílání (%1$d)</string>
+    <string name="collapse">Sbalit</string>
+    <string name="expand">Rozbalit</string>
+    <string name="retry_failed_number">Opakovat selhané (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d dalších odesílání</string>
+    <string name="number_in_progress">" (%1$d probíhá)"</string>
+    <string name="share_of_relays">%1$d/%2$d relayů</string>
+    <string name="timeout">Časový limit vypršel</string>
+    <string name="retrying">Opakuje se…</string>
+    <string name="retry">Opakovat</string>
+    <string name="view">Zobrazit</string>
+    <string name="dismiss">Zavřít</string>
+    <string name="broadcasting">Odesílání</string>
+    <string name="broadcasting_name">Odesílání %1$s</string>
+    <string name="broadcasting_number_events">Odesílání %1$d událostí…</string>
+    <string name="sent_number_events">Odesláno %1$d událostí</string>
+    <string name="bradcasting_result_partial">Některé události selhaly</string>
+    <string name="bradcasting_result_success">Všechny události byly úspěšné</string>
+    <string name="bradcasting_result_failure">Všechny události selhaly</string>
+    <string name="reaction">Reakce</string>
+    <string name="voice_post">Hlasový příspěvek</string>
+    <string name="voice_reply">Hlasová odpověď</string>
+    <string name="closing_time">Čas ukončení</string>
+    <string name="confirm">Potvrdit</string>
+    <string name="next">Další</string>
+    <string name="add_poll_option_button">Přidat možnost ankety</string>
 </resources>
