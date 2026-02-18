@@ -35,7 +35,7 @@ data class TorSettings(
     val videosViaTor: Boolean = false,
     val moneyOperationsViaTor: Boolean = false,
     val nip05VerificationsViaTor: Boolean = false,
-    val nip96UploadsViaTor: Boolean = false,
+    val mediaUploadsViaTor: Boolean = false,
 )
 
 enum class TorType(
@@ -90,7 +90,7 @@ fun isPreset(
         torSettings.videosViaTor == preset.videosViaTor &&
         torSettings.moneyOperationsViaTor == preset.moneyOperationsViaTor &&
         torSettings.nip05VerificationsViaTor == preset.nip05VerificationsViaTor &&
-        torSettings.nip96UploadsViaTor == preset.nip96UploadsViaTor
+        torSettings.mediaUploadsViaTor == preset.mediaUploadsViaTor
 
 fun whichPreset(torSettings: TorSettings): TorPresetType {
     if (isPreset(torSettings, torOnlyWhenNeededPreset)) return TorPresetType.ONLY_WHEN_NEEDED
@@ -112,7 +112,7 @@ val torOnlyWhenNeededPreset =
         videosViaTor = false,
         moneyOperationsViaTor = false,
         nip05VerificationsViaTor = false,
-        nip96UploadsViaTor = false,
+        mediaUploadsViaTor = false,
     )
 val torDefaultPreset =
     TorSettings(
@@ -126,7 +126,7 @@ val torDefaultPreset =
         videosViaTor = false,
         moneyOperationsViaTor = false,
         nip05VerificationsViaTor = false,
-        nip96UploadsViaTor = false,
+        mediaUploadsViaTor = false,
     )
 val torSmallPayloadsPreset =
     TorSettings(
@@ -140,7 +140,7 @@ val torSmallPayloadsPreset =
         videosViaTor = false,
         moneyOperationsViaTor = true,
         nip05VerificationsViaTor = true,
-        nip96UploadsViaTor = false,
+        mediaUploadsViaTor = false,
     )
 val torFullyPrivate =
     TorSettings(
@@ -154,5 +154,5 @@ val torFullyPrivate =
         videosViaTor = true,
         moneyOperationsViaTor = true,
         nip05VerificationsViaTor = true,
-        nip96UploadsViaTor = true,
+        mediaUploadsViaTor = true,
     )

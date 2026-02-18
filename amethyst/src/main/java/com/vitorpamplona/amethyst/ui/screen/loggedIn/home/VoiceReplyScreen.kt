@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -164,10 +165,10 @@ private fun VoiceReplyScreenBody(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Server selection
-        val fileServers =
-            accountViewModel.account.serverLists.liveServerList
+        val fileServers by
+            accountViewModel.account.blossomServers.hostNameFlow
                 .collectAsState()
-                .value
+
         FileServerSelectionRow(
             fileServers = fileServers,
             selectedServer = viewModel.voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer,

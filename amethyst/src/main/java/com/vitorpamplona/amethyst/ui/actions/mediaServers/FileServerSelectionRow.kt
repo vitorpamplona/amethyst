@@ -41,11 +41,7 @@ fun FileServerSelectionRow(
         remember(fileServers) {
             fileServers
                 .map {
-                    if (it.type == ServerType.NIP95) {
-                        TitleExplainer(it.name, nip95description)
-                    } else {
-                        TitleExplainer(it.name, it.baseUrl)
-                    }
+                    TitleExplainer(it.name, it.baseUrl)
                 }.toImmutableList()
         }
 

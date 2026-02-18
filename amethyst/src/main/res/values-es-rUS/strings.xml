@@ -447,7 +447,7 @@
     <string name="follow_set_type_public">Público</string>
     <string name="follow_set_type_private">Privado</string>
     <string name="follow_set_type_mixed">Mixto</string>
-    <string name="follow_set_empty_feed_msg">        Al parecer, aún no tienes ningún conjunto de seguimiento. 
+    <string name="follow_set_empty_feed_msg">        Al parecer, aún no tienes ningún conjunto de seguimiento.
         \nToca abajo para actualizar o toca los botones de agregar para crear uno nuevo.
     </string>
     <string name="follow_set_add_author_from_note_action">Agregar autor a conjunto de seguimiento</string>
@@ -497,8 +497,8 @@
     <string name="tor_use_money_operations_explainer">Forzar Tor en transferencias de zaps, Lightning y Cashu</string>
     <string name="tor_use_nip05_verification">Verificación de dirección de Nostr</string>
     <string name="tor_use_nip05_verification_explainer">Forzar Tor al verificar direcciones NIP-05</string>
-    <string name="tor_use_nip96_uploads">Subidas multimedia</string>
-    <string name="tor_use_nip96_uploads_explainer">Forzar Tor al subir contenido</string>
+    <string name="tor_use_media_uploads">Subidas multimedia</string>
+    <string name="tor_use_media_uploads_explainer">Forzar Tor al subir contenido</string>
     <string name="tor_internal">Interno</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Desactivado</string>

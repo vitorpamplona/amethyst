@@ -595,8 +595,8 @@
     <string name="tor_use_money_operations_explainer">ज्साप लैटनिंग तथा काशयु व्यापार के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_use_nip05_verification">नोस्ट्र पता सत्यापन</string>
     <string name="tor_use_nip05_verification_explainer">निप॰-०५ पता सत्यापन के लिए टोर का प्रयोग अवश्य करें</string>
-    <string name="tor_use_nip96_uploads">चित्र चलचित्र अभिलेख आरोहण</string>
-    <string name="tor_use_nip96_uploads_explainer">चित्र चलचित्र अभिलेख आरोहण के लिए टोर का प्रयोग अवश्य करें</string>
+    <string name="tor_use_media_uploads">चित्र चलचित्र अभिलेख आरोहण</string>
+    <string name="tor_use_media_uploads_explainer">चित्र चलचित्र अभिलेख आरोहण के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_internal">आन्तरीय</string>
     <string name="tor_external">ओर्बोट</string>
     <string name="tor_off">निष्क्रिय</string>

@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
@@ -264,9 +263,7 @@ fun EditPostView(
                                             accountViewModel.account.settings.defaultFileServer,
                                             onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                                                 postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel.toastManager::toast, context)
-                                                if (server.type != ServerType.NIP95) {
-                                                    accountViewModel.account.settings.changeDefaultFileServer(server)
-                                                }
+                                                accountViewModel.account.settings.changeDefaultFileServer(server)
                                             },
                                             onDelete = postViewModel::deleteMediaToUpload,
                                             onCancel = { postViewModel.multiOrchestrator = null },

@@ -48,7 +48,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
@@ -563,8 +562,8 @@ open class ShortNotePostViewModel :
                 return
             }
             // Update default server if voice message was successfully uploaded
-            if (voiceSelectedServer != null && voiceSelectedServer?.type != ServerType.NIP95) {
-                account.settings.changeDefaultFileServer(voiceSelectedServer!!)
+            voiceSelectedServer?.let {
+                account.settings.changeDefaultFileServer(it)
             }
         }
 

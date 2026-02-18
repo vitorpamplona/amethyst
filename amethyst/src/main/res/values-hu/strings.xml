@@ -446,8 +446,8 @@
     <string name="tor_use_money_operations_explainer">Tor kényszerítése Zap küldésekor, lightning és cashu tranzakciókhoz</string>
     <string name="tor_use_nip05_verification">Nostr-cím hitelesítése</string>
     <string name="tor_use_nip05_verification_explainer">Tor kényszerítése a NIP-05 címek hitelesítésekor</string>
-    <string name="tor_use_nip96_uploads">Média-feltöltések</string>
-    <string name="tor_use_nip96_uploads_explainer">Tor kényszerítése média feltöltésekor</string>
+    <string name="tor_use_media_uploads">Média-feltöltések</string>
+    <string name="tor_use_media_uploads_explainer">Tor kényszerítése média feltöltésekor</string>
     <string name="tor_internal">Beépített</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Kikapcsolva</string>

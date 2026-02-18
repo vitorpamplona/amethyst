@@ -535,6 +535,7 @@
     <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 
+    <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_media_servers_title">Built-in Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>
@@ -680,8 +681,8 @@
     <string name="tor_use_nip05_verification">Nostr Address Verification</string>
     <string name="tor_use_nip05_verification_explainer">Force Tor when verifying NIP-05 addresses</string>
 
-    <string name="tor_use_nip96_uploads">Media Uploads</string>
-    <string name="tor_use_nip96_uploads_explainer">Force Tor when uploading content</string>
+    <string name="tor_use_media_uploads">Media Uploads</string>
+    <string name="tor_use_media_uploads_explainer">Force Tor when uploading content</string>
 
     <string name="tor_internal">Internal</string>
     <string name="tor_external">Orbot</string>

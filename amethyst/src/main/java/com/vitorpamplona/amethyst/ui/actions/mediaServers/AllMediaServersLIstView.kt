@@ -56,11 +56,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
-fun AllMediaBody(
-    nip96ServersViewModel: NIP96ServersViewModel,
-    blossomServersViewModel: BlossomServersViewModel,
-) {
-    val nip96ServersState by nip96ServersViewModel.fileServers.collectAsStateWithLifecycle()
+fun AllMediaBody(blossomServersViewModel: BlossomServersViewModel) {
     val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -89,40 +85,15 @@ fun AllMediaBody(
             },
         )
 
-        item {
-            SettingsCategory(
-                R.string.media_servers_nip96_section,
-                R.string.media_servers_nip96_explainer,
-                SettingsCategorySpacingModifier,
-            )
-        }
-
-        renderMediaServerList(
-            mediaServersState = nip96ServersState,
-            keyType = "nip96",
-            editLabel = R.string.add_a_nip96_server,
-            emptyLabel = R.string.no_nip96_server_message,
-            onAddServer = { server ->
-                nip96ServersViewModel.addServer(server)
-            },
-            onDeleteServer = {
-                nip96ServersViewModel.removeServer(serverUrl = it)
-            },
-        )
-
         DEFAULT_MEDIA_SERVERS.let {
             item {
                 SettingsCategoryWithButton(
-                    title = R.string.built_in_media_servers_title,
+                    title = R.string.recommended_media_servers,
                     description = R.string.built_in_servers_description,
                     modifier = SettingsCategorySpacingModifier,
                 ) {
                     OutlinedButton(
                         onClick = {
-                            nip96ServersViewModel.addServerList(
-                                it.mapNotNull { s -> if (s.type == ServerType.NIP96) s.baseUrl else null },
-                            )
-
                             blossomServersViewModel.addServerList(
                                 it.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
                             )
@@ -142,9 +113,7 @@ fun AllMediaBody(
                     serverEntry = server,
                     isAmethystDefault = true,
                     onAddOrDelete = { serverUrl ->
-                        if (server.type == ServerType.NIP96) {
-                            nip96ServersViewModel.addServer(serverUrl)
-                        } else if (server.type == ServerType.Blossom) {
+                        if (server.type == ServerType.Blossom) {
                             blossomServersViewModel.addServer(serverUrl)
                         }
                     },

@@ -62,7 +62,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -343,9 +342,7 @@ private fun NewPostScreenBody(
                             accountViewModel.account.settings.defaultFileServer,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, useH265 ->
                                 postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context, useH265)
-                                if (server.type != ServerType.NIP95) {
-                                    accountViewModel.account.settings.changeDefaultFileServer(server)
-                                }
+                                accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
                             onCancel = { postViewModel.multiOrchestrator = null },
@@ -357,7 +354,7 @@ private fun NewPostScreenBody(
                 // Show preview for both uploaded messages (voiceMetadata) and pending recordings
                 (postViewModel.voiceMetadata ?: postViewModel.getVoicePreviewMetadata())?.let { metadata ->
                     val fileServersState =
-                        accountViewModel.account.serverLists.liveServerList
+                        accountViewModel.account.blossomServers.hostNameFlow
                             .collectAsState()
                     val fileServers = fileServersState.value
 

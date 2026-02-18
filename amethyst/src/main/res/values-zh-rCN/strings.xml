@@ -595,8 +595,8 @@
     <string name="tor_use_money_operations_explainer">强制为 Zap、闪电网络和 Cashu 转账时使用 Tor</string>
     <string name="tor_use_nip05_verification">Nostr 地址验证</string>
     <string name="tor_use_nip05_verification_explainer">强制为 NIP-05 地址验证使用 Tor</string>
-    <string name="tor_use_nip96_uploads">媒体上传</string>
-    <string name="tor_use_nip96_uploads_explainer">强制为上传媒体内容时使用 Tor</string>
+    <string name="tor_use_media_uploads">媒体上传</string>
+    <string name="tor_use_media_uploads_explainer">强制为上传媒体内容时使用 Tor</string>
     <string name="tor_internal">内置</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">关闭</string>

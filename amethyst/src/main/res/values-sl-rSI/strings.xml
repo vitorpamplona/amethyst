@@ -606,8 +606,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="tor_use_money_operations_explainer">Prisili tor pri Zapih, Lightning in Cashu plačilnih prenosih</string>
     <string name="tor_use_nip05_verification">Preveritev Nostr naslova</string>
     <string name="tor_use_nip05_verification_explainer">Prisili tor ob preverjanju NIP-05 naslovov</string>
-    <string name="tor_use_nip96_uploads">Nalaganje medijske vsebine</string>
-    <string name="tor_use_nip96_uploads_explainer">Prisili tor pri nalaganju vsebine</string>
+    <string name="tor_use_media_uploads">Nalaganje medijske vsebine</string>
+    <string name="tor_use_media_uploads_explainer">Prisili tor pri nalaganju vsebine</string>
     <string name="tor_internal">Interno</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Izključeno</string>

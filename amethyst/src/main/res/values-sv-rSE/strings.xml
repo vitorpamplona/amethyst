@@ -590,8 +590,8 @@
     <string name="tor_use_money_operations_explainer">Tvinga Tor på zaps, lightning och cashu överföringar</string>
     <string name="tor_use_nip05_verification">Nostr Adress Verifiering</string>
     <string name="tor_use_nip05_verification_explainer">Tvinga Tor vid verifiering av NIP-05 adresser</string>
-    <string name="tor_use_nip96_uploads">Mediauppladdningar</string>
-    <string name="tor_use_nip96_uploads_explainer">Tvinga Tor vid uppladdning av innehåll</string>
+    <string name="tor_use_media_uploads">Mediauppladdningar</string>
+    <string name="tor_use_media_uploads_explainer">Tvinga Tor vid uppladdning av innehåll</string>
     <string name="tor_internal">Intern</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Av</string>

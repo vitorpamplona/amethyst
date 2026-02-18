@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -83,38 +82,12 @@ fun ImageVideoDescription(
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    ImageVideoDescription(uris, defaultServer, true, onAdd, onDelete, onCancel, accountViewModel)
-}
-
-@Composable
-fun ImageVideoDescription(
-    uris: MultiOrchestrator,
-    defaultServer: ServerName,
-    includeNIP95: Boolean,
-    onAdd: (String, ServerName, Boolean, Int, Boolean) -> Unit,
-    onDelete: (SelectedMediaProcessing) -> Unit,
-    onCancel: () -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
-
-    val fileServers by accountViewModel.account.serverLists.liveServerList
+    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =
-        remember(fileServers, includeNIP95) {
-            fileServers
-                .mapNotNull {
-                    if (it.type == ServerType.NIP95) {
-                        if (includeNIP95) {
-                            TitleExplainer(it.name, nip95description)
-                        } else {
-                            null
-                        }
-                    } else {
-                        TitleExplainer(it.name, it.baseUrl)
-                    }
-                }.toImmutableList()
+        remember(fileServers) {
+            fileServers.map { TitleExplainer(it.name, it.baseUrl) }.toImmutableList()
         }
 
     var selectedServer by remember {

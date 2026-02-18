@@ -444,8 +444,8 @@
     <string name="tor_use_money_operations_explainer">Vynutit Tor na zaps, lightning a cashu převody</string>
     <string name="tor_use_nip05_verification">Ověření Nostr adresy</string>
     <string name="tor_use_nip05_verification_explainer">Vynutit Tor při ověřování NIP-05 adres</string>
-    <string name="tor_use_nip96_uploads">Nahrávání médií</string>
-    <string name="tor_use_nip96_uploads_explainer">Vynutit Tor při nahrávání obsahu</string>
+    <string name="tor_use_media_uploads">Nahrávání médií</string>
+    <string name="tor_use_media_uploads_explainer">Vynutit Tor při nahrávání obsahu</string>
     <string name="tor_internal">Interní</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Vypnuto</string>

@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationController
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoicePreset
@@ -274,9 +273,7 @@ class VoiceReplyViewModel : ViewModel() {
                             accountViewModel.account.signAndComputeBroadcast(template)
                         }
 
-                        if (server.type != ServerType.NIP95) {
-                            accountViewModel.account.settings.changeDefaultFileServer(server)
-                        }
+                        accountViewModel.account.settings.changeDefaultFileServer(server)
 
                         deleteVoiceLocalFile()
                         voiceAnonymization.deleteDistortedFiles()

@@ -49,18 +49,15 @@ fun AllMediaServersScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nip96ServersViewModel: NIP96ServersViewModel = viewModel()
     val blossomServersViewModel: BlossomServersViewModel = viewModel()
 
-    nip96ServersViewModel.init(accountViewModel)
     blossomServersViewModel.init(accountViewModel)
 
     LaunchedEffect(key1 = accountViewModel) {
-        nip96ServersViewModel.load()
         blossomServersViewModel.load()
     }
 
-    MediaServersScaffold(nip96ServersViewModel, blossomServersViewModel) {
+    MediaServersScaffold(blossomServersViewModel) {
         nav.popBack()
     }
 }
@@ -68,7 +65,6 @@ fun AllMediaServersScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaServersScaffold(
-    nip96ServersViewModel: NIP96ServersViewModel,
     blossomServersViewModel: BlossomServersViewModel,
     onClose: () -> Unit,
 ) {
@@ -77,12 +73,10 @@ fun MediaServersScaffold(
             SavingTopBar(
                 titleRes = R.string.media_servers,
                 onCancel = {
-                    nip96ServersViewModel.refresh()
                     blossomServersViewModel.refresh()
                     onClose()
                 },
                 onPost = {
-                    nip96ServersViewModel.saveFileServers()
                     blossomServersViewModel.saveFileServers()
                     onClose()
                 },
@@ -111,7 +105,7 @@ fun MediaServersScaffold(
                 color = MaterialTheme.colorScheme.grayText,
             )
 
-            AllMediaBody(nip96ServersViewModel, blossomServersViewModel)
+            AllMediaBody(blossomServersViewModel)
         }
     }
 }

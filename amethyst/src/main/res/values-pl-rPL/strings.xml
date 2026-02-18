@@ -592,8 +592,8 @@
     <string name="tor_use_money_operations_explainer">Wymuś Tor przy zapsach, transferach lightning and cashu</string>
     <string name="tor_use_nip05_verification">Weryfikacja adresu Nostr</string>
     <string name="tor_use_nip05_verification_explainer">Wymuś Tor podczas weryfikacji adresów NIP-05</string>
-    <string name="tor_use_nip96_uploads">Wgrywanie mediów</string>
-    <string name="tor_use_nip96_uploads_explainer">Wymuś Tor podczas wgrywania zawartości</string>
+    <string name="tor_use_media_uploads">Wgrywanie mediów</string>
+    <string name="tor_use_media_uploads_explainer">Wymuś Tor podczas wgrywania zawartości</string>
     <string name="tor_internal">Wewnętrznie</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Wył.</string>

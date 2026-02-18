@@ -393,8 +393,8 @@
     <string name="tor_use_money_operations">المعاملات المالية</string>
     <string name="tor_use_nip05_verification">التحقق من عنوان Nostr</string>
     <string name="tor_use_nip05_verification_explainer">أستخدام Tor عند التحقق من عناوين NIP-05</string>
-    <string name="tor_use_nip96_uploads">رفع الوسائط</string>
-    <string name="tor_use_nip96_uploads_explainer">أستخدام Tor عند رفع الوسائط</string>
+    <string name="tor_use_media_uploads">رفع الوسائط</string>
+    <string name="tor_use_media_uploads_explainer">أستخدام Tor عند رفع الوسائط</string>
     <string name="tor_internal">مضمن</string>
     <string name="tor_off">إيقاف</string>
     <string name="tor_when_needed">أساسي</string>

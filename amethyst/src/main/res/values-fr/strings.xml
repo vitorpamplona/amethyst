@@ -440,8 +440,8 @@
     <string name="tor_use_money_operations_explainer">Forcer Tor pour les transferts en zaps, lightning ou cashu</string>
     <string name="tor_use_nip05_verification">Vérification de l\'adresse Nostr</string>
     <string name="tor_use_nip05_verification_explainer">Forcer Tor lors de la vérification des adresses NIP-05</string>
-    <string name="tor_use_nip96_uploads">Téléversements de média</string>
-    <string name="tor_use_nip96_uploads_explainer">Forcer Tor lors du téléversement de contenu</string>
+    <string name="tor_use_media_uploads">Téléversements de média</string>
+    <string name="tor_use_media_uploads_explainer">Forcer Tor lors du téléversement de contenu</string>
     <string name="tor_internal">Interne</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Désactivé</string>

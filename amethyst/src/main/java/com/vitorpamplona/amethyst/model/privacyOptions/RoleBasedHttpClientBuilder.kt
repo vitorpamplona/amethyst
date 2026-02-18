@@ -122,8 +122,8 @@ class RoleBasedHttpClientBuilder(
     fun shouldUseTorForUploads(url: String) =
         when (torSettings.torType.value) {
             TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.nip96UploadsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.nip96UploadsViaTor.value)
+            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
+            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
         }
 
     override fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(shouldUseTorForVideoDownload(url))

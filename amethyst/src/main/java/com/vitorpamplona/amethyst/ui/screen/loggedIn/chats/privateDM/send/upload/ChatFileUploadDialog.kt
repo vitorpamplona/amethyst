@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -70,9 +69,7 @@ fun RoomChatFileUploadDialog(
                 onceUploaded = onUpload,
             )
 
-            if (state.selectedServer.type != ServerType.NIP95) {
-                accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
-            }
+            accountViewModel.account.settings.changeDefaultFileServer(state.selectedServer)
         },
         onCancel,
         accountViewModel,

@@ -591,8 +591,8 @@
     <string name="tor_use_money_operations_explainer">Forçar Tor em zaps, transfers relâmpago e cashu</string>
     <string name="tor_use_nip05_verification">Verificação de Endereço Nostr</string>
     <string name="tor_use_nip05_verification_explainer">Forçar Tor ao verificar endereços NIP-05</string>
-    <string name="tor_use_nip96_uploads">Envio de Mídia</string>
-    <string name="tor_use_nip96_uploads_explainer">Forçar Tor ao enviar conteúdo</string>
+    <string name="tor_use_media_uploads">Envio de Mídia</string>
+    <string name="tor_use_media_uploads_explainer">Forçar Tor ao enviar conteúdo</string>
     <string name="tor_internal">Interno</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Desativado</string>

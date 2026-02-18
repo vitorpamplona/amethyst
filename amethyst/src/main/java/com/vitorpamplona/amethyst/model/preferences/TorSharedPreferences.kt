@@ -101,7 +101,7 @@ class TorSharedPreferences(
                 videosViaTor = preferences[VIDEOS_VIA_TOR_KEY] ?: false,
                 moneyOperationsViaTor = preferences[MONEY_OPERATIONS_VIA_TOR_KEY] ?: false,
                 nip05VerificationsViaTor = preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] ?: false,
-                nip96UploadsViaTor = preferences[MEDIA_UPLOADS_VIA_TOR_KEY] ?: false,
+                mediaUploadsViaTor = preferences[MEDIA_UPLOADS_VIA_TOR_KEY] ?: false,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -125,7 +125,7 @@ class TorSharedPreferences(
                 preferences[VIDEOS_VIA_TOR_KEY] = torSettings.videosViaTor
                 preferences[MONEY_OPERATIONS_VIA_TOR_KEY] = torSettings.moneyOperationsViaTor
                 preferences[NIP05_VERIFICATIONS_VIA_TOR_KEY] = torSettings.nip05VerificationsViaTor
-                preferences[MEDIA_UPLOADS_VIA_TOR_KEY] = torSettings.nip96UploadsViaTor
+                preferences[MEDIA_UPLOADS_VIA_TOR_KEY] = torSettings.mediaUploadsViaTor
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

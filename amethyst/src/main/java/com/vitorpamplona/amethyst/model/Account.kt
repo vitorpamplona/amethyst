@@ -82,14 +82,12 @@ import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
-import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithSearchRelayListsState
-import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
@@ -317,8 +315,6 @@ class Account(
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
     val blossomServers = BlossomServerListState(signer, cache, scope, settings)
-    val fileStorageServers = FileStorageServerListState(signer, cache, scope, settings)
-    val serverLists = MergedServerListState(fileStorageServers, blossomServers, scope)
 
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
@@ -1915,8 +1911,6 @@ class Account(
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
-
-    suspend fun sendFileServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(fileStorageServers.saveFileServersList(servers))
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
