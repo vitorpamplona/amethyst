@@ -2,7 +2,7 @@
 accompanistAdaptive = "0.37.3"
 composeMultiplatform = "1.10.0"
 activityCompose = "1.12.4"
-agp = "9.0.0"
+agp = "9.0.1"
 android-compileSdk = "36"
 android-minSdk = "26"
 android-targetSdk = "36"
