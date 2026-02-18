@@ -138,7 +138,7 @@ class GiftWrapSigningBenchmark {
         benchmarkRule.measureRepeated {
             runBlocking {
                 GiftWrapEvent.create(
-                    event = seal!!,
+                    event = seal,
                     recipientPubKey = receiver.pubKey,
                 )
             }

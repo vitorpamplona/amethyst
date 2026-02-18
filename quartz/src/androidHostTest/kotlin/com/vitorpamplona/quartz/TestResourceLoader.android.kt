@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz
 
-expect class TestResourceLoader() {
-    fun loadString(file: String): String
+actual class TestResourceLoader actual constructor() {
+    actual fun loadString(file: String): String {
+        TODO("Not yet implemented")
+    }
 }

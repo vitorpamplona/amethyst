@@ -170,7 +170,7 @@ class GiftWrapReceivingBenchmark {
                 wrap.pubKey.hexToByteArray(),
             )
 
-        benchmarkRule.measureRepeated { assertNotNull(innerJson?.let { Event.fromJson(it) }) }
+        benchmarkRule.measureRepeated { assertNotNull(innerJson.let { Event.fromJson(it) }) }
     }
 
     @Test
@@ -205,6 +205,6 @@ class GiftWrapReceivingBenchmark {
                 seal.pubKey.hexToByteArray(),
             )
 
-        benchmarkRule.measureRepeated { assertNotNull(innerJson?.let { Rumor.fromJson(it) }) }
+        benchmarkRule.measureRepeated { assertNotNull(innerJson.let { Rumor.fromJson(it) }) }
     }
 }
