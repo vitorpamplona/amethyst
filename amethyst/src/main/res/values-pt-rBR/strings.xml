@@ -1252,11 +1252,13 @@
     <string name="retry_failed_number">Tentar novamente falhas (%1$d)</string>
     <string name="more_broadcasts_number">+%1$d envios adicionais</string>
     <string name="number_in_progress">" (%1$d em andamento)"</string>
+    <string name="share_of_relays">%1$d/%2$d relés</string>
     <string name="timeout">Tempo esgotado</string>
     <string name="retrying">Tentando novamente…</string>
     <string name="retry">Tentar novamente</string>
     <string name="view">Ver</string>
     <string name="dismiss">Dispensar</string>
+    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Enviando</string>
     <string name="broadcasting_name">Enviando %1$s</string>
     <string name="broadcasting_number_events">Enviando %1$d eventos…</string>

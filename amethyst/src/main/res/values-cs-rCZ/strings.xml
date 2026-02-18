@@ -1258,6 +1258,7 @@
     <string name="retry">Opakovat</string>
     <string name="view">Zobrazit</string>
     <string name="dismiss">Zavřít</string>
+    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Odesílání</string>
     <string name="broadcasting_name">Odesílání %1$s</string>
     <string name="broadcasting_number_events">Odesílání %1$d událostí…</string>
