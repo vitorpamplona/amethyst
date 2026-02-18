@@ -430,6 +430,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_heading_required">Erforderliche Felder:</string>
     <string name="poll_zap_recipients">Zap-Empfänger</string>
     <string name="poll_primary_description">Hauptbeschreibung der Umfrage…</string>
+    <string name="poll_option">Wahl</string>
     <string name="poll_option_index">Wahl %s</string>
     <string name="poll_option_description">Beschreibung der Umfrageoption</string>
     <string name="poll_heading_optional">Optionale Felder:</string>
@@ -1262,6 +1263,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="retry">Erneut versuchen</string>
     <string name="view">Anzeigen</string>
     <string name="dismiss">Schließen</string>
+    <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Senden</string>
     <string name="broadcasting_name">Sende %1$s</string>
     <string name="broadcasting_number_events">Sende %1$d Ereignisse…</string>
