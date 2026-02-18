@@ -91,7 +91,7 @@ class ReactionEvent(
         ) = eventTemplate<ReactionEvent>(KIND, reaction, createdAt) {
             eTag(reactedTo.toETag())
             if (reactedTo.event is AddressableEvent) {
-                aTag(reactedTo.event.aTag(reactedTo.relay))
+                aTag(reactedTo.event.address(), reactedTo.relay)
             }
             pTag(reactedTo.event.pubKey, reactedTo.relay)
             kind(reactedTo.event.kind)
@@ -104,7 +104,7 @@ class ReactionEvent(
         ) = eventTemplate<ReactionEvent>(KIND, reaction.toContentEncode(), createdAt) {
             eTag(reactedTo.toETag())
             if (reactedTo.event is AddressableEvent) {
-                aTag(reactedTo.event.aTag(reactedTo.relay))
+                aTag(reactedTo.event.address(), reactedTo.relay)
             }
             pTag(reactedTo.event.pubKey, reactedTo.relay)
             kind(reactedTo.event.kind)

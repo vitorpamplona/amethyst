@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip30CustomEmoji.selection
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTags
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.removeATag
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.removeAddress
 
 fun TagArrayBuilder<EmojiPackSelectionEvent>.pack(tag: ATag) = aTag(tag)
 
 fun TagArrayBuilder<EmojiPackSelectionEvent>.packs(tags: List<ATag>) = aTags(tags)
 
-fun TagArrayBuilder<EmojiPackSelectionEvent>.removePack(tag: ATag) = removeATag(tag)
+fun TagArrayBuilder<EmojiPackSelectionEvent>.removePack(address: Address) = removeAddress(address)

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.nip18Reposts
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -35,34 +35,26 @@ object RepostAction {
     /**
      * Creates a signed repost event.
      *
-     * @param event The event to repost
+     * @param eventHint The event to repost
      * @param signer The NostrSigner to sign the event
-     * @param noteHint Optional relay hint where the note was seen
-     * @param authorHint Optional relay hint for the author's outbox
      * @return Signed repost event ready to broadcast
      * @throws IllegalStateException if signer is not writeable
      */
     suspend fun repost(
-        event: Event,
+        eventHint: EventHintBundle<Event>,
         signer: NostrSigner,
-        noteHint: String? = null,
-        authorHint: String? = null,
     ): Event {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot repost: signer is not writeable")
         }
 
-        // Normalize relay hints
-        val normalizedNoteHint = noteHint?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-        val normalizedAuthorHint = authorHint?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-
         // Use NIP-18 RepostEvent (kind 6) for text notes (kind 1)
         // Use GenericRepostEvent (kind 16) for all other kinds
         val template =
-            if (event.kind == 1) {
-                RepostEvent.build(event, normalizedNoteHint, normalizedAuthorHint)
+            if (eventHint.event.kind == 1) {
+                RepostEvent.build(eventHint)
             } else {
-                GenericRepostEvent.build(event, normalizedNoteHint, normalizedAuthorHint)
+                GenericRepostEvent.build(eventHint)
             }
 
         return signer.sign(template)
@@ -86,10 +78,8 @@ object RepostAction {
         if (!signer.isWriteable()) return null
         if (note.hasBoostedInTheLast5Minutes(signer.pubKey)) return null
 
-        val noteEvent = note.event ?: return null
-        val noteHint = note.relayHintUrl()?.url
-        val authorHint = note.author?.bestRelayHint()?.url
+        val hint = note.toEventHint<Event>() ?: return null
 
-        return repost(noteEvent, signer, noteHint, authorHint)
+        return repost(hint, signer)
     }
 }

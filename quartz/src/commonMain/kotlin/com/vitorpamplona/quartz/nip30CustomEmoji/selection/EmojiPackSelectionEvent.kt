@@ -78,7 +78,7 @@ class EmojiPackSelectionEvent(
             createdAt: Long = TimeUtils.now(),
             updater: TagArrayBuilder<EmojiPackSelectionEvent>.() -> Unit = {},
         ) = eventUpdate(currentSelection, createdAt) {
-            removePack(packToRemove.aTag(null))
+            removePack(packToRemove.address())
             updater()
         }
 

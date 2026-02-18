@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -83,17 +83,16 @@ class InteractiveStoryReadingStateEvent(
 
         fun update(
             base: InteractiveStoryReadingStateEvent,
-            currentScene: InteractiveStoryBaseEvent,
-            currentSceneRelay: NormalizedRelayUrl?,
+            currentScene: EventHintBundle<InteractiveStoryBaseEvent>,
             createdAt: Long = TimeUtils.now(),
         ): EventTemplate<InteractiveStoryReadingStateEvent> {
             val rootTag = base.dTag()
-            val sceneTag = currentScene.aTag(currentSceneRelay)
+            val sceneTag = ATag(currentScene.event.address(), currentScene.relay)
 
             val status =
                 if (rootTag == sceneTag.toTag()) {
                     ReadStatusTag.STATUS.NEW
-                } else if (currentScene.options().isEmpty()) {
+                } else if (currentScene.event.options().isEmpty()) {
                     ReadStatusTag.STATUS.DONE
                 } else {
                     ReadStatusTag.STATUS.READING
@@ -109,34 +108,32 @@ class InteractiveStoryReadingStateEvent(
         }
 
         fun build(
-            root: InteractiveStoryBaseEvent,
-            rootRelay: NormalizedRelayUrl?,
-            currentScene: InteractiveStoryBaseEvent,
-            currentSceneRelay: NormalizedRelayUrl?,
+            root: EventHintBundle<InteractiveStoryBaseEvent>,
+            currentScene: EventHintBundle<InteractiveStoryBaseEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<InteractiveStoryReadingStateEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            val rootTag = root.aTag(rootRelay)
-            val sceneTag = currentScene.aTag(currentSceneRelay)
+            val rootTag = ATag(root.event.address(), root.relay)
+            val sceneTag = ATag(currentScene.event.address(), currentScene.relay)
             val status =
                 if (rootTag == sceneTag) {
                     ReadStatusTag.STATUS.NEW
-                } else if (currentScene.options().isEmpty()) {
+                } else if (currentScene.event.options().isEmpty()) {
                     ReadStatusTag.STATUS.DONE
                 } else {
                     ReadStatusTag.STATUS.READING
                 }
 
             dTag(rootTag.toTag())
-            alt(root.title()?.let { ALT2 + it } ?: ALT1)
+            alt(root.event.title()?.let { ALT2 + it } ?: ALT1)
 
             rootScene(rootTag)
             currentScene(sceneTag)
             status(status)
 
-            root.title()?.let { storyTitle(it) }
-            root.summary()?.let { storyImage(it) }
-            root.image()?.let { storySummary(it) }
+            root.event.title()?.let { storyTitle(it) }
+            root.event.summary()?.let { storyImage(it) }
+            root.event.image()?.let { storySummary(it) }
 
             initializer()
         }

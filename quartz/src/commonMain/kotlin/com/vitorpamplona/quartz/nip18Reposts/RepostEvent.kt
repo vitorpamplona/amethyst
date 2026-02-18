@@ -26,9 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
@@ -82,7 +83,7 @@ class RepostEvent(
     fun containedPost() =
         try {
             fromJson(content)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
 
@@ -91,22 +92,28 @@ class RepostEvent(
         const val ALT = "Repost event"
 
         fun build(
-            boostedPost: Event,
-            eventSourceRelay: NormalizedRelayUrl?,
-            authorHomeRelay: NormalizedRelayUrl?,
+            eventHint: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RepostEvent>.() -> Unit = {},
-        ) = eventTemplate(KIND, boostedPost.toJson(), createdAt) {
+        ) = eventTemplate(KIND, eventHint.event.toJson(), createdAt) {
+            val boostedPost = eventHint.event
+
             alt(ALT)
 
-            pTag(PTag(boostedPost.pubKey, authorHomeRelay))
-            eTag(ETag(boostedPost.id, eventSourceRelay, boostedPost.pubKey))
+            pTag(PTag(boostedPost.pubKey, eventHint.authorHomeRelay))
+            eTag(ETag(boostedPost.id, eventHint.relay, boostedPost.pubKey))
             if (boostedPost is AddressableEvent) {
-                aTag(boostedPost.aTag(eventSourceRelay))
+                aTag(boostedPost.address(), eventHint.relay)
             }
             kind(boostedPost.kind)
 
             initializer()
         }
+
+        suspend fun create(
+            eventHint: EventHintBundle<Event>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): RepostEvent = signer.sign(build(eventHint, createdAt))
     }
 }

@@ -21,8 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 
 @Immutable
 open class BaseReplaceableEvent(
@@ -33,10 +31,9 @@ open class BaseReplaceableEvent(
     tags: TagArray,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    AddressableEvent {
     override fun dTag() = FIXED_D_TAG
-
-    override fun aTag(relayHint: NormalizedRelayUrl?) = ATag(kind, pubKey, FIXED_D_TAG, relayHint)
 
     override fun address(): Address = Address(kind, pubKey, dTag())
 

@@ -61,7 +61,6 @@ import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProvide
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
@@ -420,18 +419,18 @@ object LocalCache : ILocalCache, ICacheProvider {
         return null
     }
 
-    override fun checkGetOrCreateNote(key: String): Note? {
-        if (ATag.isATag(key)) {
-            return checkGetOrCreateAddressableNote(key)
+    override fun checkGetOrCreateNote(hexKey: String): Note? {
+        if (ATag.isATag(hexKey)) {
+            return checkGetOrCreateAddressableNote(hexKey)
         }
-        if (isValidHex(key)) {
-            val note = getOrCreateNote(key)
+        if (isValidHex(hexKey)) {
+            val note = getOrCreateNote(hexKey)
             val noteEvent = note.event
             return if (noteEvent is AddressableEvent) {
                 // upgrade to the latest
-                val newNote = checkGetOrCreateAddressableNote(noteEvent.aTag().toTag())
+                val newNote = getOrCreateAddressableNote(noteEvent.address())
 
-                if (newNote != null && newNote.event == null) {
+                if (newNote.event == null) {
                     val author = note.author ?: getOrCreateUser(noteEvent.pubKey)
                     newNote.loadEvent(noteEvent as Event, author, emptyList())
                     note.moveAllReferencesTo(newNote)
@@ -1407,10 +1406,13 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consumeBaseReplaceable(
-        event: BaseAddressableEvent,
+        event: Event,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        // TODO: Redo the Event sctructure in Quartz to avoid this check
+        check(event is AddressableEvent) { "Event must be addressable: ${event.kind}" }
+
         val version = getOrCreateNote(event.id)
         val replaceableNote = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -2767,7 +2769,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         note?.event?.let { noteEvent ->
             if (noteEvent is AddressableEvent) {
-                getAddressableNoteIfExists(noteEvent.aTag().toTag())?.addRelay(relay)
+                getAddressableNoteIfExists(noteEvent.address())?.addRelay(relay)
             }
         }
 

@@ -143,7 +143,7 @@ fun routeForInner(
         }
 
         is AddressableEvent -> {
-            Route.Note(noteEvent.aTag().toTag())
+            Route.Note(noteEvent.addressTag())
         }
 
         else -> {

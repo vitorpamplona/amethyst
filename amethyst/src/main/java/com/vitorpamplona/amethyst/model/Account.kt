@@ -529,13 +529,12 @@ class Account(
         if (!signer.isWriteable()) return null
         if (note.hasReacted(userProfile(), reaction)) return null
 
-        val noteEvent = note.event ?: return null
+        val eventHint = note.toEventHint<Event>() ?: return null
 
         // For NIP-17 private groups, we don't support tracked mode (too complex)
-        if (noteEvent is NIP17Group) return null
+        if (eventHint.event is NIP17Group) return null
 
-        val relayHint = note.relays.firstOrNull()?.url
-        val event = ReactionAction.reactTo(noteEvent, reaction, signer, relayHint)
+        val event = ReactionAction.reactTo(eventHint, reaction, signer)
         val relays = computeRelayListToBroadcast(event)
 
         return event to relays
@@ -1360,19 +1359,15 @@ class Account(
     }
 
     suspend fun createInteractiveStoryReadingState(
-        root: InteractiveStoryBaseEvent,
-        rootRelay: NormalizedRelayUrl?,
-        readingScene: InteractiveStoryBaseEvent,
-        readingSceneRelay: NormalizedRelayUrl?,
+        root: EventHintBundle<InteractiveStoryBaseEvent>,
+        readingScene: EventHintBundle<InteractiveStoryBaseEvent>,
     ) {
         if (!isWriteable()) return
 
         val template =
             InteractiveStoryReadingStateEvent.build(
                 root = root,
-                rootRelay = rootRelay,
                 currentScene = readingScene,
-                currentSceneRelay = readingSceneRelay,
             )
 
         val event = signer.sign(template)
@@ -1391,8 +1386,7 @@ class Account(
 
     suspend fun updateInteractiveStoryReadingState(
         readingState: InteractiveStoryReadingStateEvent,
-        readingScene: InteractiveStoryBaseEvent,
-        readingSceneRelay: NormalizedRelayUrl?,
+        readingScene: EventHintBundle<InteractiveStoryBaseEvent>,
     ) {
         if (!isWriteable()) return
 
@@ -1400,7 +1394,6 @@ class Account(
             InteractiveStoryReadingStateEvent.update(
                 base = readingState,
                 currentScene = readingScene,
-                currentSceneRelay = readingSceneRelay,
             )
 
         val event = signer.sign(template)

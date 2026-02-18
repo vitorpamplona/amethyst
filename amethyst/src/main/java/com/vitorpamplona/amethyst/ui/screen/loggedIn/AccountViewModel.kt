@@ -91,6 +91,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.EmptyIAuthStatus
@@ -1480,21 +1481,17 @@ class AccountViewModel(
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
 
     fun updateInteractiveStoryReadingState(
-        root: InteractiveStoryBaseEvent,
-        readingScene: InteractiveStoryBaseEvent,
+        rootHint: EventHintBundle<InteractiveStoryBaseEvent>,
+        readingSceneHint: EventHintBundle<InteractiveStoryBaseEvent>,
     ) {
         launchSigner {
-            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
-
-            val readingState = getInteractiveStoryReadingState(root.addressTag())
+            val readingState = getInteractiveStoryReadingState(rootHint.event.addressTag())
             val readingStateEvent = readingState.event as? InteractiveStoryReadingStateEvent
 
             if (readingStateEvent != null) {
-                account.updateInteractiveStoryReadingState(readingStateEvent, readingScene, sceneNoteRelayHint)
+                account.updateInteractiveStoryReadingState(readingStateEvent, readingSceneHint)
             } else {
-                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.address()).relayHintUrl()
-
-                account.createInteractiveStoryReadingState(root, rootNoteRelayHint, readingScene, sceneNoteRelayHint)
+                account.createInteractiveStoryReadingState(rootHint, readingSceneHint)
             }
         }
     }

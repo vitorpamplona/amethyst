@@ -61,12 +61,13 @@ fun RenderInteractiveStory(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val baseRootEvent = baseNote.event as? InteractiveStoryBaseEvent ?: return
+    val baseRootEvent = baseNote.toEventHint<InteractiveStoryBaseEvent>() ?: return
     val address = baseNote.address() ?: return
 
     // keep updating the root event with new versions
     val note = observeNote(baseNote, accountViewModel)
-    val rootEvent = note.value?.note?.event as? InteractiveStoryBaseEvent ?: return
+    val rootHint = note.value.note.toEventHint<InteractiveStoryBaseEvent>() ?: return
+    val rootEvent = rootHint.event
 
     // keep updating the reading state event with new versions
     val readingStateNote = accountViewModel.getInteractiveStoryReadingState(address.toValue())
@@ -83,11 +84,11 @@ fun RenderInteractiveStory(
                     RenderInteractiveStory(
                         section = it,
                         onSelect = {
-                            val event = it.event as? InteractiveStoryBaseEvent ?: return@RenderInteractiveStory
-                            accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, event)
+                            val eventHint = it.toEventHint<InteractiveStoryBaseEvent>() ?: return@RenderInteractiveStory
+                            accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, eventHint)
                         },
                         onRestart = {
-                            accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, rootEvent)
+                            accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, rootHint)
                         },
                         makeItShort = makeItShort,
                         canPreview = canPreview,
@@ -103,11 +104,11 @@ fun RenderInteractiveStory(
         RenderInteractiveStory(
             section = rootEvent,
             onSelect = {
-                val event = it.event as? InteractiveStoryBaseEvent ?: return@RenderInteractiveStory
-                accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, event)
+                val eventHint = it.toEventHint<InteractiveStoryBaseEvent>() ?: return@RenderInteractiveStory
+                accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, eventHint)
             },
             onRestart = {
-                accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, rootEvent)
+                accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, rootHint)
             },
             makeItShort = makeItShort,
             canPreview = canPreview,
