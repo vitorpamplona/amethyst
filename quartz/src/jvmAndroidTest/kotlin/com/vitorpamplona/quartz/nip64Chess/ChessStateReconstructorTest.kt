@@ -340,7 +340,7 @@ class ChessStateReconstructorTest {
         assertTrue(state.gameStatus is GameStatus.Finished)
         assertEquals(
             GameResult.WHITE_WINS,
-            (state.gameStatus as GameStatus.Finished).result,
+            state.gameStatus.result,
             "White wins by checkmate",
         )
     }
@@ -375,7 +375,7 @@ class ChessStateReconstructorTest {
         assertTrue(state.gameStatus is GameStatus.Finished)
         assertEquals(
             GameResult.WHITE_WINS,
-            (state.gameStatus as GameStatus.Finished).result,
+            state.gameStatus.result,
             "White wins by resignation",
         )
     }
@@ -408,7 +408,7 @@ class ChessStateReconstructorTest {
         assertTrue(state.gameStatus is GameStatus.Finished)
         assertEquals(
             GameResult.BLACK_WINS,
-            (state.gameStatus as GameStatus.Finished).result,
+            state.gameStatus.result,
             "Black wins by fool's mate",
         )
     }
@@ -502,7 +502,7 @@ class ChessStateReconstructorTest {
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
         assertTrue(result is ReconstructionResult.Error)
-        assertEquals("No start event found", (result as ReconstructionResult.Error).message)
+        assertEquals("No start event found", result.message)
     }
 
     @Test
