@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.crypto.DeterministicSigner
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 

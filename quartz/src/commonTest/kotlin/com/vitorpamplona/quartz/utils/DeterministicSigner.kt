@@ -18,11 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.crypto
+package com.vitorpamplona.quartz.utils
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventAssembler
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 
 class DeterministicSigner(
@@ -34,7 +36,7 @@ class DeterministicSigner(
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): T = EventAssembler.hashAndSign(pubKey, createdAt, kind, tags, content, key.privKey!!, nonce = null)
+    ): T = EventAssembler.Companion.hashAndSign(pubKey, createdAt, kind, tags, content, key.privKey!!, nonce = null)
 
     fun <T : Event> sign(ev: EventTemplate<T>): T = sign(ev.createdAt, ev.kind, ev.tags, ev.content)
 }
