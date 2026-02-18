@@ -68,7 +68,7 @@ data class ChessPosition(
         val (fromFile, fromRank) = parseSquare(from)
         val (toFile, toRank) = parseSquare(to)
 
-        val newBoard = board.map { it.clone() }.toTypedArray()
+        val newBoard = board.map { it.copyOf() }.toTypedArray()
         val piece = newBoard[fromRank][fromFile] ?: throw IllegalArgumentException("No piece at $from")
 
         // Handle promotion
@@ -94,7 +94,7 @@ data class ChessPosition(
      */
     fun makeCastlingMove(kingSide: Boolean): ChessPosition {
         val rank = if (activeColor == Color.WHITE) 0 else 7
-        val newBoard = board.map { it.clone() }.toTypedArray()
+        val newBoard = board.map { it.copyOf() }.toTypedArray()
 
         if (kingSide) {
             // King-side castling (O-O)
