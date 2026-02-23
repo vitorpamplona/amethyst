@@ -25,31 +25,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -82,21 +71,16 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
-import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
-import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
-import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
-import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
-import com.vitorpamplona.amethyst.desktop.ui.ReadsScreen
-import com.vitorpamplona.amethyst.desktop.ui.SearchScreen
-import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
-import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
-import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
-import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
+import com.vitorpamplona.amethyst.desktop.ui.deck.AddColumnDialog
+import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
+import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
+import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
+import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -109,7 +93,7 @@ import kotlinx.coroutines.launch
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
 /**
- * Desktop navigation state - extends AppScreen with dynamic destinations.
+ * Desktop navigation state — used for in-column navigation (drill-down).
  */
 sealed class DesktopScreen {
     object Feed : DesktopScreen()
@@ -147,7 +131,8 @@ fun main() =
             )
         var showComposeDialog by remember { mutableStateOf(false) }
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
-        var currentScreen by remember { mutableStateOf<DesktopScreen>(DesktopScreen.Feed) }
+        val deckState = remember { DeckState().also { it.load() } }
+        var showAddColumnDialog by remember { mutableStateOf(false) }
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -175,7 +160,7 @@ fun main() =
                             } else {
                                 KeyShortcut(Key.Comma, ctrl = true)
                             },
-                        onClick = { currentScreen = DesktopScreen.Settings },
+                        onClick = { deckState.addColumn(DeckColumnType.Settings) },
                     )
                     Separator()
                     Item(
@@ -212,9 +197,102 @@ fun main() =
                     )
                 }
                 Menu("View") {
-                    Item("Feed", onClick = { })
-                    Item("Messages", onClick = { })
-                    Item("Notifications", onClick = { })
+                    Item(
+                        "Add Column",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.T, meta = true)
+                            } else {
+                                KeyShortcut(Key.T, ctrl = true)
+                            },
+                        onClick = { showAddColumnDialog = true },
+                    )
+                    Item(
+                        "Close Column",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.W, meta = true)
+                            } else {
+                                KeyShortcut(Key.W, ctrl = true)
+                            },
+                        onClick = {
+                            val cols = deckState.columns.value
+                            val idx = deckState.focusedColumnIndex.value
+                            if (cols.size > 1 && idx in cols.indices) {
+                                deckState.removeColumn(cols[idx].id)
+                            }
+                        },
+                    )
+                    Item(
+                        "Move Column Left",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.DirectionLeft, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.DirectionLeft, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            val idx = deckState.focusedColumnIndex.value
+                            if (idx > 0) {
+                                deckState.moveColumn(idx, idx - 1)
+                                deckState.focusColumn(idx - 1)
+                            }
+                        },
+                    )
+                    Item(
+                        "Move Column Right",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.DirectionRight, meta = true, shift = true)
+                            } else {
+                                KeyShortcut(Key.DirectionRight, ctrl = true, shift = true)
+                            },
+                        onClick = {
+                            val idx = deckState.focusedColumnIndex.value
+                            val size = deckState.columns.value.size
+                            if (idx < size - 1) {
+                                deckState.moveColumn(idx, idx + 1)
+                                deckState.focusColumn(idx + 1)
+                            }
+                        },
+                    )
+                    Separator()
+                    // Focus column by index (Cmd/Ctrl+1..9)
+                    val columnKeys =
+                        listOf(
+                            Key.One,
+                            Key.Two,
+                            Key.Three,
+                            Key.Four,
+                            Key.Five,
+                            Key.Six,
+                            Key.Seven,
+                            Key.Eight,
+                            Key.Nine,
+                        )
+                    columnKeys.forEachIndexed { i, key ->
+                        Item(
+                            "Column ${i + 1}",
+                            shortcut =
+                                if (isMacOS) {
+                                    KeyShortcut(key, meta = true)
+                                } else {
+                                    KeyShortcut(key, ctrl = true)
+                                },
+                            onClick = { deckState.focusColumn(i) },
+                        )
+                    }
+                    Separator()
+                    Menu("Add Column...") {
+                        Item("Home Feed", onClick = { deckState.addColumn(DeckColumnType.HomeFeed) })
+                        Item("Notifications", onClick = { deckState.addColumn(DeckColumnType.Notifications) })
+                        Item("Messages", onClick = { deckState.addColumn(DeckColumnType.Messages) })
+                        Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
+                        Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
+                        Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
+                        Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
+                        Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
+                    }
                 }
                 Menu("Help") {
                     Item("About Amethyst", onClick = { })
@@ -223,9 +301,9 @@ fun main() =
             }
 
             App(
-                currentScreen = currentScreen,
-                onScreenChange = { currentScreen = it },
+                deckState = deckState,
                 showComposeDialog = showComposeDialog,
+                showAddColumnDialog = showAddColumnDialog,
                 onShowComposeDialog = { showComposeDialog = true },
                 onShowReplyDialog = { event ->
                     replyToNote = event
@@ -235,6 +313,8 @@ fun main() =
                     showComposeDialog = false
                     replyToNote = null
                 },
+                onDismissAddColumnDialog = { showAddColumnDialog = false },
+                onShowAddColumnDialog = { showAddColumnDialog = true },
                 replyToNote = replyToNote,
             )
         }
@@ -242,12 +322,14 @@ fun main() =
 
 @Composable
 fun App(
-    currentScreen: DesktopScreen,
-    onScreenChange: (DesktopScreen) -> Unit,
+    deckState: DeckState,
     showComposeDialog: Boolean,
+    showAddColumnDialog: Boolean,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onDismissComposeDialog: () -> Unit,
+    onDismissAddColumnDialog: () -> Unit,
+    onShowAddColumnDialog: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
@@ -329,7 +411,7 @@ fun App(
                 is AccountState.LoggedOut -> {
                     LoginScreen(
                         accountManager = accountManager,
-                        onLoginSuccess = { onScreenChange(DesktopScreen.Feed) },
+                        onLoginSuccess = { },
                     )
                 }
 
@@ -343,16 +425,17 @@ fun App(
                     }
 
                     MainContent(
-                        currentScreen = currentScreen,
-                        onScreenChange = onScreenChange,
+                        deckState = deckState,
                         relayManager = relayManager,
                         localCache = localCache,
                         accountManager = accountManager,
                         account = account,
                         nwcConnection = nwcConnection,
                         subscriptionsCoordinator = subscriptionsCoordinator,
+                        appScope = scope,
                         onShowComposeDialog = onShowComposeDialog,
                         onShowReplyDialog = onShowReplyDialog,
+                        onShowAddColumnDialog = onShowAddColumnDialog,
                     )
 
                     // Compose dialog
@@ -364,6 +447,17 @@ fun App(
                             replyTo = replyToNote,
                         )
                     }
+
+                    // Add column dialog
+                    if (showAddColumnDialog) {
+                        AddColumnDialog(
+                            onDismiss = onDismissAddColumnDialog,
+                            onAdd = { type ->
+                                deckState.addColumn(type)
+                                onDismissAddColumnDialog()
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -372,16 +466,17 @@ fun App(
 
 @Composable
 fun MainContent(
-    currentScreen: DesktopScreen,
-    onScreenChange: (DesktopScreen) -> Unit,
+    deckState: DeckState,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
     account: AccountState.LoggedIn,
     nwcConnection: Nip47WalletConnect.Nip47URINorm?,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
+    appScope: CoroutineScope,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onShowAddColumnDialog: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -402,227 +497,27 @@ fun MainContent(
 
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxSize()) {
-            // Sidebar Navigation
-            NavigationRail(
-                modifier = Modifier.width(80.dp).fillMaxHeight(),
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Spacer(Modifier.height(16.dp))
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Feed") },
-                    label = { Text("Feed") },
-                    selected = currentScreen == DesktopScreen.Feed,
-                    onClick = { onScreenChange(DesktopScreen.Feed) },
-                )
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.Article, contentDescription = "Reads") },
-                    label = { Text("Reads") },
-                    selected = currentScreen == DesktopScreen.Reads,
-                    onClick = { onScreenChange(DesktopScreen.Reads) },
-                )
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    label = { Text("Search") },
-                    selected = currentScreen == DesktopScreen.Search,
-                    onClick = { onScreenChange(DesktopScreen.Search) },
-                )
-
-                NavigationRailItem(
-                    icon = { Icon(com.vitorpamplona.amethyst.commons.icons.Bookmark, contentDescription = "Bookmarks") },
-                    label = { Text("Bookmarks") },
-                    selected = currentScreen == DesktopScreen.Bookmarks,
-                    onClick = { onScreenChange(DesktopScreen.Bookmarks) },
-                )
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
-                    label = { Text("DMs") },
-                    selected = currentScreen == DesktopScreen.Messages,
-                    onClick = { onScreenChange(DesktopScreen.Messages) },
-                )
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
-                    label = { Text("Alerts") },
-                    selected = currentScreen == DesktopScreen.Notifications,
-                    onClick = { onScreenChange(DesktopScreen.Notifications) },
-                )
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") },
-                    selected = currentScreen == DesktopScreen.MyProfile || currentScreen is DesktopScreen.UserProfile,
-                    onClick = { onScreenChange(DesktopScreen.MyProfile) },
-                )
-
-                Spacer(Modifier.weight(1f))
-
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
-                    selected = currentScreen == DesktopScreen.Settings,
-                    onClick = { onScreenChange(DesktopScreen.Settings) },
-                )
-
-                Spacer(Modifier.height(16.dp))
-            }
+            DeckSidebar(
+                onAddColumn = onShowAddColumnDialog,
+                onOpenSettings = { deckState.addColumn(DeckColumnType.Settings) },
+            )
 
             VerticalDivider()
 
-            // Main Content
-            Box(
-                modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
-            ) {
-                when (currentScreen) {
-                    DesktopScreen.Feed -> {
-                        FeedScreen(
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            onCompose = onShowComposeDialog,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onNavigateToThread = { noteId ->
-                                onScreenChange(DesktopScreen.Thread(noteId))
-                            },
-                            onZapFeedback = onZapFeedback,
-                        )
-                    }
-
-                    DesktopScreen.Reads -> {
-                        ReadsScreen(
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onNavigateToArticle = { noteId ->
-                                onScreenChange(DesktopScreen.Thread(noteId))
-                            },
-                        )
-                    }
-
-                    DesktopScreen.Search -> {
-                        SearchScreen(
-                            localCache = localCache,
-                            relayManager = relayManager,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onNavigateToThread = { noteId ->
-                                onScreenChange(DesktopScreen.Thread(noteId))
-                            },
-                        )
-                    }
-
-                    DesktopScreen.Bookmarks -> {
-                        BookmarksScreen(
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onNavigateToThread = { noteId ->
-                                onScreenChange(DesktopScreen.Thread(noteId))
-                            },
-                            onZapFeedback = onZapFeedback,
-                        )
-                    }
-
-                    DesktopScreen.Messages -> {
-                        val dmSendTracker =
-                            remember(relayManager) {
-                                DmSendTracker(relayManager.client)
-                            }
-                        val iAccount =
-                            remember(account, localCache, relayManager, dmSendTracker) {
-                                DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
-                            }
-                        DesktopMessagesScreen(
-                            account = iAccount,
-                            cacheProvider = localCache,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                        )
-                    }
-
-                    DesktopScreen.Notifications -> {
-                        NotificationsScreen(relayManager, account, subscriptionsCoordinator)
-                    }
-
-                    DesktopScreen.MyProfile -> {
-                        UserProfileScreen(
-                            pubKeyHex = account.pubKeyHex,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            onBack = { onScreenChange(DesktopScreen.Feed) },
-                            onCompose = onShowComposeDialog,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onZapFeedback = onZapFeedback,
-                        )
-                    }
-
-                    is DesktopScreen.UserProfile -> {
-                        UserProfileScreen(
-                            pubKeyHex = currentScreen.pubKeyHex,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            onBack = { onScreenChange(DesktopScreen.Feed) },
-                            onCompose = onShowComposeDialog,
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onZapFeedback = onZapFeedback,
-                        )
-                    }
-
-                    is DesktopScreen.Thread -> {
-                        ThreadScreen(
-                            noteId = currentScreen.noteId,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            onBack = { onScreenChange(DesktopScreen.Feed) },
-                            onNavigateToProfile = { pubKeyHex ->
-                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
-                            },
-                            onNavigateToThread = { noteId ->
-                                onScreenChange(DesktopScreen.Thread(noteId))
-                            },
-                            onZapFeedback = onZapFeedback,
-                            onReply = onShowReplyDialog,
-                        )
-                    }
-
-                    DesktopScreen.Settings -> {
-                        RelaySettingsScreen(relayManager, account, accountManager)
-                    }
-                }
-            }
+            DeckLayout(
+                deckState = deckState,
+                relayManager = relayManager,
+                localCache = localCache,
+                accountManager = accountManager,
+                account = account,
+                nwcConnection = nwcConnection,
+                subscriptionsCoordinator = subscriptionsCoordinator,
+                appScope = appScope,
+                onShowComposeDialog = onShowComposeDialog,
+                onShowReplyDialog = onShowReplyDialog,
+                onZapFeedback = onZapFeedback,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         // Snackbar for zap feedback
