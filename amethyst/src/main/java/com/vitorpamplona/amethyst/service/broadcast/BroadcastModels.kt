@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.broadcast
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -34,8 +34,7 @@ sealed class RelayResult {
 
     /** Relay rejected the event (OK message with success=false) */
     data class Error(
-        val code: String,
-        val message: String?,
+        val message: String,
     ) : RelayResult()
 
     /** Relay did not respond within timeout */
@@ -71,13 +70,11 @@ enum class BroadcastStatus {
 @Immutable
 data class BroadcastEvent(
     val id: String,
-    val eventId: HexKey,
-    val eventName: String,
-    val kind: Int,
+    val event: Event,
     val targetRelays: List<NormalizedRelayUrl>,
+    val startedAt: Long = System.currentTimeMillis(),
     val results: Map<NormalizedRelayUrl, RelayResult> = emptyMap(),
     val status: BroadcastStatus = BroadcastStatus.IN_PROGRESS,
-    val startedAt: Long = System.currentTimeMillis(),
 ) {
     /** Number of relays that accepted the event */
     val successCount: Int
@@ -133,12 +130,3 @@ data class BroadcastEvent(
         return copy(results = newResults, status = newStatus)
     }
 }
-
-/**
- * Result of a broadcast operation, returned after all relays respond or timeout.
- */
-@Immutable
-data class BroadcastResult(
-    val broadcast: BroadcastEvent,
-    val isSuccess: Boolean,
-)
