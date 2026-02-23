@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.quartz
 
+import dev.whyoleg.cryptography.CryptographyProviderApi
+import dev.whyoleg.cryptography.providers.base.toByteArray
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
+import kotlinx.io.files.FileNotFoundException
+import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.stringWithContentsOfFile
 import platform.posix.getenv
 
@@ -33,5 +38,12 @@ actual class TestResourceLoader {
         val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()
         val filePath = "$resourceDir/$file"
         return NSString.stringWithContentsOfFile(filePath, encoding = NSUTF8StringEncoding, error = null) as String
+    }
+
+    @OptIn(ExperimentalForeignApi::class, CryptographyProviderApi::class)
+    fun loadFileData(file: String): ByteArray {
+        val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()
+        val filePath = "$resourceDir/$file"
+        return NSData.dataWithContentsOfFile(filePath)?.toByteArray() ?: throw FileNotFoundException("Resource $file was not found.")
     }
 }

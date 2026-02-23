@@ -230,7 +230,7 @@ kotlin {
                 implementation(libs.charlietap.cachemap)
                 implementation(libs.net.thauvin.erik.urlencoder.lib)
                 implementation(libs.com.ditchoom.buffer.compression)
-                implementation(libs.dev.whyoleg.cryptography.provider.apple)
+                implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
             }
         }
 
