@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 
+@Stable
 class TorSettingsFlow(
     val torType: MutableStateFlow<TorType> = MutableStateFlow(TorType.INTERNAL),
     val externalSocksPort: MutableStateFlow<Int> = MutableStateFlow(9050),

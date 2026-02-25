@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.login
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 
+@Stable
 class LoginViewModel : ViewModel() {
     lateinit var accountStateViewModel: AccountStateViewModel
 

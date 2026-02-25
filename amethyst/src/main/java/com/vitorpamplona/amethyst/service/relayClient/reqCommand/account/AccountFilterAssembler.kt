@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to logged-in accounts.
+@Stable
 class AccountQueryState(
     val account: Account,
     val feedContentStates: AccountFeedContentStates,
@@ -47,6 +49,7 @@ class AccountQueryState(
 /**
  * This assembler loads everything eech account needs.
  */
+@Stable
 class AccountFilterAssembler(
     client: INostrClient,
     cache: LocalCache,

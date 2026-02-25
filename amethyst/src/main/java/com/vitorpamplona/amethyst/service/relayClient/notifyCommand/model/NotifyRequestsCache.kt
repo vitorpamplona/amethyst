@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
+@Stable
 class NotifyRequestsCache {
     val transientPaymentRequestDismissals: MutableStateFlow<Set<NotifyRequest>> = MutableStateFlow(emptySet())
     val transientPaymentRequests: MutableStateFlow<Set<NotifyRequest>> = MutableStateFlow(emptySet())
