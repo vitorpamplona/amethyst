@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
@@ -162,6 +163,7 @@ fun AppNavigation(
             composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
+            composableFromEnd<Route.AllSettings> { AllSettingsScreen(nav) }
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
             composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
