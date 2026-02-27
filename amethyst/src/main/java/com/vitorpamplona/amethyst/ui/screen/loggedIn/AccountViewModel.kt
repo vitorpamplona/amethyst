@@ -617,9 +617,14 @@ class AccountViewModel(
 
             val decryptedInfo =
                 mapNotNullAsync(myList) { next ->
-                    val info = innerDecryptAmountMessage(next.first, next.second)
-                    if (info != null) {
-                        DecryptedInfo(next.first, next.second, info)
+                    val zap = next.second
+                    if (zap != null) {
+                        val info = innerDecryptAmountMessage(next.first, zap)
+                        if (info != null) {
+                            DecryptedInfo(next.first, zap, info)
+                        } else {
+                            null
+                        }
                     } else {
                         null
                     }
@@ -633,7 +638,7 @@ class AccountViewModel(
 
     fun decryptAmountMessage(
         zapRequest: Note,
-        zapEvent: Note?,
+        zapEvent: Note,
         onNewState: (ZapAmountCommentNotification?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -641,35 +646,50 @@ class AccountViewModel(
         }
     }
 
-    private suspend fun innerDecryptAmountMessage(
+    suspend fun innerDecryptAmountMessage(zapNote: Note): ZapAmountCommentNotification? {
+        val zapEvent = zapNote.event as? LnZapEvent ?: return null
+        val zapRequest = zapEvent.zapRequest ?: return null
+
+        return innerDecryptAmountMessage(zapRequest, zapEvent)
+    }
+
+    suspend fun innerDecryptAmountMessage(
         zapRequest: Note,
-        zapEvent: Note?,
-    ): ZapAmountCommentNotification? =
-        (zapRequest.event as? LnZapRequestEvent)?.let {
-            val amount = showAmountInteger((zapEvent?.event as? LnZapEvent)?.amount)
-            if (it.isPrivateZap()) {
-                val decryptedContent = account.decryptZapOrNull(it)
-                if (decryptedContent != null) {
-                    ZapAmountCommentNotification(
-                        LocalCache.checkGetOrCreateUser(decryptedContent.pubKey),
-                        decryptedContent.content.ifBlank { null },
-                        amount,
-                    )
-                } else {
-                    ZapAmountCommentNotification(
-                        zapRequest.author,
-                        null,
-                        amount,
-                    )
-                }
+        zapEvent: Note,
+    ): ZapAmountCommentNotification? {
+        val zapEvent = zapEvent.event as? LnZapEvent ?: return null
+        val zapRequest = zapRequest.event as? LnZapRequestEvent ?: return null
+        return innerDecryptAmountMessage(zapRequest, zapEvent)
+    }
+
+    suspend fun innerDecryptAmountMessage(
+        zapRequestEvent: LnZapRequestEvent,
+        zapEvent: LnZapEvent,
+    ): ZapAmountCommentNotification? {
+        val amount = showAmountInteger(zapEvent.amount)
+        return if (zapRequestEvent.isPrivateZap()) {
+            val decryptedContent = account.decryptZapOrNull(zapRequestEvent)
+            if (decryptedContent != null) {
+                ZapAmountCommentNotification(
+                    LocalCache.checkGetOrCreateUser(decryptedContent.pubKey),
+                    decryptedContent.content.ifBlank { null },
+                    amount,
+                )
             } else {
                 ZapAmountCommentNotification(
-                    zapRequest.author,
-                    zapRequest.event?.content?.ifBlank { null },
+                    account.cache.getOrCreateUser(zapRequestEvent.pubKey),
+                    null,
                     amount,
                 )
             }
+        } else {
+            ZapAmountCommentNotification(
+                account.cache.getOrCreateUser(zapRequestEvent.pubKey),
+                zapRequestEvent.content.ifBlank { null },
+                amount,
+            )
         }
+    }
 
     fun zap(
         note: Note,

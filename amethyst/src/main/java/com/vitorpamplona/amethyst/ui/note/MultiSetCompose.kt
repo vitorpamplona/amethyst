@@ -422,7 +422,7 @@ data class ZapAmountCommentNotification(
 @Composable
 private fun ParseAuthorCommentAndAmount(
     zapRequest: Note,
-    zapEvent: Note?,
+    zapEvent: Note,
     accountViewModel: AccountViewModel,
     onReady: @Composable (MutableState<ZapAmountCommentNotification>) -> Unit,
 ) {
@@ -437,7 +437,7 @@ private fun ParseAuthorCommentAndAmount(
             )
         }
 
-    LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent?.idHex) {
+    LaunchedEffect(key1 = zapRequest.idHex, key2 = zapEvent.idHex) {
         accountViewModel.decryptAmountMessage(zapRequest, zapEvent) { newState ->
             if (newState != null) {
                 content.value = newState

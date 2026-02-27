@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd
+import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
@@ -210,6 +211,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
@@ -791,6 +793,10 @@ private fun RenderNoteRow(
 
         is BadgeAwardEvent -> {
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is LnZapEvent -> {
+            RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is FhirResourceEvent -> {
