@@ -477,6 +477,7 @@
     <string name="set_preferred_media_servers">Ställ in dina önskade mediauppladdningsservrar.</string>
     <string name="no_nip96_server_message">Du har inga NIP-96 servrar. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
     <string name="no_blossom_server_message">Du har inga Blossom servrar satta. Du kan använda Amethyst\'s lista, eller lägga till en nedan ↓</string>
+    <string name="recommended_media_servers">Rekommenderade Mediaservrar</string>
     <string name="built_in_media_servers_title">Inbyggda mediaservrar</string>
     <string name="built_in_servers_description">Amethysts standardlista. Du kan lägga till dem individuellt eller lägga till listan.</string>
     <string name="use_default_servers">Använd standardlistan</string>

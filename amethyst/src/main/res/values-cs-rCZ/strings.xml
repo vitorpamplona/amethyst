@@ -477,6 +477,7 @@
     <string name="set_preferred_media_servers">Nastavte preferované servery pro nahrávání médií.</string>
     <string name="no_nip96_server_message">Nemáte nastaveny žádné servery NIP-96. Můžete použít Amethystův seznam nebo přidat některý níže ↓</string>
     <string name="no_blossom_server_message">Nemáte nastaveny žádné Blossom servery. Můžete použít Amethystův seznam, nebo přidat některý níže ↓</string>
+    <string name="recommended_media_servers">Doporučené média servery</string>
     <string name="built_in_media_servers_title">Integrované mediální servery</string>
     <string name="built_in_servers_description">Výchozí seznam Amethysty. Můžete je přidat jednotlivě nebo přidat seznam.</string>
     <string name="use_default_servers">Použít výchozí seznam</string>
