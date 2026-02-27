@@ -483,6 +483,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
     <string name="no_nip96_server_message">Du hast keine NIP-96-Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
     <string name="no_blossom_server_message">Du hast keine Blossom Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
+    <string name="recommended_media_servers">Empfohlene Medienserver</string>
     <string name="built_in_media_servers_title">Integrierte Medienserver</string>
     <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
     <string name="use_default_servers">Standardliste verwenden</string>

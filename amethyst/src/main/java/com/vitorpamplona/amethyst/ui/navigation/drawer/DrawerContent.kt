@@ -46,14 +46,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -480,41 +477,6 @@ fun ListContent(
             route = Route.Chess,
         )
 
-        IconRowRelays(
-            accountViewModel = accountViewModel,
-            onClick = {
-                nav.closeDrawer()
-                nav.nav(Route.EditRelays)
-            },
-        )
-
-        IconRow(
-            title = R.string.media_servers,
-            icon = Icons.Outlined.CloudUpload,
-            tint = MaterialTheme.colorScheme.onBackground,
-            onClick = {
-                nav.closeDrawer()
-                nav.nav(Route.EditMediaServers)
-            },
-        )
-
-        NavigationRow(
-            title = R.string.security_filters,
-            icon = Icons.Outlined.Security,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.SecurityFilters,
-        )
-
-        NavigationRow(
-            title = R.string.privacy_options,
-            icon = R.drawable.ic_tor,
-            iconReference = 1,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.PrivacyOptions,
-        )
-
         accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
                 title = R.string.backup_keys,
@@ -528,19 +490,11 @@ fun ListContent(
         }
 
         NavigationRow(
-            title = R.string.preferences,
+            title = R.string.settings,
             icon = Icons.Outlined.Settings,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Settings,
-        )
-
-        NavigationRow(
-            title = R.string.user_preferences,
-            icon = Icons.Outlined.Translate,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.UserSettings,
+            route = Route.AllSettings,
         )
 
         Spacer(modifier = Modifier.weight(1f))
