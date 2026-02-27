@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.utils
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
@@ -110,7 +111,7 @@ actual object GZip {
                 stream.next_in = pinIn.addressOf(0).reinterpret()
                 stream.avail_in = content.size.toUInt()
 
-                var status: Int
+                var status: Int = Z_OK
                 do {
                     val chunk = ByteArray(chunkSize)
                     chunk.usePinned { pinOut ->
@@ -131,7 +132,10 @@ actual object GZip {
         val totalSize = chunks.sumOf { it.size }
         val result = ByteArray(totalSize)
         var pos = 0
-        chunks.forEach { chunk -> chunk.copyInto(result, pos); pos += chunk.size }
+        chunks.forEach { chunk ->
+            chunk.copyInto(result, pos)
+            pos += chunk.size
+        }
         return result.decodeToString()
     }
 }
