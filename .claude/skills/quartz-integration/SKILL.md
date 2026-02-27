@@ -613,7 +613,7 @@ import android.content.Context
 val store = EventStore(context)
 
 // Insert
-store.insertOrReplace(event)
+store.insert(event)
 
 // Query
 val events = store.query(
