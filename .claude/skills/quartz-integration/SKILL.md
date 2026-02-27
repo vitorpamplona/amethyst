@@ -255,22 +255,6 @@ addAll(listOf(arrayOf("t", "tag1"), ...)) // bulk add
 remove("tagname")                          // remove all with this name
 ```
 
-### Common tags
-
-```kotlin
-arrayOf("e", eventId)                    // event reference
-arrayOf("e", eventId, relayHint, "reply") // threaded reply marker
-arrayOf("p", pubKey)                     // person mention
-arrayOf("p", pubKey, relayHint, "author") // with role
-arrayOf("a", "30023:pubkey:slug")        // addressable event
-arrayOf("d", "unique-identifier")        // addressable event id
-arrayOf("t", "hashtag")                  // hashtag
-arrayOf("subject", "Title")              // NIP-14 subject
-arrayOf("relay", "wss://relay.example")  // relay hint
-```
-
----
-
 ## 6. Relay Client Setup (JVM / Android)
 
 The relay client requires an OkHttp WebSocket builder (available on JVM + Android).
