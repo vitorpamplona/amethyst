@@ -116,8 +116,13 @@ class RichTextParser {
             } else if (it.originalUrl.contains("。")) {
                 null // avoids Japanese characters as fake urls
             } else {
-                if (HTTPRegex.matches(it.originalUrl)) {
-                    it.originalUrl
+                // Only include URLs with explicit http/https scheme to avoid false positives.
+                // Scheme-less domains (e.g. noscha.io) will be handled by SchemelessUrlSegment
+                // in wordIdentifier, which renders them as simple clickable text without a preview card.
+                val url = it.originalUrl
+                if (HTTPRegex.matches(url) &&
+                    (url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true))) {
+                    url
                 } else {
                     null
                 }
@@ -275,7 +280,11 @@ class RichTextParser {
             if (schemelessMatcher != null) {
                 val url = schemelessMatcher.groups[1]?.value // url
                 val additionalChars = schemelessMatcher.groups[4]?.value?.ifEmpty { null } // additional chars
-                if (additionalUrlSchema.find(word) != null && url != null) {
+                // Do not treat as URL if the domain is embedded in a larger word
+                // (e.g., "noscha.ioが面白い" should not become a link because Japanese chars follow).
+                // Only treat as SchemelessUrl when additional chars are non-word characters (punctuation only).
+                val additionalCharsAreSafe = additionalChars == null || !additionalChars[0].isLetterOrDigit()
+                if (additionalUrlSchema.find(word) != null && url != null && additionalCharsAreSafe) {
                     return SchemelessUrlSegment(word, url, additionalChars)
                 }
             }
