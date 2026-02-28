@@ -45,29 +45,36 @@ import com.vitorpamplona.amethyst.commons.hashtags.Skull
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.hashtags.Weed
 import com.vitorpamplona.amethyst.commons.hashtags.Zap
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
-import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
-import com.vitorpamplona.amethyst.ui.components.HashTag
 import com.vitorpamplona.amethyst.ui.components.RenderRegular
 import com.vitorpamplona.amethyst.ui.components.RenderTextParagraph
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Preview
 @Composable
 fun RenderHashTagIconsPreview() {
+    val accountViewModel = mockAccountViewModel()
     ThemeComparisonColumn {
         RenderRegular(
             "Testing rendering of hashtags: #flowerstr #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
             EmptyTagList,
-        ) { paragraph, state, spaceWidth, modifier ->
-            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
-                when (word) {
-                    is HashTagSegment -> HashTag(word, EmptyNav())
-                    is RegularTextSegment -> Text(word.segmentText)
-                }
-            }
+        ) { paragraph, state, modifier ->
+            RenderTextParagraph(
+                paragraph = paragraph,
+                modifier = modifier,
+                state = state,
+                canPreview = false,
+                quotesLeft = 0,
+                backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                callbackUri = null,
+                accountViewModel = accountViewModel,
+                nav = EmptyNav(),
+            )
         }
     }
 }
