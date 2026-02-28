@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1381,9 +1380,10 @@ fun FirstUserInfoRow(
 
         if (isDraft) {
             ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
-                val isCommunityPost by remember(draftNote) {
-                    derivedStateOf { draftNote.event?.isACommunityPost() == true }
-                }
+                val isCommunityPost =
+                    remember(draftNote) {
+                        draftNote.event?.isACommunityPost() == true
+                    }
 
                 if (isCommunityPost) {
                     DisplayFollowingCommunityInPost(draftNote, accountViewModel, nav)
@@ -1392,9 +1392,10 @@ fun FirstUserInfoRow(
                 }
             }
         } else {
-            val isCommunityPost by remember(baseNote) {
-                derivedStateOf { baseNote.event?.isACommunityPost() == true }
-            }
+            val isCommunityPost =
+                remember(baseNote) {
+                    baseNote.event?.isACommunityPost() == true
+                }
 
             if (isCommunityPost) {
                 DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)
