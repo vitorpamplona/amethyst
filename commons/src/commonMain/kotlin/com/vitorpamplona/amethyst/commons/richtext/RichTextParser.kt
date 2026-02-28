@@ -169,34 +169,189 @@ class RichTextParser {
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): ImmutableList<ParagraphState> {
-        val lines = content.split('\n')
-        val paragraphSegments = ArrayList<ParagraphState>(lines.size)
+        val paragraphSegments = ArrayList<ParagraphState>()
+        val contentLength = content.length
+        var lineStart = 0
 
-        lines.forEach { paragraph ->
-            val isRTL = isArabic(paragraph)
+        // Scan for newlines manually to avoid allocating a List<String> from split('\n')
+        // and avoid allocating each paragraph as a substring.
+        while (lineStart <= contentLength) {
+            val nlIdx = content.indexOf('\n', lineStart)
+            val lineEnd = if (nlIdx < 0) contentLength else nlIdx
 
-            val wordList = paragraph.trimEnd().split(' ')
-            val segments = ArrayList<Segment>(wordList.size)
-            wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
+            val isRTL = isArabicInRange(content, lineStart, lineEnd)
+
+            // Compute trimEnd boundary without creating a substring (matches trimEnd().split(' ')).
+            var actualEnd = lineEnd
+            while (actualEnd > lineStart && content[actualEnd - 1].isWhitespace()) actualEnd--
+
+            val paragraphState: ParagraphState
+            if (actualEnd <= lineStart) {
+                // Empty / all-whitespace line: mirror "".split(' ') == [""] from the original.
+                paragraphState = ParagraphState(persistentListOf(RegularTextSegment("")), isRTL)
+            } else {
+                // First pass: check every word without creating substrings.
+                // For the common all-plain-text paragraph this avoids all per-word allocations.
+                var allRegular = true
+                var tempWordStart = lineStart
+                while (tempWordStart < actualEnd) {
+                    val spIdx = content.indexOf(' ', tempWordStart)
+                    val tempWordEnd = if (spIdx < 0 || spIdx >= actualEnd) actualEnd else spIdx
+                    if (!isRegularByIndex(content, tempWordStart, tempWordEnd, emojis)) {
+                        allRegular = false
+                        break
+                    }
+                    tempWordStart = tempWordEnd + 1
+                }
+
+                paragraphState =
+                    if (allRegular) {
+                        // Entire paragraph is plain text: one substring for the whole trimmed line,
+                        // skipping per-word allocations and the joinToString done later.
+                        ParagraphState(
+                            persistentListOf(RegularTextSegment(content.substring(lineStart, actualEnd))),
+                            isRTL,
+                        )
+                    } else {
+                        // Mixed paragraph: classify each word with the full wordIdentifier.
+                        val segments = ArrayList<Segment>()
+                        var wordStart = lineStart
+                        while (wordStart < actualEnd) {
+                            val spIdx = content.indexOf(' ', wordStart)
+                            val wordEnd = if (spIdx < 0 || spIdx >= actualEnd) actualEnd else spIdx
+                            segments.add(wordIdentifier(content.substring(wordStart, wordEnd), images, videos, urls, emojis, tags))
+                            wordStart = wordEnd + 1
+                        }
+                        ParagraphState(segments.toPersistentList(), isRTL)
+                    }
             }
 
-            paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
+            paragraphSegments.add(paragraphState)
+            lineStart = lineEnd + 1
         }
 
         val segmentsWithGalleries = GalleryParser().processParagraphs(paragraphSegments)
 
         return segmentsWithGalleries
             .map { paragraph ->
-                if (paragraph.words.isEmpty() || paragraph.words.any { it !is RegularTextSegment }) {
-                    paragraph
-                } else {
-                    ParagraphState(
-                        persistentListOf<Segment>(RegularTextSegment(paragraph.words.joinToString(" ") { it.segmentText })),
-                        paragraph.isRTL,
-                    )
+                when {
+                    paragraph.words.isEmpty() -> paragraph
+                    // Single segment: already optimal, no join needed.
+                    paragraph.words.size == 1 -> paragraph
+                    paragraph.words.any { it !is RegularTextSegment } -> paragraph
+                    else ->
+                        ParagraphState(
+                            persistentListOf<Segment>(RegularTextSegment(paragraph.words.joinToString(" ") { it.segmentText })),
+                            paragraph.isRTL,
+                        )
                 }
             }.toImmutableList()
+    }
+
+    /**
+     * Returns true when the word at content[wordStart, wordEnd) is definitely plain text and
+     * does not need a substring to be created for classification.  Conservative: a false return
+     * only means the caller should run the full [wordIdentifier] check; it never produces a
+     * wrong result.
+     */
+    private fun isRegularByIndex(
+        content: String,
+        wordStart: Int,
+        wordEnd: Int,
+        emojis: Map<String, String>,
+    ): Boolean {
+        val len = wordEnd - wordStart
+        if (len == 0) return true
+
+        val c0 = content[wordStart]
+
+        // Quick first-character reject for token types that always start with a known char.
+        when (c0) {
+            '#' -> return false // hashtag (#hashtag) or tag reference (#[n])
+            '@' -> return false // @npub… NIP-19 mention or email starting with @
+            'd', 'D' -> if (len > 11 && content.startsWith("data:image/", wordStart)) return false
+            'l', 'L' -> {
+                if (len > 4 && content.startsWith("lnbc", wordStart, ignoreCase = true)) return false
+                if (len > 5 && content.startsWith("lnurl", wordStart, ignoreCase = true)) return false
+            }
+            'c', 'C' -> {
+                if (len > 6 &&
+                    (
+                        content.startsWith("cashuA", wordStart, ignoreCase = true) ||
+                            content.startsWith("cashuB", wordStart, ignoreCase = true)
+                    )
+                ) return false
+            }
+            'n', 'N' -> {
+                // nostr: prefix or NIP-19 bech32 schemes (npub1, note1, naddr1, nevent1, nprofile1, nembed)
+                if (len >= 5) {
+                    if (content.startsWith("nostr:", wordStart, ignoreCase = true)) return false
+                    if (wordStart + 1 < wordEnd) {
+                        when (content[wordStart + 1]) {
+                            'p', 'P' ->
+                                if (content.startsWith("npub1", wordStart, ignoreCase = true) ||
+                                    content.startsWith("nprofile1", wordStart, ignoreCase = true)
+                                ) return false
+                            'o', 'O' -> if (content.startsWith("note1", wordStart, ignoreCase = true)) return false
+                            'a', 'A' -> if (content.startsWith("naddr1", wordStart, ignoreCase = true)) return false
+                            'e', 'E' ->
+                                if (content.startsWith("nevent1", wordStart, ignoreCase = true) ||
+                                    content.startsWith("nembed", wordStart, ignoreCase = true)
+                                ) return false
+                        }
+                    }
+                }
+            }
+            'h', 'H' -> {
+                // Only http(s):// words can be in the URL sets (parseValidUrls filters by HTTPRegex).
+                if (len >= 7 &&
+                    (
+                        content.startsWith("http://", wordStart, ignoreCase = true) ||
+                            content.startsWith("https://", wordStart, ignoreCase = true)
+                    )
+                ) return false
+            }
+        }
+
+        // Single-pass character scan for special markers.
+        var isPotentialPhone = len in 7..14
+        var hasMidPeriod = false
+        for (i in wordStart until wordEnd) {
+            val c = content[i]
+            val code = c.code
+            when {
+                // Custom emoji uses :name: format; fastMightContainEmoji checks for ':'.
+                c == ':' && emojis.isNotEmpty() -> return false
+                // Email address
+                c == '@' -> return false
+                // Possible schemeless URL (domain.tld): period not at first or last position
+                c == '.' && i > wordStart && i < wordEnd - 1 -> hasMidPeriod = true
+                // EmojiCoder: Unicode variation selectors BMP range U+FE00..U+FE0F
+                code in 0xFE00..0xFE0F -> return false
+                // EmojiCoder: high surrogate 0xDB40 leads a variation-selector supplement codepoint
+                code == 0xDB40 -> return false
+                // Phone number: allowed chars are digits, '-', ' ', '.'
+                isPotentialPhone && c !in '0'..'9' && c != '-' && c != ' ' && c != '.' -> isPotentialPhone = false
+            }
+        }
+
+        // Let wordIdentifier confirm whether these are actually phone / schemeless-URL.
+        if (isPotentialPhone) return false
+        if (hasMidPeriod) return false
+
+        return true
+    }
+
+    private fun isArabicInRange(
+        content: String,
+        start: Int,
+        end: Int,
+    ): Boolean {
+        for (i in start until end) {
+            val c = content[i]
+            if (c in '\u0600'..'\u06FF' || c in '\u0750'..'\u077F') return true
+        }
+        return false
     }
 
     private fun isNumber(word: String) = numberPattern.matches(word)
@@ -224,8 +379,6 @@ class RichTextParser {
     }
 
     fun isDate(word: String): Boolean = shortDatePattern.matches(word) || longDatePattern.matches(word)
-
-    private fun isArabic(text: String): Boolean = text.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
 
     private fun wordIdentifier(
         word: String,
