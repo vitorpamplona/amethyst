@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,28 +48,32 @@ import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.hashtags.Weed
 import com.vitorpamplona.amethyst.commons.hashtags.Zap
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
-import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
-import com.vitorpamplona.amethyst.ui.components.HashTag
 import com.vitorpamplona.amethyst.ui.components.RenderRegular
 import com.vitorpamplona.amethyst.ui.components.RenderTextParagraph
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Preview
 @Composable
 fun RenderHashTagIconsPreview() {
+    val accountViewModel = mockAccountViewModel()
     ThemeComparisonColumn {
         RenderRegular(
             "Testing rendering of hashtags: #flowerstr #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
             EmptyTagList,
-        ) { paragraph, state, spaceWidth, modifier ->
-            RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
-                when (word) {
-                    is HashTagSegment -> HashTag(word, EmptyNav())
-                    is RegularTextSegment -> Text(word.segmentText)
-                }
-            }
+        ) { paragraph, state, modifier ->
+            RenderTextParagraph(
+                paragraph = paragraph,
+                modifier = modifier,
+                state = state,
+                canPreview = false,
+                quotesLeft = 0,
+                backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                callbackUri = null,
+                accountViewModel = accountViewModel,
+                nav = EmptyNav(),
+            )
         }
     }
 }
