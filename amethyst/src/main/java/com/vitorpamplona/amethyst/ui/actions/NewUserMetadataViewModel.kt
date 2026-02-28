@@ -169,6 +169,26 @@ class NewUserMetadataViewModel : ViewModel() {
         }
     }
 
+    fun uploadPictureAndSave(
+        uri: SelectedMedia,
+        context: Context,
+        onError: (String, String) -> Unit,
+    ) {
+        load()
+        accountViewModel.launchSigner {
+            upload(
+                uri,
+                context,
+                onUploading = { isUploadingImageForPicture = it },
+                onUploaded = {
+                    picture.value = it
+                    create()
+                },
+                onError = onError,
+            )
+        }
+    }
+
     private suspend fun upload(
         galleryUri: SelectedMedia,
         context: Context,
