@@ -69,7 +69,7 @@ class RichTextParser {
             isImage = fullUrl.startsWith("data:image/")
             isVideo = fullUrl.startsWith("data:video/")
         } else {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
+            val removedParamsFromUrl = stripUrlForExtensionCheck(fullUrl)
             isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
             isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
@@ -169,92 +169,109 @@ class RichTextParser {
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
     ): ImmutableList<ParagraphState> {
-        val paragraphSegments = ArrayList<ParagraphState>()
-        val contentLength = content.length
+        val paragraphs = ArrayList<ParagraphState>()
         var lineStart = 0
 
-        // Scan for newlines manually to avoid allocating a List<String> from split('\n')
-        // and avoid allocating each paragraph as a substring.
-        while (lineStart <= contentLength) {
+        // Scan for newline boundaries without splitting the string into a List<String>.
+        while (lineStart <= content.length) {
             val nlIdx = content.indexOf('\n', lineStart)
-            val lineEnd = if (nlIdx < 0) contentLength else nlIdx
-
-            val isRTL = isArabicInRange(content, lineStart, lineEnd)
-
-            // Compute trimEnd boundary without creating a substring (matches trimEnd().split(' ')).
-            var actualEnd = lineEnd
-            while (actualEnd > lineStart && content[actualEnd - 1].isWhitespace()) actualEnd--
-
-            val paragraphState: ParagraphState
-            if (actualEnd <= lineStart) {
-                // Empty / all-whitespace line: mirror "".split(' ') == [""] from the original.
-                paragraphState = ParagraphState(persistentListOf(RegularTextSegment("")), isRTL)
-            } else {
-                // First pass: check every word without creating substrings.
-                // For the common all-plain-text paragraph this avoids all per-word allocations.
-                var allRegular = true
-                var tempWordStart = lineStart
-                while (tempWordStart < actualEnd) {
-                    val spIdx = content.indexOf(' ', tempWordStart)
-                    val tempWordEnd = if (spIdx < 0 || spIdx >= actualEnd) actualEnd else spIdx
-                    if (!isRegularByIndex(content, tempWordStart, tempWordEnd, emojis)) {
-                        allRegular = false
-                        break
-                    }
-                    tempWordStart = tempWordEnd + 1
-                }
-
-                paragraphState =
-                    if (allRegular) {
-                        // Entire paragraph is plain text: one substring for the whole trimmed line,
-                        // skipping per-word allocations and the joinToString done later.
-                        ParagraphState(
-                            persistentListOf(RegularTextSegment(content.substring(lineStart, actualEnd))),
-                            isRTL,
-                        )
-                    } else {
-                        // Mixed paragraph: classify each word with the full wordIdentifier.
-                        val segments = ArrayList<Segment>()
-                        var wordStart = lineStart
-                        while (wordStart < actualEnd) {
-                            val spIdx = content.indexOf(' ', wordStart)
-                            val wordEnd = if (spIdx < 0 || spIdx >= actualEnd) actualEnd else spIdx
-                            segments.add(wordIdentifier(content.substring(wordStart, wordEnd), images, videos, urls, emojis, tags))
-                            wordStart = wordEnd + 1
-                        }
-                        ParagraphState(segments.toPersistentList(), isRTL)
-                    }
-            }
-
-            paragraphSegments.add(paragraphState)
+            val lineEnd = if (nlIdx < 0) content.length else nlIdx
+            paragraphs.add(parseParagraphLine(content, lineStart, lineEnd, images, videos, urls, emojis, tags))
             lineStart = lineEnd + 1
         }
 
-        val segmentsWithGalleries = GalleryParser().processParagraphs(paragraphSegments)
-
-        return segmentsWithGalleries
-            .map { paragraph ->
-                when {
-                    paragraph.words.isEmpty() -> paragraph
-                    // Single segment: already optimal, no join needed.
-                    paragraph.words.size == 1 -> paragraph
-                    paragraph.words.any { it !is RegularTextSegment } -> paragraph
-                    else ->
-                        ParagraphState(
-                            persistentListOf<Segment>(RegularTextSegment(paragraph.words.joinToString(" ") { it.segmentText })),
-                            paragraph.isRTL,
-                        )
-                }
-            }.toImmutableList()
+        return GalleryParser()
+            .processParagraphs(paragraphs)
+            .map { mergeIfAllRegular(it) }
+            .toImmutableList()
     }
 
     /**
-     * Returns true when the word at content[wordStart, wordEnd) is definitely plain text and
-     * does not need a substring to be created for classification.  Conservative: a false return
-     * only means the caller should run the full [wordIdentifier] check; it never produces a
-     * wrong result.
+     * Parses a single line of [content] (from [lineStart] to [lineEnd], exclusive) into a
+     * [ParagraphState]. Trailing whitespace is ignored. For lines where every word is plain text,
+     * a single [RegularTextSegment] is returned without allocating per-word substrings.
      */
-    private fun isRegularByIndex(
+    private fun parseParagraphLine(
+        content: String,
+        lineStart: Int,
+        lineEnd: Int,
+        images: Set<String>,
+        videos: Set<String>,
+        urls: Set<String>,
+        emojis: Map<String, String>,
+        tags: ImmutableListOfLists<String>,
+    ): ParagraphState {
+        val isRTL = isArabicInRange(content, lineStart, lineEnd)
+
+        // Strip trailing whitespace without creating a substring.
+        var actualEnd = lineEnd
+        while (actualEnd > lineStart && content[actualEnd - 1].isWhitespace()) actualEnd--
+
+        if (actualEnd <= lineStart) {
+            // Empty or all-whitespace line.
+            return ParagraphState(persistentListOf(RegularTextSegment("")), isRTL)
+        }
+
+        // Fast path: if every word is plain text, return one segment for the whole line.
+        if (isAllPlainText(content, lineStart, actualEnd, emojis)) {
+            return ParagraphState(
+                persistentListOf(RegularTextSegment(content.substring(lineStart, actualEnd))),
+                isRTL,
+            )
+        }
+
+        // Mixed line: classify each space-delimited word individually.
+        val segments = ArrayList<Segment>()
+        var wordStart = lineStart
+        while (wordStart < actualEnd) {
+            val spIdx = content.indexOf(' ', wordStart)
+            val wordEnd = if (spIdx < 0 || spIdx >= actualEnd) actualEnd else spIdx
+            segments.add(wordIdentifier(content.substring(wordStart, wordEnd), images, videos, urls, emojis, tags))
+            wordStart = wordEnd + 1
+        }
+        return ParagraphState(segments.toPersistentList(), isRTL)
+    }
+
+    /**
+     * Returns true when every space-delimited word in content[lineStart, lineEnd) is plain text
+     * that needs no special rendering. A word is plain if [isPlainWord] returns true for it.
+     */
+    private fun isAllPlainText(
+        content: String,
+        lineStart: Int,
+        lineEnd: Int,
+        emojis: Map<String, String>,
+    ): Boolean {
+        var wordStart = lineStart
+        while (wordStart < lineEnd) {
+            val spIdx = content.indexOf(' ', wordStart)
+            val wordEnd = if (spIdx < 0 || spIdx >= lineEnd) lineEnd else spIdx
+            if (!isPlainWord(content, wordStart, wordEnd, emojis)) return false
+            wordStart = wordEnd + 1
+        }
+        return true
+    }
+
+    /**
+     * If [paragraph] contains only [RegularTextSegment] words, merges them back into a single
+     * segment joined by spaces. This collapses paragraphs that were split word-by-word but turned
+     * out to be entirely plain text (e.g. after gallery post-processing).
+     */
+    private fun mergeIfAllRegular(paragraph: ParagraphState): ParagraphState {
+        if (paragraph.words.size <= 1) return paragraph
+        if (paragraph.words.any { it !is RegularTextSegment }) return paragraph
+        return ParagraphState(
+            persistentListOf(RegularTextSegment(paragraph.words.joinToString(" ") { it.segmentText })),
+            paragraph.isRTL,
+        )
+    }
+
+    /**
+     * Returns true when the word at content[wordStart, wordEnd) is definitely plain text and does
+     * not need a full [wordIdentifier] classification. Conservative: returning false only means
+     * the caller should run the full check; it never produces a wrong result.
+     */
+    private fun isPlainWord(
         content: String,
         wordStart: Int,
         wordEnd: Int,
@@ -265,10 +282,10 @@ class RichTextParser {
 
         val c0 = content[wordStart]
 
-        // Quick first-character reject for token types that always start with a known char.
+        // Quick first-character reject for token types that always start with a known character.
         when (c0) {
             '#' -> return false // hashtag (#hashtag) or tag reference (#[n])
-            '@' -> return false // @npub… NIP-19 mention or email starting with @
+            '@' -> return false // @npub… NIP-19 mention
             'd', 'D' -> if (len > 11 && content.startsWith("data:image/", wordStart)) return false
             'l', 'L' -> {
                 if (len > 4 && content.startsWith("lnbc", wordStart, ignoreCase = true)) return false
@@ -313,29 +330,23 @@ class RichTextParser {
             }
         }
 
-        // Single-pass character scan for special markers.
+        // Single-pass character scan: detect markers that require full classification.
         var isPotentialPhone = len in 7..14
         var hasMidPeriod = false
         for (i in wordStart until wordEnd) {
             val c = content[i]
             val code = c.code
             when {
-                // Custom emoji uses :name: format; fastMightContainEmoji checks for ':'.
-                c == ':' && emojis.isNotEmpty() -> return false
-                // Email address
-                c == '@' -> return false
-                // Possible schemeless URL (domain.tld): period not at first or last position
-                c == '.' && i > wordStart && i < wordEnd - 1 -> hasMidPeriod = true
-                // EmojiCoder: Unicode variation selectors BMP range U+FE00..U+FE0F
-                code in 0xFE00..0xFE0F -> return false
-                // EmojiCoder: high surrogate 0xDB40 leads a variation-selector supplement codepoint
-                code == 0xDB40 -> return false
-                // Phone number: allowed chars are digits, '-', ' ', '.'
+                c == ':' && emojis.isNotEmpty() -> return false // custom emoji :name: format
+                c == '@' -> return false // email address
+                c == '.' && i > wordStart && i < wordEnd - 1 -> hasMidPeriod = true // possible schemeless URL
+                code in 0xFE00..0xFE0F -> return false // Unicode variation selectors (EmojiCoder)
+                code == 0xDB40 -> return false // high surrogate for variation-selector supplement (EmojiCoder)
                 isPotentialPhone && c !in '0'..'9' && c != '-' && c != ' ' && c != '.' -> isPotentialPhone = false
             }
         }
 
-        // Let wordIdentifier confirm whether these are actually phone / schemeless-URL.
+        // Defer to wordIdentifier to confirm whether these are actually a phone / schemeless URL.
         if (isPotentialPhone) return false
         if (hasMidPeriod) return false
 
@@ -390,58 +401,54 @@ class RichTextParser {
     ): Segment {
         if (word.isEmpty()) return RegularTextSegment(word)
 
+        // Inline media and detected URL sets
         if (word.startsWith("data:image/")) {
             if (Patterns.BASE64_IMAGE.matches(word)) return Base64Segment(word)
         }
-
         if (images.contains(word)) return ImageSegment(word)
-
         if (videos.contains(word)) return VideoSegment(word)
-
         if (urls.contains(word)) return LinkSegment(word)
 
+        // Custom emoji
         if (CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
 
+        // Lightning / Cashu payments
         if (word.startsWith("lnbc", true)) return InvoiceSegment(word)
-
         if (word.startsWith("lnurl", true)) return WithdrawSegment(word)
-
         if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
 
+        // Nostr / NIP-19 identifiers
         if (word.startsWith("#")) return parseHash(word, tags)
-
         if (EmojiCoder.isCoded(word)) return SecretEmoji(word)
+        if (startsWithNIP19Scheme(word)) return BechSegment(word)
 
+        // Contact info
         if (word.contains("@")) {
             if (Patterns.EMAIL_ADDRESS.matches(word)) return EmailSegment(word)
         }
-
-        if (startsWithNIP19Scheme(word)) return BechSegment(word)
-
         if (isPotentialPhoneNumber(word) && !isDate(word)) {
             if (Patterns.PHONE.matches(word)) return PhoneSegment(word)
         }
 
-        val indexOfPeriod = word.indexOf(".")
-        if (indexOfPeriod > 0 && indexOfPeriod < word.length - 1) { // periods cannot be the last one
-            val schemelessMatcher = noProtocolUrlValidator.find(word)
-            if (schemelessMatcher != null) {
-                val url = schemelessMatcher.groups[1]?.value // url
-                val additionalChars = schemelessMatcher.groups[4]?.value?.ifEmpty { null } // additional chars
-                if (additionalUrlSchema.find(word) != null && url != null) {
-                    return SchemelessUrlSegment(word, url, additionalChars)
-                }
-            }
-        }
+        // Schemeless URL fallback
+        return parseSchemelessUrl(word) ?: RegularTextSegment(word)
+    }
 
-        return RegularTextSegment(word)
+    private fun parseSchemelessUrl(word: String): SchemelessUrlSegment? {
+        val indexOfPeriod = word.indexOf('.')
+        if (indexOfPeriod <= 0 || indexOfPeriod >= word.length - 1) return null
+        val schemelessMatcher = noProtocolUrlValidator.find(word) ?: return null
+        val url = schemelessMatcher.groups[1]?.value ?: return null
+        val additionalChars = schemelessMatcher.groups[4]?.value?.ifEmpty { null }
+        if (additionalUrlSchema.find(word) == null) return null
+        return SchemelessUrlSegment(word, url, additionalChars)
     }
 
     private fun parseHash(
         word: String,
         tags: ImmutableListOfLists<String>,
     ): Segment {
-        // First #[n]
+        // First #[n] — tag index reference
         try {
             val matcher = tagIndex.find(word)
             if (matcher != null) {
@@ -465,7 +472,7 @@ class RichTextParser {
             Log.w("Tag Parser", "Couldn't link tag $word", e)
         }
 
-        // Second #Amethyst
+        // Second #Amethyst — plain hashtag
         try {
             val hashtagMatcher = hashTagsPattern.find(word)
             if (hashtagMatcher != null) {
@@ -483,11 +490,21 @@ class RichTextParser {
     }
 
     companion object {
+        // --- Date / number patterns ---
         val longDatePattern: Regex = Regex("^\\d{4}-\\d{2}-\\d{2}$")
         val shortDatePattern: Regex = Regex("^\\d{2}-\\d{2}-\\d{2}$")
         val numberPattern: Regex = Regex("^(-?[\\d.]+)([a-zA-Z%]*)$")
 
-        // Android9 seems to have an issue starting this regex.
+        // --- File extension lists ---
+        val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
+        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
+
+        val imageExtensions = imageExt + imageExt.map { it.uppercase() }
+        val videoExtensions = videoExt + videoExt.map { it.uppercase() }
+
+        // --- URL validation patterns ---
+
+        // Android 9 seems to have an issue starting this regex.
         val noProtocolUrlValidator =
             try {
                 Regex(
@@ -507,23 +524,20 @@ class RichTextParser {
             "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?"
                 .toRegex(RegexOption.IGNORE_CASE)
 
-        val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
-
-        val imageExtensions = imageExt + imageExt.map { it.uppercase() }
-        val videoExtensions = videoExt + videoExt.map { it.uppercase() }
-
-        val tagIndex = Regex("\\#\\[([0-9]+)\\](.*)")
-        val hashTagsPattern: Regex =
-            Regex("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", RegexOption.IGNORE_CASE)
-
+        // --- Nostr / NIP-19 ---
         val acceptedNIP19schemes =
             listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1", "nembed") +
                 listOf("npub1", "naddr1", "note1", "nprofile1", "nevent1", "nembed").map {
                     it.uppercase()
                 }
 
-        private fun removeQueryParamsForExtensionComparison(fullUrl: String): String =
+        // --- Hash tag / tag index ---
+        val tagIndex = Regex("\\#\\[([0-9]+)\\](.*)")
+        val hashTagsPattern: Regex =
+            Regex("#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)(.*)", RegexOption.IGNORE_CASE)
+
+        // Strips query string and fragment from a URL so the bare path extension can be compared.
+        private fun stripUrlForExtensionCheck(fullUrl: String): String =
             if (fullUrl.contains("?")) {
                 fullUrl.split("?")[0]
             } else if (fullUrl.contains("#")) {
@@ -533,20 +547,19 @@ class RichTextParser {
             }
 
         fun isImageOrVideoUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-
-            return imageExtensions.any { removedParamsFromUrl.endsWith(it) } ||
-                videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val bare = stripUrlForExtensionCheck(url)
+            return imageExtensions.any { bare.endsWith(it) } ||
+                videoExtensions.any { bare.endsWith(it) }
         }
 
         fun isImageUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val bare = stripUrlForExtensionCheck(url)
+            return imageExtensions.any { bare.endsWith(it) }
         }
 
         fun isVideoUrl(url: String): Boolean {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val bare = stripUrlForExtensionCheck(url)
+            return videoExtensions.any { bare.endsWith(it) }
         }
 
         fun isValidURL(url: String?): Boolean =
@@ -560,9 +573,9 @@ class RichTextParser {
             }
 
         fun parseImageOrVideo(fullUrl: String): BaseMediaContent {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-            val isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-            val isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+            val bare = stripUrlForExtensionCheck(fullUrl)
+            val isImage = imageExtensions.any { bare.endsWith(it) }
+            val isVideo = videoExtensions.any { bare.endsWith(it) }
 
             return if (isImage) {
                 MediaUrlImage(fullUrl)
