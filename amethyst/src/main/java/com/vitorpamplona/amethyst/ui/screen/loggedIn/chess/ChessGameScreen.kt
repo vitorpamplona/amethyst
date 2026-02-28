@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
 /**
@@ -392,7 +393,7 @@ private fun RelaySettingsSheet(
             fontWeight = FontWeight.Bold,
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Height4dpModifier)
 
         Text(
             text = gameId,
