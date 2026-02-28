@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
@@ -144,12 +143,12 @@ class NewUserMetadataViewModel : ViewModel() {
     ) {
         accountViewModel.launchSigner {
             upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForPicture = it },
-                onUploaded = { picture.value = it },
+                galleryUri = uri,
+                context = context,
                 onError = onError,
-            )
+            )?.let {
+                picture.value = it
+            }
         }
     }
 
@@ -160,12 +159,12 @@ class NewUserMetadataViewModel : ViewModel() {
     ) {
         accountViewModel.launchSigner {
             upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForBanner = it },
-                onUploaded = { banner.value = it },
+                galleryUri = uri,
+                context = context,
                 onError = onError,
-            )
+            )?.let {
+                banner.value = it
+            }
         }
     }
 
@@ -177,30 +176,27 @@ class NewUserMetadataViewModel : ViewModel() {
         load()
         accountViewModel.launchSigner {
             upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForPicture = it },
-                onUploaded = {
-                    picture.value = it
-                    create()
-                },
+                galleryUri = uri,
+                context = context,
                 onError = onError,
-            )
+            )?.let {
+                picture.value = it
+            }
+
+            create()
         }
     }
 
     private suspend fun upload(
         galleryUri: SelectedMedia,
         context: Context,
-        onUploading: (Boolean) -> Unit,
-        onUploaded: (String) -> Unit,
         onError: (String, String) -> Unit,
-    ) {
-        onUploading(true)
+    ): String? {
+        isUploadingImageForPicture = true
 
         val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
-        try {
+        return try {
             val result =
                 if (account.settings.defaultFileServer.type == ServerType.NIP96) {
                     Nip96Uploader().upload(
@@ -229,20 +225,17 @@ class NewUserMetadataViewModel : ViewModel() {
                     )
                 }
 
-            if (result.url != null) {
-                onUploading(false)
-                onUploaded(result.url)
-            } else {
-                onUploading(false)
+            if (result.url == null) {
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
             }
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
+
+            result.url
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            onUploading(false)
             onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+            null
+        } finally {
+            isUploadingImageForPicture = false
         }
     }
 }
