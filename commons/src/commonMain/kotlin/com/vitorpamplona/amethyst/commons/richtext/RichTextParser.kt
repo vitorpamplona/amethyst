@@ -64,10 +64,10 @@ class RichTextParser {
 
         if (contentType != null) {
             isImage = contentType.startsWith("image/")
-            isVideo = contentType.startsWith("video/")
+            isVideo = contentType.startsWith("video/") || contentType.startsWith("audio/")
         } else if (fullUrl.startsWith("data:")) {
             isImage = fullUrl.startsWith("data:image/")
-            isVideo = fullUrl.startsWith("data:video/")
+            isVideo = fullUrl.startsWith("data:video/") || fullUrl.startsWith("data:audio/")
         } else {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
             isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
@@ -355,7 +355,7 @@ class RichTextParser {
                 .toRegex(RegexOption.IGNORE_CASE)
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
+        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a")
 
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
