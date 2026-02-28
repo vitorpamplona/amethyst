@@ -521,7 +521,7 @@ fun ClickableNote(
     content: @Composable () -> Unit,
 ) {
     val updatedModifier =
-        remember(baseNote, backgroundColor.value, modifier) {
+        remember(baseNote, modifier) {
             modifier
                 .combinedClickable(
                     onClick = {
@@ -543,10 +543,10 @@ fun ClickableNote(
                         }
                     },
                     onLongClick = showPopup,
-                ).background(backgroundColor.value)
+                )
         }
 
-    Column(modifier = updatedModifier) { content() }
+    Column(modifier = updatedModifier.background(backgroundColor.value)) { content() }
 }
 
 @Composable
