@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
@@ -58,6 +59,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Topic
@@ -70,6 +72,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -79,6 +82,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -91,6 +95,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -112,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.NoticeDebugMessage
@@ -202,6 +209,11 @@ fun RelayInformationBody(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val nostrClient = remember { Amethyst.instance.client as? NostrClient }
+    val activeReqs = remember(relay) { nostrClient?.activeRequests(relay) ?: emptyMap() }
+    val activeCounts = remember(relay) { nostrClient?.activeCounts(relay) ?: emptyMap() }
+    val activeOutbox = remember(relay) { nostrClient?.activeOutboxCache(relay) ?: emptySet() }
+
     LazyColumn(
         modifier =
             Modifier
@@ -264,6 +276,59 @@ fun RelayInformationBody(
             item { SoftwareCard(relayInfo) }
         }
 
+        // Active subscriptions and outbox section
+        val hasReqs = activeReqs.isNotEmpty()
+        val hasCounts = activeCounts.isNotEmpty()
+        val hasOutbox = activeOutbox.isNotEmpty()
+
+        if (hasReqs || hasCounts || hasOutbox) {
+            item { SectionHeader(stringRes(R.string.relay_active_subscriptions)) }
+
+            if (hasReqs) {
+                item {
+                    Text(
+                        text = stringRes(R.string.relay_req_subscriptions, activeReqs.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+                items(activeReqs.entries.toList(), key = { "req_${it.key}" }) { (subId, filters) ->
+                    SubscriptionCard(subId = subId, filters = filters)
+                    Spacer(modifier = StdVertSpacer)
+                }
+            }
+
+            if (hasCounts) {
+                item {
+                    Text(
+                        text = stringRes(R.string.relay_count_subscriptions, activeCounts.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(bottom = 4.dp, top = if (hasReqs) 8.dp else 0.dp),
+                    )
+                }
+                items(activeCounts.entries.toList(), key = { "count_${it.key}" }) { (subId, filters) ->
+                    SubscriptionCard(subId = subId, filters = filters)
+                    Spacer(modifier = StdVertSpacer)
+                }
+            }
+
+            if (hasOutbox) {
+                item {
+                    Text(
+                        text = stringRes(R.string.relay_outbox_events, activeOutbox.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(bottom = 4.dp, top = if (hasReqs || hasCounts) 8.dp else 0.dp),
+                    )
+                }
+                item {
+                    OutboxEventsCard(eventIds = activeOutbox)
+                }
+            }
+        }
+
         item {
             SectionHeader(stringRes(R.string.relay_error_messages))
         }
@@ -272,6 +337,300 @@ fun RelayInformationBody(
             RenderDebugMessage(msg)
 
             Spacer(modifier = StdVertSpacer)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Active subscriptions + outbox display
+// ---------------------------------------------------------------------------
+
+private fun kindDisplayName(kind: Int): String =
+    when (kind) {
+        0 -> "Profile"
+        1 -> "Note"
+        2 -> "Relay"
+        3 -> "Contacts"
+        4 -> "DM"
+        5 -> "Delete"
+        6 -> "Repost"
+        7 -> "Reaction"
+        8 -> "Badge"
+        9 -> "Chat"
+        16 -> "GenRepost"
+        40 -> "Channel"
+        41 -> "ChMeta"
+        42 -> "ChMsg"
+        1059 -> "GiftWrap"
+        1311 -> "LiveChat"
+        1984 -> "Report"
+        9041 -> "ZapGoal"
+        9734 -> "ZapReq"
+        9735 -> "Zap"
+        10000 -> "Mute"
+        10001 -> "Pins"
+        10002 -> "RelayList"
+        10003 -> "Bookmarks"
+        10004 -> "Communities"
+        10050 -> "DMRelays"
+        17375 -> "Wallet"
+        23194 -> "NWC Req"
+        23195 -> "NWC Resp"
+        30000 -> "FollowSets"
+        30023 -> "Article"
+        30311 -> "LiveEvent"
+        else -> "k$kind"
+    }
+
+@Composable
+private fun KindChip(kind: Int) {
+    val name = kindDisplayName(kind)
+    val (bg, fg) =
+        when {
+            kind in setOf(0, 1, 6, 7, 16, 30023) ->
+                MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+            kind in setOf(3, 10002, 10000, 10001, 10003, 10004, 30000) ->
+                MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+            kind in setOf(4, 1059, 10050) ->
+                MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+            kind in setOf(9734, 9735, 9041, 17375, 23194, 23195) ->
+                MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+            else ->
+                MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = bg,
+    ) {
+        Text(
+            text = name,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = fg,
+        )
+    }
+}
+
+@Composable
+private fun FilterAttributeChip(
+    text: String,
+    color: Color = MaterialTheme.colorScheme.surfaceVariant,
+    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = color,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = textColor,
+        )
+    }
+}
+
+@Composable
+private fun FilterVisual(
+    filter: Filter,
+    index: Int,
+) {
+    val context = LocalContext.current
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "filter ${index + 1}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                // Kinds
+                filter.kinds?.forEach { kind ->
+                    KindChip(kind)
+                }
+
+                // Authors
+                filter.authors?.let { authors ->
+                    if (authors.isNotEmpty()) {
+                        FilterAttributeChip(
+                            text = "👤 ${stringRes(R.string.relay_filter_authors, authors.size)}",
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                }
+
+                // IDs
+                filter.ids?.let { ids ->
+                    if (ids.isNotEmpty()) {
+                        FilterAttributeChip(
+                            text = "🆔 ${stringRes(R.string.relay_filter_ids, ids.size)}",
+                        )
+                    }
+                }
+
+                // Tags
+                filter.tags?.forEach { (tagName, values) ->
+                    if (values.isNotEmpty()) {
+                        FilterAttributeChip(
+                            text =
+                                when {
+                                    values.size == 1 -> "#$tagName:${values[0].take(8)}"
+                                    else -> "#$tagName ×${values.size}"
+                                },
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            textColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                }
+
+                // tagsAll
+                filter.tagsAll?.forEach { (tagName, values) ->
+                    if (values.isNotEmpty()) {
+                        FilterAttributeChip(
+                            text =
+                                when {
+                                    values.size == 1 -> "&$tagName:${values[0].take(8)}"
+                                    else -> "&$tagName ×${values.size}"
+                                },
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            textColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                }
+
+                // Since
+                filter.since?.let { since ->
+                    FilterAttributeChip(
+                        text = stringRes(R.string.relay_filter_since, timeAgoNoDot(since, context)),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                // Until
+                filter.until?.let { until ->
+                    FilterAttributeChip(
+                        text = stringRes(R.string.relay_filter_until, timeAgoNoDot(until, context)),
+                    )
+                }
+
+                // Limit
+                filter.limit?.let { limit ->
+                    FilterAttributeChip(
+                        text = stringRes(R.string.relay_filter_limit, limit),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    )
+                }
+
+                // Search
+                filter.search?.let { search ->
+                    if (search.isNotEmpty()) {
+                        FilterAttributeChip(
+                            text = "🔍 ${search.take(20)}${if (search.length > 20) "…" else ""}",
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionCard(
+    subId: String,
+    filters: List<Filter>,
+) {
+    val displayId =
+        if (subId.length > 28) {
+            subId.take(22) + "…" + subId.takeLast(4)
+        } else {
+            subId
+        }
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FilterAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                SelectionContainer(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = displayId,
+                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = "${filters.size}f",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            }
+
+            filters.forEachIndexed { index, filter ->
+                FilterVisual(filter = filter, index = index)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutboxEventsCard(eventIds: Set<HexKey>) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        FlowRow(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            eventIds.forEach { eventId ->
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                        Text(
+                            text = eventId.take(8) + "…" + eventId.takeLast(4),
+                            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                }
+            }
         }
     }
 }
