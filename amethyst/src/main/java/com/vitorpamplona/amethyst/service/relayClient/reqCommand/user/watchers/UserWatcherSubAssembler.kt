@@ -49,7 +49,7 @@ class UserWatcherSubAssembler(
         relay: NormalizedRelayUrl,
         time: Long,
         filters: List<Filter>? = null,
-    ) = {
+    ) {
         filters?.forEach {
             it.authors?.forEach {
                 cache.getUserIfExists(it)?.let { user ->
