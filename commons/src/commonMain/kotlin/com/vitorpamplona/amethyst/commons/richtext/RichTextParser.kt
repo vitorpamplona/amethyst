@@ -178,7 +178,13 @@ class RichTextParser {
             val wordList = paragraph.trimEnd().split(' ')
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
+                val schemeIndex = findUrlSchemeIndex(word)
+                if (schemeIndex > 0) {
+                    segments.add(RegularTextSegment(word.substring(0, schemeIndex)))
+                    segments.add(wordIdentifier(word.substring(schemeIndex), images, videos, urls, emojis, tags))
+                } else {
+                    segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
+                }
             }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
@@ -197,6 +203,16 @@ class RichTextParser {
                     )
                 }
             }.toImmutableList()
+    }
+
+    private fun findUrlSchemeIndex(word: String): Int {
+        val https = word.indexOf("https://")
+        val http = word.indexOf("http://")
+        return when {
+            https > 0 && (http <= 0 || https <= http) -> https
+            http > 0 -> http
+            else -> -1
+        }
     }
 
     private fun isNumber(word: String) = numberPattern.matches(word)
