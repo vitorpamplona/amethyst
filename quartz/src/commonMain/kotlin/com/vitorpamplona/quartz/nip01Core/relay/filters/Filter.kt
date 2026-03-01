@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.filters
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -46,6 +47,7 @@ import com.vitorpamplona.quartz.utils.Log
  * This class performs validation on construction to ensure all string-based identifiers
  * follow Nostr requirements (64-char hex, onion addresses) and logs errors for invalid inputs.
  */
+@Stable
 class Filter(
     val ids: List<HexKey>? = null,
     val authors: List<HexKey>? = null,
