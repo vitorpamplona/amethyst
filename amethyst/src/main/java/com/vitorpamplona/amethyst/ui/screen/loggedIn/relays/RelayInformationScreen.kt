@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
@@ -548,7 +549,7 @@ private fun kindDisplayName(
         LabeledBookmarkListEvent.KIND -> "Named Bookmarks"
         LiveActivitiesChatMessageEvent.KIND -> "Live Chats"
         LiveActivitiesEvent.KIND -> "Live Streams"
-        LnZapEvent.KIND -> "Zap"
+        LnZapEvent.KIND -> "Zaps"
         LnZapPaymentRequestEvent.KIND -> "NWC Request"
         LnZapPaymentResponseEvent.KIND -> "NWC Response"
         LnZapPrivateEvent.KIND -> "Private Zaps"
@@ -633,11 +634,11 @@ private fun KindChip(kind: Int) {
 
             // zaps
             in zaps -> {
-                MaterialTheme.colorScheme.bitcoinColor to MaterialTheme.colorScheme.onBackground
+                MaterialTheme.colorScheme.background to MaterialTheme.colorScheme.bitcoinColor
             }
 
             in reports -> {
-                MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onError
+                MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.redColorOnSecondSurface
             }
 
             else -> {
