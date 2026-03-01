@@ -148,7 +148,7 @@ fun RichTextViewer(
 fun RenderStrangeNamePreview() {
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
-            "If you want to stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm can you here",
+            "If you want to FreeFrom Official \uD80C\uDD66 stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm can you here",
             EmptyTagList,
         ) { paragraph, state, spaceWidth, modifier ->
             RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
