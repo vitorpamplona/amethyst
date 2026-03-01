@@ -1511,7 +1511,7 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Broadcasting</string>
     <string name="broadcasting_name">Broadcasting %1$s</string>
-    <string name="broadcasting_number_events">Broadcasting %1$d events...</string>
+    <string name="broadcasting_number_events">Broadcasting %1$d events…</string>
     <string name="sent_number_events">%1$d events sent</string>
 
     <string name="bradcasting_result_partial">Some events failed</string>
@@ -1526,12 +1526,9 @@
     <string name="next">Next</string>
     <string name="add_poll_option_button">Add poll option button</string>
 
-    <string name="back">Back</string>
     <string name="go_back">Go Back</string>
-    <string name="dismiss">Dismiss</string>
     <string name="approve">Approve</string>
     <string name="connected">Connected</string>
-    <string name="relay_settings">Relay Settings</string>
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
     <string name="restart">Restart</string>
