@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -72,8 +73,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -95,8 +96,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -118,16 +117,144 @@ import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.experimental.relationshipStatus.ContactCardEvent
+import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.NoticeDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.SpamDebugMessage
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -345,58 +472,177 @@ fun RelayInformationBody(
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
 
-private fun kindDisplayName(kind: Int): String =
+private fun kindDisplayName(
+    kind: Int,
+    context: Context,
+): String =
     when (kind) {
-        0 -> "Profile"
-        1 -> "Note"
-        2 -> "Relay"
-        3 -> "Contacts"
-        4 -> "DM"
-        5 -> "Delete"
-        6 -> "Repost"
-        7 -> "Reaction"
-        8 -> "Badge"
-        9 -> "Chat"
-        16 -> "GenRepost"
-        40 -> "Channel"
-        41 -> "ChMeta"
-        42 -> "ChMsg"
-        1059 -> "GiftWrap"
-        1311 -> "LiveChat"
-        1984 -> "Report"
-        9041 -> "ZapGoal"
-        9734 -> "ZapReq"
-        9735 -> "Zap"
-        10000 -> "Mute"
-        10001 -> "Pins"
-        10002 -> "RelayList"
-        10003 -> "Bookmarks"
-        10004 -> "Communities"
-        10050 -> "DMRelays"
-        17375 -> "Wallet"
-        23194 -> "NWC Req"
-        23195 -> "NWC Resp"
-        30000 -> "FollowSets"
-        30023 -> "Article"
-        30311 -> "LiveEvent"
+        AdvertisedRelayListEvent.KIND -> "Outbox Relays"
+        AppDefinitionEvent.KIND -> "Apps"
+        AppRecommendationEvent.KIND -> "App Recommendations"
+        AppSpecificDataEvent.KIND -> "User Settings"
+        AudioHeaderEvent.KIND -> "Audio Header"
+        AudioTrackEvent.KIND -> "Audio Track"
+        BadgeAwardEvent.KIND -> "Badge Awards"
+        BadgeDefinitionEvent.KIND -> "Badge Definitions"
+        BadgeProfilesEvent.KIND -> "Profile Badges"
+        BlockedRelayListEvent.KIND -> "Blocked Relays"
+        BlossomServersEvent.KIND -> "Blossom Servers"
+        BlossomAuthorizationEvent.KIND -> "Blossom Auth"
+        BroadcastRelayListEvent.KIND -> "Broadcast Relays"
+        BookmarkListEvent.KIND -> "Bookmark List"
+        CalendarDateSlotEvent.KIND -> "Day Appointment"
+        CalendarEvent.KIND -> "Calendar"
+        CalendarTimeSlotEvent.KIND -> "Appointment"
+        CalendarRSVPEvent.KIND -> "Appt RSVP"
+        ChessGameEvent.KIND -> "Chess Games"
+        JesterEvent.KIND -> "Chess Auth"
+        LiveChessGameChallengeEvent.KIND -> "Chess Challenges"
+        LiveChessGameAcceptEvent.KIND -> "Chess Game Accept"
+        LiveChessMoveEvent.KIND -> "Chess Move"
+        LiveChessGameEndEvent.KIND -> "Chess Game End"
+        LiveChessDrawOfferEvent.KIND -> "Chess Draw Offer"
+        ChannelCreateEvent.KIND -> "Channel Definition"
+        ChannelHideMessageEvent.KIND -> "Channel Hide Msg"
+        ChannelListEvent.KIND -> "Channel List"
+        ChannelMessageEvent.KIND -> "Channel Message"
+        ChannelMetadataEvent.KIND -> "Channel Metadata"
+        ChannelMuteUserEvent.KIND -> "Channel Mute User"
+        ChatMessageEncryptedFileHeaderEvent.KIND -> "DM File"
+        ChatMessageEvent.KIND -> "DM Message"
+        ChatMessageRelayListEvent.KIND -> "DM Relays"
+        ClassifiedsEvent.KIND -> "Classifieds"
+        CommentEvent.KIND -> "Comments"
+        CommunityDefinitionEvent.KIND -> "Community Def"
+        CommunityListEvent.KIND -> "Community List"
+        CommunityPostApprovalEvent.KIND -> "Community Post"
+        ContactListEvent.KIND -> "Follow List"
+        DeletionEvent.KIND -> "Deletions"
+        DraftWrapEvent.KIND -> "Drafts"
+        EmojiPackEvent.KIND -> "Emoji Packs"
+        EmojiPackSelectionEvent.KIND -> "Emoji Pack List"
+        EphemeralChatEvent.KIND -> "Ephemeral Chat"
+        EphemeralChatListEvent.KIND -> "Ephemeral Chatrooms"
+        FileHeaderEvent.KIND -> "File Headers"
+        ProfileGalleryEntryEvent.KIND -> "Profile Gallery"
+        FileServersEvent.KIND -> "File Servers"
+        FileStorageEvent.KIND -> "Blob Data"
+        FileStorageHeaderEvent.KIND -> "Blob Headers"
+        FhirResourceEvent.KIND -> "Medical Data"
+        FollowListEvent.KIND -> "Follow Packs"
+        GenericRepostEvent.KIND -> "Reposts (16)"
+        GeohashListEvent.KIND -> "Geohash Follows"
+        GiftWrapEvent.KIND -> "GiftWraps"
+        GitIssueEvent.KIND -> "Git Issue"
+        GitPatchEvent.KIND -> "Git Path"
+        GitRepositoryEvent.KIND -> "Git Repo"
+        GitReplyEvent.KIND -> "Git Reply"
+        GoalEvent.KIND -> "Zap Goals"
+        HashtagListEvent.KIND -> "Hashtag Follows"
+        HighlightEvent.KIND -> "Highlights"
+        HTTPAuthorizationEvent.KIND -> "Http Auth"
+        IndexerRelayListEvent.KIND -> "Index Relay List"
+        InteractiveStoryPrologueEvent.KIND -> "Adventure Prologue"
+        InteractiveStorySceneEvent.KIND -> "Adventure Scene"
+        InteractiveStoryReadingStateEvent.KIND -> "Adventure Reading"
+        LabeledBookmarkListEvent.KIND -> "Named Bookmarks"
+        LiveActivitiesChatMessageEvent.KIND -> "Live Chats"
+        LiveActivitiesEvent.KIND -> "Live Streams"
+        LnZapEvent.KIND -> "Zap"
+        LnZapPaymentRequestEvent.KIND -> "NWC Request"
+        LnZapPaymentResponseEvent.KIND -> "NWC Response"
+        LnZapPrivateEvent.KIND -> "Private Zaps"
+        LnZapRequestEvent.KIND -> "Zap Req"
+        LongTextNoteEvent.KIND -> "Blogs"
+        MeetingRoomEvent.KIND -> "Meeting Room"
+        MeetingRoomPresenceEvent.KIND -> "Room Presence"
+        MeetingSpaceEvent.KIND -> "Meeting Space"
+        MetadataEvent.KIND -> "Profile"
+        MuteListEvent.KIND -> "Mute List"
+        NNSEvent.KIND -> "NNS"
+        NipTextEvent.KIND -> "NIP"
+        NostrConnectEvent.KIND -> "Nostr Connect"
+        NIP90StatusEvent.KIND -> "DVM Status"
+        NIP90ContentDiscoveryRequestEvent.KIND -> "DVM Content Req"
+        NIP90ContentDiscoveryResponseEvent.KIND -> "DVM Content Resp"
+        NIP90UserDiscoveryRequestEvent.KIND -> "DVM User Req"
+        NIP90UserDiscoveryResponseEvent.KIND -> "DVM User Resp"
+        OtsEvent.KIND -> "OTS"
+        PaymentTargetsEvent.KIND -> "PayTo"
+        PeopleListEvent.KIND -> "People Lists"
+        PictureEvent.KIND -> "Pictures"
+        PinListEvent.KIND -> "Pins"
+        PollNoteEvent.KIND -> "Zap Poll"
+        PollEvent.KIND -> "Poll"
+        PollResponseEvent.KIND -> "Poll Response"
+        PrivateDmEvent.KIND -> "NIP-04 DMs"
+        PrivateOutboxRelayListEvent.KIND -> "Private Relays"
+        ProxyRelayListEvent.KIND -> "Proxy Relays"
+        PublicMessageEvent.KIND -> "Public Message"
+        ReactionEvent.KIND -> "Reactions"
+        ContactCardEvent.KIND -> "Contact Card"
+        RelayAuthEvent.KIND -> "Relay Auth"
+        RelaySetEvent.KIND -> "Relay Set"
+        ReportEvent.KIND -> "Reports"
+        RepostEvent.KIND -> "Reposts"
+        RequestToVanishEvent.KIND -> "User Delete"
+        SealedRumorEvent.KIND -> "Seals"
+        SearchRelayListEvent.KIND -> "Search Relays"
+        StatusEvent.KIND -> "User Status"
+        TextNoteEvent.KIND -> "Notes"
+        TextNoteModificationEvent.KIND -> "Edits"
+        TorrentEvent.KIND -> "Torrents"
+        TorrentCommentEvent.KIND -> "Torrent Comments"
+        TrustedRelayListEvent.KIND -> "Trusted Relays"
+        TrustProviderListEvent.KIND -> "Trusted Providers"
+        VideoHorizontalEvent.KIND -> "Video (Repl)"
+        VideoVerticalEvent.KIND -> "Shorts (Repl)"
+        VideoNormalEvent.KIND -> "Video"
+        VideoShortEvent.KIND -> "Shorts"
+        VoiceEvent.KIND -> "Voice Msg"
+        VoiceReplyEvent.KIND -> "Voice Reply"
+        WikiNoteEvent.KIND -> "Wiki"
         else -> "k$kind"
     }
 
+val posts = setOf(0, 1, 6, 7, 16, 30023)
+val settings = setOf(3, 10002, 10000, 10001, 10003, 10004, 30000)
+val dms = setOf(4, 1059, 10050)
+val zaps = setOf(9734, 9735, 9041, 17375, 23194, 23195)
+val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, RequestToVanishEvent.KIND)
+
 @Composable
 private fun KindChip(kind: Int) {
-    val name = kindDisplayName(kind)
+    val context = LocalContext.current
+    val name = kindDisplayName(kind, context)
     val (bg, fg) =
-        when {
-            kind in setOf(0, 1, 6, 7, 16, 30023) ->
+        when (kind) {
+            in posts -> {
                 MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-            kind in setOf(3, 10002, 10000, 10001, 10003, 10004, 30000) ->
+            }
+
+            //
+            in settings -> {
                 MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-            kind in setOf(4, 1059, 10050) ->
+            }
+
+            // dms
+            in dms -> {
                 MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-            kind in setOf(9734, 9735, 9041, 17375, 23194, 23195) ->
-                MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-            else ->
+            }
+
+            // zaps
+            in zaps -> {
+                MaterialTheme.colorScheme.bitcoinColor to MaterialTheme.colorScheme.onBackground
+            }
+
+            in reports -> {
+                MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onError
+            }
+
+            else -> {
                 MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+            }
         }
     Surface(
         shape = RoundedCornerShape(50),
@@ -483,8 +729,17 @@ private fun FilterVisual(
                         FilterAttributeChip(
                             text =
                                 when {
-                                    values.size == 1 -> "#$tagName:${values[0].take(8)}"
-                                    else -> "#$tagName ×${values.size}"
+                                    values.size == 1 -> {
+                                        if (values[0].length > 8) {
+                                            "#$tagName:${values[0].take(8)}..."
+                                        } else {
+                                            "#$tagName:${values[0]}"
+                                        }
+                                    }
+
+                                    else -> {
+                                        "#$tagName ×${values.size}"
+                                    }
                                 },
                             color = MaterialTheme.colorScheme.tertiaryContainer,
                             textColor = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -498,8 +753,17 @@ private fun FilterVisual(
                         FilterAttributeChip(
                             text =
                                 when {
-                                    values.size == 1 -> "&$tagName:${values[0].take(8)}"
-                                    else -> "&$tagName ×${values.size}"
+                                    values.size == 1 -> {
+                                        if (values[0].length > 8) {
+                                            "&$tagName:${values[0].take(8)}..."
+                                        } else {
+                                            "&$tagName:${values[0]}"
+                                        }
+                                    }
+
+                                    else -> {
+                                        "&$tagName ×${values.size}"
+                                    }
                                 },
                             color = MaterialTheme.colorScheme.tertiaryContainer,
                             textColor = MaterialTheme.colorScheme.onTertiaryContainer,
