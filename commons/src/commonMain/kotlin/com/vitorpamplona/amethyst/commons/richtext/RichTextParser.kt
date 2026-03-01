@@ -245,7 +245,7 @@ class RichTextParser {
 
         if (videos.contains(word)) return VideoSegment(word)
 
-        if (word.startsWith("ws://", ignoreCase = true) || word.startsWith("wss://", ignoreCase = true)) return RelayUrlSegment(word)
+        if (word.startsWith("ws://") || word.startsWith("wss://")) return RelayUrlSegment(word)
 
         if (urls.contains(word)) return LinkSegment(word)
 
