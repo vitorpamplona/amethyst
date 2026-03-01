@@ -792,6 +792,17 @@
     <string name="terms_and_conditions">Terms &amp; Conditions</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Errors and Notices from this Relay</string>
+    <string name="relay_active_subscriptions">Active Subscriptions</string>
+    <string name="relay_active_outbox">Pending Outbox Events</string>
+    <string name="relay_req_subscriptions">REQ Subscriptions (%1$d)</string>
+    <string name="relay_count_subscriptions">COUNT Subscriptions (%1$d)</string>
+    <string name="relay_outbox_events">Outbox Events (%1$d)</string>
+    <string name="relay_no_active_subscriptions">No active subscriptions for this relay</string>
+    <string name="relay_filter_authors">%1$d authors</string>
+    <string name="relay_filter_ids">%1$d ids</string>
+    <string name="relay_filter_since">since %1$s</string>
+    <string name="relay_filter_until">until %1$s</string>
+    <string name="relay_filter_limit">limit %1$d</string>
     <string name="message_length">Message length</string>
     <string name="subscriptions">Subscriptions</string>
     <string name="filters">Filters</string>
