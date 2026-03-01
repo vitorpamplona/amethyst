@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Translate
@@ -37,6 +38,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,12 +52,26 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeDialog
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun AllSettingsScreen(nav: INav) {
+fun AllSettingsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val tint = MaterialTheme.colorScheme.onBackground
+    var showReactionDialog by remember { mutableStateOf(false) }
+
+    if (showReactionDialog) {
+        UpdateReactionTypeDialog(
+            onClose = { showReactionDialog = false },
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -88,6 +107,13 @@ fun AllSettingsScreen(nav: INav) {
                 iconPainterRef = 1,
                 tint = tint,
                 onClick = { nav.nav(Route.PrivacyOptions) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.reactions,
+                icon = Icons.Outlined.FavoriteBorder,
+                tint = tint,
+                onClick = { showReactionDialog = true },
             )
             HorizontalDivider()
             SettingsNavigationRow(
