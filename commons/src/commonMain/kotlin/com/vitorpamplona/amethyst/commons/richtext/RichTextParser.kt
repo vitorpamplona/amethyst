@@ -175,7 +175,7 @@ class RichTextParser {
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.trimEnd().split(' ')
+            val wordList = paragraph.trimEnd().split(wordBoundaryRegex).filter { it.isNotEmpty() }
             val segments = ArrayList<Segment>(wordList.size)
             wordList.forEach { word ->
                 segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
@@ -334,17 +334,14 @@ class RichTextParser {
         val shortDatePattern: Regex = Regex("^\\d{2}-\\d{2}-\\d{2}$")
         val numberPattern: Regex = Regex("^(-?[\\d.]+)([a-zA-Z%]*)$")
 
-        // Android9 seems to have an issue starting this regex.
         val noProtocolUrlValidator =
-            try {
-                Regex(
-                    "(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)",
-                )
-            } catch (e: Exception) {
-                Regex(
-                    "(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)",
-                )
-            }
+            Regex(
+                "(([a-zA-Z0-9_-]+\\.)*[a-zA-Z][a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.]?[a-zA-Z0-9_-]+)*\\/?)(.*)",
+            )
+
+        // Splits at spaces AND at ASCII/multibyte character boundaries
+        // e.g. "ああexample.com" -> ["ああ", "example.com"]
+        private val wordBoundaryRegex = Regex("(?<=[\\u0000-\\u007F])(?=[\\u0080-\\uFFFF])|(?<=[\\u0080-\\uFFFF])(?=[\\u0000-\\u007F])| +")
 
         val additionalUrlSchema =
             """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
