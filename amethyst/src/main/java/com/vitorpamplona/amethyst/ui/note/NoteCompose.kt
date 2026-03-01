@@ -670,7 +670,7 @@ fun RenderApproveButton(
             accountViewModel.approveCommunityPost(post, community)
         },
     ) {
-        Text("Approve")
+        Text(stringRes(R.string.approve))
     }
 }
 

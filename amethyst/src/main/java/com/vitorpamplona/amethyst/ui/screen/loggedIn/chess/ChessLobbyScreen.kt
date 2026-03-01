@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.chess.PublicGame
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -168,7 +169,7 @@ fun ChessLobbyScreen(
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringRes(R.string.back),
                         )
                     }
                 },
@@ -176,7 +177,7 @@ fun ChessLobbyScreen(
                     IconButton(onClick = { showRelaySettings = true }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Relay Settings",
+                            contentDescription = stringRes(R.string.relay_settings),
                         )
                     }
                 },
@@ -186,7 +187,7 @@ fun ChessLobbyScreen(
             FloatingActionButton(
                 onClick = { showNewGameDialog = true },
             ) {
-                Icon(Icons.Default.Add, contentDescription = "New Game")
+                Icon(Icons.Default.Add, contentDescription = stringRes(R.string.chess_new_game))
             }
         },
     ) { paddingValues ->
@@ -238,7 +239,7 @@ fun ChessLobbyScreen(
                         ) {
                             Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
                             OutlinedButton(onClick = { chessViewModel.clearError() }) {
-                                Text("Dismiss")
+                                Text(stringRes(R.string.dismiss))
                             }
                         }
                     }
@@ -730,7 +731,7 @@ private fun RelayRow(
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
-            contentDescription = "Connected",
+            contentDescription = stringRes(R.string.connected),
             tint =
                 if (isPreferred) {
                     MaterialTheme.colorScheme.tertiary

@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +59,7 @@ fun NewChessGameButton(
     ) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "New Chess Game",
+            contentDescription = stringRes(R.string.new_chess_game),
         )
     }
 

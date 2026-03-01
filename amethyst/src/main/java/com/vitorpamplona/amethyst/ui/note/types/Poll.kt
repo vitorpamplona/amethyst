@@ -77,8 +77,10 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.showCount
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
@@ -392,7 +394,7 @@ private fun ColumnScope.RenderMultiChoiceOptions(
         modifier = Modifier.align(Alignment.End),
         enabled = multichoice.isNotEmpty(),
     ) {
-        Text("Submit")
+        Text(stringRes(R.string.poll_submit))
     }
 }
 

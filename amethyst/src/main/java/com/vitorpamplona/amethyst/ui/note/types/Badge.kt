@@ -172,7 +172,7 @@ fun RenderBadgeAward(
         }
 
         if (awardees.size > 100) {
-            Text(" and ${awardees.size - 100} others", maxLines = 1)
+            Text(stringRes(R.string.badge_and_n_others, awardees.size - 100), maxLines = 1)
         }
     }
 

@@ -68,8 +68,10 @@ import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
@@ -186,7 +188,7 @@ fun ChessGameScreen(
                         IconButton(onClick = { nav.popBack() }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = stringRes(R.string.back),
                             )
                         }
                     },
@@ -194,7 +196,7 @@ fun ChessGameScreen(
                         IconButton(onClick = { showRelaySettings = true }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = "Relay Settings",
+                                contentDescription = stringRes(R.string.relay_settings),
                             )
                         }
                     },
@@ -239,7 +241,7 @@ fun ChessGameScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Loading game...")
+                        Text(stringRes(R.string.chess_loading_game))
                     }
                 }
             }
@@ -256,7 +258,7 @@ fun ChessGameScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "Game Not Found",
+                        text = stringRes(R.string.chess_game_not_found),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -265,7 +267,7 @@ fun ChessGameScreen(
 
                     // Show specific error if available
                     Text(
-                        text = error ?: "This game may have ended or is waiting for opponent.",
+                        text = error ?: stringRes(R.string.chess_game_waiting),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -273,7 +275,7 @@ fun ChessGameScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Game ID: ${gameId.take(16)}...",
+                        text = stringRes(R.string.chess_game_id, gameId.take(16)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -283,10 +285,10 @@ fun ChessGameScreen(
                     Button(onClick = { nav.popBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringRes(R.string.back),
                             modifier = Modifier.padding(end = 8.dp),
                         )
-                        Text("Go Back")
+                        Text(stringRes(R.string.go_back))
                     }
                 }
             }

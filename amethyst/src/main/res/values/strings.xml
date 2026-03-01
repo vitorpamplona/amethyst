@@ -1525,4 +1525,24 @@
     <string name="confirm">Confirm</string>
     <string name="next">Next</string>
     <string name="add_poll_option_button">Add poll option button</string>
+
+    <string name="back">Back</string>
+    <string name="go_back">Go Back</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="approve">Approve</string>
+    <string name="connected">Connected</string>
+    <string name="relay_settings">Relay Settings</string>
+    <string name="social_proof">Social proof</string>
+    <string name="poll_submit">Submit</string>
+    <string name="restart">Restart</string>
+    <string name="chess_accept">Accept</string>
+    <string name="chess_decline">Decline</string>
+    <string name="chess_new_game">New Game</string>
+    <string name="new_chess_game">New Chess Game</string>
+    <string name="chess_loading_game">Loading game\u2026</string>
+    <string name="chess_game_not_found">Game Not Found</string>
+    <string name="chess_game_waiting">This game may have ended or is waiting for opponent.</string>
+    <string name="chess_game_id">Game ID: %1$s\u2026</string>
+    <string name="badge_and_n_others"> and %1$d others</string>
+    <string name="remove_language">Remove %1$s</string>
 </resources>
