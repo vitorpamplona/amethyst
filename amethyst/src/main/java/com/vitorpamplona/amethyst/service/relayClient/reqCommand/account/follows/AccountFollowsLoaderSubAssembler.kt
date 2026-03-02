@@ -152,8 +152,6 @@ class AccountFollowsLoaderSubAssembler(
 
         if (users.isEmpty()) return null
 
-        println("AccountFollowNeeds ${users.size}")
-
         val connectedRelays = client.connectedRelaysFlow().value
 
         val perRelay = pickRelaysToLoadUsers(users, accounts, connectedRelays, failureTracker.cannotConnectRelays, hasTried)
