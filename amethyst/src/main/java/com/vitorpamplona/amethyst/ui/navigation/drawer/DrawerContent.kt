@@ -49,7 +49,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -102,7 +101,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -433,8 +431,6 @@ fun ListContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var backupDialogOpen by remember { mutableStateOf(false) }
-
     Column(modifier) {
         NavigationRow(
             title = R.string.profile,
@@ -477,17 +473,13 @@ fun ListContent(
             route = Route.Chess,
         )
 
-        accountViewModel.account.settings.keyPair.privKey?.let {
-            IconRow(
-                title = R.string.backup_keys,
-                icon = Icons.Outlined.Key,
-                tint = MaterialTheme.colorScheme.onBackground,
-                onClick = {
-                    nav.closeDrawer()
-                    backupDialogOpen = true
-                },
-            )
-        }
+        IconRowRelays(
+            accountViewModel = accountViewModel,
+            onClick = {
+                nav.closeDrawer()
+                nav.nav(Route.EditRelays)
+            },
+        )
 
         NavigationRow(
             title = R.string.settings,
@@ -505,10 +497,6 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
-    }
-
-    if (backupDialogOpen) {
-        AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
     }
 }
 
