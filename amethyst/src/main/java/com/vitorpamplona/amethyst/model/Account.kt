@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -274,6 +276,9 @@ class Account(
 
     val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
     val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
+
+    val favoriteRelayListDecryptionCache = FavoriteRelayListDecryptionCache(signer)
+    val favoriteRelayList = FavoriteRelayListState(signer, cache, favoriteRelayListDecryptionCache, scope, settings)
 
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
@@ -1914,6 +1919,8 @@ class Account(
     suspend fun saveProxyRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(proxyRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
+
+    suspend fun saveFavoriteRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(favoriteRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 

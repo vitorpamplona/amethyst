@@ -1317,6 +1317,10 @@
     <string name="trusted_section">Trusted Relays</string>
     <string name="trusted_section_explainer">Relays you trust to not need a Tor connection for</string>
 
+    <string name="favorite_relays_title">Favorite Relay Feeds</string>
+    <string name="favorite_section">Favorite Relay Feeds</string>
+    <string name="favorite_section_explainer">Relays you frequently go to see their Global feed</string>
+
     <string name="proxy_relays_title">Proxy Relays</string>
     <string name="proxy_section">Proxy Relays</string>
     <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>

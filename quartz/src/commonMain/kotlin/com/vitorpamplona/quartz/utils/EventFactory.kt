@@ -88,6 +88,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -193,6 +194,7 @@ class EventFactory {
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
                 ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
+                FavoriteRelayListEvent.KIND -> FavoriteRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 JesterEvent.KIND -> JesterEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessGameChallengeEvent.KIND -> LiveChessGameChallengeEvent(id, pubKey, createdAt, tags, content, sig)
                 LiveChessGameAcceptEvent.KIND -> LiveChessGameAcceptEvent(id, pubKey, createdAt, tags, content, sig)

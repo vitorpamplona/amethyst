@@ -196,6 +196,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -498,6 +499,7 @@ private fun kindDisplayName(
         CalendarRSVPEvent.KIND -> "Appt RSVP"
         ChessGameEvent.KIND -> "Chess Games"
         JesterEvent.KIND -> "Chess Auth"
+        FavoriteRelayListEvent.KIND -> "Favorite Relays"
         LiveChessGameChallengeEvent.KIND -> "Chess Challenges"
         LiveChessGameAcceptEvent.KIND -> "Chess Game Accept"
         LiveChessMoveEvent.KIND -> "Chess Move"

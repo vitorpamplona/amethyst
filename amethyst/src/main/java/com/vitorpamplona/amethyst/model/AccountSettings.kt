@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
@@ -135,6 +136,7 @@ class AccountSettings(
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
     var backupIndexRelayList: IndexerRelayListEvent? = null,
+    var backupFavoriteRelayList: FavoriteRelayListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
@@ -373,6 +375,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupIndexRelayList?.id != newIndexRelayList.id) {
             backupIndexRelayList = newIndexRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateFavoriteRelayList(newFavoriteRelayList: FavoriteRelayListEvent?) {
+        if (newFavoriteRelayList == null || newFavoriteRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupFavoriteRelayList?.id != newFavoriteRelayList.id) {
+            backupFavoriteRelayList = newFavoriteRelayList
             saveAccountSettings()
         }
     }

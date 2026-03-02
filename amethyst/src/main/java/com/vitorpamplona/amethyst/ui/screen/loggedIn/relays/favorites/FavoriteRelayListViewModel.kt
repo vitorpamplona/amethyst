@@ -18,44 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.favorites
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
-class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun relayListBuilder(): List<BasicRelaySetupInfo> {
-        val relayList = getRelayList()
-
-        return relayList
-            .map {
-                BasicRelaySetupInfo(
-                    relay = it,
-                    relayStat = Amethyst.instance.relayStats.get(it),
-                    forcesTor =
-                        Amethyst.instance.torEvaluatorFlow.flow.value
-                            .useTor(it),
-                    users =
-                        account.declaredFollowsPerRelay.value[it]?.mapNotNull { hex ->
-                            LocalCache.checkGetOrCreateUser(hex)
-                        } ?: emptyList(),
-                )
-            }.distinctBy { it.relay }
-            .sortedBy { it.relayStat.receivedBytes }
-            .reversed()
-    }
-
-    override fun getRelayList(): List<NormalizedRelayUrl> =
-        account.client
-            .availableRelaysFlow()
-            .value
-            .sorted()
+class FavoriteRelayListViewModel : BasicRelaySetupInfoModel() {
+    override fun getRelayList(): List<NormalizedRelayUrl>? =
+        account.favoriteRelayList.flow.value
+            .toList()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+        account.saveFavoriteRelayList(urlList)
     }
 }

@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
@@ -202,6 +203,7 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -832,6 +834,10 @@ private fun RenderNoteRow(
 
         is TrustedRelayListEvent -> {
             DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is FavoriteRelayListEvent -> {
+            DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is IndexerRelayListEvent -> {

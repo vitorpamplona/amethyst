@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -69,6 +70,7 @@ val AccountInfoAndListsFromKeyKinds2 =
         GeohashListEvent.KIND,
         TrustProviderListEvent.KIND,
         PaymentTargetsEvent.KIND,
+        FavoriteRelayListEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
