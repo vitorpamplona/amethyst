@@ -1292,15 +1292,6 @@
     <string name="confirm">Bekräfta</string>
     <string name="next">Nästa</string>
     <string name="add_poll_option_button">Lägg till omröstningsalternativ</string>
-
-    <string name="favorite_relays_title">Favorit-reläflöden</string>
-    <string name="favorite_section">Favorit-reläflöden</string>
-    <string name="favorite_section_explainer">Reläer som du ofta besöker för att se deras globala flöde</string>
-    <string name="ui_preferences">Gränssnittsinställningar</string>
-    <string name="translations">Översättningar</string>
-    <string name="reactions">Reaktioner</string>
-    <string name="account_settings">Kontoinställningar</string>
-    <string name="app_settings">Appinställningar</string>
     <string name="go_back">Gå tillbaka</string>
     <string name="approve">Godkänn</string>
     <string name="connected">Ansluten</string>
@@ -1317,15 +1308,4 @@
     <string name="chess_game_id">Parti-ID: %1$s…</string>
     <string name="badge_and_n_others"> och %1$d andra</string>
     <string name="remove_language">Ta bort %1$s</string>
-    <string name="relay_active_subscriptions">Aktiva prenumerationer</string>
-    <string name="relay_active_outbox">Väntande utgående händelser</string>
-    <string name="relay_req_subscriptions">REQ-prenumerationer (%1$d)</string>
-    <string name="relay_count_subscriptions">COUNT-prenumerationer (%1$d)</string>
-    <string name="relay_outbox_events">Utgående händelser (%1$d)</string>
-    <string name="relay_no_active_subscriptions">Inga aktiva prenumerationer för detta relä</string>
-    <string name="relay_filter_authors">%1$d författare</string>
-    <string name="relay_filter_ids">%1$d ID:n</string>
-    <string name="relay_filter_since">sedan %1$s</string>
-    <string name="relay_filter_until">till %1$s</string>
-    <string name="relay_filter_limit">gräns %1$d</string>
 </resources>

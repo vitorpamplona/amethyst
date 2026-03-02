@@ -1292,15 +1292,6 @@
     <string name="confirm">Potvrdit</string>
     <string name="next">Další</string>
     <string name="add_poll_option_button">Přidat možnost ankety</string>
-
-    <string name="favorite_relays_title">Oblíbené feedy relayí</string>
-    <string name="favorite_section">Oblíbené feedy relayí</string>
-    <string name="favorite_section_explainer">Relaye, které často navštěvujete pro zobrazení jejich globálního feedu</string>
-    <string name="ui_preferences">Nastavení rozhraní</string>
-    <string name="translations">Překlady</string>
-    <string name="reactions">Reakce</string>
-    <string name="account_settings">Nastavení účtu</string>
-    <string name="app_settings">Nastavení aplikace</string>
     <string name="go_back">Jít zpět</string>
     <string name="approve">Schválit</string>
     <string name="connected">Připojeno</string>
@@ -1317,15 +1308,4 @@
     <string name="chess_game_id">ID hry: %1$s…</string>
     <string name="badge_and_n_others"> a %1$d dalších</string>
     <string name="remove_language">Odebrat %1$s</string>
-    <string name="relay_active_subscriptions">Aktivní odběry</string>
-    <string name="relay_active_outbox">Čekající události k odeslání</string>
-    <string name="relay_req_subscriptions">REQ odběry (%1$d)</string>
-    <string name="relay_count_subscriptions">COUNT odběry (%1$d)</string>
-    <string name="relay_outbox_events">Události k odeslání (%1$d)</string>
-    <string name="relay_no_active_subscriptions">Pro tento relay nejsou žádné aktivní odběry</string>
-    <string name="relay_filter_authors">%1$d autorů</string>
-    <string name="relay_filter_ids">%1$d ID</string>
-    <string name="relay_filter_since">od %1$s</string>
-    <string name="relay_filter_until">do %1$s</string>
-    <string name="relay_filter_limit">limit %1$d</string>
 </resources>
