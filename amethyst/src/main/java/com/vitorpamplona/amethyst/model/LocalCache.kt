@@ -190,6 +190,7 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
@@ -2066,6 +2067,12 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
+        event: CodeSnippetEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
         event: PollEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -3104,6 +3111,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
+                is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)
