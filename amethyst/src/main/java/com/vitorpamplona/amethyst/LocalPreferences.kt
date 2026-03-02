@@ -25,7 +25,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
-import com.vitorpamplona.amethyst.LocalPreferences.parseEventOrNull
 import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS

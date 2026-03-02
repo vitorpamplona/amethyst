@@ -24,7 +24,6 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
@@ -33,7 +32,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
-import kotlinx.coroutines.flow.map
 
 @Composable
 fun GalleryThumbnail(

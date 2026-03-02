@@ -100,7 +100,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlin.collections.map
 
 @Composable
 fun RenderPoll(
