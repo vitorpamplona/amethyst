@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
@@ -48,8 +49,6 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarTimeSlotEvent
@@ -117,13 +116,17 @@ class NotificationFeedFilter(
             ) + ADDRESSABLE_KINDS
     }
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultNotificationFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
-    override fun showHiddenKey(): Boolean =
-        account.settings.defaultNotificationFollowList.value ==
-            PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultNotificationFollowList.value ==
-            MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+    fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
+
+    fun TopFilter.isMuteList() = this is TopFilter.MuteList
+
+    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
+
+    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
+
+    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(

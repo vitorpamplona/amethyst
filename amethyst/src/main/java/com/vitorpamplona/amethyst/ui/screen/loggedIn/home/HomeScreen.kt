@@ -59,8 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.model.AROUND_ME
-import com.vitorpamplona.amethyst.model.CHESS
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -236,7 +235,7 @@ fun HomeScreenFloatingButton(
             .collectAsStateWithLifecycle()
 
     when (list.value) {
-        AROUND_ME -> {
+        TopFilter.AroundMe -> {
             val location by Amethyst.instance.locationManager.geohashStateFlow
                 .collectAsStateWithLifecycle()
 
@@ -251,7 +250,7 @@ fun HomeScreenFloatingButton(
             }
         }
 
-        CHESS -> {
+        TopFilter.Chess -> {
             NewChessGameButton(accountViewModel, nav)
         }
 

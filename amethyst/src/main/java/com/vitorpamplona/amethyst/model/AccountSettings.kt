@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -61,6 +62,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.Serializable
 import java.util.Locale
 
 val DefaultChannels =
@@ -97,23 +99,58 @@ val DefaultSignerPermissions =
         Permission(CommandType.DECRYPT_ZAP_EVENT),
     )
 
-// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val GLOBAL_FOLLOWS = " Global "
+@Serializable
+sealed class TopFilter(
+    val code: String,
+) {
+    @Serializable
+    object Global : TopFilter(" Global ")
 
-// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val ALL_FOLLOWS = " All Follows "
+    @Serializable
+    object AllFollows : TopFilter(" All Follows ")
 
-// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val ALL_USER_FOLLOWS = " All User Follows "
+    @Serializable
+    object AllUserFollows : TopFilter(" All User Follows ")
 
-// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val KIND3_FOLLOWS = " Main User Follows "
+    @Serializable
+    object DefaultFollows : TopFilter(" Main User Follows ")
 
-// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val AROUND_ME = " Around Me "
+    @Serializable
+    object AroundMe : TopFilter(" Around Me ")
 
-// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val CHESS = " Chess "
+    @Serializable
+    object Chess : TopFilter(" Chess ")
+
+    @Serializable
+    class PeopleList(
+        val address: Address,
+    ) : TopFilter(address.toValue())
+
+    @Serializable
+    class MuteList(
+        val address: Address,
+    ) : TopFilter(address.toValue())
+
+    @Serializable
+    class Community(
+        val address: Address,
+    ) : TopFilter("Community/${address.toValue()}")
+
+    @Serializable
+    class Hashtag(
+        val tag: String,
+    ) : TopFilter("Hashtag/$tag")
+
+    @Serializable
+    class Geohash(
+        val tag: String,
+    ) : TopFilter("Geohash/$tag")
+
+    @Serializable
+    class Relay(
+        val url: String,
+    ) : TopFilter("Relay/$url")
+}
 
 @Stable
 class AccountSettings(
@@ -122,10 +159,10 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
-    val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(ALL_FOLLOWS),
-    val defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    val defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    val defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
+    val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val zapPaymentRequest: MutableStateFlow<Nip47WalletConnect.Nip47URINorm?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
@@ -226,7 +263,7 @@ class AccountSettings(
         changeDefaultHomeFollowList(name.code)
     }
 
-    fun changeDefaultHomeFollowList(name: String) {
+    fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
             saveAccountSettings()
@@ -237,7 +274,7 @@ class AccountSettings(
         changeDefaultStoriesFollowList(name.code)
     }
 
-    fun changeDefaultStoriesFollowList(name: String) {
+    fun changeDefaultStoriesFollowList(name: TopFilter) {
         if (defaultStoriesFollowList.value != name) {
             defaultStoriesFollowList.tryEmit(name)
             saveAccountSettings()
@@ -248,7 +285,7 @@ class AccountSettings(
         changeDefaultNotificationFollowList(name.code)
     }
 
-    fun changeDefaultNotificationFollowList(name: String) {
+    fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
             saveAccountSettings()
@@ -259,7 +296,7 @@ class AccountSettings(
         changeDefaultDiscoveryFollowList(name.code)
     }
 
-    fun changeDefaultDiscoveryFollowList(name: String) {
+    fun changeDefaultDiscoveryFollowList(name: TopFilter) {
         if (defaultDiscoveryFollowList.value != name) {
             defaultDiscoveryFollowList.tryEmit(name)
             saveAccountSettings()

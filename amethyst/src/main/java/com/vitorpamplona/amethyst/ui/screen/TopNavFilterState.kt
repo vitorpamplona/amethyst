@@ -24,14 +24,9 @@ import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
-import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
-import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.CHESS
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -81,7 +76,7 @@ class TopNavFilterState(
 ) {
     val allFollows =
         PeopleListOutBoxFeedDefinition(
-            code = ALL_FOLLOWS,
+            code = TopFilter.AllFollows,
             name = ResourceName(R.string.follow_list_kind3follows),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -90,7 +85,7 @@ class TopNavFilterState(
 
     val userFollows =
         PeopleListOutBoxFeedDefinition(
-            code = ALL_USER_FOLLOWS,
+            code = TopFilter.AllUserFollows,
             name = ResourceName(R.string.follow_list_kind3follows_users_only),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -99,7 +94,7 @@ class TopNavFilterState(
 
     val kind3Follows =
         PeopleListOutBoxFeedDefinition(
-            code = KIND3_FOLLOWS,
+            code = TopFilter.DefaultFollows,
             name = ResourceName(R.string.follow_list_kind3_follows_users_only),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -108,7 +103,7 @@ class TopNavFilterState(
 
     val globalFollow =
         GlobalFeedDefinition(
-            code = GLOBAL_FOLLOWS,
+            code = TopFilter.Global,
             name = ResourceName(R.string.follow_list_global),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -116,7 +111,7 @@ class TopNavFilterState(
 
     val aroundMe =
         AroundMeFeedDefinition(
-            code = AROUND_ME,
+            code = TopFilter.AroundMe,
             name = ResourceName(R.string.follow_list_aroundme),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -124,7 +119,7 @@ class TopNavFilterState(
 
     val muteListFollow =
         PeopleListOutBoxFeedDefinition(
-            code = MuteListEvent.blockListFor(account.userProfile().pubkeyHex),
+            code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
             name = ResourceName(R.string.follow_list_mute_list),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -133,7 +128,7 @@ class TopNavFilterState(
 
     val chessFollow =
         GlobalFeedDefinition(
-            code = CHESS,
+            code = TopFilter.Chess,
             name = ResourceName(R.string.follow_list_chess),
             type = CodeNameType.HARDCODED,
             kinds =
@@ -154,7 +149,7 @@ class TopNavFilterState(
         val peopleListsDefs =
             peopleLists.map {
                 PeopleListOutBoxFeedDefinition(
-                    it.idHex,
+                    TopFilter.PeopleList(it.address),
                     PeopleListName(it),
                     CodeNameType.PEOPLE_LIST,
                     kinds = DEFAULT_FEED_KINDS,
@@ -165,7 +160,7 @@ class TopNavFilterState(
         val followListsDefs =
             followLists.map {
                 PeopleListOutBoxFeedDefinition(
-                    it.idHex,
+                    TopFilter.PeopleList(it.address),
                     PeopleListName(it),
                     CodeNameType.PEOPLE_LIST,
                     kinds = DEFAULT_FEED_KINDS,
@@ -198,7 +193,7 @@ class TopNavFilterState(
         val hashtags =
             hashtagList.map {
                 TagFeedDefinition(
-                    "Hashtag/$it",
+                    TopFilter.Hashtag(it),
                     HashtagName(it),
                     CodeNameType.ROUTE,
                     route = Route.Hashtag(it),
@@ -210,7 +205,7 @@ class TopNavFilterState(
         val geotags =
             geotagList.map {
                 TagFeedDefinition(
-                    "Geohash/$it",
+                    TopFilter.Geohash(it),
                     GeoHashName(it),
                     CodeNameType.ROUTE,
                     route = Route.Geohash(it),
@@ -222,7 +217,7 @@ class TopNavFilterState(
         val communities =
             communityList.map { communityNote ->
                 TagFeedDefinition(
-                    "Community/${communityNote.idHex}",
+                    TopFilter.Community(communityNote.address),
                     CommunityName(communityNote),
                     CodeNameType.ROUTE,
                     route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
@@ -352,7 +347,7 @@ class CommunityName(
 
 @Immutable
 abstract class FeedDefinition(
-    val code: String,
+    val code: TopFilter,
     val name: Name,
     val type: CodeNameType,
     val route: Route?,
@@ -360,7 +355,7 @@ abstract class FeedDefinition(
 
 @Immutable
 class GlobalFeedDefinition(
-    code: String,
+    code: TopFilter,
     name: Name,
     type: CodeNameType,
     val kinds: List<Int>,
@@ -368,7 +363,7 @@ class GlobalFeedDefinition(
 
 @Immutable
 class TagFeedDefinition(
-    code: String,
+    code: TopFilter,
     name: Name,
     type: CodeNameType,
     route: Route?,
@@ -382,7 +377,7 @@ class TagFeedDefinition(
 
 @Immutable
 class AroundMeFeedDefinition(
-    code: String,
+    code: TopFilter,
     name: Name,
     type: CodeNameType,
     val kinds: List<Int>,
@@ -390,7 +385,7 @@ class AroundMeFeedDefinition(
 
 @Immutable
 class PeopleListOutBoxFeedDefinition(
-    code: String,
+    code: TopFilter,
     name: Name,
     type: CodeNameType,
     val kinds: List<Int>,

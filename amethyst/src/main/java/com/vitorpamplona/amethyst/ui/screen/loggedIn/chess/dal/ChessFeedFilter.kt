@@ -26,8 +26,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
 
 /**
@@ -42,10 +40,6 @@ class ChessFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-chess-feed"
 
     override fun limit() = 200
-
-    override fun showHiddenKey(): Boolean =
-        account.settings.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)

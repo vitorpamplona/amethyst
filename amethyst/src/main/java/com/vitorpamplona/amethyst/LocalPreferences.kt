@@ -25,9 +25,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
-import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -322,16 +321,11 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_FILE_SERVER,
                         JsonMapper.toJson(settings.defaultFileServer),
                     )
-                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, settings.defaultHomeFollowList.value)
-                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, settings.defaultStoriesFollowList.value)
-                    putString(
-                        PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST,
-                        settings.defaultNotificationFollowList.value,
-                    )
-                    putString(
-                        PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
-                        settings.defaultDiscoveryFollowList.value,
-                    )
+
+                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
+                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
+                    putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNotificationFollowList.value))
+                    putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultDiscoveryFollowList.value))
 
                     putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
 
@@ -460,14 +454,10 @@ object LocalPreferences {
                         getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
                             ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
-                    val defaultHomeFollowList =
-                        getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: ALL_FOLLOWS
-                    val defaultStoriesFollowList =
-                        getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
-                    val defaultNotificationFollowList =
-                        getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
-                    val defaultDiscoveryFollowList =
-                        getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
+                    val defaultHomeFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_HOME_FOLLOW_LIST) ?: TopFilter.AllFollows
+                    val defaultStoriesFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST) ?: TopFilter.Global
+                    val defaultNotificationFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST) ?: TopFilter.Global
+                    val defaultDiscoveryFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST) ?: TopFilter.Global
 
                     val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
                     val defaultFileServer = parseOrNull<ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: DEFAULT_MEDIA_SERVERS[0]

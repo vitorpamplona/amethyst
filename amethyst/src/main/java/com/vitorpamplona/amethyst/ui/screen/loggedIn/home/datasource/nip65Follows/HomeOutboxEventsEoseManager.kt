@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
@@ -52,7 +53,7 @@ import kotlinx.coroutines.launch
 class HomeOutboxEventsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<HomeQueryState>,
-) : PerUserAndFollowListEoseManager<HomeQueryState, String>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<HomeQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(
         key: HomeQueryState,
         since: SincePerRelayMap?,
