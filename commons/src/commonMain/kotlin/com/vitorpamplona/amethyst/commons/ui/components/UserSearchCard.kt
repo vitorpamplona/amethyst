@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_navigate
 import com.vitorpamplona.amethyst.commons.resources.accessibility_user_avatar
 import org.jetbrains.compose.resources.stringResource
 
@@ -100,7 +101,7 @@ fun UserSearchCard(
 
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Navigate",
+                contentDescription = stringResource(Res.string.accessibility_navigate),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

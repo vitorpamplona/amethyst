@@ -53,4 +53,5 @@
 
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
+    <string name="accessibility_navigate">Navigate</string>
 </resources>
