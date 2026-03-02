@@ -122,7 +122,7 @@ fun PlayPauseButton(
                 Icon(
                     imageVector = Icons.Default.Pause,
                     modifier = Size50Modifier,
-                    contentDescription = stringRes(R.string.play),
+                    contentDescription = stringRes(R.string.pause),
                 )
             }
         }

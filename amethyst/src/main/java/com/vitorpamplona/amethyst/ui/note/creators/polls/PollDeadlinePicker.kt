@@ -99,7 +99,7 @@ fun PollDeadlinePicker(model: ShortNotePostViewModel) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Default.DateRange, contentDescription = null)
+            Icon(Icons.Default.DateRange, contentDescription = stringResource(R.string.accessibility_select_date))
             Spacer(Modifier.width(12.dp))
 
             if (model.closedAt < TimeUtils.oneMinuteFromNow()) {
