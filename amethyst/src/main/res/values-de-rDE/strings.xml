@@ -1298,15 +1298,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="confirm">Bestätigen</string>
     <string name="next">Weiter</string>
     <string name="add_poll_option_button">Umfrageoption hinzufügen</string>
-
-    <string name="favorite_relays_title">Favorisierte Relay-Feeds</string>
-    <string name="favorite_section">Favorisierte Relay-Feeds</string>
-    <string name="favorite_section_explainer">Relays, die du häufig besuchst, um ihren globalen Feed zu sehen</string>
-    <string name="ui_preferences">UI-Einstellungen</string>
-    <string name="translations">Übersetzungen</string>
-    <string name="reactions">Reaktionen</string>
-    <string name="account_settings">Kontoeinstellungen</string>
-    <string name="app_settings">App-Einstellungen</string>
     <string name="go_back">Zurückgehen</string>
     <string name="approve">Genehmigen</string>
     <string name="connected">Verbunden</string>
@@ -1323,15 +1314,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="chess_game_id">Spiel-ID: %1$s…</string>
     <string name="badge_and_n_others"> und %1$d weitere</string>
     <string name="remove_language">%1$s entfernen</string>
-    <string name="relay_active_subscriptions">Aktive Abonnements</string>
-    <string name="relay_active_outbox">Ausstehende Outbox-Ereignisse</string>
-    <string name="relay_req_subscriptions">REQ-Abonnements (%1$d)</string>
-    <string name="relay_count_subscriptions">COUNT-Abonnements (%1$d)</string>
-    <string name="relay_outbox_events">Outbox-Ereignisse (%1$d)</string>
-    <string name="relay_no_active_subscriptions">Keine aktiven Abonnements für dieses Relay</string>
-    <string name="relay_filter_authors">%1$d Autoren</string>
-    <string name="relay_filter_ids">%1$d IDs</string>
-    <string name="relay_filter_since">seit %1$s</string>
-    <string name="relay_filter_until">bis %1$s</string>
-    <string name="relay_filter_limit">Limit %1$d</string>
 </resources>
