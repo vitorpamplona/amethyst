@@ -72,8 +72,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -95,8 +95,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.amethyst.commons.util.timeDiffAgoShortish
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -119,11 +117,13 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.NoticeDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.SpamDebugMessage
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -387,16 +387,25 @@ private fun KindChip(kind: Int) {
     val name = kindDisplayName(kind)
     val (bg, fg) =
         when {
-            kind in setOf(0, 1, 6, 7, 16, 30023) ->
+            kind in setOf(0, 1, 6, 7, 16, 30023) -> {
                 MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-            kind in setOf(3, 10002, 10000, 10001, 10003, 10004, 30000) ->
+            }
+
+            kind in setOf(3, 10002, 10000, 10001, 10003, 10004, 30000) -> {
                 MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-            kind in setOf(4, 1059, 10050) ->
+            }
+
+            kind in setOf(4, 1059, 10050) -> {
                 MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-            kind in setOf(9734, 9735, 9041, 17375, 23194, 23195) ->
+            }
+
+            kind in setOf(9734, 9735, 9041, 17375, 23194, 23195) -> {
                 MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-            else ->
+            }
+
+            else -> {
                 MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+            }
         }
     Surface(
         shape = RoundedCornerShape(50),

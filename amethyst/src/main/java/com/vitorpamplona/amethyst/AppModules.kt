@@ -142,7 +142,12 @@ class AppModules(
 
     // Custom fetcher that considers tor settings and avoids forwarding.
     val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
-    val nip05Client = Nip05Client(nip05Fetcher)
+    val namecoinResolver =
+        com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver(
+            com.vitorpamplona.quartz.nip05.namecoin
+                .ElectrumxClient(),
+        )
+    val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
 
     // Application-wide block height request cache
     val otsBlockHeightCache by lazy { OtsBlockHeightCache() }
