@@ -39,6 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_user_avatar
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A card displaying user search result with avatar, name, and nip05/pubkey.
@@ -69,7 +72,7 @@ fun UserSearchCard(
                 userHex = user.pubkeyHex,
                 pictureUrl = user.profilePicture(),
                 size = 40.dp,
-                contentDescription = "Profile picture",
+                contentDescription = stringResource(Res.string.accessibility_user_avatar),
             )
 
             Column(modifier = Modifier.weight(1f)) {
