@@ -33,4 +33,5 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте могли да појачате постове</string>
     <string name="login_with_a_private_key_to_like_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте лајковали постове</string>
     <string name="no_zap_amount_setup_long_press_to_change">Нема подешавања износа Зап. Дуго притисните да бисте променили</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

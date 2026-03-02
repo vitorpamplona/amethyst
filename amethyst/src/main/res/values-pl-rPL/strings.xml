@@ -1276,4 +1276,5 @@
     <string name="confirm">Potwierdź</string>
     <string name="next">Dalej</string>
     <string name="add_poll_option_button">Przycisk \"Dodaj opcję ankiety\"</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

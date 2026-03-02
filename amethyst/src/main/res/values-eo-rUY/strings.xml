@@ -442,4 +442,5 @@
     <string name="error_dialog_zap_error">Nekapable sendi zapon</string>
     <string name="error_dialog_talk_to_user">Mesaĝi la Uzanto</string>
     <string name="error_dialog_button_ok">Okej</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

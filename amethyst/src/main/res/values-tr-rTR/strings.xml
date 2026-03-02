@@ -167,4 +167,5 @@
     <string name="mark_all_new_as_read">Tüm yenileri okundu olarak işaretle</string>
     <string name="mark_all_as_read">Tümünü okundu olarak işaretle</string>
     <string name="biometric_error">Hata</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

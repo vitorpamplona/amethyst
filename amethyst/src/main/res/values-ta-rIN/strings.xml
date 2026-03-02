@@ -369,4 +369,5 @@
     <string name="community_approved_posts">அங்கீகரிக்கப்பட்ட குறிப்பு</string>
     <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும் </string>
     <string name="community_no_descriptor">இந்த சமூகத்தின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும்</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

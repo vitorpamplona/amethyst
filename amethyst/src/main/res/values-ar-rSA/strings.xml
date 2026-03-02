@@ -660,4 +660,5 @@
     <string name="dvm_looking_for_app">البحث عن تطبيق</string>
     <string name="delete_all">حذف الكل</string>
     <string name="delete_all_drafts_confirmation">متأكد من حذف جميع المسودات؟</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>
