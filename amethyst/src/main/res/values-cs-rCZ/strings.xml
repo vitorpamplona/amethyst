@@ -696,6 +696,7 @@
     <string name="relay_filter_ids">%1$d ID</string>
     <string name="relay_filter_since">od %1$s</string>
     <string name="relay_filter_until">do %1$s</string>
+    <string name="relay_filter_limit">limit %1$d</string>
     <string name="message_length">Délka zprávy</string>
     <string name="subscriptions">Předplatné</string>
     <string name="filters">Filtry</string>
