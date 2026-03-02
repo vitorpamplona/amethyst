@@ -50,4 +50,8 @@
     <string name="screen_messages_description">Your encrypted direct messages will appear here.</string>
     <string name="screen_notifications_title">Notifications</string>
     <string name="screen_notifications_description">Mentions, replies, and reactions will appear here.</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_user_avatar">User avatar</string>
+    <string name="accessibility_navigate">Navigate</string>
 </resources>

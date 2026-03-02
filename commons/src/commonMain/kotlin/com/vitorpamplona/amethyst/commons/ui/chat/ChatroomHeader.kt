@@ -35,9 +35,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accessibility_user_avatar
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatSize34dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatStdPadding
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Shared chatroom header for a single-user conversation.
@@ -67,6 +70,7 @@ fun ChatroomHeader(
                     userHex = user.pubkeyHex,
                     pictureUrl = user.profilePicture(),
                     size = ChatSize34dp,
+                    contentDescription = stringResource(Res.string.accessibility_user_avatar),
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -114,6 +118,7 @@ fun GroupChatroomHeader(
                         userHex = firstUser.pubkeyHex,
                         pictureUrl = firstUser.profilePicture(),
                         size = ChatSize34dp,
+                        contentDescription = stringResource(Res.string.accessibility_user_avatar),
                     )
                 }
 
