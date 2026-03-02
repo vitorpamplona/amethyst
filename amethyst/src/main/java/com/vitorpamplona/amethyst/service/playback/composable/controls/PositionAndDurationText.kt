@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -76,6 +77,7 @@ fun PositionAndDurationText(
 
     Text(
         text = text,
+        color = Color.White,
         style = MaterialTheme.typography.labelLarge,
         modifier = modifier,
     )
