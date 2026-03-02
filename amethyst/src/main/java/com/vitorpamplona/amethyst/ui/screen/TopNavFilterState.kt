@@ -30,31 +30,8 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -78,66 +55,42 @@ class TopNavFilterState(
         PeopleListOutBoxFeedDefinition(
             code = TopFilter.AllFollows,
             name = ResourceName(R.string.follow_list_kind3follows),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
     val userFollows =
         PeopleListOutBoxFeedDefinition(
             code = TopFilter.AllUserFollows,
             name = ResourceName(R.string.follow_list_kind3follows_users_only),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
     val kind3Follows =
         PeopleListOutBoxFeedDefinition(
             code = TopFilter.DefaultFollows,
             name = ResourceName(R.string.follow_list_kind3_follows_users_only),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
     val globalFollow =
         GlobalFeedDefinition(
             code = TopFilter.Global,
             name = ResourceName(R.string.follow_list_global),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
         )
 
     val aroundMe =
         AroundMeFeedDefinition(
             code = TopFilter.AroundMe,
             name = ResourceName(R.string.follow_list_aroundme),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
         )
 
     val muteListFollow =
         PeopleListOutBoxFeedDefinition(
             code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
             name = ResourceName(R.string.follow_list_mute_list),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
         )
 
     val chessFollow =
         GlobalFeedDefinition(
             code = TopFilter.Chess,
             name = ResourceName(R.string.follow_list_chess),
-            type = CodeNameType.HARDCODED,
-            kinds =
-                listOf(
-                    ChessGameEvent.KIND, // Completed games (Kind 64)
-                    LiveChessGameChallengeEvent.KIND, // Challenges (Kind 30064)
-                    LiveChessGameEndEvent.KIND, // Game endings (Kind 30067)
-                    // Note: LiveChessMoveEvent (Kind 30066) intentionally excluded - too noisy
-                ),
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
@@ -151,9 +104,6 @@ class TopNavFilterState(
                 PeopleListOutBoxFeedDefinition(
                     TopFilter.PeopleList(it.address),
                     PeopleListName(it),
-                    CodeNameType.PEOPLE_LIST,
-                    kinds = DEFAULT_FEED_KINDS,
-                    listOf(it.idHex),
                 )
             }
 
@@ -162,9 +112,6 @@ class TopNavFilterState(
                 PeopleListOutBoxFeedDefinition(
                     TopFilter.PeopleList(it.address),
                     PeopleListName(it),
-                    CodeNameType.PEOPLE_LIST,
-                    kinds = DEFAULT_FEED_KINDS,
-                    listOf(it.idHex),
                 )
             }
 
@@ -195,10 +142,7 @@ class TopNavFilterState(
                 TagFeedDefinition(
                     TopFilter.Hashtag(it),
                     HashtagName(it),
-                    CodeNameType.ROUTE,
                     route = Route.Hashtag(it),
-                    kinds = DEFAULT_FEED_KINDS,
-                    tTags = listOf(it),
                 )
             }
 
@@ -207,10 +151,7 @@ class TopNavFilterState(
                 TagFeedDefinition(
                     TopFilter.Geohash(it),
                     GeoHashName(it),
-                    CodeNameType.ROUTE,
                     route = Route.Geohash(it),
-                    kinds = DEFAULT_FEED_KINDS,
-                    gTags = listOf(it),
                 )
             }
 
@@ -219,10 +160,7 @@ class TopNavFilterState(
                 TagFeedDefinition(
                     TopFilter.Community(communityNote.address),
                     CommunityName(communityNote),
-                    CodeNameType.ROUTE,
                     route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
-                    kinds = DEFAULT_COMMUNITY_FEEDS,
-                    aTags = listOf(communityNote.idHex),
                 )
             }
 
@@ -292,12 +230,6 @@ class TopNavFilterState(
     }
 }
 
-enum class CodeNameType {
-    HARDCODED,
-    PEOPLE_LIST,
-    ROUTE,
-}
-
 abstract class Name {
     abstract fun name(): String
 
@@ -349,7 +281,6 @@ class CommunityName(
 abstract class FeedDefinition(
     val code: TopFilter,
     val name: Name,
-    val type: CodeNameType,
     val route: Route?,
 )
 
@@ -357,74 +288,23 @@ abstract class FeedDefinition(
 class GlobalFeedDefinition(
     code: TopFilter,
     name: Name,
-    type: CodeNameType,
-    val kinds: List<Int>,
-) : FeedDefinition(code, name, type, null)
+) : FeedDefinition(code, name, null)
 
 @Immutable
 class TagFeedDefinition(
     code: TopFilter,
     name: Name,
-    type: CodeNameType,
     route: Route?,
-    val kinds: List<Int>,
-    val pTags: List<String>? = null,
-    val eTags: List<String>? = null,
-    val aTags: List<String>? = null,
-    val tTags: List<String>? = null,
-    val gTags: List<String>? = null,
-) : FeedDefinition(code, name, type, route)
+) : FeedDefinition(code, name, route)
 
 @Immutable
 class AroundMeFeedDefinition(
     code: TopFilter,
     name: Name,
-    type: CodeNameType,
-    val kinds: List<Int>,
-) : FeedDefinition(code, name, type, null)
+) : FeedDefinition(code, name, null)
 
 @Immutable
 class PeopleListOutBoxFeedDefinition(
     code: TopFilter,
     name: Name,
-    type: CodeNameType,
-    val kinds: List<Int>,
-    val unpackList: List<String>,
-) : FeedDefinition(code, name, type, null)
-
-val DEFAULT_FEED_KINDS =
-    listOf(
-        TextNoteEvent.KIND,
-        RepostEvent.KIND,
-        GenericRepostEvent.KIND,
-        ClassifiedsEvent.KIND,
-        LongTextNoteEvent.KIND,
-        PollNoteEvent.KIND,
-        PollEvent.KIND,
-        HighlightEvent.KIND,
-        AudioTrackEvent.KIND,
-        AudioHeaderEvent.KIND,
-        PinListEvent.KIND,
-        LiveActivitiesChatMessageEvent.KIND,
-        LiveActivitiesEvent.KIND,
-        WikiNoteEvent.KIND,
-        NipTextEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
-    )
-
-val DEFAULT_COMMUNITY_FEEDS =
-    listOf(
-        TextNoteEvent.KIND,
-        CommentEvent.KIND,
-        LongTextNoteEvent.KIND,
-        ClassifiedsEvent.KIND,
-        HighlightEvent.KIND,
-        AudioHeaderEvent.KIND,
-        AudioTrackEvent.KIND,
-        PollEvent.KIND,
-        PinListEvent.KIND,
-        WikiNoteEvent.KIND,
-        NipTextEvent.KIND,
-        CommunityPostApprovalEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
-    )
+) : FeedDefinition(code, name, null)
