@@ -18,41 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.chess
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 /**
- * Global chess configuration shared across Android and Desktop.
- *
- * These relays are the primary relays used by Jester and other Nostr chess apps.
- * Using a small, fixed set ensures fast queries and reliable game discovery.
+ * Filter assembler for chess events
  */
-object ChessConfig {
-    /**
-     * The 3 main relays for chess events.
-     * These are used for both fetching and publishing chess events.
-     */
-    val CHESS_RELAYS =
+class ChessFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<ChessQueryState>() {
+    val group =
         listOf(
-            "wss://relay.damus.io",
-            "wss://nos.lol",
-            "wss://relay.primal.net",
+            ChessFeedFilterSubAssembler(client, ::allKeys),
         )
 
-    /**
-     * Display names for the chess relays (without protocol prefix)
-     */
-    val CHESS_RELAY_NAMES =
-        listOf(
-            "relay.damus.io".normalizeRelayUrl(),
-            "nos.lol".normalizeRelayUrl(),
-            "relay.primal.net".normalizeRelayUrl(),
-        )
+    override fun invalidateKeys() = invalidateFilters()
 
-    /**
-     * Timeout for relay queries in milliseconds.
-     * With only 3 relays, we can wait for all of them.
-     */
-    const val FETCH_TIMEOUT_MS = 10_000L
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.destroy() }
 }

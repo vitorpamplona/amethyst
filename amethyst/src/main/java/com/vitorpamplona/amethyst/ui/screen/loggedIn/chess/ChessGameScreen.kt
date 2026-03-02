@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.LiveChessGameScreen
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
@@ -128,7 +129,7 @@ fun ChessGameScreen(
 
     // Subscribe to chess events when game screen is visible
     // This is critical - without it, no new events will arrive from relays
-    ChessSubscription(accountViewModel, chessViewModel)
+    ChessSubscription(chessViewModel, accountViewModel)
 
     // Handle initial game loading
     // Once game is in maps, gameState above will always have the latest

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
@@ -46,15 +47,12 @@ import kotlinx.coroutines.flow.StateFlow
  * - Platform adapter creation
  * - State exposure to Compose UI
  */
+@Stable
 class ChessViewModelNew(
     private val account: Account,
 ) : ViewModel() {
     // Instance ID for debugging ViewModel sharing
     val instanceId = System.identityHashCode(this)
-
-    init {
-        println("[ChessViewModelNew] Created instance $instanceId for ${account.userProfile().pubkeyHex.take(8)}")
-    }
 
     // Platform adapters
     private val publisher = AndroidChessPublisher(account)

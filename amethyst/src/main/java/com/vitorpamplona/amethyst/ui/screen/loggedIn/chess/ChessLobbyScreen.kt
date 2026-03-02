@@ -37,7 +37,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
@@ -53,7 +52,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -62,7 +60,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,20 +69,23 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.chess.ActiveGameCard
+import com.vitorpamplona.amethyst.commons.chess.ChallengeCard
 import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessConfig
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.chess.PublicGame
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
@@ -106,45 +106,12 @@ fun ChessLobbyScreen(
             factory = ChessViewModelFactory(accountViewModel.account),
         )
 
-    val activeGames by chessViewModel.activeGames.collectAsState()
-    val spectatingGames by chessViewModel.spectatingGames.collectAsState()
-    val publicGames by chessViewModel.publicGames.collectAsState()
-    val challenges by chessViewModel.challenges.collectAsState()
-    val error by chessViewModel.error.collectAsState()
-    val broadcastStatus by chessViewModel.broadcastStatus.collectAsState()
-    val syncStatus by chessViewModel.syncStatus.collectAsState()
-    val selectedGameId by chessViewModel.selectedGameId.collectAsState()
-    val userPubkey = accountViewModel.account.userProfile().pubkeyHex
-
-    var showNewGameDialog by remember { mutableStateOf(false) }
-    var showRelaySettings by remember { mutableStateOf(false) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    // Get relay information for settings display
-    val inboxRelays by accountViewModel.account.notificationRelays.flow
-        .collectAsState()
-    val outboxRelays by accountViewModel.account.outboxRelays.flow
-        .collectAsState()
-    val globalRelays by accountViewModel.account.defaultGlobalRelays.flow
-        .collectAsState()
-
     // Subscribe to chess events when screen is visible
-    ChessSubscription(accountViewModel, chessViewModel)
+    ChessSubscription(chessViewModel, accountViewModel)
 
     // Clear any stale game selection on mount
     LaunchedEffect(Unit) {
         chessViewModel.selectGame(null)
-    }
-
-    // Auto-navigate when a game is selected (e.g., after accepting a challenge)
-    LaunchedEffect(selectedGameId, activeGames) {
-        selectedGameId?.let { gameId ->
-            if (activeGames.containsKey(gameId)) {
-                nav.nav(Route.ChessGame(gameId))
-                chessViewModel.selectGame(null)
-            }
-        }
     }
 
     // Set lobby mode (poll all games) when screen is visible
@@ -158,6 +125,42 @@ fun ChessLobbyScreen(
             // 1. Game screen enters and sets focused mode
             // 2. Lobby's onDispose fires and stops ALL polling
             // ViewModel.onCleared() will stop polling when user leaves chess entirely
+        }
+    }
+
+    ChessLobbyScreen(chessViewModel, accountViewModel, nav)
+}
+
+/**
+ * Chess lobby screen showing challenges and active games
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChessLobbyScreen(
+    chessViewModel: ChessViewModelNew,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val activeGames by chessViewModel.activeGames.collectAsState()
+    val spectatingGames by chessViewModel.spectatingGames.collectAsState()
+    val publicGames by chessViewModel.publicGames.collectAsState()
+    val challenges by chessViewModel.challenges.collectAsState()
+    val error by chessViewModel.error.collectAsState()
+    val broadcastStatus by chessViewModel.broadcastStatus.collectAsState()
+    val syncStatus by chessViewModel.syncStatus.collectAsState()
+    val selectedGameId by chessViewModel.selectedGameId.collectAsState()
+    val userPubkey = accountViewModel.account.userProfile().pubkeyHex
+
+    var showNewGameDialog by remember { mutableStateOf(false) }
+    var showRelaySettings by remember { mutableStateOf(false) }
+
+    // Auto-navigate when a game is selected (e.g., after accepting a challenge)
+    LaunchedEffect(selectedGameId, activeGames) {
+        selectedGameId?.let { gameId ->
+            if (activeGames.containsKey(gameId)) {
+                nav.nav(Route.ChessGame(gameId))
+                chessViewModel.selectGame(null)
+            }
         }
     }
 
@@ -187,25 +190,14 @@ fun ChessLobbyScreen(
             NewChessGameButton { showNewGameDialog = true }
         },
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = {
-                scope.launch {
-                    isRefreshing = true
-                    chessViewModel.forceRefresh()
-                    delay(500) // Brief delay for visual feedback
-                    isRefreshing = false
-                }
-            },
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+        RefresheableBox(
+            onRefresh = { chessViewModel.forceRefresh() },
         ) {
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .padding(paddingValues)
                         .padding(horizontal = 16.dp),
             ) {
                 // Sync status banner (shows relay progress during loading)
@@ -285,11 +277,9 @@ fun ChessLobbyScreen(
             sheetState = rememberModalBottomSheetState(),
         ) {
             ChessRelaySettingsSheet(
-                inboxRelays = inboxRelays.map { it.displayUrl() },
-                outboxRelays = outboxRelays.map { it.displayUrl() },
-                globalRelays = globalRelays.map { it.displayUrl() },
                 challengeCount = challenges.size,
                 publicGameCount = publicGames.size,
+                accountViewModel = accountViewModel,
             )
         }
     }
@@ -373,7 +363,7 @@ fun ChessLobbyContent(
                     remember(state.opponentPubkey) {
                         accountViewModel.checkGetOrCreateUser(state.opponentPubkey)?.toBestDisplayName() ?: state.opponentPubkey.take(8)
                     }
-                com.vitorpamplona.amethyst.commons.chess.ActiveGameCard(
+                ActiveGameCard(
                     gameId = gameId,
                     opponentName = displayName,
                     isYourTurn = state.isPlayerTurn(),
@@ -452,7 +442,7 @@ fun ChessLobbyContent(
                             ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
-                com.vitorpamplona.amethyst.commons.chess.ChallengeCard(
+                ChallengeCard(
                     challengerName = displayName,
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = true,
@@ -526,13 +516,19 @@ fun ChessLobbyContent(
  */
 @Composable
 private fun ChessRelaySettingsSheet(
-    inboxRelays: List<String>,
-    outboxRelays: List<String>,
-    globalRelays: List<String>,
     challengeCount: Int,
     publicGameCount: Int,
     connectedRelayCount: Int = 0,
+    accountViewModel: AccountViewModel,
 ) {
+    // Get relay information for settings display
+    val inboxRelays by accountViewModel.account.notificationRelays.flow
+        .collectAsState()
+    val outboxRelays by accountViewModel.account.outboxRelays.flow
+        .collectAsState()
+    val globalRelays by accountViewModel.account.defaultGlobalRelays.flow
+        .collectAsState()
+
     Column(
         modifier =
             Modifier
@@ -601,10 +597,10 @@ private fun ChessRelaySettingsSheet(
         // Show chess relays and their connection status
         ChessConfig.CHESS_RELAY_NAMES.forEach { relay ->
             val isConnected =
-                inboxRelays.any { it.contains(relay) } ||
-                    outboxRelays.any { it.contains(relay) } ||
-                    globalRelays.any { it.contains(relay) }
-            ChessRelayRow(relayUrl = "wss://$relay/", isConnected = isConnected)
+                inboxRelays.contains(relay) ||
+                    outboxRelays.contains(relay) ||
+                    globalRelays.contains(relay)
+            ChessRelayRow(relay = relay, isConnected = isConnected)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -714,7 +710,7 @@ private fun ChessRelaySettingsSheet(
 
 @Composable
 private fun RelayRow(
-    relayUrl: String,
+    relayUrl: NormalizedRelayUrl,
     isPreferred: Boolean = false,
 ) {
     Row(
@@ -737,7 +733,7 @@ private fun RelayRow(
             modifier = Modifier.size(12.dp),
         )
         Text(
-            text = relayUrl.removePrefix("wss://").removePrefix("ws://"),
+            text = relayUrl.displayUrl(),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (isPreferred) FontWeight.Medium else FontWeight.Normal,
         )
@@ -753,7 +749,7 @@ private fun RelayRow(
 
 @Composable
 private fun ChessRelayRow(
-    relayUrl: String,
+    relay: NormalizedRelayUrl,
     isConnected: Boolean,
 ) {
     Row(
@@ -781,7 +777,7 @@ private fun ChessRelayRow(
             modifier = Modifier.size(16.dp),
         )
         Text(
-            text = relayUrl.removePrefix("wss://").removePrefix("ws://").removeSuffix("/"),
+            text = relay.displayUrl(),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
         )
