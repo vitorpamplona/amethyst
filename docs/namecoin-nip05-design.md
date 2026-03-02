@@ -154,6 +154,17 @@ The integration is minimal and non-invasive:
 3. Non-Namecoin identifiers are completely unaffected
 4. **`AppModules`** wires up the resolver at construction time
 
+## Search Integration
+
+The search bar resolves Namecoin identifiers in real-time via `SearchBarViewModel`:
+
+1. A `namecoinResolvedUser` flow watches the search input with a 400ms debounce
+2. If the input matches any Namecoin format (`d/*`, `id/*`, `*.bit`, `*@*.bit`), it resolves via `NamecoinNameService` → `ElectrumxClient` → blockchain
+3. The resolved pubkey is used to get/create a `User` in `LocalCache`
+4. The Namecoin-resolved user is prepended to the standard local search results (deduplicated)
+
+This means typing `alice@example.bit`, `example.bit`, `d/example`, or `id/alice` into the search bar will query the Namecoin blockchain and show the resolved user profile at the top of results.
+
 ## Default ElectrumX Server
 
 ```
@@ -202,6 +213,7 @@ Search bar integration. When a user types a `.bit` identifier, shows a loading s
 
 ### Modified files
 - `amethyst/.../AppModules.kt` — Wire up `NamecoinNameResolver` into `Nip05Client`
+- `amethyst/.../ui/screen/loggedIn/search/SearchBarViewModel.kt` — Namecoin search resolution
 - `quartz/.../nip05DnsIdentifiers/Nip05Client.kt` — Route `.bit` identifiers to Namecoin resolver
 - `amethyst/.../relays/RelayInformationScreen.kt` — Import reordering (spotless)
 
@@ -212,13 +224,34 @@ Search bar integration. When a user types a `.bit` identifier, shows a loading s
 ./gradlew :quartz:jvmTest --tests "*NamecoinNameResolverTest*"
 ```
 
-### Manual testing (emulator)
-1. Build and install: `./gradlew :amethyst:installFdroidDebug`
-2. Search for `m@testls.bit` — should resolve to pubkey `6cdebcca...18667d`
-3. Search for `testls.bit` — root domain lookup
-4. Search for `d/testls` — direct namespace format
+### Manual testing (emulator or device)
 
-### Live verification
+Build and install the debug APK:
+```bash
+./gradlew assemblePlayDebug
+adb install -r amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
+```
+
+**Search bar tests** — open the search bar and enter each of these:
+
+| Search query | Expected result | What it tests |
+|---|---|---|
+| `m@testls.bit` | Resolves to Vitor Pamplona's profile | NIP-05 style `user@domain.bit` |
+| `testls.bit` | Resolves to Vitor Pamplona's profile (root `_` entry) | Bare domain `.bit` lookup |
+| `d/testls` | Resolves to Vitor Pamplona's profile | Direct `d/` namespace |
+| `id/someuser` | Resolves if registered on-chain | Direct `id/` namespace |
+
+**Verification test** — if a profile has a `.bit` address in its `nip05` field, the NIP-05 badge should verify via the blockchain instead of HTTP.
+
+**Network verification** — to confirm ElectrumX calls are being made:
+```bash
+# Monitor traffic to ElectrumX ports on the emulator
+adb root
+adb shell tcpdump -i any -nn port 50002 or port 50006
+```
+You should see TCP connections to `162.212.154.52:50002` (electrumx.testls.space) when searching for `.bit` identifiers.
+
+### Live test data
 The name `d/testls` is registered on the Namecoin blockchain (block 551519+, last updated block 814278) with value:
 ```json
 {
@@ -229,3 +262,8 @@ The name `d/testls` is registered on the Namecoin blockchain (block 551519+, las
   }
 }
 ```
+
+This means:
+- `m@testls.bit` → resolves `m` entry → pubkey `6cdebcca...18667d`
+- `testls.bit` → resolves root `_` entry → falls back to first available entry
+- `d/testls` → same as `testls.bit` (root lookup)

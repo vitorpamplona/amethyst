@@ -32,8 +32,11 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -43,7 +46,9 @@ import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -69,12 +74,41 @@ class SearchBarViewModel(
 
     val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
+    /**
+     * Resolves Namecoin identifiers (.bit / d/ / id/) via ElectrumX and
+     * returns the matching [User] from LocalCache, or null.
+     */
+    private val namecoinResolvedUser =
+        searchValueFlow
+            .debounce(400)
+            .distinctUntilChanged()
+            .filter { NamecoinNameResolver.isNamecoinIdentifier(it) }
+            .map { term ->
+                try {
+                    val result = NamecoinNameService.getInstance().resolve(term)
+                    if (result != null) {
+                        LocalCache.getOrCreateUser(result.pubkey)
+                    } else {
+                        null
+                    }
+                } catch (_: Exception) {
+                    null
+                }
+            }.flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, WhileSubscribed(5000), null)
+
     val searchResultsUsers =
         combine(
             searchValueFlow.debounce(100),
             invalidations.debounce(100),
-        ) { term, version ->
-            LocalCache.findUsersStartingWith(term, account)
+            namecoinResolvedUser,
+        ) { term, version, namecoinUser ->
+            val localResults = LocalCache.findUsersStartingWith(term, account)
+            if (namecoinUser != null && localResults.none { it.pubkeyHex == namecoinUser.pubkeyHex }) {
+                listOf(namecoinUser) + localResults
+            } else {
+                localResults
+            }
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
