@@ -340,11 +340,16 @@ class NewPublicMessageViewModel :
         }
     }
 
-    private suspend fun createTemplate(): EventTemplate<PublicMessageEvent>? {
+    private suspend fun createTemplate(): EventTemplate<PublicMessageEvent> {
         val toUsersTagger = NewMessageTagger(this@NewPublicMessageViewModel.toUsers.text, null, null, accountViewModel)
         toUsersTagger.run()
 
-        val tagger = NewMessageTagger(message.text, null, null, accountViewModel)
+        val msg =
+            replyingTo?.let {
+                it.toNostrUri() + "\n" + message.text
+            } ?: message.text
+
+        val tagger = NewMessageTagger(msg, null, null, accountViewModel)
         tagger.run()
 
         val users = (toUsersTagger.pTags ?: emptyList()) + (tagger.pTags ?: emptyList())
