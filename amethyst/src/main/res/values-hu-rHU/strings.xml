@@ -1279,4 +1279,5 @@
     <string name="confirm">Megerősítés</string>
     <string name="next">Következő</string>
     <string name="add_poll_option_button">Szavazati lehetőség hozzáadása</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

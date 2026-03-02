@@ -1063,4 +1063,5 @@
     <string name="crashreport_found_send">Enviarlo</string>
     <string name="this_message_will_disappear_in_days">Este mensaje desaparecerá en %1$d días</string>
     <string name="select_signer">Seleccionar firmante</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

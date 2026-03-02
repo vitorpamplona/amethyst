@@ -68,4 +68,5 @@
     <string name="and">" va "</string>
     <string name="in_channel">"bu kanalda: "</string>
     <string name="profile_banner">Profil banneri</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>
