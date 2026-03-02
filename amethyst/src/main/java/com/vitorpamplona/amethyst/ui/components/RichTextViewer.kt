@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -607,7 +608,7 @@ fun DisplayFullNote(
         baseNote = note,
         modifier = MaterialTheme.colorScheme.innerPostModifier,
         isQuotedNote = true,
-        unPackReply = false,
+        unPackReply = ReplyRenderType.LINE,
         quotesLeft = quotesLeft - 1,
         parentBackgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
@@ -880,7 +881,7 @@ private fun DisplayNoteFromTag(
             baseNote = baseNote,
             modifier = MaterialTheme.colorScheme.innerPostModifier,
             isQuotedNote = true,
-            unPackReply = false,
+            unPackReply = ReplyRenderType.LINE,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,

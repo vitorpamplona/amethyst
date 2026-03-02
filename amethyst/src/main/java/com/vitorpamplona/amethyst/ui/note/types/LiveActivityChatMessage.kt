@@ -80,7 +80,7 @@ fun RenderLiveActivityChatMessage(
         makeItShort,
         canPreview,
         quotesLeft,
-        unPackReply = false,
+        unPackReply = ReplyRenderType.NONE,
         backgroundColor,
         editState,
         accountViewModel,

@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -350,7 +351,7 @@ fun RenderThreadFeed(
                     baseNote = item,
                     modifier = modifier,
                     isBoostedNote = false,
-                    unPackReply = false,
+                    unPackReply = ReplyRenderType.NONE,
                     quotesLeft = 3,
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
@@ -648,7 +649,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
                 } else if (noteEvent is DraftWrapEvent) {
-                    RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
+                    RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is PublicMessageEvent) {
@@ -659,7 +660,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         editState,
                         accountViewModel,
@@ -683,7 +684,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         accountViewModel,
                         nav,
@@ -743,7 +744,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         editState,
                         accountViewModel,
@@ -755,7 +756,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         editState,
                         accountViewModel,
@@ -1093,7 +1094,7 @@ private fun RenderWikiHeaderForThreadPreview() {
                     makeItShort = false,
                     canPreview = true,
                     quotesLeft = 3,
-                    unPackReply = false,
+                    unPackReply = ReplyRenderType.NONE,
                     backgroundColor = backgroundColor,
                     editState = editState,
                     accountViewModel = accountViewModel,

@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.donations.ShowDonationCard
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -267,7 +268,7 @@ fun NoteCardCompose(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     showHidden: Boolean = false,
     parentBackgroundColor: MutableState<Color>? = null,

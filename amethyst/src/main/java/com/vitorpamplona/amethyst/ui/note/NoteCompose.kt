@@ -135,6 +135,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -247,7 +248,7 @@ fun NoteCompose(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     isHiddenFeed: Boolean = false,
     quotesLeft: Int,
@@ -296,7 +297,7 @@ fun AcceptableNote(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     quotesLeft: Int,
@@ -468,7 +469,7 @@ private fun CheckNewAndRenderNote(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     quotesLeft: Int,
@@ -556,7 +557,7 @@ fun InnerNoteWithReactions(
     backgroundColor: MutableState<Color>,
     isBoostedNote: Boolean,
     isQuotedNote: Boolean,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
@@ -680,7 +681,7 @@ fun RenderApproveButton(
 fun NoteBody(
     baseNote: Note,
     showAuthorPicture: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     showSecondRow: Boolean,
@@ -742,7 +743,7 @@ private fun RenderNoteRow(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1201,7 +1202,7 @@ fun ObserveDraftEvent(
 fun RenderDraft(
     note: Note,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1242,7 +1243,7 @@ fun RenderRepost(
             it,
             modifier = Modifier,
             isBoostedNote = true,
-            unPackReply = false,
+            unPackReply = ReplyRenderType.NONE,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
@@ -1271,7 +1272,7 @@ fun ReplyNoteComposition(
         baseNote = replyingDirectlyTo,
         modifier = MaterialTheme.colorScheme.replyModifier,
         isQuotedNote = true,
-        unPackReply = false,
+        unPackReply = ReplyRenderType.NONE,
         makeItShort = true,
         quotesLeft = 0,
         parentBackgroundColor = backgroundColor,

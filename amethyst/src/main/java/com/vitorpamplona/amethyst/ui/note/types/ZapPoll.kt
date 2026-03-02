@@ -56,7 +56,7 @@ fun RenderZapPoll(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -67,7 +67,7 @@ fun RenderZapPoll(
     val showReply by
         remember(note) {
             derivedStateOf {
-                !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                !makeItShort && unPackReply == ReplyRenderType.FULL && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
             }
         }
 
