@@ -42,6 +42,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
+import javax.net.SocketFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
@@ -97,6 +98,7 @@ data class ElectrumxServer(
 class ElectrumxClient(
     private val connectTimeoutMs: Long = 10_000L,
     private val readTimeoutMs: Long = 15_000L,
+    private val socketFactory: () -> SocketFactory = { SocketFactory.getDefault() },
 ) {
     private val json =
         Json {
@@ -107,12 +109,24 @@ class ElectrumxClient(
     private val mutex = Mutex()
 
     companion object {
-        /** Well-known public Namecoin ElectrumX servers. */
+        /** Well-known public Namecoin ElectrumX servers (clearnet). */
         val DEFAULT_SERVERS =
             listOf(
                 ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
                 ElectrumxServer("ulrichard.ch", 50006, useSsl = true),
                 ElectrumxServer("nmc2.lelux.fi", 50006, useSsl = true),
+            )
+
+        /** Tor-preferred server list: onion primary, clearnet fallback. */
+        val TOR_SERVERS =
+            listOf(
+                ElectrumxServer(
+                    "i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion",
+                    50002,
+                    useSsl = true,
+                    trustAllCerts = true,
+                ),
+                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
             )
 
         private const val PROTOCOL_VERSION = "1.4"
@@ -155,10 +169,16 @@ class ElectrumxClient(
         }
 
     /**
-     * Try each default server in order until one succeeds.
+     * Try each server in order until one succeeds.
+     *
+     * @param identifier Full Namecoin name, e.g. "d/example"
+     * @param servers    Ordered server list to try; defaults to [DEFAULT_SERVERS]
      */
-    suspend fun nameShowWithFallback(identifier: String): NameShowResult? {
-        for (server in DEFAULT_SERVERS) {
+    suspend fun nameShowWithFallback(
+        identifier: String,
+        servers: List<ElectrumxServer> = DEFAULT_SERVERS,
+    ): NameShowResult? {
+        for (server in servers) {
             val result = nameShow(identifier, server)
             if (result != null) return result
         }
@@ -412,22 +432,25 @@ class ElectrumxClient(
         return data
     }
 
-    private fun createSocket(server: ElectrumxServer): Socket =
-        if (server.useSsl) {
-            val factory =
-                if (server.trustAllCerts) {
-                    trustAllSslFactory()
-                } else {
-                    SSLSocketFactory.getDefault() as SSLSocketFactory
-                }
-            factory.createSocket().apply {
+    private fun createSocket(server: ElectrumxServer): Socket {
+        // Create the base socket through the injected factory, which
+        // may route through a SOCKS proxy (e.g. Tor) if configured.
+        val baseSocket =
+            socketFactory().createSocket().apply {
                 connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
             }
-        } else {
-            Socket().apply {
-                connect(InetSocketAddress(server.host, server.port), connectTimeoutMs.toInt())
+
+        if (!server.useSsl) return baseSocket
+
+        // Upgrade to TLS over the already-connected (possibly proxied) socket.
+        val sslFactory =
+            if (server.trustAllCerts) {
+                trustAllSslFactory()
+            } else {
+                SSLSocketFactory.getDefault() as SSLSocketFactory
             }
-        }
+        return sslFactory.createSocket(baseSocket, server.host, server.port, true)
+    }
 
     /**
      * Create an SSLSocketFactory that accepts any certificate.

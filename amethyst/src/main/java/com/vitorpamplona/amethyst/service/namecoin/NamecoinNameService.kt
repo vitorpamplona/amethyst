@@ -38,10 +38,11 @@ import kotlinx.coroutines.launch
  * Thread-safe, lifecycle-aware, and designed for integration
  * into Amethyst's existing `ServiceManager` infrastructure.
  */
-class NamecoinNameService private constructor() {
+class NamecoinNameService(
+    electrumxClient: ElectrumxClient = ElectrumxClient(),
+) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val electrumxClient = ElectrumxClient()
     private val resolver = NamecoinNameResolver(electrumxClient)
     private val cache = NamecoinLookupCache()
 
@@ -53,8 +54,14 @@ class NamecoinNameService private constructor() {
         private var instance: NamecoinNameService? = null
 
         fun getInstance(): NamecoinNameService =
-            instance ?: synchronized(this) {
-                instance ?: NamecoinNameService().also { instance = it }
+            instance ?: throw IllegalStateException(
+                "NamecoinNameService not initialized. Call init() first.",
+            )
+
+        fun init(electrumxClient: ElectrumxClient): NamecoinNameService =
+            synchronized(this) {
+                instance?.let { return it }
+                NamecoinNameService(electrumxClient).also { instance = it }
             }
     }
 

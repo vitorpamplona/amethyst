@@ -52,6 +52,7 @@ data class NamecoinNostrResult(
 class NamecoinNameResolver(
     private val electrumxClient: ElectrumxClient = ElectrumxClient(),
     private val lookupTimeoutMs: Long = 20_000L,
+    private val serverListProvider: () -> List<ElectrumxServer> = { ElectrumxClient.DEFAULT_SERVERS },
 ) {
     private val json =
         Json {
@@ -165,7 +166,7 @@ class NamecoinNameResolver(
     // ── Lookup & Value Parsing ─────────────────────────────────────────
 
     private suspend fun performLookup(parsed: ParsedIdentifier): NamecoinNostrResult? {
-        val nameResult = electrumxClient.nameShowWithFallback(parsed.namecoinName) ?: return null
+        val nameResult = electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider()) ?: return null
         val valueJson = tryParseJson(nameResult.value) ?: return null
 
         return when (parsed.namespace) {

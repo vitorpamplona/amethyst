@@ -17,43 +17,80 @@ This is censorship-resistant identity verification: no web server to seize, no D
 │    └── Namecoin path (new)  ── NamecoinNameResolver         │
 │                                    │                        │
 │  NamecoinNameService (singleton)   │                        │
-│    ├── NamecoinLookupCache         │                        │
-│    └── Nip05NamecoinAdapter        │                        │
+│    └── NamecoinLookupCache         │                        │
 │                                    │                        │
-│  UI: NamecoinVerificationDisplay   │                        │
-│       NamecoinSearchResult         │                        │
+│  RoleBasedHttpClientBuilder        │                        │
+│    └── socketFactoryForNip05()  ───┤ (Tor-aware sockets)    │
+│                                    │                        │
+│  ProxiedSocketFactory              │                        │
+│    └── SOCKS5 proxy routing     ───┘                        │
 ├────────────────────────────────────┼────────────────────────┤
 │                        Quartz Library                       │
 ├────────────────────────────────────┼────────────────────────┤
 │  NamecoinNameResolver              │                        │
 │    ├── parseIdentifier()           │                        │
 │    ├── extractFromDomainValue()    │ (d/ namespace)         │
-│    └── extractFromIdentityValue()  │ (id/ namespace)        │
+│    ├── extractFromIdentityValue()  │ (id/ namespace)        │
+│    └── serverListProvider()        │ (Tor/clearnet routing) │
 │                                    │                        │
 │  ElectrumxClient                   │                        │
 │    ├── buildNameIndexScript()      │                        │
 │    ├── electrumScriptHash()        │                        │
-│    └── parseNameScript()           │                        │
+│    ├── parseNameScript()           │                        │
+│    └── socketFactory()          ───┤ (injected, proxy-aware)│
 │                                    ▼                        │
-│                          ┌──────────────────┐               │
-│                          │  ElectrumX Server │               │
-│                          │  (Namecoin node)  │               │
-│                          └──────────────────┘               │
+│                  ┌───────────────────────────┐              │
+│                  │    ElectrumX Server        │              │
+│                  │  (clearnet or .onion)      │              │
+│                  └───────────────────────────┘              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Layer Separation
 
 - **`quartz/` (library)** — Protocol-level logic. No Android dependencies.
-  - `ElectrumxClient` — TCP/TLS connection to ElectrumX, JSON-RPC, script parsing
-  - `NamecoinNameResolver` — Identifier parsing, value extraction, NIP-05 mapping
+  - `ElectrumxClient` — TCP/TLS connection to ElectrumX, JSON-RPC, script parsing. Accepts an injected `SocketFactory` lambda for proxy/Tor support.
+  - `NamecoinNameResolver` — Identifier parsing, value extraction, NIP-05 mapping. Accepts a `serverListProvider` lambda for dynamic server selection.
   - `NamecoinLookupCache` — LRU cache with TTL
   - `NamecoinNameResolverTest` — Unit tests for parsing and value extraction
 
-- **`amethyst/` (app)** — Android integration and UI.
-  - `NamecoinNameService` — Application singleton, lifecycle management
-  - `Nip05NamecoinAdapter` — Static bridge for NIP-05 verification hooks
-  - `NamecoinVerificationDisplay` — Compose UI for verified badge + search results
+- **`amethyst/` (app)** — Android integration and Tor-aware wiring.
+  - `NamecoinNameService` — Application singleton, initialized with a proxy-aware `ElectrumxClient`
+  - `ProxiedSocketFactory` — `SocketFactory` implementation that routes through a SOCKS5 proxy (Tor)
+  - `RoleBasedHttpClientBuilder.socketFactoryForNip05()` — Returns a proxy-aware or default `SocketFactory` based on current Tor settings
+
+## Tor & Proxy Integration
+
+The ElectrumX connection respects the user's Tor settings to prevent IP leaks:
+
+### Problem
+
+The original `ElectrumxClient` used raw `java.net.Socket` / `SSLSocket` directly, bypassing OkHttp entirely. This meant Namecoin lookups would leak the user's real IP even when they had configured Tor for NIP-05 verification traffic.
+
+### Solution
+
+1. **`ElectrumxClient`** accepts a `socketFactory: () -> SocketFactory` lambda (evaluated at each connection, not captured at construction)
+2. **`ProxiedSocketFactory`** creates sockets routed through a `java.net.Proxy` (SOCKS5)
+3. **`RoleBasedHttpClientBuilder.socketFactoryForNip05()`** checks the user's NIP-05 Tor settings and returns either `SocketFactory.getDefault()` or a `ProxiedSocketFactory` with the active Tor SOCKS proxy
+4. SSL is layered on top of the (possibly proxied) base socket via `SSLSocketFactory.createSocket(socket, host, port, autoClose)`, preserving the proxy tunnel
+
+### Server Selection
+
+When Tor is enabled for NIP-05 traffic, the server list switches to prioritize onion routing:
+
+| Setting | Primary server | Fallback |
+|---|---|---|
+| **Tor off** | `electrumx.testls.space:50002` | `ulrichard.ch:50006`, `nmc2.lelux.fi:50006` |
+| **Tor on** | `.onion:50002` (see below) | `electrumx.testls.space:50002` (via Tor) |
+
+The `serverListProvider` lambda in `NamecoinNameResolver` is evaluated at resolution time, so toggling Tor settings takes effect immediately without restarting the app.
+
+### Dynamic Evaluation
+
+Both the socket factory and server list are provided as lambdas, not captured values. This means:
+- Toggling Tor on/off in settings takes effect on the next Namecoin lookup
+- The proxy port is read from `DualHttpClientManager`'s live `StateFlow`
+- No app restart or singleton reconstruction needed
 
 ## ElectrumX Protocol — How Name Resolution Works
 
@@ -152,7 +189,7 @@ The integration is minimal and non-invasive:
 1. **`Nip05Client`** gains an optional `namecoinResolver` parameter
 2. On `verify()` and `get()`, if the identifier matches `.bit` / `d/` / `id/`, it routes to `NamecoinNameResolver` instead of the HTTP fetcher
 3. Non-Namecoin identifiers are completely unaffected
-4. **`AppModules`** wires up the resolver at construction time
+4. **`AppModules`** wires up the resolver with Tor-aware socket factory and dynamic server selection
 
 ## Search Integration
 
@@ -165,15 +202,20 @@ The search bar resolves Namecoin identifiers in real-time via `SearchBarViewMode
 
 This means typing `alice@example.bit`, `example.bit`, `d/example`, or `id/alice` into the search bar will query the Namecoin blockchain and show the resolved user profile at the top of results.
 
-## Default ElectrumX Server
+## Default ElectrumX Servers
 
-```
-electrumx.testls.space:50002  (TLS, self-signed certificate)
-```
+### Clearnet (Tor off)
+| Server | Port | TLS | Notes |
+|---|---|---|---|
+| `electrumx.testls.space` | 50002 | Yes (self-signed) | Primary |
+| `ulrichard.ch` | 50006 | Yes | Fallback |
+| `nmc2.lelux.fi` | 50006 | Yes | Fallback |
 
-- ElectrumX 1.16.0, Namecoin chain, protocol 1.4–1.4.3
-- Also available via Tor: `i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion:50002`
-- Fallback servers: `ulrichard.ch:50006`, `nmc2.lelux.fi:50006` (currently offline)
+### Tor (Tor on for NIP-05)
+| Server | Port | TLS | Notes |
+|---|---|---|---|
+| `i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion` | 50002 | Yes (self-signed) | Primary — onion service for `electrumx.testls.space` |
+| `electrumx.testls.space` | 50002 | Yes (self-signed) | Fallback (routed through Tor SOCKS proxy) |
 
 The `trustAllCerts` flag is set for servers with self-signed certificates. Users can configure custom servers via `NamecoinNameService.setCustomServers()`.
 
@@ -184,38 +226,31 @@ The `trustAllCerts` flag is set for servers with self-signed certificates. Users
 - Both positive and negative results are cached
 - Cache is invalidated on TTL expiry; manual `invalidate()` and `clear()` are available
 
-## UI Components
-
-### NamecoinVerificationDisplay
-Shows a ⛓ chain-link badge next to profiles verified via Namecoin. Distinct from the standard NIP-05 checkmark — uses Namecoin blue (#4A90D9) and sea green (#2E8B57).
-
-### NamecoinSearchResult
-Search bar integration. When a user types a `.bit` identifier, shows a loading state during resolution, then the resolved pubkey with a clickable profile link.
-
 ## Security Considerations
 
+- **Tor integration**: ElectrumX connections are routed through the user's Tor SOCKS proxy when NIP-05 Tor settings are enabled. This prevents IP leaks to ElectrumX servers. The onion server is preferred when Tor is active, providing end-to-end onion routing.
 - **Self-signed certificates**: The primary ElectrumX server uses a self-signed TLS cert. The `trustAllCerts` option accepts any certificate for that server. This is acceptable because the Namecoin blockchain itself provides the trust anchor — we verify names against on-chain data, not the transport layer. A MITM could return stale data but cannot forge name registrations.
 - **Name expiry**: Namecoin names expire after ~36,000 blocks (~250 days) if not renewed. The current implementation does not check expiry. Future work should compare the name's `height` + `expiresIn` against the current block height.
 - **Server trust**: The client trusts that the ElectrumX server returns accurate transaction data. For higher assurance, SPV proof verification could be added in the future.
+- **Dynamic proxy evaluation**: Socket factory and server list are evaluated per-request (via lambdas), ensuring Tor setting changes take effect immediately without stale socket reuse.
 
 ## Files Changed
 
 ### New files (quartz/)
-- `quartz/.../nip05/namecoin/ElectrumxClient.kt` — ElectrumX TCP/TLS client, scripthash-based name resolution
-- `quartz/.../nip05/namecoin/NamecoinNameResolver.kt` — Identifier parsing, value extraction
+- `quartz/.../nip05/namecoin/ElectrumxClient.kt` — ElectrumX TCP/TLS client with injected `SocketFactory` for proxy support
+- `quartz/.../nip05/namecoin/NamecoinNameResolver.kt` — Identifier parsing, value extraction, dynamic server selection
 - `quartz/.../nip05/namecoin/NamecoinLookupCache.kt` — LRU cache with TTL
 - `quartz/src/jvmTest/.../NamecoinNameResolverTest.kt` — Unit tests
 
 ### New files (amethyst/)
-- `amethyst/.../service/namecoin/NamecoinNameService.kt` — App singleton, coroutine scope
-- `amethyst/.../service/namecoin/Nip05NamecoinAdapter.kt` — Static bridge for NIP-05 hooks
-- `amethyst/.../ui/note/namecoin/NamecoinVerificationDisplay.kt` — Compose UI components
+- `amethyst/.../service/namecoin/NamecoinNameService.kt` — App singleton, initialized with proxy-aware ElectrumxClient
+- `amethyst/.../model/privacyOptions/ProxiedSocketFactory.kt` — `SocketFactory` that routes through SOCKS5 proxy (Tor)
 
 ### Modified files
-- `amethyst/.../AppModules.kt` — Wire up `NamecoinNameResolver` into `Nip05Client`
+- `amethyst/.../AppModules.kt` — Wires up resolver with Tor-aware socket factory and server list provider
+- `amethyst/.../model/privacyOptions/RoleBasedHttpClientBuilder.kt` — Added `socketFactoryForNip05()` for proxy-aware socket creation
 - `amethyst/.../ui/screen/loggedIn/search/SearchBarViewModel.kt` — Namecoin search resolution
 - `quartz/.../nip05DnsIdentifiers/Nip05Client.kt` — Route `.bit` identifiers to Namecoin resolver
-- `amethyst/.../relays/RelayInformationScreen.kt` — Import reordering (spotless)
 
 ## Testing
 
@@ -241,15 +276,20 @@ adb install -r amethyst/build/outputs/apk/play/debug/amethyst-play-universal-deb
 | `d/testls` | Resolves to Vitor Pamplona's profile | Direct `d/` namespace |
 | `id/someuser` | Resolves if registered on-chain | Direct `id/` namespace |
 
+**Tor tests** — enable Tor and set "NIP-05 verifications via Tor" to on:
+1. Search for `m@testls.bit` — should resolve via onion server
+2. Verify no direct clearnet connections to ElectrumX servers (use `tcpdump`)
+3. Toggle Tor off — next search should use clearnet servers
+
 **Verification test** — if a profile has a `.bit` address in its `nip05` field, the NIP-05 badge should verify via the blockchain instead of HTTP.
 
 **Network verification** — to confirm ElectrumX calls are being made:
 ```bash
-# Monitor traffic to ElectrumX ports on the emulator
 adb root
 adb shell tcpdump -i any -nn port 50002 or port 50006
 ```
-You should see TCP connections to `162.212.154.52:50002` (electrumx.testls.space) when searching for `.bit` identifiers.
+With Tor off, you should see TCP connections to `162.212.154.52:50002` (electrumx.testls.space).
+With Tor on, you should see connections to the local Tor SOCKS port only (no direct ElectrumX connections).
 
 ### Live test data
 The name `d/testls` is registered on the Namecoin blockchain (block 551519+, last updated block 814278) with value:
