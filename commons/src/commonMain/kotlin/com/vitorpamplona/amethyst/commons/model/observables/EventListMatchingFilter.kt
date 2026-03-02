@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.util.SortedSet
 import java.util.concurrent.ConcurrentSkipListSet
-import kotlin.collections.mapNotNull
 
 /**
  * Creates a list of events (regular and addressable)

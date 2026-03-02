@@ -21,14 +21,8 @@
 package com.vitorpamplona.quartz.nip88Polls.response
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parse
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.EndsAtTag.Companion.parse
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag.Companion.parse
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollTypeTag.Companion.parse
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.RelayTag.Companion.parse
 import com.vitorpamplona.quartz.nip88Polls.response.tags.PollTag
 import com.vitorpamplona.quartz.nip88Polls.response.tags.ResponseTag
-import com.vitorpamplona.quartz.nip88Polls.response.tags.ResponseTag.Companion.parse
 
 fun TagArray.responses() = mapNotNull(ResponseTag::parse)
 
