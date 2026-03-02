@@ -550,7 +550,10 @@ fun CreateClickableTextWithEmoji(
                 text =
                     buildAnnotatedString {
                         withLink(
-                            LinkAnnotation.Clickable("me") {
+                            LinkAnnotation.Clickable(
+                                "me",
+                                TextLinkStyles(style = style.toSpanStyle()),
+                            ) {
                                 onClick()
                             },
                         ) {
