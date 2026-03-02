@@ -89,7 +89,34 @@ fun AnimatedSaveButton(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
+fun rememberSaveMediaAction(onSaveClick: (Context) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val writeStoragePermission =
+        rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+            if (isGranted) onSaveClick(context)
+        }
+    return {
+        scope.launch {
+            Toast
+                .makeText(
+                    context,
+                    stringRes(context, R.string.video_download_has_started_toast),
+                    Toast.LENGTH_SHORT,
+                ).show()
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || writeStoragePermission.status.isGranted) {
+            onSaveClick(context)
+        } else {
+            writeStoragePermission.launchPermissionRequest()
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
 fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
+    val saveAction = rememberSaveMediaAction(onSaveClick)
     Box(modifier = PinBottomIconSize) {
         Box(
             Modifier
@@ -98,35 +125,8 @@ fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
                 .align(Alignment.Center)
                 .background(MaterialTheme.colorScheme.background),
         )
-
-        val localContext = LocalContext.current
-
-        val writeStoragePermissionState =
-            rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                if (isGranted) {
-                    onSaveClick(localContext)
-                }
-            }
-        val scope = rememberCoroutineScope()
         IconButton(
-            onClick = {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            localContext,
-                            stringRes(localContext, R.string.video_download_has_started_toast),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                }
-                if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                    writeStoragePermissionState.status.isGranted
-                ) {
-                    onSaveClick(localContext)
-                } else {
-                    writeStoragePermissionState.launchPermissionRequest()
-                }
-            },
+            onClick = saveAction,
             modifier = Size50Modifier,
         ) {
             Icon(
