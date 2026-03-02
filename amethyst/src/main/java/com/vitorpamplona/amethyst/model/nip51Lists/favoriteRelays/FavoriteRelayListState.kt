@@ -97,18 +97,18 @@ class FavoriteRelayListState(
         return saveRelayList(current)
     }
 
-    suspend fun saveRelayList(FavoriteRelays: List<NormalizedRelayUrl>): FavoriteRelayListEvent {
+    suspend fun saveRelayList(favoriteRelays: List<NormalizedRelayUrl>): FavoriteRelayListEvent {
         val relayListForFavorite = getFavoriteRelayList()
 
         return if (relayListForFavorite != null && relayListForFavorite.tags.isNotEmpty()) {
             FavoriteRelayListEvent.updateRelayList(
                 earlierVersion = relayListForFavorite,
-                relays = FavoriteRelays,
+                relays = favoriteRelays,
                 signer = signer,
             )
         } else {
             FavoriteRelayListEvent.create(
-                relays = FavoriteRelays,
+                relays = favoriteRelays,
                 signer = signer,
             )
         }
