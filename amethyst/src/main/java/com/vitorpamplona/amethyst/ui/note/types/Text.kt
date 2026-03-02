@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
@@ -115,6 +116,7 @@ fun RenderTextEvent(
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                    Spacer(modifier = HalfVertSpacer)
                 }
             }
         }
