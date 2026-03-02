@@ -131,6 +131,13 @@ class ElectrumxClient(
 
         private const val PROTOCOL_VERSION = "1.4"
 
+        /**
+         * Namecoin names expire this many blocks after their last update.
+         * From chainparams.cpp: consensus.nNameExpirationDepth = 36000
+         * (~250 days at ~10 min/block).
+         */
+        const val NAME_EXPIRE_DEPTH = 36_000
+
         // Namecoin script opcodes
         private const val OP_NAME_UPDATE: Byte = 0x53 // OP_3 repurposed by Namecoin
         private const val OP_2DROP: Byte = 0x6d
@@ -222,8 +229,28 @@ class ElectrumxClient(
             writer.println(txReq)
             val txResponse = reader.readLine() ?: return null
 
-            // 5. Parse the name value from the transaction
-            return parseNameFromTransaction(identifier, txHash, height, txResponse)
+            // 5. Get current block height to check name expiry
+            val headersReq = buildRpcRequest("blockchain.headers.subscribe", emptyList<String>())
+            writer.println(headersReq)
+            val headersResponse = reader.readLine()
+            val currentHeight = parseBlockHeight(headersResponse)
+
+            // 6. Check if the name has expired
+            if (currentHeight != null && height > 0) {
+                val blocksSinceUpdate = currentHeight - height
+                if (blocksSinceUpdate >= NAME_EXPIRE_DEPTH) {
+                    return null // Name has expired
+                }
+            }
+
+            // 7. Parse the name value from the transaction
+            val result = parseNameFromTransaction(identifier, txHash, height, txResponse)
+            // Populate expiresIn if we know the current height
+            return if (result != null && currentHeight != null && height > 0) {
+                result.copy(expiresIn = NAME_EXPIRE_DEPTH - (currentHeight - height))
+            } else {
+                result
+            }
         } finally {
             runCatching { writer.close() }
             runCatching { reader.close() }
@@ -277,6 +304,22 @@ class ElectrumxClient(
     private fun electrumScriptHash(script: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(script)
         return digest.reversedArray().joinToString("") { "%02x".format(it) }
+    }
+
+    /**
+     * Parse the block height from a `blockchain.headers.subscribe` response.
+     *
+     * Response format: {"result": {"height": 814300, "hex": "..."}, ...}
+     */
+    private fun parseBlockHeight(raw: String?): Int? {
+        if (raw == null) return null
+        return try {
+            val envelope = json.parseToJsonElement(raw).jsonObject
+            val result = envelope["result"]?.jsonObject ?: return null
+            result["height"]?.jsonPrimitive?.int
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**
