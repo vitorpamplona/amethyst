@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transform
 
 @Stable
 class TopNavFilterState(
@@ -52,43 +55,43 @@ class TopNavFilterState(
     val scope: CoroutineScope,
 ) {
     val allFollows =
-        PeopleListOutBoxFeedDefinition(
+        FeedDefinition(
             code = TopFilter.AllFollows,
             name = ResourceName(R.string.follow_list_kind3follows),
         )
 
     val userFollows =
-        PeopleListOutBoxFeedDefinition(
+        FeedDefinition(
             code = TopFilter.AllUserFollows,
             name = ResourceName(R.string.follow_list_kind3follows_users_only),
         )
 
     val kind3Follows =
-        PeopleListOutBoxFeedDefinition(
+        FeedDefinition(
             code = TopFilter.DefaultFollows,
             name = ResourceName(R.string.follow_list_kind3_follows_users_only),
         )
 
     val globalFollow =
-        GlobalFeedDefinition(
+        FeedDefinition(
             code = TopFilter.Global,
             name = ResourceName(R.string.follow_list_global),
         )
 
     val aroundMe =
-        AroundMeFeedDefinition(
+        FeedDefinition(
             code = TopFilter.AroundMe,
             name = ResourceName(R.string.follow_list_aroundme),
         )
 
     val muteListFollow =
-        PeopleListOutBoxFeedDefinition(
+        FeedDefinition(
             code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
             name = ResourceName(R.string.follow_list_mute_list),
         )
 
     val chessFollow =
-        GlobalFeedDefinition(
+        FeedDefinition(
             code = TopFilter.Chess,
             name = ResourceName(R.string.follow_list_chess),
         )
@@ -101,7 +104,7 @@ class TopNavFilterState(
     ): List<FeedDefinition> {
         val peopleListsDefs =
             peopleLists.map {
-                PeopleListOutBoxFeedDefinition(
+                FeedDefinition(
                     TopFilter.PeopleList(it.address),
                     PeopleListName(it),
                 )
@@ -109,7 +112,7 @@ class TopNavFilterState(
 
         val followListsDefs =
             followLists.map {
-                PeopleListOutBoxFeedDefinition(
+                FeedDefinition(
                     TopFilter.PeopleList(it.address),
                     PeopleListName(it),
                 )
@@ -136,10 +139,11 @@ class TopNavFilterState(
         hashtagList: Set<String>,
         geotagList: Set<String>,
         communityList: List<AddressableNote>,
+        relayList: Set<NormalizedRelayUrl>,
     ): List<FeedDefinition> {
         val hashtags =
             hashtagList.map {
-                TagFeedDefinition(
+                FeedDefinition(
                     TopFilter.Hashtag(it),
                     HashtagName(it),
                     route = Route.Hashtag(it),
@@ -148,7 +152,7 @@ class TopNavFilterState(
 
         val geotags =
             geotagList.map {
-                TagFeedDefinition(
+                FeedDefinition(
                     TopFilter.Geohash(it),
                     GeoHashName(it),
                     route = Route.Geohash(it),
@@ -157,14 +161,23 @@ class TopNavFilterState(
 
         val communities =
             communityList.map { communityNote ->
-                TagFeedDefinition(
+                FeedDefinition(
                     TopFilter.Community(communityNote.address),
                     CommunityName(communityNote),
                     route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
                 )
             }
 
-        return (communities + hashtags + geotags).sortedBy { it.name.name() }
+        val relays =
+            relayList.map { relayUrl ->
+                FeedDefinition(
+                    TopFilter.Relay(relayUrl.url),
+                    RelayName(relayUrl),
+                    route = Route.RelayFeed(relayUrl.url),
+                )
+            }
+
+        return (communities + hashtags + geotags + relays).sortedBy { it.name.name() }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -173,6 +186,7 @@ class TopNavFilterState(
             account.hashtagList.flow,
             account.geohashList.flow,
             account.communityList.flowNotes,
+            account.favoriteRelayList.flow,
             ::mergeInterests,
         ).onStart {
             emit(
@@ -180,6 +194,7 @@ class TopNavFilterState(
                     account.hashtagList.flow.value,
                     account.geohashList.flow.value,
                     account.communityList.flowNotes.value,
+                    account.favoriteRelayList.flow.value,
                 ),
             )
         }
@@ -188,28 +203,25 @@ class TopNavFilterState(
         combineTransform(
             livePeopleListsFlow,
             liveInterestFlows,
-        ) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+        ) { peopleLists, interests ->
             checkNotInMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
-                    myLivePeopleListsFlow,
-                    myLiveKind3FollowsFlow,
+                    peopleLists,
+                    interests,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
         }
 
     private val _kind3GlobalPeople =
-        combineTransform(
-            livePeopleListsFlow,
-            liveInterestFlows,
-        ) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+        livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
-                    myLivePeopleListsFlow,
+                    peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
@@ -230,24 +242,35 @@ class TopNavFilterState(
     }
 }
 
+@Stable
 abstract class Name {
     abstract fun name(): String
 
     open fun name(context: Context) = name()
 }
 
+@Stable
 class GeoHashName(
     val geoHashTag: String,
 ) : Name() {
     override fun name() = "/g/$geoHashTag"
 }
 
+@Stable
 class HashtagName(
     val hashTag: String,
 ) : Name() {
     override fun name() = "#$hashTag"
 }
 
+@Stable
+class RelayName(
+    val url: NormalizedRelayUrl,
+) : Name() {
+    override fun name() = url.displayUrl()
+}
+
+@Stable
 class ResourceName(
     val resourceId: Int,
 ) : Name() {
@@ -256,6 +279,7 @@ class ResourceName(
     override fun name(context: Context) = stringRes(context, resourceId)
 }
 
+@Stable
 class PeopleListName(
     val note: AddressableNote,
 ) : Name() {
@@ -271,6 +295,7 @@ class PeopleListName(
     }
 }
 
+@Stable
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
@@ -278,33 +303,8 @@ class CommunityName(
 }
 
 @Immutable
-abstract class FeedDefinition(
+class FeedDefinition(
     val code: TopFilter,
     val name: Name,
-    val route: Route?,
+    val route: Route? = null,
 )
-
-@Immutable
-class GlobalFeedDefinition(
-    code: TopFilter,
-    name: Name,
-) : FeedDefinition(code, name, null)
-
-@Immutable
-class TagFeedDefinition(
-    code: TopFilter,
-    name: Name,
-    route: Route?,
-) : FeedDefinition(code, name, route)
-
-@Immutable
-class AroundMeFeedDefinition(
-    code: TopFilter,
-    name: Name,
-) : FeedDefinition(code, name, null)
-
-@Immutable
-class PeopleListOutBoxFeedDefinition(
-    code: TopFilter,
-    name: Name,
-) : FeedDefinition(code, name, null)
