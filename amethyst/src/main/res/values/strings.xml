@@ -917,6 +917,9 @@
 
     <string name="muted_button">Muted. Click to unmute</string>
     <string name="mute_button">Sound on. Click to mute</string>
+    <string name="skip_back">Skip back %d seconds</string>
+    <string name="skip_forward">Skip forward %d seconds</string>
+    <string name="picture_in_picture">Picture-in-Picture</string>
     <string name="search_button">Search local and remote records</string>
 
     <string name="nip05_verified">Nostr address was verified</string>

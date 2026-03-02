@@ -21,13 +21,19 @@
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.seekBackward
+import com.vitorpamplona.amethyst.service.playback.composable.skipForward
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
@@ -36,16 +42,35 @@ fun RenderCenterButtons(
     controllerState: MediaControllerState,
     controllerVisible: MutableState<Boolean>,
     modifier: Modifier,
+    isLiveStream: Boolean = false,
 ) {
     val state = rememberPlayPauseButtonState(controllerState.controller)
 
-    AnimatedPlayPauseButton(controllerVisible, modifier, !state.showPlay) {
-        state.onClick()
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!isLiveStream) {
+            AnimatedSkipButton(controllerVisible = controllerVisible, isForward = false) {
+                controllerState.controller.seekBackward()
+            }
+        }
+
+        AnimatedPlayPauseButton(controllerVisible, Modifier, !state.showPlay) {
+            state.onClick()
+        }
+
+        if (!isLiveStream) {
+            AnimatedSkipButton(controllerVisible = controllerVisible, isForward = true) {
+                controllerState.controller.skipForward()
+            }
+        }
     }
 
     if (!state.showPlay) {
         LaunchedEffect(state.showPlay) {
-            delay(2000)
+            delay(3000)
             controllerVisible.value = false
         }
     }

@@ -20,65 +20,77 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
-import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.util.Util
-import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.playback.composable.SKIP_SECONDS
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
-@OptIn(UnstableApi::class)
+private val FadeIn = fadeIn()
+private val FadeOut = fadeOut()
+
 @Preview
 @Composable
-fun PositionAndDurationTextPreview() {
+fun SkipBackButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
-            PositionAndDurationText(
-                133000,
-                1000000,
-                modifier = Modifier,
-            )
+            SkipButton(isForward = false, onClick = {})
         }
     }
 }
 
-@OptIn(UnstableApi::class)
+@Preview
 @Composable
-fun PositionAndDurationText(
-    player: Player,
-    modifier: Modifier = Modifier,
-) {
-    val state = rememberProgressStateWithTickInterval(player, tickIntervalMs = 1000L)
-
-    PositionAndDurationText(
-        state.currentPositionMs,
-        state.durationMs,
-        modifier,
-    )
+fun SkipForwardButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.background(BitcoinOrange)) {
+            SkipButton(isForward = true, onClick = {})
+        }
+    }
 }
 
-@UnstableApi
 @Composable
-fun PositionAndDurationText(
-    positionMs: Long,
-    durationMs: Long,
+fun AnimatedSkipButton(
+    controllerVisible: State<Boolean>,
+    isForward: Boolean,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
-    val text = "${Util.getStringForTime(positionMs)} / ${Util.getStringForTime(durationMs)}"
-
-    Text(
-        text = text,
-        color = Color.White,
-        style = MaterialTheme.typography.labelLarge,
+    AnimatedVisibility(
+        visible = controllerVisible.value,
         modifier = modifier,
-    )
+        enter = FadeIn,
+        exit = FadeOut,
+    ) {
+        SkipButton(isForward = isForward, onClick = onClick)
+    }
+}
+
+@Composable
+fun SkipButton(
+    isForward: Boolean,
+    onClick: () -> Unit,
+) {
+    val icon = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10
+    val label = if (isForward) stringRes(R.string.skip_forward, SKIP_SECONDS) else stringRes(R.string.skip_back, SKIP_SECONDS)
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(imageVector = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(32.dp))
+    }
 }
