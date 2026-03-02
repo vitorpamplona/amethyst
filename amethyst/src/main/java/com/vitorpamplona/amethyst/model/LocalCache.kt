@@ -2497,15 +2497,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) {
         val toBeRemoved = channel.pruneHiddenMessages(account)
 
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            removeFromCache(it)
-
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        removeFromCache(childrenToBeRemoved)
+        removeNotesAndChildren(toBeRemoved)
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
             println(
@@ -2531,15 +2523,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun pruneOldMessagesChannel(channel: Channel) {
         val toBeRemoved = channel.pruneOldMessages()
 
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            removeFromCache(it)
-
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        removeFromCache(childrenToBeRemoved)
+        removeNotesAndChildren(toBeRemoved)
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
             println(
@@ -2567,16 +2551,10 @@ object LocalCache : ILocalCache, ICacheProvider {
             room.rooms.map { key, chatroom ->
                 val toBeRemoved = chatroom.pruneMessagesToTheLatestOnly()
 
-                val childrenToBeRemoved = mutableListOf<Note>()
-
-                toBeRemoved.forEach {
-                    childrenToBeRemoved.addAll(removeIfWrap(it))
-                    removeFromCache(it)
-
-                    childrenToBeRemoved.addAll(it.removeAllChildNotes())
-                }
-
-                removeFromCache(childrenToBeRemoved)
+                // removeIfWrap removes each wrap-parent from cache and returns its orphaned children
+                val wrapChildren = toBeRemoved.flatMap { removeIfWrap(it) }
+                removeNotesAndChildren(toBeRemoved)
+                removeFromCache(wrapChildren)
 
                 if (toBeRemoved.size > 1) {
                     println(
@@ -2617,19 +2595,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
             }
 
-        val childrenToBeRemoved = mutableListOf<Note>()
-
         toBeRemoved.forEach {
             val newerVersion = (it.event as? AddressableEvent)?.address()?.let { tag -> addressables.get(tag) }
             if (newerVersion != null) {
                 it.moveAllReferencesTo(newerVersion)
             }
-
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        removeNotesAndChildren(toBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} old version of addressables removed.")
@@ -2659,14 +2632,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     true // don't delete if it's a notification to the logged in user
             }
 
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        removeFromCache(childrenToBeRemoved)
+        removeNotesAndChildren(toBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} thread replies removed.")
@@ -2721,6 +2687,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         nextToBeRemoved.forEach { note -> removeFromCache(note) }
     }
 
+    private fun removeNotesAndChildren(toBeRemoved: Collection<Note>) {
+        val childrenToBeRemoved = mutableListOf<Note>()
+        toBeRemoved.forEach {
+            removeFromCache(it)
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+        removeFromCache(childrenToBeRemoved)
+    }
+
     fun pruneExpiredEvents() {
         checkNotInMainThread()
 
@@ -2728,19 +2703,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         val versionsToBeRemoved = notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
         val addressesToBeRemoved = addressables.filter { _, it -> it.event?.isExpirationBefore(now) == true }
 
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        versionsToBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        addressesToBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        removeFromCache(childrenToBeRemoved)
+        removeNotesAndChildren(versionsToBeRemoved + addressesToBeRemoved)
 
         if (versionsToBeRemoved.size > 1 || addressesToBeRemoved.size > 1) {
             println("PRUNE: ${versionsToBeRemoved.size} events and ${addressesToBeRemoved.size} expired.")
@@ -2750,20 +2713,13 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun pruneHiddenEvents(account: Account) {
         checkNotInMainThread()
 
-        val childrenToBeRemoved = mutableListOf<Note>()
-
         val toBeRemoved =
             account.hiddenUsers.flow.value.hiddenUsers
                 .map { userHex ->
                     (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
                 }.flatten()
 
-        toBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
-        }
-
-        removeFromCache(childrenToBeRemoved)
+        removeNotesAndChildren(toBeRemoved)
 
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }
