@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -289,9 +290,9 @@ fun ChessLobbyScreen(
             sheetState = rememberModalBottomSheetState(),
         ) {
             ChessRelaySettingsSheet(
-                inboxRelays = inboxRelays.map { it.toString() },
-                outboxRelays = outboxRelays.map { it.toString() },
-                globalRelays = globalRelays.map { it.toString() },
+                inboxRelays = inboxRelays.map { it.displayUrl() },
+                outboxRelays = outboxRelays.map { it.displayUrl() },
+                globalRelays = globalRelays.map { it.displayUrl() },
                 challengeCount = challenges.size,
                 publicGameCount = publicGames.size,
             )
