@@ -569,4 +569,5 @@
     <string name="server_did_not_provide_a_url_after_uploading">Palvelin ei antanut URL-osoitetta latauksen jälkeen</string>
     <string name="could_not_download_from_the_server">Mediaa ei voitu ladata palvelimelta</string>
     <string name="could_not_prepare_local_file_to_upload">Paikallista tiedostoa ei voitu valmistella ladattavaksi: %1$s</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

@@ -389,4 +389,5 @@
     <string name="automatically_play_videos">自動的に動画を再生</string>
     <string name="automatically_show_url_preview">自動的にURLプレビューを表示</string>
     <string name="load_image">画像読み込み</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

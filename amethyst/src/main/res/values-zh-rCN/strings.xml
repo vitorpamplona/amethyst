@@ -1279,4 +1279,5 @@
     <string name="confirm">确认</string>
     <string name="next">下一个</string>
     <string name="add_poll_option_button">添加投票选项按钮</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>
