@@ -1663,6 +1663,8 @@
     <string name="kind_reactions">Reactions</string>
     <string name="kind_contact_card">Contact Card</string>
     <string name="kind_relay_auth">Relay Auth</string>
+    <string name="kind_relay_discovery">Relay Discovery</string>
+    <string name="kind_relay_monitor">Relay Monitor Announcement</string>
     <string name="kind_relay_set">Relay Set</string>
     <string name="kind_reports">Reports</string>
     <string name="kind_reposts">Reposts</string>

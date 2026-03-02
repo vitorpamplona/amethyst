@@ -229,6 +229,8 @@ import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -582,6 +584,8 @@ private fun kindDisplayName(kind: Int): Int =
         ReactionEvent.KIND -> R.string.kind_reactions
         ContactCardEvent.KIND -> R.string.kind_contact_card
         RelayAuthEvent.KIND -> R.string.kind_relay_auth
+        RelayDiscoveryEvent.KIND -> R.string.kind_relay_discovery
+        RelayMonitorEvent.KIND -> R.string.kind_relay_monitor
         RelaySetEvent.KIND -> R.string.kind_relay_set
         ReportEvent.KIND -> R.string.kind_reports
         RepostEvent.KIND -> R.string.kind_reposts
