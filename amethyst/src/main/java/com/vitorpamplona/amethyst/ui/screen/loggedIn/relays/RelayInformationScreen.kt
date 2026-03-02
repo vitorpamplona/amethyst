@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
-import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -87,6 +86,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -474,138 +474,135 @@ fun RelayInformationBody(
 // Active subscriptions + outbox display
 // ---------------------------------------------------------------------------
 
-private fun kindDisplayName(
-    kind: Int,
-    context: Context,
-): String =
+private fun kindDisplayName(kind: Int): Int =
     when (kind) {
-        AdvertisedRelayListEvent.KIND -> "Outbox Relays"
-        AppDefinitionEvent.KIND -> "Apps"
-        AppRecommendationEvent.KIND -> "App Recommendations"
-        AppSpecificDataEvent.KIND -> "User Settings"
-        AudioHeaderEvent.KIND -> "Audio Header"
-        AudioTrackEvent.KIND -> "Audio Track"
-        BadgeAwardEvent.KIND -> "Badge Awards"
-        BadgeDefinitionEvent.KIND -> "Badge Definitions"
-        BadgeProfilesEvent.KIND -> "Profile Badges"
-        BlockedRelayListEvent.KIND -> "Blocked Relays"
-        BlossomServersEvent.KIND -> "Blossom Servers"
-        BlossomAuthorizationEvent.KIND -> "Blossom Auth"
-        BroadcastRelayListEvent.KIND -> "Broadcast Relays"
-        BookmarkListEvent.KIND -> "Bookmark List"
-        CalendarDateSlotEvent.KIND -> "Day Appointment"
-        CalendarEvent.KIND -> "Calendar"
-        CalendarTimeSlotEvent.KIND -> "Appointment"
-        CalendarRSVPEvent.KIND -> "Appt RSVP"
-        ChessGameEvent.KIND -> "Chess Games"
-        JesterEvent.KIND -> "Chess Auth"
-        FavoriteRelayListEvent.KIND -> "Favorite Relays"
-        LiveChessGameChallengeEvent.KIND -> "Chess Challenges"
-        LiveChessGameAcceptEvent.KIND -> "Chess Game Accept"
-        LiveChessMoveEvent.KIND -> "Chess Move"
-        LiveChessGameEndEvent.KIND -> "Chess Game End"
-        LiveChessDrawOfferEvent.KIND -> "Chess Draw Offer"
-        ChannelCreateEvent.KIND -> "Channel Definition"
-        ChannelHideMessageEvent.KIND -> "Channel Hide Msg"
-        ChannelListEvent.KIND -> "Channel List"
-        ChannelMessageEvent.KIND -> "Channel Message"
-        ChannelMetadataEvent.KIND -> "Channel Metadata"
-        ChannelMuteUserEvent.KIND -> "Channel Mute User"
-        ChatMessageEncryptedFileHeaderEvent.KIND -> "DM File"
-        ChatMessageEvent.KIND -> "DM Message"
-        ChatMessageRelayListEvent.KIND -> "DM Relays"
-        ClassifiedsEvent.KIND -> "Classifieds"
-        CommentEvent.KIND -> "Comments"
-        CommunityDefinitionEvent.KIND -> "Community Def"
-        CommunityListEvent.KIND -> "Community List"
-        CommunityPostApprovalEvent.KIND -> "Community Post"
-        ContactListEvent.KIND -> "Follow List"
-        DeletionEvent.KIND -> "Deletions"
-        DraftWrapEvent.KIND -> "Drafts"
-        EmojiPackEvent.KIND -> "Emoji Packs"
-        EmojiPackSelectionEvent.KIND -> "Emoji Pack List"
-        EphemeralChatEvent.KIND -> "Ephemeral Chat"
-        EphemeralChatListEvent.KIND -> "Ephemeral Chatrooms"
-        FileHeaderEvent.KIND -> "File Headers"
-        ProfileGalleryEntryEvent.KIND -> "Profile Gallery"
-        FileServersEvent.KIND -> "File Servers"
-        FileStorageEvent.KIND -> "Blob Data"
-        FileStorageHeaderEvent.KIND -> "Blob Headers"
-        FhirResourceEvent.KIND -> "Medical Data"
-        FollowListEvent.KIND -> "Follow Packs"
-        GenericRepostEvent.KIND -> "Reposts (16)"
-        GeohashListEvent.KIND -> "Geohash Follows"
-        GiftWrapEvent.KIND -> "GiftWraps"
-        GitIssueEvent.KIND -> "Git Issue"
-        GitPatchEvent.KIND -> "Git Path"
-        GitRepositoryEvent.KIND -> "Git Repo"
-        GitReplyEvent.KIND -> "Git Reply"
-        GoalEvent.KIND -> "Zap Goals"
-        HashtagListEvent.KIND -> "Hashtag Follows"
-        HighlightEvent.KIND -> "Highlights"
-        HTTPAuthorizationEvent.KIND -> "Http Auth"
-        IndexerRelayListEvent.KIND -> "Index Relay List"
-        InteractiveStoryPrologueEvent.KIND -> "Adventure Prologue"
-        InteractiveStorySceneEvent.KIND -> "Adventure Scene"
-        InteractiveStoryReadingStateEvent.KIND -> "Adventure Reading"
-        LabeledBookmarkListEvent.KIND -> "Named Bookmarks"
-        LiveActivitiesChatMessageEvent.KIND -> "Live Chats"
-        LiveActivitiesEvent.KIND -> "Live Streams"
-        LnZapEvent.KIND -> "Zaps"
-        LnZapPaymentRequestEvent.KIND -> "NWC Request"
-        LnZapPaymentResponseEvent.KIND -> "NWC Response"
-        LnZapPrivateEvent.KIND -> "Private Zaps"
-        LnZapRequestEvent.KIND -> "Zap Req"
-        LongTextNoteEvent.KIND -> "Blogs"
-        MeetingRoomEvent.KIND -> "Meeting Room"
-        MeetingRoomPresenceEvent.KIND -> "Room Presence"
-        MeetingSpaceEvent.KIND -> "Meeting Space"
-        MetadataEvent.KIND -> "Profile"
-        MuteListEvent.KIND -> "Mute List"
-        NNSEvent.KIND -> "NNS"
-        NipTextEvent.KIND -> "NIP"
-        NostrConnectEvent.KIND -> "Nostr Connect"
-        NIP90StatusEvent.KIND -> "DVM Status"
-        NIP90ContentDiscoveryRequestEvent.KIND -> "DVM Content Req"
-        NIP90ContentDiscoveryResponseEvent.KIND -> "DVM Content Resp"
-        NIP90UserDiscoveryRequestEvent.KIND -> "DVM User Req"
-        NIP90UserDiscoveryResponseEvent.KIND -> "DVM User Resp"
-        OtsEvent.KIND -> "OTS"
-        PaymentTargetsEvent.KIND -> "PayTo"
-        PeopleListEvent.KIND -> "People Lists"
-        PictureEvent.KIND -> "Pictures"
-        PinListEvent.KIND -> "Pins"
-        PollNoteEvent.KIND -> "Zap Poll"
-        PollEvent.KIND -> "Poll"
-        PollResponseEvent.KIND -> "Poll Response"
-        PrivateDmEvent.KIND -> "NIP-04 DMs"
-        PrivateOutboxRelayListEvent.KIND -> "Private Relays"
-        ProxyRelayListEvent.KIND -> "Proxy Relays"
-        PublicMessageEvent.KIND -> "Public Message"
-        ReactionEvent.KIND -> "Reactions"
-        ContactCardEvent.KIND -> "Contact Card"
-        RelayAuthEvent.KIND -> "Relay Auth"
-        RelaySetEvent.KIND -> "Relay Set"
-        ReportEvent.KIND -> "Reports"
-        RepostEvent.KIND -> "Reposts"
-        RequestToVanishEvent.KIND -> "User Delete"
-        SealedRumorEvent.KIND -> "Seals"
-        SearchRelayListEvent.KIND -> "Search Relays"
-        StatusEvent.KIND -> "User Status"
-        TextNoteEvent.KIND -> "Notes"
-        TextNoteModificationEvent.KIND -> "Edits"
-        TorrentEvent.KIND -> "Torrents"
-        TorrentCommentEvent.KIND -> "Torrent Comments"
-        TrustedRelayListEvent.KIND -> "Trusted Relays"
-        TrustProviderListEvent.KIND -> "Trusted Providers"
-        VideoHorizontalEvent.KIND -> "Video (Repl)"
-        VideoVerticalEvent.KIND -> "Shorts (Repl)"
-        VideoNormalEvent.KIND -> "Video"
-        VideoShortEvent.KIND -> "Shorts"
-        VoiceEvent.KIND -> "Voice Msg"
-        VoiceReplyEvent.KIND -> "Voice Reply"
-        WikiNoteEvent.KIND -> "Wiki"
-        else -> "k$kind"
+        AdvertisedRelayListEvent.KIND -> R.string.kind_outbox_relays
+        AppDefinitionEvent.KIND -> R.string.kind_apps
+        AppRecommendationEvent.KIND -> R.string.kind_app_recommendations
+        AppSpecificDataEvent.KIND -> R.string.kind_user_settings
+        AudioHeaderEvent.KIND -> R.string.kind_audio_header
+        AudioTrackEvent.KIND -> R.string.kind_audio_track
+        BadgeAwardEvent.KIND -> R.string.kind_badge_awards
+        BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
+        BadgeProfilesEvent.KIND -> R.string.kind_profile_badges
+        BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
+        BlossomServersEvent.KIND -> R.string.kind_blossom_servers
+        BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
+        BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays
+        BookmarkListEvent.KIND -> R.string.kind_bookmark_list
+        CalendarDateSlotEvent.KIND -> R.string.kind_day_appointment
+        CalendarEvent.KIND -> R.string.kind_calendar
+        CalendarTimeSlotEvent.KIND -> R.string.kind_appointment
+        CalendarRSVPEvent.KIND -> R.string.kind_appt_rsvp
+        ChessGameEvent.KIND -> R.string.kind_chess_games
+        JesterEvent.KIND -> R.string.kind_chess_auth
+        FavoriteRelayListEvent.KIND -> R.string.kind_favorite_relays
+        LiveChessGameChallengeEvent.KIND -> R.string.kind_chess_challenges
+        LiveChessGameAcceptEvent.KIND -> R.string.kind_chess_game_accept
+        LiveChessMoveEvent.KIND -> R.string.kind_chess_move
+        LiveChessGameEndEvent.KIND -> R.string.kind_chess_game_end
+        LiveChessDrawOfferEvent.KIND -> R.string.kind_chess_draw_offer
+        ChannelCreateEvent.KIND -> R.string.kind_channel_definition
+        ChannelHideMessageEvent.KIND -> R.string.kind_channel_hide_msg
+        ChannelListEvent.KIND -> R.string.kind_channel_list
+        ChannelMessageEvent.KIND -> R.string.kind_channel_message
+        ChannelMetadataEvent.KIND -> R.string.kind_channel_metadata
+        ChannelMuteUserEvent.KIND -> R.string.kind_channel_mute_user
+        ChatMessageEncryptedFileHeaderEvent.KIND -> R.string.kind_dm_file
+        ChatMessageEvent.KIND -> R.string.kind_dm_message
+        ChatMessageRelayListEvent.KIND -> R.string.kind_dm_relays
+        ClassifiedsEvent.KIND -> R.string.kind_classifieds
+        CommentEvent.KIND -> R.string.kind_comments
+        CommunityDefinitionEvent.KIND -> R.string.kind_community_def
+        CommunityListEvent.KIND -> R.string.kind_community_list
+        CommunityPostApprovalEvent.KIND -> R.string.kind_community_post
+        ContactListEvent.KIND -> R.string.kind_follow_list
+        DeletionEvent.KIND -> R.string.kind_deletions
+        DraftWrapEvent.KIND -> R.string.kind_drafts
+        EmojiPackEvent.KIND -> R.string.kind_emoji_packs
+        EmojiPackSelectionEvent.KIND -> R.string.kind_emoji_pack_list
+        EphemeralChatEvent.KIND -> R.string.kind_ephemeral_chat
+        EphemeralChatListEvent.KIND -> R.string.kind_ephemeral_chatrooms
+        FileHeaderEvent.KIND -> R.string.kind_file_headers
+        ProfileGalleryEntryEvent.KIND -> R.string.kind_profile_gallery
+        FileServersEvent.KIND -> R.string.kind_file_servers
+        FileStorageEvent.KIND -> R.string.kind_blob_data
+        FileStorageHeaderEvent.KIND -> R.string.kind_blob_headers
+        FhirResourceEvent.KIND -> R.string.kind_medical_data
+        FollowListEvent.KIND -> R.string.kind_follow_packs
+        GenericRepostEvent.KIND -> R.string.kind_reposts_16
+        GeohashListEvent.KIND -> R.string.kind_geohash_follows
+        GiftWrapEvent.KIND -> R.string.kind_gift_wraps
+        GitIssueEvent.KIND -> R.string.kind_git_issue
+        GitPatchEvent.KIND -> R.string.kind_git_patch
+        GitRepositoryEvent.KIND -> R.string.kind_git_repo
+        GitReplyEvent.KIND -> R.string.kind_git_reply
+        GoalEvent.KIND -> R.string.kind_zap_goals
+        HashtagListEvent.KIND -> R.string.kind_hashtag_follows
+        HighlightEvent.KIND -> R.string.kind_highlights
+        HTTPAuthorizationEvent.KIND -> R.string.kind_http_auth
+        IndexerRelayListEvent.KIND -> R.string.kind_index_relay_list
+        InteractiveStoryPrologueEvent.KIND -> R.string.kind_adventure_prologue
+        InteractiveStorySceneEvent.KIND -> R.string.kind_adventure_scene
+        InteractiveStoryReadingStateEvent.KIND -> R.string.kind_adventure_reading
+        LabeledBookmarkListEvent.KIND -> R.string.kind_named_bookmarks
+        LiveActivitiesChatMessageEvent.KIND -> R.string.kind_live_chats
+        LiveActivitiesEvent.KIND -> R.string.kind_live_streams
+        LnZapEvent.KIND -> R.string.kind_zaps
+        LnZapPaymentRequestEvent.KIND -> R.string.kind_nwc_request
+        LnZapPaymentResponseEvent.KIND -> R.string.kind_nwc_response
+        LnZapPrivateEvent.KIND -> R.string.kind_private_zaps
+        LnZapRequestEvent.KIND -> R.string.kind_zap_req
+        LongTextNoteEvent.KIND -> R.string.kind_blogs
+        MeetingRoomEvent.KIND -> R.string.kind_meeting_room
+        MeetingRoomPresenceEvent.KIND -> R.string.kind_room_presence
+        MeetingSpaceEvent.KIND -> R.string.kind_meeting_space
+        MetadataEvent.KIND -> R.string.kind_profile
+        MuteListEvent.KIND -> R.string.kind_mute_list
+        NNSEvent.KIND -> R.string.kind_nns
+        NipTextEvent.KIND -> R.string.kind_nip
+        NostrConnectEvent.KIND -> R.string.kind_nostr_connect
+        NIP90StatusEvent.KIND -> R.string.kind_dvm_status
+        NIP90ContentDiscoveryRequestEvent.KIND -> R.string.kind_dvm_content_req
+        NIP90ContentDiscoveryResponseEvent.KIND -> R.string.kind_dvm_content_resp
+        NIP90UserDiscoveryRequestEvent.KIND -> R.string.kind_dvm_user_req
+        NIP90UserDiscoveryResponseEvent.KIND -> R.string.kind_dvm_user_resp
+        OtsEvent.KIND -> R.string.kind_ots
+        PaymentTargetsEvent.KIND -> R.string.kind_pay_to
+        PeopleListEvent.KIND -> R.string.kind_people_lists
+        PictureEvent.KIND -> R.string.kind_pictures
+        PinListEvent.KIND -> R.string.kind_pins
+        PollNoteEvent.KIND -> R.string.kind_zap_poll
+        PollEvent.KIND -> R.string.kind_poll
+        PollResponseEvent.KIND -> R.string.kind_poll_response
+        PrivateDmEvent.KIND -> R.string.kind_nip04_dms
+        PrivateOutboxRelayListEvent.KIND -> R.string.kind_private_relays
+        ProxyRelayListEvent.KIND -> R.string.kind_proxy_relays
+        PublicMessageEvent.KIND -> R.string.kind_public_message
+        ReactionEvent.KIND -> R.string.kind_reactions
+        ContactCardEvent.KIND -> R.string.kind_contact_card
+        RelayAuthEvent.KIND -> R.string.kind_relay_auth
+        RelaySetEvent.KIND -> R.string.kind_relay_set
+        ReportEvent.KIND -> R.string.kind_reports
+        RepostEvent.KIND -> R.string.kind_reposts
+        RequestToVanishEvent.KIND -> R.string.kind_user_delete
+        SealedRumorEvent.KIND -> R.string.kind_seals
+        SearchRelayListEvent.KIND -> R.string.kind_search_relays
+        StatusEvent.KIND -> R.string.kind_user_status
+        TextNoteEvent.KIND -> R.string.kind_notes
+        TextNoteModificationEvent.KIND -> R.string.kind_edits
+        TorrentEvent.KIND -> R.string.kind_torrents
+        TorrentCommentEvent.KIND -> R.string.kind_torrent_comments
+        TrustedRelayListEvent.KIND -> R.string.kind_trusted_relays
+        TrustProviderListEvent.KIND -> R.string.kind_trusted_providers
+        VideoHorizontalEvent.KIND -> R.string.kind_video_repl
+        VideoVerticalEvent.KIND -> R.string.kind_shorts_repl
+        VideoNormalEvent.KIND -> R.string.kind_video
+        VideoShortEvent.KIND -> R.string.kind_shorts
+        VoiceEvent.KIND -> R.string.kind_voice_msg
+        VoiceReplyEvent.KIND -> R.string.kind_voice_reply
+        WikiNoteEvent.KIND -> R.string.kind_wiki
+        else -> -1
     }
 
 val posts = setOf(0, 1, 6, 7, 16, 30023)
@@ -616,8 +613,8 @@ val reports = setOf(ReportEvent.KIND, MuteListEvent.KIND, DeletionEvent.KIND, Re
 
 @Composable
 private fun KindChip(kind: Int) {
-    val context = LocalContext.current
-    val name = kindDisplayName(kind, context)
+    val nameResId = kindDisplayName(kind)
+    val name = if (nameResId != -1) stringResource(nameResId) else "k$kind"
     val (bg, fg) =
         when (kind) {
             in posts -> {
