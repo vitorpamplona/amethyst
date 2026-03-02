@@ -20,10 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
-import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Build
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,14 +29,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
@@ -50,10 +43,8 @@ import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -132,13 +123,10 @@ fun RenderTopButtons(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val shareDialogVisible = remember { mutableStateOf(false) }
-
-    val writeStoragePermission =
-        rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) {
-            if (it) accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
+    val saveAction =
+        rememberSaveMediaAction { context ->
+            accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
         }
 
     LaunchedEffect(controllerVisible.value) {
@@ -166,21 +154,7 @@ fun RenderTopButtons(
                 showSave = !isLive,
                 showPip = pipSupported,
                 onShareClick = { shareDialogVisible.value = true },
-                onSaveClick = {
-                    scope.launch {
-                        Toast
-                            .makeText(
-                                context,
-                                stringRes(context, R.string.video_download_has_started_toast),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || writeStoragePermission.status.isGranted) {
-                        accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
-                    } else {
-                        writeStoragePermission.launchPermissionRequest()
-                    }
-                },
+                onSaveClick = saveAction,
                 onPipClick = onPictureInPictureClick,
             )
 
