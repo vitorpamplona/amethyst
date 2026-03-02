@@ -84,6 +84,19 @@ class FavoriteRelayListState(
                 emptySet(),
             )
 
+    suspend fun addRelay(relay: NormalizedRelayUrl): FavoriteRelayListEvent {
+        val current = normalizeFavoriteRelayListWithBackupNoDefaults(favoriteListNote).toMutableList()
+        if (relay !in current) current.add(relay)
+        return saveRelayList(current)
+    }
+
+    suspend fun removeRelay(relay: NormalizedRelayUrl): FavoriteRelayListEvent? {
+        val current = normalizeFavoriteRelayListWithBackupNoDefaults(favoriteListNote).toMutableList()
+        if (relay !in current) return null
+        current.remove(relay)
+        return saveRelayList(current)
+    }
+
     suspend fun saveRelayList(FavoriteRelays: List<NormalizedRelayUrl>): FavoriteRelayListEvent {
         val relayListForFavorite = getFavoriteRelayList()
 
