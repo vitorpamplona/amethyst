@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerSta
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
-import com.vitorpamplona.amethyst.service.playback.pip.makePipParams
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
 
