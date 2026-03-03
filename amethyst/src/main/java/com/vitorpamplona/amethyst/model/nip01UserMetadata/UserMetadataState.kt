@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -51,6 +52,12 @@ class UserMetadataState(
 
     fun getUserMetadataEvent(): MetadataEvent? = note.event as? MetadataEvent
 
+    fun getIdentitiesEventAddress() = ExternalIdentitiesEvent.createAddress(signer.pubKey)
+
+    val identitiesNote = cache.getOrCreateAddressableNote(getIdentitiesEventAddress())
+
+    fun getExternalIdentitiesEvent(): ExternalIdentitiesEvent? = identitiesNote.event as? ExternalIdentitiesEvent
+
     suspend fun sendNewUserMetadata(
         name: String? = null,
         displayName: String? = null,
@@ -62,9 +69,6 @@ class UserMetadataState(
         nip05: String? = null,
         lnAddress: String? = null,
         lnURL: String? = null,
-        twitter: String? = null,
-        mastodon: String? = null,
-        github: String? = null,
     ): MetadataEvent {
         val latest = getUserMetadataEvent()
 
@@ -82,9 +86,6 @@ class UserMetadataState(
                     nip05 = nip05,
                     lnAddress = lnAddress,
                     lnURL = lnURL,
-                    twitter = twitter,
-                    mastodon = mastodon,
-                    github = github,
                 )
             } else {
                 MetadataEvent.createNew(
@@ -98,6 +99,29 @@ class UserMetadataState(
                     nip05 = nip05,
                     lnAddress = lnAddress,
                     lnURL = lnURL,
+                )
+            }
+
+        return signer.sign(template)
+    }
+
+    suspend fun sendNewUserIdentities(
+        twitter: String? = null,
+        mastodon: String? = null,
+        github: String? = null,
+    ): ExternalIdentitiesEvent {
+        val latest = getExternalIdentitiesEvent()
+
+        val template =
+            if (latest != null) {
+                ExternalIdentitiesEvent.updateFromPast(
+                    latest = latest,
+                    twitter = twitter,
+                    mastodon = mastodon,
+                    github = github,
+                )
+            } else {
+                ExternalIdentitiesEvent.createNew(
                     twitter = twitter,
                     mastodon = mastodon,
                     github = github,

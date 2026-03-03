@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
@@ -81,6 +82,7 @@ private const val IDENTITY_ICON_CACHE_KEY = 0
 fun DrawAdditionalInfo(
     baseUser: User,
     appRecommendations: UserAppRecommendationsFeedViewModel,
+    externalIdentities: UserExternalIdentitiesViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -88,6 +90,7 @@ fun DrawAdditionalInfo(
     val user = userState ?: return
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
+    val identities by externalIdentities.identities.collectAsStateWithLifecycle()
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
         CreateTextWithEmoji(
@@ -183,8 +186,9 @@ fun DrawAdditionalInfo(
         }
     DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
 
-    if (user.identities.isNotEmpty()) {
-        user.identities.forEach { identity: IdentityClaimTag ->
+    val displayIdentities = identities.ifEmpty { user.identities }
+    if (displayIdentities.isNotEmpty()) {
+        displayIdentities.forEach { identity: IdentityClaimTag ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,

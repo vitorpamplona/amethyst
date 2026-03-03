@@ -132,6 +132,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
@@ -562,6 +563,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         return false
     }
+
+    fun consume(
+        event: ExternalIdentitiesEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: ContactListEvent,
@@ -3059,6 +3066,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is EmojiPackSelectionEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatListEvent -> consume(event, relay, wasVerified)
+                is ExternalIdentitiesEvent -> consume(event, relay, wasVerified)
                 is GenericRepostEvent -> consume(event, relay, wasVerified)
                 is FhirResourceEvent -> consume(event, relay, wasVerified)
                 is FileHeaderEvent -> consume(event, relay, wasVerified)
