@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
@@ -82,18 +83,23 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info.nip05 ?: ""
             lnAddress.value = it.info.lud16 ?: ""
             lnURL.value = it.info.lud06 ?: ""
+        }
 
-            twitter.value = ""
-            github.value = ""
-            mastodon.value = ""
+        twitter.value = ""
+        github.value = ""
+        mastodon.value = ""
 
-            // TODO: Validate Telegram input, somehow.
-            it.identities.forEach { identity ->
-                when (identity) {
-                    is TwitterIdentity -> twitter.value = identity.toProofUrl()
-                    is GitHubIdentity -> github.value = identity.toProofUrl()
-                    is MastodonIdentity -> mastodon.value = identity.toProofUrl()
-                }
+        // Load identities from kind 10011 first, fall back to kind 0 for backwards compat
+        val identities =
+            account.userMetadata.getExternalIdentitiesEvent()?.identityClaims()
+                ?: account.userProfile().metadataOrNull()?.flow?.value?.identities
+                ?: emptyList()
+
+        identities.forEach { identity ->
+            when (identity) {
+                is TwitterIdentity -> twitter.value = identity.toProofUrl()
+                is GitHubIdentity -> github.value = identity.toProofUrl()
+                is MastodonIdentity -> mastodon.value = identity.toProofUrl()
             }
         }
     }
@@ -111,12 +117,17 @@ class NewUserMetadataViewModel : ViewModel() {
                 nip05 = nip05.value,
                 lnAddress = lnAddress.value,
                 lnURL = lnURL.value,
+            )
+
+        val identities =
+            account.userMetadata.sendNewUserIdentities(
                 twitter = twitter.value,
                 mastodon = mastodon.value,
                 github = github.value,
             )
 
         account.sendLiterallyEverywhere(metadata)
+        account.sendLiterallyEverywhere(identities)
 
         clear()
     }
