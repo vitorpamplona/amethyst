@@ -113,8 +113,6 @@ class ElectrumxClient(
         val DEFAULT_SERVERS =
             listOf(
                 ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("ulrichard.ch", 50006, useSsl = true),
-                ElectrumxServer("nmc2.lelux.fi", 50006, useSsl = true),
                 ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
                 ElectrumxServer("46.229.238.187", 57002, useSsl = true, trustAllCerts = true),
             )
