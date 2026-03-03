@@ -479,6 +479,7 @@
 
     <string name="looking_for_event">"Looking for Event %1$s"</string>
 
+    <string name="send_zap">Send Zap</string>
     <string name="custom_zaps_add_a_message">Add a public message</string>
     <string name="custom_zaps_add_a_message_private">Add a private message</string>
     <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
