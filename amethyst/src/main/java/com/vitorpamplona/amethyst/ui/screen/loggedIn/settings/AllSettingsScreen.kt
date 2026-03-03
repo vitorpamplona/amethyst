@@ -57,10 +57,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeDialog
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -82,16 +80,6 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val tint = MaterialTheme.colorScheme.onBackground
-
-    var showReactionDialog by remember { mutableStateOf(false) }
-
-    if (showReactionDialog) {
-        UpdateReactionTypeDialog(
-            onClose = { showReactionDialog = false },
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -119,7 +107,7 @@ fun AllSettingsScreen(
                 title = R.string.reactions,
                 icon = Icons.Outlined.FavoriteBorder,
                 tint = tint,
-                onClick = { showReactionDialog = true },
+                onClick = { nav.nav(Route.UpdateReactionType) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
@@ -143,22 +131,13 @@ fun AllSettingsScreen(
                 onClick = { nav.nav(Route.UserSettings) },
             )
             accountViewModel.account.settings.keyPair.privKey?.let {
-                var backupDialogOpen by remember { mutableStateOf(false) }
-
                 HorizontalDivider()
                 SettingsNavigationRow(
                     title = R.string.backup_keys,
                     icon = Icons.Outlined.Key,
                     tint = tint,
-                    onClick = {
-                        nav.closeDrawer()
-                        backupDialogOpen = true
-                    },
+                    onClick = { nav.nav(Route.AccountBackup) },
                 )
-
-                if (backupDialogOpen) {
-                    AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
-                }
             }
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.app_settings)

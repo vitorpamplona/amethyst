@@ -871,7 +871,6 @@ fun LikeReaction(
     heartSizeModifier: Modifier = Size18Modifier,
     iconFontSize: TextUnit = Font14SP,
 ) {
-    var wantsToChangeReactionSymbol by remember { mutableStateOf(false) }
     var wantsToReact by remember { mutableStateOf(false) }
 
     ClickableBox(
@@ -883,7 +882,7 @@ fun LikeReaction(
                 onWantsToSignReaction = { accountViewModel.reactToOrDelete(baseNote) },
             )
         },
-        onLongClick = { wantsToChangeReactionSymbol = true },
+        onLongClick = { nav.nav(Route.UpdateReactionType) },
     ) {
         ObserveLikeIcon(baseNote, accountViewModel) { reactionType ->
             CrossfadeIfEnabled(targetState = reactionType, contentAlignment = Center, label = "LikeIcon", accountViewModel = accountViewModel) {
@@ -895,14 +894,6 @@ fun LikeReaction(
             }
         }
 
-        if (wantsToChangeReactionSymbol) {
-            UpdateReactionTypeDialog(
-                { wantsToChangeReactionSymbol = false },
-                accountViewModel = accountViewModel,
-                nav,
-            )
-        }
-
         if (wantsToReact) {
             ReactionChoicePopup(
                 baseNote,
@@ -911,7 +902,7 @@ fun LikeReaction(
                 onDismiss = { wantsToReact = false },
                 onChangeAmount = {
                     wantsToReact = false
-                    wantsToChangeReactionSymbol = true
+                    nav.nav(Route.UpdateReactionType)
                 },
             )
         }

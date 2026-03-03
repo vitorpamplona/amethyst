@@ -81,6 +81,8 @@ sealed class Route {
 
     @Serializable object AllSettings : Route()
 
+    @Serializable object AccountBackup : Route()
+
     @Serializable object Settings : Route()
 
     @Serializable object UserSettings : Route()
@@ -112,6 +114,8 @@ sealed class Route {
     @Serializable object EditRelays : Route()
 
     @Serializable object EditMediaServers : Route()
+
+    @Serializable object UpdateReactionType : Route()
 
     @Serializable data class Nip47NWCSetup(
         val nip47: String? = null,
@@ -336,6 +340,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.ContentDiscovery>() -> entry.toRoute<Route.ContentDiscovery>()
         dest.hasRoute<Route.Drafts>() -> entry.toRoute<Route.Drafts>()
         dest.hasRoute<Route.AllSettings>() -> entry.toRoute<Route.AllSettings>()
+        dest.hasRoute<Route.AccountBackup>() -> entry.toRoute<Route.AccountBackup>()
         dest.hasRoute<Route.Settings>() -> entry.toRoute<Route.Settings>()
         dest.hasRoute<Route.EditProfile>() -> entry.toRoute<Route.EditProfile>()
         dest.hasRoute<Route.Profile>() -> entry.toRoute<Route.Profile>()
@@ -355,6 +360,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.EventRedirect>() -> entry.toRoute<Route.EventRedirect>()
         dest.hasRoute<Route.EditRelays>() -> entry.toRoute<Route.EditRelays>()
         dest.hasRoute<Route.EditMediaServers>() -> entry.toRoute<Route.EditMediaServers>()
+        dest.hasRoute<Route.UpdateReactionType>() -> entry.toRoute<Route.UpdateReactionType>()
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
         dest.hasRoute<Route.UpdateZapAmount>() -> entry.toRoute<Route.UpdateZapAmount>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
