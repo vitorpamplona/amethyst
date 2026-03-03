@@ -113,6 +113,8 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object UpdateReactionType : Route()
+
     @Serializable data class Nip47NWCSetup(
         val nip47: String? = null,
     ) : Route()
@@ -351,6 +353,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.EventRedirect>() -> entry.toRoute<Route.EventRedirect>()
         dest.hasRoute<Route.EditRelays>() -> entry.toRoute<Route.EditRelays>()
         dest.hasRoute<Route.EditMediaServers>() -> entry.toRoute<Route.EditMediaServers>()
+        dest.hasRoute<Route.UpdateReactionType>() -> entry.toRoute<Route.UpdateReactionType>()
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
         dest.hasRoute<Route.NewShortNote>() -> entry.toRoute<Route.NewShortNote>()
