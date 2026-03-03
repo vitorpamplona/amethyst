@@ -352,6 +352,7 @@ class CardFeedContentState(
     }
 
     fun deleteFromFeed(deletedNotes: Set<Note>) {
+        // TODO: Implement deletion of notes from the notification feed
     }
 
     private fun refreshFromOldState(newItems: Set<Note>) {

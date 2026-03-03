@@ -102,7 +102,9 @@ class ZapOptionViewModel : ViewModel() {
 
     fun value(): Long? = customAmount.text.trim().toLongOrNull()
 
-    fun cancel() {}
+    fun cancel() {
+        // No cleanup needed; dialog state is reset on close
+    }
 }
 
 @Composable
