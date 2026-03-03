@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,11 +44,13 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,6 +81,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
@@ -90,7 +93,7 @@ import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -128,170 +131,150 @@ fun AccountBackupScreenPreview() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun AccountBackupScreenContent(
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
 ) {
-    Surface(
-        modifier =
-            Modifier
-                .verticalScroll(rememberScrollState()),
+    Scaffold(
+        topBar = {
+            TopBarWithBackButton(
+                stringRes(R.string.backup_keys),
+                popBack = onClose,
+            )
+        },
     ) {
         Column(
-            modifier =
-            Modifier,
+            Modifier
+                .fillMaxSize()
+                .padding(it)
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            val content1 = stringRes(R.string.account_backup_tips2_md)
+
+            val astNode1 =
+                remember {
+                    CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content1)
+                }
+
+            RichText(
+                style = RichTextStyle().resolveDefaults(),
+                renderer = null,
             ) {
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier,
-                ) {
-                    ArrowBackIcon()
+                BasicMarkdown(astNode1)
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row {
+                Column {
+                    NSecCopyButton(accountViewModel)
+                }
+
+                Column {
+                    QrCodeButton(accountViewModel)
                 }
             }
 
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+            Spacer(modifier = Modifier.height(30.dp))
+
+            val content = stringRes(R.string.account_backup_tips3_md)
+
+            val astNode =
+                remember {
+                    CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
+                }
+
+            RichText(
+                style = RichTextStyle().resolveDefaults(),
+                renderer = null,
             ) {
-                val content1 = stringRes(R.string.account_backup_tips2_md)
+                BasicMarkdown(astNode)
+            }
 
-                val astNode1 =
-                    remember {
-                        CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content1)
-                    }
+            val password = remember { mutableStateOf(TextFieldValue("")) }
+            var errorMessage by remember { mutableStateOf("") }
+            var showCharsPassword by remember { mutableStateOf(false) }
 
-                RichText(
-                    style = RichTextStyle().resolveDefaults(),
-                    renderer = null,
-                ) {
-                    BasicMarkdown(astNode1)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Row {
-                    Column {
-                        NSecCopyButton(accountViewModel)
-                    }
-
-                    Column {
-                        QrCodeButton(accountViewModel)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(30.dp))
-
-                val content = stringRes(R.string.account_backup_tips3_md)
-
-                val astNode =
-                    remember {
-                        CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
-                    }
-
-                RichText(
-                    style = RichTextStyle().resolveDefaults(),
-                    renderer = null,
-                ) {
-                    BasicMarkdown(astNode)
-                }
-
-                val password = remember { mutableStateOf(TextFieldValue("")) }
-                var errorMessage by remember { mutableStateOf("") }
-                var showCharsPassword by remember { mutableStateOf(false) }
-
-                val autofillNode =
-                    AutofillNode(
-                        autofillTypes = listOf(AutofillType.Password),
-                        onFill = { password.value = TextFieldValue(it) },
-                    )
-                val autofill = LocalAutofill.current
-                LocalAutofillTree.current += autofillNode
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    modifier =
-                        Modifier
-                            .onGloballyPositioned { coordinates ->
-                                autofillNode.boundingBox = coordinates.boundsInWindow()
-                            }.onFocusChanged { focusState ->
-                                autofill?.run {
-                                    if (focusState.isFocused) {
-                                        requestAutofillForNode(autofillNode)
-                                    } else {
-                                        cancelAutofillForNode(autofillNode)
-                                    }
-                                }
-                            },
-                    value = password.value,
-                    onValueChange = {
-                        password.value = it
-                        if (errorMessage.isNotEmpty()) {
-                            errorMessage = ""
-                        }
-                    },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            autoCorrectEnabled = false,
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Go,
-                        ),
-                    placeholder = {
-                        Text(
-                            text = stringRes(R.string.ncryptsec_password),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    trailingIcon = {
-                        Row {
-                            IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
-                                Icon(
-                                    imageVector =
-                                        if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                    contentDescription =
-                                        if (showCharsPassword) {
-                                            stringRes(R.string.show_password)
-                                        } else {
-                                            stringRes(
-                                                R.string.hide_password,
-                                            )
-                                        },
-                                )
-                            }
-                        }
-                    },
-                    visualTransformation =
-                        if (showCharsPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            val autofillNode =
+                AutofillNode(
+                    autofillTypes = listOf(AutofillType.Password),
+                    onFill = { password.value = TextFieldValue(it) },
                 )
+            val autofill = LocalAutofill.current
+            LocalAutofillTree.current += autofillNode
 
-                if (errorMessage.isNotBlank()) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            OutlinedTextField(
+                modifier =
+                    Modifier
+                        .onGloballyPositioned { coordinates ->
+                            autofillNode.boundingBox = coordinates.boundsInWindow()
+                        }.onFocusChanged { focusState ->
+                            autofill?.run {
+                                if (focusState.isFocused) {
+                                    requestAutofillForNode(autofillNode)
+                                } else {
+                                    cancelAutofillForNode(autofillNode)
+                                }
+                            }
+                        },
+                value = password.value,
+                onValueChange = {
+                    password.value = it
+                    if (errorMessage.isNotEmpty()) {
+                        errorMessage = ""
+                    }
+                },
+                keyboardOptions =
+                    KeyboardOptions(
+                        autoCorrectEnabled = false,
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Go,
+                    ),
+                placeholder = {
                     Text(
-                        text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = stringRes(R.string.ncryptsec_password),
+                        color = MaterialTheme.colorScheme.placeholderText,
                     )
-                }
+                },
+                trailingIcon = {
+                    Row {
+                        IconButton(onClick = { showCharsPassword = !showCharsPassword }) {
+                            Icon(
+                                imageVector =
+                                    if (showCharsPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription =
+                                    if (showCharsPassword) {
+                                        stringRes(R.string.show_password)
+                                    } else {
+                                        stringRes(
+                                            R.string.hide_password,
+                                        )
+                                    },
+                            )
+                        }
+                    }
+                },
+                visualTransformation =
+                    if (showCharsPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                EncryptNSecCopyButton(accountViewModel, password)
-
-                Spacer(modifier = Modifier.height(30.dp))
+            if (errorMessage.isNotBlank()) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            EncryptNSecCopyButton(accountViewModel, password)
         }
     }
 }
