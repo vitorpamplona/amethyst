@@ -334,11 +334,11 @@ private fun NavigateIfIntentRequested(
     accountViewModel: AccountViewModel,
     accountStateViewModel: AccountStateViewModel,
 ) {
-    accountViewModel.firstRoute?.let {
+    accountViewModel.firstRoute?.let { newRoute ->
         accountViewModel.firstRoute = null
-        val currentRoute = getRouteWithArguments(nav.controller)
-        if (!isSameRoute(currentRoute, it)) {
-            nav.newStack(it)
+        val currentRoute = getRouteWithArguments(newRoute::class, nav.controller)
+        if (!isSameRoute(currentRoute, newRoute)) {
+            nav.newStack(newRoute)
         }
     }
 
@@ -389,7 +389,7 @@ private fun NavigateIfIntentRequested(
                         if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
                             accountStateViewModel.checkAndSwitchUserSync(npub, nextRoute)
                         } else {
-                            val currentRoute = getRouteWithArguments(nav.controller)
+                            val currentRoute = getRouteWithArguments(nextRoute::class, nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
                                 nav.newStack(nextRoute)
                             }
@@ -445,7 +445,7 @@ private fun NavigateIfIntentRequested(
                                     if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
                                         accountStateViewModel.checkAndSwitchUserSync(npub, newPage)
                                     } else {
-                                        val currentRoute = getRouteWithArguments(nav.controller)
+                                        val currentRoute = getRouteWithArguments(newPage::class, nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {
                                             nav.newStack(newPage)
                                         }
