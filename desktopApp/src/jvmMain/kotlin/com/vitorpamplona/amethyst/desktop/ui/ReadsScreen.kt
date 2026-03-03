@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.desktop.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -259,16 +261,17 @@ fun ReadsScreen(
         }
     }
 
+    @OptIn(ExperimentalLayoutApi::class)
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
-        Row(
+        // Header — wraps on narrow columns
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
+                    verticalArrangement = Arrangement.Center,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(

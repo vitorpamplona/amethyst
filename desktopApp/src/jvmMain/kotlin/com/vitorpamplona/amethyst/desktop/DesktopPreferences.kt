@@ -36,6 +36,7 @@ object DesktopPreferences {
     private const val KEY_FEED_MODE = "feed_mode"
     private const val KEY_LAST_SCREEN = "last_screen"
     private const val KEY_DECK_COLUMNS = "deck_columns"
+    private const val KEY_LAYOUT_MODE = "layout_mode"
 
     var feedMode: FeedMode
         get() {
@@ -60,5 +61,11 @@ object DesktopPreferences {
         get() = prefs.get(KEY_DECK_COLUMNS, "")
         set(value) {
             prefs.put(KEY_DECK_COLUMNS, value)
+        }
+
+    var layoutMode: String
+        get() = prefs.get(KEY_LAYOUT_MODE, "SINGLE_PANE")
+        set(value) {
+            prefs.put(KEY_LAYOUT_MODE, value)
         }
 }

@@ -21,13 +21,12 @@
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -64,38 +64,41 @@ fun DeckLayout(
     modifier: Modifier = Modifier,
 ) {
     val columns by deckState.columns.collectAsState()
-    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
 
-    Row(
-        modifier = modifier.fillMaxSize().horizontalScroll(scrollState),
-    ) {
-        columns.forEachIndexed { index, column ->
-            if (index > 0) {
-                DraggableDivider(
-                    onDrag = { delta ->
-                        val leftCol = columns[index - 1]
-                        val rightCol = columns[index]
-                        deckState.updateColumnWidth(leftCol.id, leftCol.width + delta)
-                        deckState.updateColumnWidth(rightCol.id, rightCol.width - delta)
-                    },
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val availableWidthDp = with(density) { constraints.maxWidth.toDp().value }
+        deckState.setAvailableWidth(availableWidthDp)
+
+        Row(modifier = Modifier.fillMaxSize()) {
+            columns.forEachIndexed { index, column ->
+                if (index > 0) {
+                    DraggableDivider(
+                        onDrag = { delta ->
+                            val leftCol = columns[index - 1]
+                            val rightCol = columns[index]
+                            deckState.resizePair(leftCol.id, rightCol.id, delta, availableWidthDp)
+                        },
+                    )
+                }
+
+                DeckColumnContainer(
+                    column = column,
+                    canClose = columns.size > 1,
+                    onClose = { deckState.removeColumn(column.id) },
+                    onDoubleClickHeader = { deckState.expandColumn(column.id, availableWidthDp) },
+                    relayManager = relayManager,
+                    localCache = localCache,
+                    accountManager = accountManager,
+                    account = account,
+                    nwcConnection = nwcConnection,
+                    subscriptionsCoordinator = subscriptionsCoordinator,
+                    appScope = appScope,
+                    onShowComposeDialog = onShowComposeDialog,
+                    onShowReplyDialog = onShowReplyDialog,
+                    onZapFeedback = onZapFeedback,
                 )
             }
-
-            DeckColumnContainer(
-                column = column,
-                canClose = columns.size > 1,
-                onClose = { deckState.removeColumn(column.id) },
-                relayManager = relayManager,
-                localCache = localCache,
-                accountManager = accountManager,
-                account = account,
-                nwcConnection = nwcConnection,
-                subscriptionsCoordinator = subscriptionsCoordinator,
-                appScope = appScope,
-                onShowComposeDialog = onShowComposeDialog,
-                onShowReplyDialog = onShowReplyDialog,
-                onZapFeedback = onZapFeedback,
-            )
         }
     }
 }

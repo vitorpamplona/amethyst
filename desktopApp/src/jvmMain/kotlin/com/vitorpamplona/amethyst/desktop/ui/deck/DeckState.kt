@@ -34,6 +34,12 @@ class DeckState {
     private val _focusedColumnIndex = MutableStateFlow(0)
     val focusedColumnIndex: StateFlow<Int> = _focusedColumnIndex.asStateFlow()
 
+    private var lastKnownWidth: Float = 0f
+
+    fun setAvailableWidth(width: Float) {
+        lastKnownWidth = width
+    }
+
     fun addColumn(
         type: DeckColumnType,
         afterIndex: Int? = null,
@@ -45,12 +51,24 @@ class DeckState {
             } else {
                 _columns.value + col
             }
-        save()
+        // Auto-fit all columns to available width when known
+        if (lastKnownWidth > 0f) {
+            fitColumnsToWidth(lastKnownWidth)
+        } else {
+            save()
+        }
     }
 
     fun removeColumn(id: String) {
         if (_columns.value.size <= 1) return
-        _columns.value = _columns.value.filter { it.id != id }
+        val removed = _columns.value.find { it.id == id } ?: return
+        val remaining = _columns.value.filter { it.id != id }
+        // Redistribute removed column's width evenly across remaining columns
+        val extra = removed.width / remaining.size
+        _columns.value =
+            remaining.map {
+                it.copy(width = (it.width + extra).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH))
+            }
         if (_focusedColumnIndex.value >= _columns.value.size) {
             _focusedColumnIndex.value = _columns.value.size - 1
         }
@@ -77,6 +95,72 @@ class DeckState {
             _columns.value.map {
                 if (it.id == id) it.copy(width = width.coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)) else it
             }
+        save()
+    }
+
+    fun expandColumn(
+        id: String,
+        availableWidth: Float,
+    ) {
+        val cols = _columns.value
+        val target = cols.find { it.id == id } ?: return
+        val others = cols.filter { it.id != id }
+        // Shrink others to minimum, give the rest to the target
+        val othersMin = others.size * MIN_COLUMN_WIDTH
+        val dividerWidth = (cols.size - 1) * DIVIDER_WIDTH
+        val maxForTarget = (availableWidth - othersMin - dividerWidth).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+        _columns.value =
+            cols.map {
+                if (it.id == id) {
+                    it.copy(width = maxForTarget)
+                } else {
+                    it.copy(width = MIN_COLUMN_WIDTH)
+                }
+            }
+        save()
+    }
+
+    fun resizePair(
+        leftId: String,
+        rightId: String,
+        delta: Float,
+        availableWidth: Float,
+    ) {
+        val cols = _columns.value
+        val left = cols.find { it.id == leftId } ?: return
+        val right = cols.find { it.id == rightId } ?: return
+        // Compute max total allowed (available minus other columns and dividers)
+        val otherWidth = cols.filter { it.id != leftId && it.id != rightId }.sumOf { it.width.toDouble() }.toFloat()
+        val dividerWidth = (cols.size - 1) * DIVIDER_WIDTH
+        val maxPairWidth = availableWidth - otherWidth - dividerWidth
+        var newLeft = (left.width + delta).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+        var newRight = (right.width - delta).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+        // Ensure pair doesn't exceed available space
+        if (newLeft + newRight > maxPairWidth) {
+            if (delta > 0) {
+                newLeft = (maxPairWidth - newRight).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+            } else {
+                newRight = (maxPairWidth - newLeft).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+            }
+        }
+        _columns.value =
+            cols.map {
+                when (it.id) {
+                    leftId -> it.copy(width = newLeft)
+                    rightId -> it.copy(width = newRight)
+                    else -> it
+                }
+            }
+        save()
+    }
+
+    fun fitColumnsToWidth(availableWidth: Float) {
+        val cols = _columns.value
+        if (cols.isEmpty()) return
+        val dividers = (cols.size - 1) * DIVIDER_WIDTH
+        val usable = availableWidth - dividers
+        val perColumn = (usable / cols.size).coerceIn(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH)
+        _columns.value = cols.map { it.copy(width = perColumn) }
         save()
     }
 
@@ -130,6 +214,7 @@ class DeckState {
     companion object {
         const val MIN_COLUMN_WIDTH = 300f
         const val MAX_COLUMN_WIDTH = 800f
+        const val DIVIDER_WIDTH = 4f
 
         val DEFAULT_COLUMNS =
             listOf(

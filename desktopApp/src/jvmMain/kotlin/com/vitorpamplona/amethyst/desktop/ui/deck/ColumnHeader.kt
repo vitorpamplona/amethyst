@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -58,6 +60,7 @@ fun ColumnHeader(
     hasBackStack: Boolean,
     onBack: () -> Unit,
     onClose: () -> Unit,
+    onDoubleClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -66,7 +69,11 @@ fun ColumnHeader(
                 .fillMaxWidth()
                 .height(40.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(horizontal = 8.dp),
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = { onDoubleClick() },
+                    )
+                }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (hasBackStack) {

@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
+import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -91,6 +92,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+
+enum class LayoutMode {
+    SINGLE_PANE,
+    DECK,
+}
 
 /**
  * Desktop navigation state — used for in-column navigation (drill-down).
@@ -133,6 +139,15 @@ fun main() =
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckState = remember { DeckState().also { it.load() } }
         var showAddColumnDialog by remember { mutableStateOf(false) }
+        var layoutMode by remember {
+            mutableStateOf(
+                try {
+                    LayoutMode.valueOf(DesktopPreferences.layoutMode)
+                } catch (e: Exception) {
+                    LayoutMode.SINGLE_PANE
+                },
+            )
+        }
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -198,100 +213,117 @@ fun main() =
                 }
                 Menu("View") {
                     Item(
-                        "Add Column",
+                        if (layoutMode == LayoutMode.DECK) "\u2713 Deck Layout" else "Deck Layout",
                         shortcut =
                             if (isMacOS) {
-                                KeyShortcut(Key.T, meta = true)
+                                KeyShortcut(Key.D, meta = true, shift = true)
                             } else {
-                                KeyShortcut(Key.T, ctrl = true)
-                            },
-                        onClick = { showAddColumnDialog = true },
-                    )
-                    Item(
-                        "Close Column",
-                        shortcut =
-                            if (isMacOS) {
-                                KeyShortcut(Key.W, meta = true)
-                            } else {
-                                KeyShortcut(Key.W, ctrl = true)
+                                KeyShortcut(Key.D, ctrl = true, shift = true)
                             },
                         onClick = {
-                            val cols = deckState.columns.value
-                            val idx = deckState.focusedColumnIndex.value
-                            if (cols.size > 1 && idx in cols.indices) {
-                                deckState.removeColumn(cols[idx].id)
-                            }
+                            layoutMode =
+                                if (layoutMode == LayoutMode.DECK) LayoutMode.SINGLE_PANE else LayoutMode.DECK
+                            DesktopPreferences.layoutMode = layoutMode.name
                         },
                     )
-                    Item(
-                        "Move Column Left",
-                        shortcut =
-                            if (isMacOS) {
-                                KeyShortcut(Key.DirectionLeft, meta = true, shift = true)
-                            } else {
-                                KeyShortcut(Key.DirectionLeft, ctrl = true, shift = true)
-                            },
-                        onClick = {
-                            val idx = deckState.focusedColumnIndex.value
-                            if (idx > 0) {
-                                deckState.moveColumn(idx, idx - 1)
-                                deckState.focusColumn(idx - 1)
-                            }
-                        },
-                    )
-                    Item(
-                        "Move Column Right",
-                        shortcut =
-                            if (isMacOS) {
-                                KeyShortcut(Key.DirectionRight, meta = true, shift = true)
-                            } else {
-                                KeyShortcut(Key.DirectionRight, ctrl = true, shift = true)
-                            },
-                        onClick = {
-                            val idx = deckState.focusedColumnIndex.value
-                            val size = deckState.columns.value.size
-                            if (idx < size - 1) {
-                                deckState.moveColumn(idx, idx + 1)
-                                deckState.focusColumn(idx + 1)
-                            }
-                        },
-                    )
-                    Separator()
-                    // Focus column by index (Cmd/Ctrl+1..9)
-                    val columnKeys =
-                        listOf(
-                            Key.One,
-                            Key.Two,
-                            Key.Three,
-                            Key.Four,
-                            Key.Five,
-                            Key.Six,
-                            Key.Seven,
-                            Key.Eight,
-                            Key.Nine,
-                        )
-                    columnKeys.forEachIndexed { i, key ->
+                    if (layoutMode == LayoutMode.DECK) {
+                        Separator()
                         Item(
-                            "Column ${i + 1}",
+                            "Add Column",
                             shortcut =
                                 if (isMacOS) {
-                                    KeyShortcut(key, meta = true)
+                                    KeyShortcut(Key.T, meta = true)
                                 } else {
-                                    KeyShortcut(key, ctrl = true)
+                                    KeyShortcut(Key.T, ctrl = true)
                                 },
-                            onClick = { deckState.focusColumn(i) },
+                            onClick = { showAddColumnDialog = true },
                         )
-                    }
-                    Separator()
-                    Menu("Add Column...") {
-                        Item("Home Feed", onClick = { deckState.addColumn(DeckColumnType.HomeFeed) })
-                        Item("Notifications", onClick = { deckState.addColumn(DeckColumnType.Notifications) })
-                        Item("Messages", onClick = { deckState.addColumn(DeckColumnType.Messages) })
-                        Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
-                        Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
-                        Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
-                        Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
-                        Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
+                        Item(
+                            "Close Column",
+                            shortcut =
+                                if (isMacOS) {
+                                    KeyShortcut(Key.W, meta = true)
+                                } else {
+                                    KeyShortcut(Key.W, ctrl = true)
+                                },
+                            onClick = {
+                                val cols = deckState.columns.value
+                                val idx = deckState.focusedColumnIndex.value
+                                if (cols.size > 1 && idx in cols.indices) {
+                                    deckState.removeColumn(cols[idx].id)
+                                }
+                            },
+                        )
+                        Item(
+                            "Move Column Left",
+                            shortcut =
+                                if (isMacOS) {
+                                    KeyShortcut(Key.DirectionLeft, meta = true, shift = true)
+                                } else {
+                                    KeyShortcut(Key.DirectionLeft, ctrl = true, shift = true)
+                                },
+                            onClick = {
+                                val idx = deckState.focusedColumnIndex.value
+                                if (idx > 0) {
+                                    deckState.moveColumn(idx, idx - 1)
+                                    deckState.focusColumn(idx - 1)
+                                }
+                            },
+                        )
+                        Item(
+                            "Move Column Right",
+                            shortcut =
+                                if (isMacOS) {
+                                    KeyShortcut(Key.DirectionRight, meta = true, shift = true)
+                                } else {
+                                    KeyShortcut(Key.DirectionRight, ctrl = true, shift = true)
+                                },
+                            onClick = {
+                                val idx = deckState.focusedColumnIndex.value
+                                val size = deckState.columns.value.size
+                                if (idx < size - 1) {
+                                    deckState.moveColumn(idx, idx + 1)
+                                    deckState.focusColumn(idx + 1)
+                                }
+                            },
+                        )
+                        Separator()
+                        // Focus column by index (Cmd/Ctrl+1..9)
+                        val columnKeys =
+                            listOf(
+                                Key.One,
+                                Key.Two,
+                                Key.Three,
+                                Key.Four,
+                                Key.Five,
+                                Key.Six,
+                                Key.Seven,
+                                Key.Eight,
+                                Key.Nine,
+                            )
+                        columnKeys.forEachIndexed { i, key ->
+                            Item(
+                                "Column ${i + 1}",
+                                shortcut =
+                                    if (isMacOS) {
+                                        KeyShortcut(key, meta = true)
+                                    } else {
+                                        KeyShortcut(key, ctrl = true)
+                                    },
+                                onClick = { deckState.focusColumn(i) },
+                            )
+                        }
+                        Separator()
+                        Menu("Add Column...") {
+                            Item("Home Feed", onClick = { deckState.addColumn(DeckColumnType.HomeFeed) })
+                            Item("Notifications", onClick = { deckState.addColumn(DeckColumnType.Notifications) })
+                            Item("Messages", onClick = { deckState.addColumn(DeckColumnType.Messages) })
+                            Item("Search", onClick = { deckState.addColumn(DeckColumnType.Search) })
+                            Item("Reads", onClick = { deckState.addColumn(DeckColumnType.Reads) })
+                            Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
+                            Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
+                            Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
+                        }
                     }
                 }
                 Menu("Help") {
@@ -301,6 +333,7 @@ fun main() =
             }
 
             App(
+                layoutMode = layoutMode,
                 deckState = deckState,
                 showComposeDialog = showComposeDialog,
                 showAddColumnDialog = showAddColumnDialog,
@@ -322,6 +355,7 @@ fun main() =
 
 @Composable
 fun App(
+    layoutMode: LayoutMode,
     deckState: DeckState,
     showComposeDialog: Boolean,
     showAddColumnDialog: Boolean,
@@ -425,6 +459,7 @@ fun App(
                     }
 
                     MainContent(
+                        layoutMode = layoutMode,
                         deckState = deckState,
                         relayManager = relayManager,
                         localCache = localCache,
@@ -466,6 +501,7 @@ fun App(
 
 @Composable
 fun MainContent(
+    layoutMode: LayoutMode,
     deckState: DeckState,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
@@ -497,27 +533,47 @@ fun MainContent(
 
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxSize()) {
-            DeckSidebar(
-                onAddColumn = onShowAddColumnDialog,
-                onOpenSettings = { deckState.addColumn(DeckColumnType.Settings) },
-            )
+            when (layoutMode) {
+                LayoutMode.SINGLE_PANE -> {
+                    SinglePaneLayout(
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        accountManager = accountManager,
+                        account = account,
+                        nwcConnection = nwcConnection,
+                        subscriptionsCoordinator = subscriptionsCoordinator,
+                        appScope = appScope,
+                        onShowComposeDialog = onShowComposeDialog,
+                        onShowReplyDialog = onShowReplyDialog,
+                        onZapFeedback = onZapFeedback,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
-            VerticalDivider()
+                LayoutMode.DECK -> {
+                    DeckSidebar(
+                        onAddColumn = onShowAddColumnDialog,
+                        onOpenSettings = { deckState.addColumn(DeckColumnType.Settings) },
+                    )
 
-            DeckLayout(
-                deckState = deckState,
-                relayManager = relayManager,
-                localCache = localCache,
-                accountManager = accountManager,
-                account = account,
-                nwcConnection = nwcConnection,
-                subscriptionsCoordinator = subscriptionsCoordinator,
-                appScope = appScope,
-                onShowComposeDialog = onShowComposeDialog,
-                onShowReplyDialog = onShowReplyDialog,
-                onZapFeedback = onZapFeedback,
-                modifier = Modifier.weight(1f),
-            )
+                    VerticalDivider()
+
+                    DeckLayout(
+                        deckState = deckState,
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        accountManager = accountManager,
+                        account = account,
+                        nwcConnection = nwcConnection,
+                        subscriptionsCoordinator = subscriptionsCoordinator,
+                        appScope = appScope,
+                        onShowComposeDialog = onShowComposeDialog,
+                        onShowReplyDialog = onShowReplyDialog,
+                        onZapFeedback = onZapFeedback,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
 
         // Snackbar for zap feedback

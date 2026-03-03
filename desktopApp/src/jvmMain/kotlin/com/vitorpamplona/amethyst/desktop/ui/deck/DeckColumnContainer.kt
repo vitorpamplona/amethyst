@@ -80,6 +80,7 @@ fun DeckColumnContainer(
     column: DeckColumn,
     canClose: Boolean,
     onClose: () -> Unit,
+    onDoubleClickHeader: () -> Unit = {},
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
     accountManager: AccountManager,
@@ -108,6 +109,7 @@ fun DeckColumnContainer(
             hasBackStack = navStack.isNotEmpty(),
             onBack = { navState.pop() },
             onClose = onClose,
+            onDoubleClick = onDoubleClickHeader,
         )
 
         HorizontalDivider()
@@ -152,7 +154,7 @@ fun DeckColumnContainer(
 }
 
 @Composable
-private fun RootContent(
+internal fun RootContent(
     columnType: DeckColumnType,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
@@ -314,7 +316,7 @@ private fun RootContent(
 }
 
 @Composable
-private fun OverlayContent(
+internal fun OverlayContent(
     screen: DesktopScreen,
     relayManager: DesktopRelayConnectionManager,
     localCache: DesktopLocalCache,
