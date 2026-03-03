@@ -33,17 +33,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,21 +66,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ActiveGameCard
 import com.vitorpamplona.amethyst.commons.chess.ChallengeCard
-import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastBanner
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.chess.ChessConfig
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
-import com.vitorpamplona.amethyst.commons.chess.PublicGame
+import com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard
+import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
+import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource.ChessSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
@@ -128,7 +120,28 @@ fun ChessLobbyScreen(
         }
     }
 
+    NavigateIfInAGame(chessViewModel, nav)
+
     ChessLobbyScreen(chessViewModel, accountViewModel, nav)
+}
+
+@Composable
+fun NavigateIfInAGame(
+    chessViewModel: ChessViewModelNew,
+    nav: INav,
+) {
+    val selectedGameId by chessViewModel.selectedGameId.collectAsState()
+    val activeGames by chessViewModel.activeGames.collectAsState()
+
+    // Auto-navigate when a game is selected (e.g., after accepting a challenge)
+    LaunchedEffect(selectedGameId, activeGames) {
+        selectedGameId?.let { gameId ->
+            if (activeGames.containsKey(gameId)) {
+                nav.nav(Route.ChessGame(gameId))
+                chessViewModel.selectGame(null)
+            }
+        }
+    }
 }
 
 /**
@@ -141,28 +154,8 @@ fun ChessLobbyScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val activeGames by chessViewModel.activeGames.collectAsState()
-    val spectatingGames by chessViewModel.spectatingGames.collectAsState()
-    val publicGames by chessViewModel.publicGames.collectAsState()
-    val challenges by chessViewModel.challenges.collectAsState()
-    val error by chessViewModel.error.collectAsState()
-    val broadcastStatus by chessViewModel.broadcastStatus.collectAsState()
-    val syncStatus by chessViewModel.syncStatus.collectAsState()
-    val selectedGameId by chessViewModel.selectedGameId.collectAsState()
-    val userPubkey = accountViewModel.account.userProfile().pubkeyHex
-
     var showNewGameDialog by remember { mutableStateOf(false) }
     var showRelaySettings by remember { mutableStateOf(false) }
-
-    // Auto-navigate when a game is selected (e.g., after accepting a challenge)
-    LaunchedEffect(selectedGameId, activeGames) {
-        selectedGameId?.let { gameId ->
-            if (activeGames.containsKey(gameId)) {
-                nav.nav(Route.ChessGame(gameId))
-                chessViewModel.selectGame(null)
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -201,45 +194,15 @@ fun ChessLobbyScreen(
                         .padding(horizontal = 16.dp),
             ) {
                 // Sync status banner (shows relay progress during loading)
-                ChessSyncBanner(
-                    status = syncStatus,
-                    onRetry = { chessViewModel.forceRefresh() },
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
+                ChessSyncBanner(chessViewModel)
 
-                // Broadcast status banner
-                ChessBroadcastBanner(
-                    status = broadcastStatus,
-                    onTap = { /* no-op in lobby */ },
-                    modifier = Modifier.padding(bottom = 8.dp),
+                ErrorDisplay(
+                    chessViewModel,
                 )
-
-                // Error display
-                error?.let { errorMsg ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
-                            OutlinedButton(onClick = { chessViewModel.clearError() }) {
-                                Text(stringRes(R.string.dismiss))
-                            }
-                        }
-                    }
-                }
 
                 // Main content
                 ChessLobbyContent(
-                    challenges = challenges,
-                    activeGames = activeGames,
-                    spectatingGames = spectatingGames,
-                    publicGames = publicGames,
-                    userPubkey = userPubkey,
+                    chessViewModel = chessViewModel,
                     accountViewModel = accountViewModel,
                     onAcceptChallenge = { challenge ->
                         chessViewModel.acceptChallenge(challenge)
@@ -277,8 +240,7 @@ fun ChessLobbyScreen(
             sheetState = rememberModalBottomSheetState(),
         ) {
             ChessRelaySettingsSheet(
-                challengeCount = challenges.size,
-                publicGameCount = publicGames.size,
+                chessViewModel = chessViewModel,
                 accountViewModel = accountViewModel,
             )
         }
@@ -286,18 +248,55 @@ fun ChessLobbyScreen(
 }
 
 @Composable
+fun ChessSyncBanner(chessViewModel: ChessViewModelNew) {
+    val syncStatus by chessViewModel.syncStatus.collectAsState()
+
+    ChessSyncBanner(
+        status = syncStatus,
+        onRetry = { chessViewModel.forceRefresh() },
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
+}
+
+@Composable
+fun ErrorDisplay(chessViewModel: ChessViewModelNew) {
+    // Error display
+    val error by chessViewModel.error.collectAsState()
+
+    error?.let { errorMsg ->
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
+                OutlinedButton(onClick = { chessViewModel.clearError() }) {
+                    Text(stringRes(R.string.dismiss))
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun ChessLobbyContent(
-    challenges: List<ChessChallenge>,
-    activeGames: Map<String, LiveChessGameState>,
-    spectatingGames: Map<String, LiveChessGameState>,
-    publicGames: List<PublicGame>,
-    userPubkey: String,
+    chessViewModel: ChessViewModelNew,
     accountViewModel: AccountViewModel,
     onAcceptChallenge: (ChessChallenge) -> Unit,
     onOpenOwnChallenge: (ChessChallenge) -> Unit,
     onSelectGame: (String) -> Unit,
     onWatchGame: (String) -> Unit,
 ) {
+    val activeGames by chessViewModel.activeGames.collectAsState()
+    val spectatingGames by chessViewModel.spectatingGames.collectAsState()
+    val publicGames by chessViewModel.publicGames.collectAsState()
+    val challenges by chessViewModel.challenges.collectAsState()
+    val userPubkey = accountViewModel.account.userProfile().pubkeyHex
+
     val hasContent =
         activeGames.isNotEmpty() || spectatingGames.isNotEmpty() ||
             publicGames.isNotEmpty() || challenges.isNotEmpty()
@@ -390,7 +389,7 @@ fun ChessLobbyContent(
                     challenge.opponentPubkey?.let { pubkey ->
                         accountViewModel.checkGetOrCreateUser(pubkey)?.toBestDisplayName() ?: pubkey.take(8)
                     }
-                com.vitorpamplona.amethyst.commons.chess.OutgoingChallengeCard(
+                OutgoingChallengeCard(
                     opponentName = opponentName,
                     userPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     onClick = { onOpenOwnChallenge(challenge) },
@@ -415,7 +414,7 @@ fun ChessLobbyContent(
                     state.moveHistory
                         .collectAsState()
                         .value.size
-                com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard(
+                SpectatingGameCard(
                     moveCount = moveCount,
                     onClick = { onSelectGame(gameId) },
                 )
@@ -471,7 +470,7 @@ fun ChessLobbyContent(
                             ?: accountViewModel.checkGetOrCreateUser(challenge.challengerPubkey)?.toBestDisplayName()
                             ?: challenge.challengerPubkey.take(8)
                     }
-                com.vitorpamplona.amethyst.commons.chess.ChallengeCard(
+                ChallengeCard(
                     challengerName = displayName,
                     challengerPlaysWhite = challenge.challengerColor == ChessColor.WHITE,
                     isIncoming = false,
@@ -495,7 +494,7 @@ fun ChessLobbyContent(
             items(publicGames, key = { "public-${it.gameId}" }) { game ->
                 val whiteName = game.whiteDisplayName ?: game.whitePubkey.take(8)
                 val blackName = game.blackDisplayName ?: game.blackPubkey.take(8)
-                com.vitorpamplona.amethyst.commons.chess.PublicGameCard(
+                PublicGameCard(
                     whiteName = whiteName,
                     blackName = blackName,
                     moveCount = game.moveCount,
@@ -508,289 +507,5 @@ fun ChessLobbyContent(
         item {
             Spacer(Modifier.height(80.dp))
         }
-    }
-}
-
-/**
- * Bottom sheet showing relay settings and debug info for chess subscriptions
- */
-@Composable
-private fun ChessRelaySettingsSheet(
-    challengeCount: Int,
-    publicGameCount: Int,
-    connectedRelayCount: Int = 0,
-    accountViewModel: AccountViewModel,
-) {
-    // Get relay information for settings display
-    val inboxRelays by accountViewModel.account.notificationRelays.flow
-        .collectAsState()
-    val outboxRelays by accountViewModel.account.outboxRelays.flow
-        .collectAsState()
-    val globalRelays by accountViewModel.account.defaultGlobalRelays.flow
-        .collectAsState()
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-    ) {
-        Text(
-            text = "Chess Relay Settings",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Stats section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "$challengeCount",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = "Challenges",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "$publicGameCount",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = "Live Games",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Chess relay info
-        Text(
-            text = "Active Chess Relays",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Chess uses 3 dedicated relays for fast, reliable queries",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Show chess relays and their connection status
-        ChessConfig.CHESS_RELAY_NAMES.forEach { relay ->
-            val isConnected =
-                inboxRelays.contains(relay) ||
-                    outboxRelays.contains(relay) ||
-                    globalRelays.contains(relay)
-            ChessRelayRow(relay = relay, isConnected = isConnected)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Inbox relays (where challenges TO you are fetched)
-        Text(
-            text = "Inbox Relays (${inboxRelays.size})",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Personal challenges are fetched from here",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        if (inboxRelays.isEmpty()) {
-            Text(
-                text = "No inbox relays configured",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        } else {
-            inboxRelays.take(5).forEach { relay ->
-                RelayRow(relayUrl = relay)
-            }
-            if (inboxRelays.size > 5) {
-                Text(
-                    text = "+${inboxRelays.size - 5} more",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Global relays (where open challenges are fetched)
-        Text(
-            text = "Global Relays (${globalRelays.size})",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Open challenges and public games are fetched from here",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        if (globalRelays.isEmpty()) {
-            Text(
-                text = "No global relays configured - open challenges won't load!",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        } else {
-            globalRelays.take(5).forEach { relay ->
-                RelayRow(relayUrl = relay)
-            }
-            if (globalRelays.size > 5) {
-                Text(
-                    text = "+${globalRelays.size - 5} more",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Outbox relays (where your challenges are published)
-        Text(
-            text = "Outbox Relays (${outboxRelays.size})",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Your challenges and moves are published here",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        if (outboxRelays.isEmpty()) {
-            Text(
-                text = "No outbox relays configured",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        } else {
-            outboxRelays.take(5).forEach { relay ->
-                RelayRow(relayUrl = relay)
-            }
-            if (outboxRelays.size > 5) {
-                Text(
-                    text = "+${outboxRelays.size - 5} more",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-    }
-}
-
-@Composable
-private fun RelayRow(
-    relayUrl: NormalizedRelayUrl,
-    isPreferred: Boolean = false,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = stringRes(R.string.connected),
-            tint =
-                if (isPreferred) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-            modifier = Modifier.size(12.dp),
-        )
-        Text(
-            text = relayUrl.displayUrl(),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = if (isPreferred) FontWeight.Medium else FontWeight.Normal,
-        )
-        if (isPreferred) {
-            Text(
-                text = "preferred",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.tertiary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ChessRelayRow(
-    relay: NormalizedRelayUrl,
-    isConnected: Boolean,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(
-            imageVector =
-                if (isConnected) {
-                    Icons.Default.CheckCircle
-                } else {
-                    Icons.Default.Close
-                },
-            contentDescription = if (isConnected) "Connected" else "Not connected",
-            tint =
-                if (isConnected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-            modifier = Modifier.size(16.dp),
-        )
-        Text(
-            text = relay.displayUrl(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(Modifier.weight(1f))
-        Text(
-            text = if (isConnected) "connected" else "not connected",
-            style = MaterialTheme.typography.labelSmall,
-            color =
-                if (isConnected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-        )
     }
 }
