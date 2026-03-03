@@ -92,7 +92,12 @@ class NewUserMetadataViewModel : ViewModel() {
         // Load identities from kind 10011 first, fall back to kind 0 for backwards compat
         val identities =
             account.userMetadata.getExternalIdentitiesEvent()?.identityClaims()
-                ?: account.userProfile().metadataOrNull()?.flow?.value?.identities
+                ?: account
+                    .userProfile()
+                    .metadataOrNull()
+                    ?.flow
+                    ?.value
+                    ?.identities
                 ?: emptyList()
 
         identities.forEach { identity ->
