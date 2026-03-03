@@ -41,14 +41,14 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 
 @Composable
-fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
+fun AccountScreen(accountSessionManager: AccountSessionManager) {
     // Pauses relay services when the app pauses
     ManageRelayServices()
     ManageWebOkHttp()
 
-    val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
+    val accountState by accountSessionManager.accountContent.collectAsStateWithLifecycle()
 
-    Log.d("ActivityLifecycle", "AccountScreen $accountState $accountStateViewModel")
+    Log.d("ActivityLifecycle", "AccountScreen $accountState $accountSessionManager")
 
     Crossfade(
         targetState = accountState,
@@ -56,8 +56,8 @@ fun AccountScreen(accountStateViewModel: AccountStateViewModel) {
     ) { state ->
         when (state) {
             is AccountState.Loading -> LoadingSetup()
-            is AccountState.LoggedOff -> LoggedOffSetup(accountStateViewModel)
-            is AccountState.LoggedIn -> LoggedInSetup(state, accountStateViewModel)
+            is AccountState.LoggedOff -> LoggedOffSetup(accountSessionManager)
+            is AccountState.LoggedIn -> LoggedInSetup(state, accountSessionManager)
         }
     }
 }
@@ -94,25 +94,25 @@ fun LoadingSetup() {
 }
 
 @Composable
-fun LoggedOffSetup(accountStateViewModel: AccountStateViewModel) {
+fun LoggedOffSetup(accountSessionManager: AccountSessionManager) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        LoginOrSignupScreen(null, accountStateViewModel, isFirstLogin = true)
+        LoginOrSignupScreen(null, accountSessionManager, isFirstLogin = true)
     }
 }
 
 @Composable
 fun LoggedInSetup(
     state: AccountState.LoggedIn,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     SetAccountCentricViewModelStore(state) {
         LoggedInPage(
             account = state.account,
             route = state.route,
-            accountStateViewModel = accountStateViewModel,
+            accountSessionManager = accountSessionManager,
         )
     }
 }

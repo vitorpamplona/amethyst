@@ -28,11 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
 @Stable
 class LoginViewModel : ViewModel() {
-    lateinit var accountStateViewModel: AccountStateViewModel
+    lateinit var accountSessionManager: AccountSessionManager
+    lateinit var torSettings: TorSettingsFlow
 
     val errorManager = LoginErrorManager()
 
@@ -52,8 +54,12 @@ class LoginViewModel : ViewModel() {
 
     var isFirstLogin by mutableStateOf(false)
 
-    fun init(accountStateViewModel: AccountStateViewModel) {
-        this.accountStateViewModel = accountStateViewModel
+    fun init(accountSessionManager: AccountSessionManager) {
+        this.accountSessionManager = accountSessionManager
+    }
+
+    fun init(torSettings: TorSettingsFlow) {
+        this.torSettings = torSettings
     }
 
     fun load(
@@ -132,7 +138,7 @@ class LoginViewModel : ViewModel() {
     fun login() {
         if (checkCanLogin()) {
             processingLogin = true
-            accountStateViewModel.login(
+            accountSessionManager.login(
                 key = key.text,
                 password = password.text,
                 transientAccount = isTemporary,
@@ -150,7 +156,7 @@ class LoginViewModel : ViewModel() {
     fun loginWithExternalSigner(packageName: String) {
         if (checkCanLogin()) {
             processingLogin = true
-            accountStateViewModel.login(
+            accountSessionManager.login(
                 key = key.text,
                 transientAccount = isTemporary,
                 loginWithExternalSigner = true,

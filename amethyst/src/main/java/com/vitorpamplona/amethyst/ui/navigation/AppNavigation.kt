@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.BookmarkListScreen
@@ -128,11 +128,11 @@ import java.net.URI
 @Composable
 fun AppNavigation(
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountStateViewModel, nav) {
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
         NavHost(
             navController = nav.controller,
             startDestination = Route.Home,
@@ -320,7 +320,7 @@ fun AppNavigation(
         }
     }
 
-    NavigateIfIntentRequested(nav, accountViewModel, accountStateViewModel)
+    NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
 
     DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
     DisplayNotifyMessages(accountViewModel, nav)
@@ -332,7 +332,7 @@ fun AppNavigation(
 private fun NavigateIfIntentRequested(
     nav: Nav,
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     accountViewModel.firstRoute?.let { newRoute ->
         accountViewModel.firstRoute = null
@@ -386,8 +386,8 @@ private fun NavigateIfIntentRequested(
                 if (actionableNextPage != null) {
                     actionableNextPage?.let { nextRoute ->
                         val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                        if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
-                            accountStateViewModel.checkAndSwitchUserSync(npub, nextRoute)
+                        if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
+                            accountSessionManager.checkAndSwitchUserSync(npub, nextRoute)
                         } else {
                             val currentRoute = getRouteWithArguments(nextRoute::class, nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
@@ -442,8 +442,8 @@ private fun NavigateIfIntentRequested(
                             if (newPage != null) {
                                 scope.launch {
                                     val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                                    if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
-                                        accountStateViewModel.checkAndSwitchUserSync(npub, newPage)
+                                    if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
+                                        accountSessionManager.checkAndSwitchUserSync(npub, newPage)
                                     } else {
                                         val currentRoute = getRouteWithArguments(newPage::class, nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {
@@ -474,7 +474,7 @@ private fun NavigateIfIntentRequested(
         }
 
         if (newAccount != null) {
-            AddAccountDialog(newAccount, accountStateViewModel) { newAccount = null }
+            AddAccountDialog(newAccount, accountSessionManager) { newAccount = null }
         }
     }
 }

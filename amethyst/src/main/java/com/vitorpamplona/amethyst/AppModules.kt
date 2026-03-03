@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -231,6 +232,15 @@ class AppModules(
             client = client,
         )
 
+    val sessionManager =
+        AccountSessionManager(
+            accountsCache = accountsCache,
+            nip05Client = nip05Client,
+            client = client,
+            localPreferences = LocalPreferences,
+            scope = applicationIOScope,
+        )
+
     // Organizes cache clearing
     val trimmingService = MemoryTrimmingService(cache)
 
@@ -274,6 +284,7 @@ class AppModules(
         applicationIOScope.launch {
             // loads main account quickly.
             LocalPreferences.loadAccountConfigFromEncryptedStorage()
+            sessionManager.loginWithDefaultAccountIfLoggedOff()
         }
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes

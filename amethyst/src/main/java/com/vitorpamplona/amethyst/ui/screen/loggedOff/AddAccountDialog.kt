@@ -35,14 +35,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAccountDialog(
     newAccountKey: String?,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
     onClose: () -> Unit,
 ) {
     Dialog(
@@ -51,7 +51,7 @@ fun AddAccountDialog(
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Box {
-                LoginOrSignupScreen(newAccountKey, accountStateViewModel, isFirstLogin = false)
+                LoginOrSignupScreen(newAccountKey, accountSessionManager, isFirstLogin = false)
                 TopAppBar(
                     title = {
                         Text(text = stringRes(R.string.account_switch_add_account_dialog_title))
