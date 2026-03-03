@@ -117,7 +117,7 @@ class PlaybackService : MediaSessionService() {
 
         // if nothing is pl
         if (playing.isEmpty() && BackgroundMedia.hasInstance()) {
-            BackgroundMedia.bgInstance.value?.id?.let { id ->
+            BackgroundMedia.bgInstance?.id?.let { id ->
                 (poolNoProxy?.getSession(id) ?: poolWithProxy?.getSession(id))?.let {
                     super.onUpdateNotification(it, startInForegroundRequired)
                 }
@@ -126,7 +126,7 @@ class PlaybackService : MediaSessionService() {
         }
 
         playing.forEachIndexed { idx, it ->
-            if (it.session.player.isPlaying && it.session.player.volume > 0 && it.session.id == BackgroundMedia.bgInstance.value?.id) {
+            if (it.session.player.isPlaying && it.session.player.volume > 0 && it.session.id == BackgroundMedia.bgInstance?.id) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
                 return
             }

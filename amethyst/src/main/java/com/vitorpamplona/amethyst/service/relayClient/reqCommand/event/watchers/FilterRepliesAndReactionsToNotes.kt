@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -49,7 +50,6 @@ val RepliesAndReactionsKinds =
         GenericRepostEvent.KIND,
         ReportEvent.KIND,
         LnZapEvent.KIND,
-        PollNoteEvent.KIND,
         OtsEvent.KIND,
         TextNoteModificationEvent.KIND,
         CommentEvent.KIND,
@@ -62,6 +62,8 @@ val RepliesAndReactionsKinds2 =
         NIP90StatusEvent.KIND,
         TorrentCommentEvent.KIND,
         GitReplyEvent.KIND,
+        PollResponseEvent.KIND,
+        PollNoteEvent.KIND,
     )
 
 fun filterRepliesAndReactionsToNotes(

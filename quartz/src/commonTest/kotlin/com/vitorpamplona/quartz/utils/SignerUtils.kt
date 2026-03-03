@@ -20,10 +20,28 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.crypto.DeterministicSigner
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventAssembler
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 
 fun String.nsecToKeyPair() = KeyPair(this.bechToBytes())
 
 fun String.nsecToSigner() = this.nsecToKeyPair().let { DeterministicSigner(it) }
+
+class DeterministicSigner(
+    val key: KeyPair,
+    val pubKey: HexKey = key.pubKey.toHexKey(),
+) {
+    fun <T : Event> sign(
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): T = EventAssembler.hashAndSign(pubKey, createdAt, kind, tags, content, key.privKey!!, nonce = null)
+
+    fun <T : Event> sign(ev: EventTemplate<T>): T = sign(ev.createdAt, ev.kind, ev.tags, ev.content)
+}

@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -38,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
@@ -103,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
+import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -114,6 +114,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
+import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd
+import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
@@ -131,6 +134,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -140,6 +145,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
+import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -198,6 +204,7 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -206,9 +213,13 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -220,6 +231,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
@@ -236,7 +248,7 @@ fun NoteCompose(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     isHiddenFeed: Boolean = false,
     quotesLeft: Int,
@@ -285,7 +297,7 @@ fun AcceptableNote(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     quotesLeft: Int,
@@ -457,7 +469,7 @@ private fun CheckNewAndRenderNote(
     routeForLastRead: String? = null,
     isBoostedNote: Boolean = false,
     isQuotedNote: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     quotesLeft: Int,
@@ -511,7 +523,7 @@ fun ClickableNote(
     content: @Composable () -> Unit,
 ) {
     val updatedModifier =
-        remember(baseNote, backgroundColor.value, modifier) {
+        remember(baseNote, modifier) {
             modifier
                 .combinedClickable(
                     onClick = {
@@ -533,10 +545,10 @@ fun ClickableNote(
                         }
                     },
                     onLongClick = showPopup,
-                ).background(backgroundColor.value)
+                )
         }
 
-    Column(modifier = updatedModifier) { content() }
+    Column(modifier = updatedModifier.background(backgroundColor.value)) { content() }
 }
 
 @Composable
@@ -545,7 +557,7 @@ fun InnerNoteWithReactions(
     backgroundColor: MutableState<Color>,
     isBoostedNote: Boolean,
     isQuotedNote: Boolean,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
@@ -661,7 +673,7 @@ fun RenderApproveButton(
             accountViewModel.approveCommunityPost(post, community)
         },
     ) {
-        Text("Approve")
+        Text(stringRes(R.string.approve))
     }
 }
 
@@ -669,7 +681,7 @@ fun RenderApproveButton(
 fun NoteBody(
     baseNote: Note,
     showAuthorPicture: Boolean = false,
-    unPackReply: Boolean = true,
+    unPackReply: ReplyRenderType = ReplyRenderType.FULL,
     makeItShort: Boolean = false,
     canPreview: Boolean = true,
     showSecondRow: Boolean,
@@ -699,7 +711,7 @@ fun NoteBody(
     }
 
     if (baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Height4dpModifier)
     }
 
     RenderNoteRow(
@@ -731,7 +743,7 @@ private fun RenderNoteRow(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -785,6 +797,10 @@ private fun RenderNoteRow(
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
         }
 
+        is LnZapEvent -> {
+            RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
         is FhirResourceEvent -> {
             RenderFhirResource(baseNote, accountViewModel, nav)
         }
@@ -819,6 +835,10 @@ private fun RenderNoteRow(
 
         is TrustedRelayListEvent -> {
             DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is FavoriteRelayListEvent -> {
+            DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is IndexerRelayListEvent -> {
@@ -911,6 +931,33 @@ private fun RenderNoteRow(
             )
         }
 
+        is ChessGameEvent -> {
+            RenderChessGame(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is LiveChessGameChallengeEvent -> {
+            RenderLiveChessChallenge(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is LiveChessGameEndEvent -> {
+            RenderLiveChessGameEnd(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,
@@ -967,12 +1014,24 @@ private fun RenderNoteRow(
         }
 
         is PollNoteEvent -> {
-            RenderPoll(
+            RenderZapPoll(
                 baseNote,
                 makeItShort,
                 canPreview,
                 quotesLeft,
                 unPackReply,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is PollEvent -> {
+            RenderPoll(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,
@@ -1143,7 +1202,7 @@ fun ObserveDraftEvent(
 fun RenderDraft(
     note: Note,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -1184,7 +1243,7 @@ fun RenderRepost(
             it,
             modifier = Modifier,
             isBoostedNote = true,
-            unPackReply = false,
+            unPackReply = ReplyRenderType.NONE,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
@@ -1213,7 +1272,7 @@ fun ReplyNoteComposition(
         baseNote = replyingDirectlyTo,
         modifier = MaterialTheme.colorScheme.replyModifier,
         isQuotedNote = true,
-        unPackReply = false,
+        unPackReply = ReplyRenderType.NONE,
         makeItShort = true,
         quotesLeft = 0,
         parentBackgroundColor = backgroundColor,
@@ -1236,7 +1295,7 @@ fun SecondUserInfoRow(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        Column(modifier = remember(noteEvent) { Modifier.weight(1f) }) {
+        Column(modifier = remember { Modifier.weight(1f) }) {
             if (noteEvent is IForkableEvent && noteEvent.isAFork()) {
                 ShowForkInformation(noteEvent, Modifier, accountViewModel, nav)
             } else {
@@ -1328,9 +1387,10 @@ fun FirstUserInfoRow(
 
         if (isDraft) {
             ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
-                val isCommunityPost by remember(draftNote) {
-                    derivedStateOf { draftNote.event?.isACommunityPost() == true }
-                }
+                val isCommunityPost =
+                    remember(draftNote) {
+                        draftNote.event?.isACommunityPost() == true
+                    }
 
                 if (isCommunityPost) {
                     DisplayFollowingCommunityInPost(draftNote, accountViewModel, nav)
@@ -1339,9 +1399,10 @@ fun FirstUserInfoRow(
                 }
             }
         } else {
-            val isCommunityPost by remember(baseNote) {
-                derivedStateOf { baseNote.event?.isACommunityPost() == true }
-            }
+            val isCommunityPost =
+                remember(baseNote) {
+                    baseNote.event?.isACommunityPost() == true
+                }
 
             if (isCommunityPost) {
                 DisplayFollowingCommunityInPost(baseNote, accountViewModel, nav)

@@ -24,33 +24,29 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
-class EventHasher {
-    companion object {
-        fun hashIdBytes(
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-        ): ByteArray = sha256(EventHasherSerializer.fastMakeJsonForId(pubKey, createdAt, kind, tags, content))
+object EventHasher {
+    fun hashIdBytes(
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): ByteArray = sha256(EventHasherSerializer.fastMakeJsonForId(pubKey, createdAt, kind, tags, content))
 
-        fun hashId(serializedJsonAsBytes: ByteArray): String = sha256(serializedJsonAsBytes).toHexKey()
+    fun hashId(
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): String = hashIdBytes(pubKey, createdAt, kind, tags, content).toHexKey()
 
-        fun hashId(
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-        ): String = hashIdBytes(pubKey, createdAt, kind, tags, content).toHexKey()
-
-        fun hashIdCheck(
-            id: HexKey,
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-        ): Boolean = EventHasherSerializer.makeJsonForIdHashAndCheck(id, pubKey, createdAt, kind, tags, content)
-    }
+    fun hashIdCheck(
+        id: HexKey,
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): Boolean = EventHasherSerializer.makeJsonForIdHashAndCheck(id, pubKey, createdAt, kind, tags, content)
 }

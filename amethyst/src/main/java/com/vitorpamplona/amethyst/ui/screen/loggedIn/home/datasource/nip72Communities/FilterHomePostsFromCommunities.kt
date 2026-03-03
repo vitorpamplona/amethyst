@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 val HomePostsFromCommunityKinds =
@@ -41,6 +42,7 @@ val HomePostsFromCommunityKinds =
         LongTextNoteEvent.KIND,
         ClassifiedsEvent.KIND,
         HighlightEvent.KIND,
+        PollEvent.KIND,
         WikiNoteEvent.KIND,
         NipTextEvent.KIND,
         CommunityPostApprovalEvent.KIND,
@@ -54,6 +56,7 @@ val HomePostsFromCommunityKindsStr =
         LongTextNoteEvent.KIND.toString(),
         ClassifiedsEvent.KIND.toString(),
         HighlightEvent.KIND.toString(),
+        PollEvent.KIND.toString(),
         WikiNoteEvent.KIND.toString(),
         NipTextEvent.KIND.toString(),
         CommunityPostApprovalEvent.KIND.toString(),

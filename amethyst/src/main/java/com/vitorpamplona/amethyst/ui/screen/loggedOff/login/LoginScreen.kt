@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,24 +95,26 @@ import kotlinx.coroutines.launch
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun LoginPagePreview() {
-    val accountViewModel: AccountStateViewModel = viewModel()
+    val loginViewModel: LoginViewModel = viewModel()
+    loginViewModel.init(TorSettingsFlow())
 
     ThemeComparisonRow(
         toPreview = {
-            LoginPage(accountViewModel, true) {}
+            LoginPage(loginViewModel) {}
         },
     )
 }
 
 @Composable
 fun LoginPage(
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
     isFirstLogin: Boolean,
     newAccountKey: String? = null,
     onWantsToLogin: () -> Unit,
 ) {
     val loginViewModel: LoginViewModel = viewModel()
-    loginViewModel.init(accountStateViewModel)
+    loginViewModel.init(accountSessionManager)
+    loginViewModel.init(Amethyst.instance.torPrefs.value)
 
     LaunchedEffect(loginViewModel, isFirstLogin, newAccountKey) {
         loginViewModel.load(isFirstLogin, newAccountKey)
@@ -180,7 +183,7 @@ fun LoginPage(
         Spacer(modifier = Modifier.height(10.dp))
 
         TorSettingsSetup(
-            torSettingsFlow = Amethyst.instance.torPrefs.value,
+            torSettingsFlow = loginViewModel.torSettings,
             onError = {
                 scope.launch {
                     Toast

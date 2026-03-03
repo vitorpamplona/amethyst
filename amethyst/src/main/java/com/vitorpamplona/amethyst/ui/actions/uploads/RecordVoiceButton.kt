@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -49,7 +51,9 @@ fun RecordVoiceButton(
     var isRecording by remember { mutableStateOf(false) }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
 
-    Column {
+    Column(
+        verticalArrangement = Arrangement.Center,
+    ) {
         // Floating recording indicator at the top
         FloatingRecordingIndicator(
             modifier = Modifier.height(50.dp),
@@ -58,7 +62,7 @@ fun RecordVoiceButton(
         )
 
         RecordAudioBox(
-            modifier = Modifier,
+            modifier = Modifier.fillMaxSize(),
             onRecordTaken = { recording ->
                 isRecording = false
                 elapsedSeconds = 0
@@ -77,12 +81,12 @@ fun RecordVoiceButton(
             }
 
             Box(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(42.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 // Expanding circles background animation
                 ExpandingCirclesAnimation(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(42.dp),
                     isRecording = recordingState,
                     primaryColor = MaterialTheme.colorScheme.primary,
                 )

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import android.app.AppOpsManager
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,23 +33,54 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.ui.note.EnablePiP
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+
+@Preview
+@Composable
+fun PictureInPictureButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.background(BitcoinOrange)) {
+            PictureInPictureButton(
+                controllerVisible = remember { mutableStateOf(true) },
+                modifier = Modifier,
+            ) {}
+        }
+    }
+}
 
 @Composable
 fun PictureInPictureButton(
     controllerVisible: MutableState<Boolean>,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val isAllowed =
+        remember {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode =
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_PICTURE_IN_PICTURE,
+                    android.os.Process.myUid(),
+                    context.packageName,
+                )
+            mode == AppOpsManager.MODE_ALLOWED
+        }
+
     AnimatedVisibility(
-        visible = controllerVisible.value,
+        visible = isAllowed && controllerVisible.value,
         modifier = modifier,
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
@@ -56,7 +89,7 @@ fun PictureInPictureButton(
             Box(
                 Modifier
                     .clip(CircleShape)
-                    .fillMaxSize(0.6f)
+                    .fillMaxSize(0.7f)
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.background),
             )

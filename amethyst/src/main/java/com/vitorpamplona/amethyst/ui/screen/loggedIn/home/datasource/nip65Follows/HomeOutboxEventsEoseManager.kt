@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
@@ -35,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQuerySt
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGlobal
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByHashtags
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip64Chess.filterHomePostsByChess
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByCommunity
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -50,7 +53,7 @@ import kotlinx.coroutines.launch
 class HomeOutboxEventsEoseManager(
     client: INostrClient,
     allKeys: () -> Set<HomeQueryState>,
-) : PerUserAndFollowListEoseManager<HomeQueryState, String>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<HomeQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(
         key: HomeQueryState,
         since: SincePerRelayMap?,
@@ -62,6 +65,7 @@ class HomeOutboxEventsEoseManager(
             is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since, newThreadSince)
             is AllFollowsTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since, newThreadSince, repliesSince)
             is AuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+            is ChessTopNavPerRelayFilterSet -> filterHomePostsByChess(feedSettings, since, newThreadSince)
             is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since, newThreadSince, repliesSince)
             is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since, newThreadSince)
             is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since, newThreadSince)

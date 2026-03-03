@@ -72,6 +72,27 @@ fun createBatchMetadataSubscription(
 }
 
 /**
+ * Creates a subscription config for multiple user metadata (kind 0).
+ * Useful for fetching metadata for a batch of users at once.
+ */
+fun createMetadataListSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    pubKeys: List<String>,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig? {
+    if (pubKeys.isEmpty()) return null
+
+    return SubscriptionConfig(
+        subId = generateSubId("meta-batch-${pubKeys.hashCode()}"),
+        filters = listOf(FilterBuilders.userMetadataMultiple(pubKeys)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+}
+
+/**
  * Creates a subscription config for user posts (kind 1).
  */
 fun createUserPostsSubscription(

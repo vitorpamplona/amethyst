@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -29,7 +30,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadat
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.paymentTargets.AccountPaymentTargetsEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to logged-in accounts.
+@Stable
 class AccountQueryState(
     val account: Account,
     val feedContentStates: AccountFeedContentStates,
@@ -47,6 +48,7 @@ class AccountQueryState(
 /**
  * This assembler loads everything eech account needs.
  */
+@Stable
 class AccountFilterAssembler(
     client: INostrClient,
     cache: LocalCache,
@@ -62,7 +64,6 @@ class AccountFilterAssembler(
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
-            AccountPaymentTargetsEoseManager(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

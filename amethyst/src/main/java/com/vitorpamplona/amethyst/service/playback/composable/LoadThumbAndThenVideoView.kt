@@ -42,7 +42,7 @@ fun LoadThumbAndThenVideoView(
     contentScale: ContentScale,
     nostrUriCallback: String? = null,
     accountViewModel: AccountViewModel,
-    onDialog: ((Boolean) -> Unit)? = null,
+    onDialog: (() -> Unit)? = null,
 ) {
     var loadingFinished by remember { mutableStateOf<Pair<Boolean, Drawable?>>(Pair(false, null)) }
     val context = LocalContext.current

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.round
 
 private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
 private const val MONTH_DATE_FORMAT = "MMM dd"
@@ -110,6 +111,46 @@ fun timeAgoNoDot(
         (timeDifference / TimeUtils.ONE_HOUR).toString() + stringRes(context, R.string.h)
     } else if (timeDifference > TimeUtils.ONE_MINUTE) {
         (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
+    } else {
+        stringRes(context, R.string.now)
+    }
+}
+
+fun timeAheadNoDot(
+    time: Long?,
+    context: Context,
+): String {
+    if (time == null) return " "
+    if (time == 0L) return " ${stringRes(context, R.string.never)}"
+
+    val timeDifference = time - TimeUtils.now()
+
+    return if (timeDifference > TimeUtils.ONE_YEAR) {
+        // Dec 12, 2022
+
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        }
+
+        yearFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_MONTH) {
+        // Dec 12
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+        }
+
+        monthFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_DAY) {
+        // 2 days
+        round(timeDifference / TimeUtils.ONE_DAY.toFloat()).toInt().toString() + stringRes(context, R.string.d)
+    } else if (timeDifference > TimeUtils.ONE_HOUR) {
+        round(timeDifference / TimeUtils.ONE_HOUR.toFloat()).toInt().toString() + stringRes(context, R.string.h)
+    } else if (timeDifference > TimeUtils.ONE_MINUTE) {
+        round(timeDifference / TimeUtils.ONE_MINUTE.toFloat()).toInt().toString() + stringRes(context, R.string.m)
     } else {
         stringRes(context, R.string.now)
     }

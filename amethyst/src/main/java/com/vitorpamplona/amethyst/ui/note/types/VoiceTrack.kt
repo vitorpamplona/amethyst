@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.content.Context
-import android.view.View
-import android.widget.FrameLayout
+import android.graphics.Rect
 import androidx.annotation.OptIn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,31 +36,40 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.PlayerView
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
-import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderControlButtons
+import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedSaveButton
+import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedShareButton
+import com.vitorpamplona.amethyst.service.playback.composable.controls.MuteButton
+import com.vitorpamplona.amethyst.service.playback.composable.controls.PictureInPictureButton
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
+import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -140,6 +149,7 @@ fun RenderAudioWithWaveform(
 
     Column(modifier = MaxWidthPaddingTop5dp, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
+            Modifier.fillMaxWidth().height(100.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             GetMediaItem(
@@ -189,35 +199,22 @@ fun RenderVoicePlayer(
     val controllerVisible = remember(controllerState) { mutableStateOf(false) }
 
     Box(modifier = borderModifier) {
-        AndroidView(
+        ContentFrame(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
-            factory = { context: Context ->
-                PlayerView(context).apply {
-                    player = controllerState.controller
-                    // if we already know the size of the frame, this forces the player to stay in the size
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                        )
-
-                    setBackgroundColor(Color.Transparent.toArgb())
-                    setShutterBackgroundColor(Color.Transparent.toArgb())
-
-                    controllerAutoShow = false
-                    useController = true
-                    hideController()
-
-                    setControllerVisibilityListener(
-                        PlayerView.ControllerVisibilityListener { visible ->
-                            controllerVisible.value = visible == View.VISIBLE
-                        },
-                    )
-                }
-            },
+                    .height(100.dp)
+                    .onGloballyPositioned { coordinates ->
+                        val bounds = coordinates.boundsInWindow()
+                        val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
+                        controllerState.visibility.bounds = boundRect
+                    }.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null, // to prevent the ripple from the tap
+                    ) { controllerVisible.value = !controllerVisible.value },
+            player = controllerState.controller,
+            keepContentOnReset = true,
+            surfaceType = SURFACE_TYPE_TEXTURE_VIEW, // texture view is better inside lazy layouts.
         )
 
         Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -225,71 +222,38 @@ fun RenderVoicePlayer(
             waveform?.let { Waveform(it, controllerState, Modifier) }
         }
 
-        RenderControlButtons(
-            mediaItem.src,
-            controllerState,
-            controllerVisible,
-            Modifier.align(Alignment.TopEnd),
-            accountViewModel,
+        RenderTopButtonsForVoice(
+            mediaData = mediaItem.src,
+            controllerState = controllerState,
+            controllerVisible = controllerVisible,
+            modifier = Modifier.align(Alignment.TopEnd),
+            accountViewModel = accountViewModel,
         )
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 fun PlayPauseButton(controllerState: MediaControllerState) {
-    val controller = controllerState.controller
-    var isPlaying by remember(controller) {
-        mutableStateOf(controllerState.isPlaying())
-    }
+    val state = rememberPlayPauseButtonState(controllerState.controller)
 
-    if (controller != null) {
-        val view = LocalView.current
-        // Keeps the screen on while playing and viewing videos.
-        DisposableEffect(key1 = controller, key2 = view) {
-            val listener =
-                object : Player.Listener {
-                    override fun onIsPlayingChanged(playing: Boolean) {
-                        // doesn't consider the mutex because the screen can turn off if the video
-                        // being played in the mutex is not visible.
-                        if (view.keepScreenOn != playing) {
-                            view.keepScreenOn = playing
-                        }
-                        isPlaying = playing
-                    }
-
-                    fun destroy() {
-                        if (view.keepScreenOn) {
-                            view.keepScreenOn = false
-                        }
-                        isPlaying = false
-                    }
-                }
-
-            controller.addListener(listener)
-            onDispose {
-                controller.removeListener(listener)
-                listener.destroy()
+    // Play/Pause Button
+    IconButton(
+        onClick = {
+            if (controllerState.controller.isPlaying) {
+                controllerState.controller.pause()
+            } else {
+                controllerState.controller.play()
             }
-        }
-
-        // Play/Pause Button
-        IconButton(
-            onClick = {
-                if (controller.isPlaying) {
-                    controller.pause()
-                } else {
-                    controller.play()
-                }
-            },
-            modifier = Size75Modifier,
-        ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.PauseCircleOutline else Icons.Default.PlayCircleOutline,
-                contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
-                modifier = Size50Modifier,
-                tint = Color.White,
-            )
-        }
+        },
+        modifier = Size75Modifier,
+    ) {
+        Icon(
+            imageVector = if (state.showPlay) Icons.Default.PlayCircleOutline else Icons.Default.PauseCircleOutline,
+            contentDescription = if (state.showPlay) stringResource(R.string.play) else stringResource(R.string.pause),
+            modifier = Size50Modifier,
+            tint = Color.White,
+        )
     }
 }
 
@@ -342,4 +306,91 @@ fun RenderAudioFromIMeta(
         accountViewModel = accountViewModel,
         nav = nav,
     )
+}
+
+@Composable
+fun RenderTopButtonsForVoice(
+    mediaData: MediaItemData,
+    controllerState: MediaControllerState,
+    controllerVisible: MutableState<Boolean>,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    val context = LocalContext.current.getActivity()
+
+    RenderTopButtonsForVoice(
+        mediaData = mediaData,
+        controllerVisible = controllerVisible,
+        startingMuteState = controllerState.controller.volume < 0.001,
+        onMuteClick = { mute ->
+            // makes the new setting the default for new creations.
+            DEFAULT_MUTED_SETTING.value = mute
+            controllerState.controller.volume = if (mute) 0f else 1f
+        },
+        onPictureInPictureClick = {
+            PipVideoActivity.callIn(mediaData, controllerState.visibility.bounds, context)
+        },
+        modifier = modifier,
+        accountViewModel = accountViewModel,
+    )
+}
+
+@Composable
+fun RenderTopButtonsForVoice(
+    mediaData: MediaItemData,
+    controllerVisible: MutableState<Boolean>,
+    startingMuteState: Boolean,
+    onMuteClick: (Boolean) -> Unit,
+    onPictureInPictureClick: () -> Unit,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    Row(modifier) {
+        if (!isLiveStreaming(mediaData.videoUri)) {
+            AnimatedShareButton(controllerVisible) { popupExpanded, toggle ->
+                ShareMediaAction(
+                    popupExpanded = popupExpanded,
+                    videoUri = mediaData.videoUri,
+                    postNostrUri = mediaData.callbackUri,
+                    blurhash = null,
+                    dim = null,
+                    hash = null,
+                    mimeType = mediaData.mimeType,
+                    onDismiss = toggle,
+                    content = MediaUrlVideo(url = mediaData.videoUri, mimeType = mediaData.mimeType, artworkUri = mediaData.artworkUri, authorName = mediaData.authorName, description = mediaData.title, uri = mediaData.callbackUri),
+                    accountViewModel = accountViewModel,
+                )
+            }
+
+            AnimatedSaveButton(controllerVisible) { context ->
+                accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
+            }
+        } else {
+            AnimatedShareButton(controllerVisible) { popupExpanded, toggle ->
+                ShareMediaAction(
+                    popupExpanded = popupExpanded,
+                    videoUri = mediaData.videoUri,
+                    postNostrUri = mediaData.callbackUri,
+                    blurhash = null,
+                    dim = null,
+                    hash = null,
+                    mimeType = mediaData.mimeType,
+                    onDismiss = toggle,
+                    content = MediaUrlVideo(url = mediaData.videoUri, mimeType = mediaData.mimeType, artworkUri = mediaData.artworkUri, authorName = mediaData.authorName, description = mediaData.title, uri = mediaData.callbackUri),
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+
+        PictureInPictureButton(
+            controllerVisible = controllerVisible,
+            onClick = onPictureInPictureClick,
+        )
+
+        MuteButton(
+            controllerVisible = controllerVisible,
+            startingMuteState = startingMuteState,
+            toggle = onMuteClick,
+        )
+    }
 }

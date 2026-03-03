@@ -20,7 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,16 +35,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,8 +74,15 @@ fun NewUserMetadataScreen(
     postViewModel.init(accountViewModel)
     val context = LocalContext.current
 
+    val socialExpanded = rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.load()
+
+        // Auto-expand social proofs if any have data
+        if (postViewModel.twitter.value.isNotBlank() || postViewModel.mastodon.value.isNotBlank() || postViewModel.github.value.isNotBlank()) {
+            socialExpanded.value = true
+        }
     }
 
     Scaffold(
@@ -95,8 +115,9 @@ fun NewUserMetadataScreen(
             Column(
                 modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
             ) {
+                // -- Profile (always visible) --
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.profile_name_with_explainer)) },
+                    label = { Text(text = stringRes(R.string.username)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.name.value,
                     onValueChange = { postViewModel.name.value = it },
@@ -106,6 +127,7 @@ fun NewUserMetadataScreen(
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
+                    prefix = { Text("@") },
                     keyboardOptions =
                         KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.Sentences,
@@ -195,7 +217,7 @@ fun NewUserMetadataScreen(
                         SelectSingleFromGallery(
                             isUploading = postViewModel.isUploadingImageForBanner,
                             tint = MaterialTheme.colorScheme.placeholderText,
-                            modifier = Modifier.padding(start = 5.dp).align(Alignment.CenterHorizontally),
+                            modifier = Modifier.padding(start = 5.dp),
                         ) {
                             postViewModel.uploadForBanner(it, context, onError = accountViewModel.toastManager::toast)
                         }
@@ -206,13 +228,29 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.pronouns)) },
+                    label = { Text(text = stringRes(R.string.lightning_address)) },
                     modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.pronouns.value,
-                    onValueChange = { postViewModel.pronouns.value = it },
+                    value = postViewModel.lnAddress.value,
+                    onValueChange = { postViewModel.lnAddress.value = it },
                     placeholder = {
                         Text(
-                            text = "they/them, ...",
+                            text = "me@mylightningnode.com",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    singleLine = true,
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringRes(R.string.nip_05) + " (NIP-05)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.nip05.value,
+                    onValueChange = { postViewModel.nip05.value = it },
+                    placeholder = {
+                        Text(
+                            text = "_@mywebsite.com",
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
@@ -238,94 +276,107 @@ fun NewUserMetadataScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.nip_05)) },
+                    label = { Text(text = stringRes(R.string.pronouns)) },
                     modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.nip05.value,
-                    onValueChange = { postViewModel.nip05.value = it },
+                    value = postViewModel.pronouns.value,
+                    onValueChange = { postViewModel.pronouns.value = it },
                     placeholder = {
                         Text(
-                            text = "_@mywebsite.com",
+                            text = "they/them, ...",
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.ln_address)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.lnAddress.value,
-                    onValueChange = { postViewModel.lnAddress.value = it },
-                    placeholder = {
-                        Text(
-                            text = "me@mylightningnode.com",
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                    singleLine = true,
-                )
+                // -- Social Proofs --
+                ExpandableSection(
+                    title = stringRes(R.string.social_proof),
+                    expanded = socialExpanded,
+                ) {
+                    OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.twitter)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.twitter.value,
+                        onValueChange = { postViewModel.twitter.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringRes(R.string.twitter_proof_url_template),
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                    )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.ln_url_outdated)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.lnURL.value,
-                    onValueChange = { postViewModel.lnURL.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringRes(R.string.lnurl),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                )
+                    OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.mastodon)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.mastodon.value,
+                        onValueChange = { postViewModel.mastodon.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringRes(R.string.mastodon_proof_url_template),
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                    )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.twitter)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.twitter.value,
-                    onValueChange = { postViewModel.twitter.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringRes(R.string.twitter_proof_url_template),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.mastodon)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.mastodon.value,
-                    onValueChange = { postViewModel.mastodon.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringRes(R.string.mastodon_proof_url_template),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.github)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    value = postViewModel.github.value,
-                    onValueChange = { postViewModel.github.value = it },
-                    placeholder = {
-                        Text(
-                            text = stringRes(R.string.github_proof_url_template),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    },
-                )
+                    OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.github)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.github.value,
+                        onValueChange = { postViewModel.github.value = it },
+                        placeholder = {
+                            Text(
+                                text = stringRes(R.string.github_proof_url_template),
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ExpandableSection(
+    title: String,
+    expanded: MutableState<Boolean>,
+    content: @Composable () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded.value = !expanded.value }
+                .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = if (expanded.value) "Collapse" else "Expand",
+            tint = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
+
+    AnimatedVisibility(
+        visible = expanded.value,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        Column {
+            content()
+            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }

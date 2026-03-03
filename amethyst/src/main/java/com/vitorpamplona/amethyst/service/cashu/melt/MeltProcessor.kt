@@ -91,6 +91,7 @@ class MeltProcessor {
         onError: (String, String) -> Unit,
         context: Context,
     ) {
+        // TODO: Implement Cashu token melting via Lightning invoice
     }
 
     suspend fun feeCalculator(

@@ -75,7 +75,7 @@ fun RenderChannelMessage(
         makeItShort,
         canPreview,
         quotesLeft,
-        unPackReply = false,
+        unPackReply = ReplyRenderType.NONE,
         backgroundColor,
         editState,
         accountViewModel,

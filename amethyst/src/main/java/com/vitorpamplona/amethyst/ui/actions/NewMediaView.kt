@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -110,9 +109,7 @@ fun NewMediaView(
                     onPost = {
                         postViewModel.upload(context, onClose, accountViewModel.toastManager::toast)
                         postViewModel.selectedServer?.let {
-                            if (it.type != ServerType.NIP95) {
-                                account.settings.changeDefaultFileServer(it)
-                            }
+                            account.settings.changeDefaultFileServer(it)
                         }
                     },
                 )
@@ -148,19 +145,14 @@ fun ImageVideoPost(
     postViewModel: NewMediaModel,
     accountViewModel: AccountViewModel,
 ) {
-    val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
-    val fileServers by accountViewModel.account.serverLists.liveServerList
+    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =
         remember(fileServers) {
             fileServers
                 .map {
-                    if (it.type == ServerType.NIP95) {
-                        TitleExplainer(it.name, nip95description)
-                    } else {
-                        TitleExplainer(it.name, it.baseUrl)
-                    }
+                    TitleExplainer(it.name, it.baseUrl)
                 }.toImmutableList()
         }
 

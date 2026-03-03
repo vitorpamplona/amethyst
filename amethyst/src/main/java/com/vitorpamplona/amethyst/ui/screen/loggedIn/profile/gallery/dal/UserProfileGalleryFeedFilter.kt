@@ -21,27 +21,25 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
+import com.vitorpamplona.quartz.nip71Video.ReplaceableVideoEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 class UserProfileGalleryFeedFilter(
     val user: User,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + "ProfileGallery"
-
-    override fun showHiddenKey(): Boolean =
-        account.settings.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -51,7 +49,16 @@ class UserProfileGalleryFeedFilter(
                 acceptableEvent(it, params, user)
             }
 
-        return sort(notes).toList()
+        val addressableNotes =
+            LocalCache.addressables
+                .filter(
+                    listOf(VideoVerticalEvent.KIND, VideoVerticalEvent.KIND),
+                    user.pubkeyHex,
+                ) { _, it ->
+                    acceptableEvent(it, params, user)
+                }
+
+        return sort(addressableNotes + notes).toList()
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
@@ -72,7 +79,8 @@ class UserProfileGalleryFeedFilter(
             (
                 it.event?.pubKey == user.pubkeyHex && (
                     noteEvent is PictureEvent ||
-                        noteEvent is VideoEvent ||
+                        noteEvent is RegularVideoEvent ||
+                        (noteEvent is ReplaceableVideoEvent && it is AddressableNote) ||
                         (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
                 )
             ) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))

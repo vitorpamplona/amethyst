@@ -24,7 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,7 +37,7 @@ class SignStringTest {
         val message = "8e58c8251bb406b6ded69e9eb14f55282a9a53bdab16fc49a3218c2ad3abc887".hexToByteArray()
         val keyPair = KeyPair("a5ab474552c8f9c46c2eda5a0b68f27430ad81f96cb405e0cb4e34bf0c6494a2".hexToByteArray())
 
-        val signedMessage = Nip01.sign(message, keyPair.privKey!!, random).toHexKey()
+        val signedMessage = Nip01Crypto.sign(message, keyPair.privKey!!, random).toHexKey()
         val expectedValue = "0f9be7e01ba53d5ee6874b9180c7956269fda7a5be424634c3d17b5cfcea6da001be89183876415ba08b7dafa6cff4555e393dc228fb8769b384344e9a27b77c"
         assertEquals(expectedValue, signedMessage)
 

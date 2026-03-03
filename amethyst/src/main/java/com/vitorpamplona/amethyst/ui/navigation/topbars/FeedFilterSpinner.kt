@@ -58,18 +58,19 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
-import com.vitorpamplona.amethyst.ui.screen.AroundMeFeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
 import com.vitorpamplona.amethyst.ui.screen.Name
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
+import com.vitorpamplona.amethyst.ui.screen.RelayName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -83,7 +84,7 @@ import kotlinx.collections.immutable.ImmutableList
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun FeedFilterSpinner(
-    placeholderCode: String,
+    placeholderCode: TopFilter,
     explainer: String,
     options: ImmutableList<FeedDefinition>,
     onSelect: (Int) -> Unit,
@@ -135,7 +136,7 @@ fun FeedFilterSpinner(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(currentText)
 
-                if (selected is AroundMeFeedDefinition) {
+                if (selected?.code is TopFilter.AroundMe) {
                     if (!locationPermissionState.status.isGranted) {
                         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
 
@@ -310,6 +311,18 @@ fun RenderOption(
                 val it by observeNote(option.note, accountViewModel)
 
                 Text(text = "/n/${((it.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+
+        is RelayName -> {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = option.name(),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }

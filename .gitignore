@@ -22,6 +22,9 @@
 /.idea/AndroidProjectSystem.xml
 /.idea/deviceManager.xml
 /.idea/inspectionProfiles/
+/commons/.idea/gradle.xml
+/commons/.idea/misc.xml
+/commons/.idea/workspace.xml
 .DS_Store
 /build
 /captures

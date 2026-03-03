@@ -42,7 +42,7 @@ class TorDialogViewModel : ViewModel() {
     val videosViaTor = mutableStateOf(false)
     val moneyOperationsViaTor = mutableStateOf(false)
     val nip05VerificationsViaTor = mutableStateOf(false)
-    val nip96UploadsViaTor = mutableStateOf(false)
+    val mediaUploadsViaTor = mutableStateOf(false)
 
     val preset =
         derivedStateOf {
@@ -60,7 +60,7 @@ class TorDialogViewModel : ViewModel() {
                     videosViaTor = videosViaTor.value,
                     moneyOperationsViaTor = moneyOperationsViaTor.value,
                     nip05VerificationsViaTor = nip05VerificationsViaTor.value,
-                    nip96UploadsViaTor = nip96UploadsViaTor.value,
+                    mediaUploadsViaTor = mediaUploadsViaTor.value,
                 ),
             )
         }
@@ -78,7 +78,7 @@ class TorDialogViewModel : ViewModel() {
         videosViaTor.value = torSettings.videosViaTor
         moneyOperationsViaTor.value = torSettings.moneyOperationsViaTor
         nip05VerificationsViaTor.value = torSettings.nip05VerificationsViaTor
-        nip96UploadsViaTor.value = torSettings.nip96UploadsViaTor
+        mediaUploadsViaTor.value = torSettings.mediaUploadsViaTor
     }
 
     fun save(): TorSettings =
@@ -95,7 +95,7 @@ class TorDialogViewModel : ViewModel() {
             videosViaTor = videosViaTor.value,
             moneyOperationsViaTor = moneyOperationsViaTor.value,
             nip05VerificationsViaTor = nip05VerificationsViaTor.value,
-            nip96UploadsViaTor = nip96UploadsViaTor.value,
+            mediaUploadsViaTor = mediaUploadsViaTor.value,
         )
 
     fun setPreset(preset: TorPresetType) {
@@ -119,6 +119,6 @@ class TorDialogViewModel : ViewModel() {
         videosViaTor.value = torSettings.videosViaTor
         moneyOperationsViaTor.value = torSettings.moneyOperationsViaTor
         nip05VerificationsViaTor.value = torSettings.nip05VerificationsViaTor
-        nip96UploadsViaTor.value = torSettings.nip96UploadsViaTor
+        mediaUploadsViaTor.value = torSettings.mediaUploadsViaTor
     }
 }

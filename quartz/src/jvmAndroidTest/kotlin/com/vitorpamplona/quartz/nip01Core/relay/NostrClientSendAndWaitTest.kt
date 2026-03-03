@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitForResponse
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.CoroutineScope
@@ -48,13 +48,13 @@ class NostrClientSendAndWaitTest : BaseNostrClientTest() {
             val resultDamus =
                 client.sendAndWaitForResponse(
                     event = event,
-                    relayList = setOf(RelayUrlNormalizer.normalize("wss://relay.damus.io")),
+                    relayList = setOf("wss://relay.damus.io".normalizeRelayUrl()),
                 )
 
             val resultNos =
                 client.sendAndWaitForResponse(
                     event = event,
-                    relayList = setOf(RelayUrlNormalizer.normalize("wss://nos.lol")),
+                    relayList = setOf("wss://nos.lol".normalizeRelayUrl()),
                 )
 
             client.disconnect()

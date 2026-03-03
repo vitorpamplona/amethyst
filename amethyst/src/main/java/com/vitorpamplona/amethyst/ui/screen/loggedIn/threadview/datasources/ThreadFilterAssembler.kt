@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadEventLoaderSubAssembler
@@ -28,11 +29,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
+@Stable
 class ThreadQueryState(
     val eventId: HexKey,
     val account: Account,
 )
 
+@Stable
 class ThreadFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<ThreadQueryState>() {

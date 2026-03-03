@@ -426,6 +426,7 @@
     <string name="poll_heading_required">Kötelező mezők:</string>
     <string name="poll_zap_recipients">Zap-kedvezményezettek</string>
     <string name="poll_primary_description">Szavazás elsődleges leírása…</string>
+    <string name="poll_option">Lehetőség</string>
     <string name="poll_option_index">%s. válaszlehetőség</string>
     <string name="poll_option_description">Válaszlehetőség leírása</string>
     <string name="poll_heading_optional">Nem kötelező mezők:</string>
@@ -433,6 +434,8 @@
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Együttműködés</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Szavazás lezárásának dátuma és ideje</string>
+    <string name="poll_closing_in">A szavazás lezárul %1$s múlva</string>
     <string name="poll_closing_time">Szavazás lezárása</string>
     <string name="poll_closing_time_days">nap</string>
     <string name="poll_unable_to_vote">Nem lehet szavazni</string>
@@ -476,6 +479,7 @@
     <string name="set_preferred_media_servers">Állítsa be a kívánt médiafeltöltő-kiszolgálókat.</string>
     <string name="no_nip96_server_message">Nincsenek beállítva NIP-96 kiszolgálók. Használhatja az Amethyst listáját, vagy hozzáadhat egyet az alábbiakból ↓</string>
     <string name="no_blossom_server_message">Nincsenek Blossom-kiszolgálók beállítva. Használhatja az Amethyst listáját, vagy hozzáadhat egyet az alábbiakból ↓</string>
+    <string name="recommended_media_servers">Ajánlott médiakiszolgálók</string>
     <string name="built_in_media_servers_title">Beépített médiakiszolgálók</string>
     <string name="built_in_servers_description">Az Amethyst alapértelmezett listája. Hozzáadhatja őket egyenként, vagy hozzáadhatja a listát.</string>
     <string name="use_default_servers">Alapértelmezett lista használata</string>
@@ -507,6 +511,7 @@
     <string name="follow_list_kind3follows_proxy">Követés proxyn keresztül</string>
     <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
     <string name="follow_list_global">Globális</string>
+    <string name="follow_list_chess">Sakk</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
     <string name="follow_sets">Követési listák</string>
     <string name="follow_sets_explainer">Ezek a követési listák az Ön saját alkalmazás-használatából lettek kialakítva. A felhasználókat privát vagy nyilvánosan követheti</string>
@@ -595,8 +600,8 @@
     <string name="tor_use_money_operations_explainer">Tor kényszerítése Zap küldésekor, lightning és cashu tranzakciókhoz</string>
     <string name="tor_use_nip05_verification">Nostr-cím hitelesítése</string>
     <string name="tor_use_nip05_verification_explainer">Tor kényszerítése a NIP-05 címek hitelesítésekor</string>
-    <string name="tor_use_nip96_uploads">Média-feltöltések</string>
-    <string name="tor_use_nip96_uploads_explainer">Tor kényszerítése média feltöltésekor</string>
+    <string name="tor_use_media_uploads">Médiafeltöltések</string>
+    <string name="tor_use_media_uploads_explainer">Tor kényszerítése tartalomfeltöltéskor</string>
     <string name="tor_internal">Beépített</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Kikapcsolva</string>
@@ -1008,6 +1013,7 @@
     <string name="route_notifications">Értesítések</string>
     <string name="route_global">Globális</string>
     <string name="route_video">Rövidek</string>
+    <string name="route_chess">Sakk</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="new_post">Új bejegyzés</string>
     <string name="new_short">Új rövidek: képek vagy videók</string>
@@ -1242,4 +1248,36 @@
     <string name="follow_set_delete">Lista törlése</string>
     <string name="follow_pack_delete">Csomag törlése</string>
     <string name="kinds">Változatok</string>
+    <string name="retry_failed">Siikertelen újrapróbálkozás</string>
+    <string name="tap_to_view_details">Koppintson a részletek megtekintéséhez</string>
+    <string name="event_sent">%1$s elküldve</string>
+    <string name="broadcast_results">Közvetítési eredmények</string>
+    <string name="broadcasts_number">Közvetítés (%1$d)</string>
+    <string name="collapse">Összecsukás</string>
+    <string name="expand">Kibontás</string>
+    <string name="retry_failed_number">Sikertelen újrapróbálkozás (%1$d)</string>
+    <string name="more_broadcasts_number">több mint %1$d közvetítés</string>
+    <string name="number_in_progress">" (%1$d folyamatban)"</string>
+    <string name="share_of_relays">%1$d/%2$d továbbító</string>
+    <string name="timeout">Időtúllépés</string>
+    <string name="retrying">Újrapróbálkozás…</string>
+    <string name="retry">Újrapróbálkozás</string>
+    <string name="view">Megtekintés</string>
+    <string name="dismiss">Elutasítás</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">Közvetítés</string>
+    <string name="broadcasting_name">%1$s közvetítése</string>
+    <string name="broadcasting_number_events">%1$d esemény közvetítése…</string>
+    <string name="sent_number_events">%1$d esemény elküldve</string>
+    <string name="bradcasting_result_partial">Néhány esemény sikertelen</string>
+    <string name="bradcasting_result_success">Az összes esemény sikeres</string>
+    <string name="bradcasting_result_failure">Az összes esemény sikertelen</string>
+    <string name="reaction">Reakció</string>
+    <string name="voice_post">Hangos bejegyzés</string>
+    <string name="voice_reply">Hangos válasz</string>
+    <string name="closing_time">Befejezés időpontja</string>
+    <string name="confirm">Megerősítés</string>
+    <string name="next">Következő</string>
+    <string name="add_poll_option_button">Szavazati lehetőség hozzáadása</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

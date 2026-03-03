@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 // This allows multiple screen to be listening to tags, even the same tag
+@Stable
 class NWCPaymentQueryState(
     val fromServiceHex: HexKey,
     val toUserHex: HexKey,
@@ -33,6 +35,7 @@ class NWCPaymentQueryState(
     val relay: NormalizedRelayUrl,
 )
 
+@Stable
 class NWCPaymentFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<NWCPaymentQueryState>() {

@@ -37,6 +37,7 @@ class EmptyNav : INav {
 
     override fun openDrawer() = runBlocking { drawerState.open() }
 
+    // All navigation methods are intentionally no-op; this is a stub for previews and tests
     override fun nav(route: Route) {}
 
     override fun nav(computeRoute: suspend () -> Route?) {}

@@ -46,14 +46,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,7 +63,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,7 +100,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -436,8 +430,6 @@ fun ListContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var backupDialogOpen by remember { mutableStateOf(false) }
-
     Column(modifier) {
         NavigationRow(
             title = R.string.profile,
@@ -471,6 +463,15 @@ fun ListContent(
             route = Route.Drafts,
         )
 
+        NavigationRow(
+            title = R.string.route_chess,
+            icon = R.drawable.ic_chess,
+            iconReference = 1,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Chess,
+        )
+
         IconRowRelays(
             accountViewModel = accountViewModel,
             onClick = {
@@ -479,59 +480,12 @@ fun ListContent(
             },
         )
 
-        IconRow(
-            title = R.string.media_servers,
-            icon = Icons.Outlined.CloudUpload,
-            tint = MaterialTheme.colorScheme.onBackground,
-            onClick = {
-                nav.closeDrawer()
-                nav.nav(Route.EditMediaServers)
-            },
-        )
-
         NavigationRow(
-            title = R.string.security_filters,
-            icon = Icons.Outlined.Security,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.SecurityFilters,
-        )
-
-        NavigationRow(
-            title = R.string.privacy_options,
-            icon = R.drawable.ic_tor,
-            iconReference = 1,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.PrivacyOptions,
-        )
-
-        accountViewModel.account.settings.keyPair.privKey?.let {
-            IconRow(
-                title = R.string.backup_keys,
-                icon = Icons.Outlined.Key,
-                tint = MaterialTheme.colorScheme.onBackground,
-                onClick = {
-                    nav.closeDrawer()
-                    backupDialogOpen = true
-                },
-            )
-        }
-
-        NavigationRow(
-            title = R.string.preferences,
+            title = R.string.settings,
             icon = Icons.Outlined.Settings,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Settings,
-        )
-
-        NavigationRow(
-            title = R.string.user_preferences,
-            icon = Icons.Outlined.Translate,
-            tint = MaterialTheme.colorScheme.onBackground,
-            nav = nav,
-            route = Route.UserSettings,
+            route = Route.AllSettings,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -542,10 +496,6 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
         )
-    }
-
-    if (backupDialogOpen) {
-        AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
     }
 }
 

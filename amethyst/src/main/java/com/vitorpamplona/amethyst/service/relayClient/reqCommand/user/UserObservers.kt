@@ -43,7 +43,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -353,6 +352,27 @@ fun observeUserIsFollowingGeohash(
         }
 
     return flow.collectAsStateWithLifecycle(geohash in accountViewModel.account.geohashList.flow.value)
+}
+
+@SuppressLint("StateFlowValueCalledInComposition")
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeUserIsFollowingRelay(
+    relayUrl: NormalizedRelayUrl,
+    accountViewModel: AccountViewModel,
+): State<Boolean> {
+    val flow =
+        remember(accountViewModel) {
+            accountViewModel.account.favoriteRelayList.flowNoDefaults
+                .mapLatest { relays ->
+                    relayUrl in relays
+                }.onStart {
+                    emit(relayUrl in accountViewModel.account.favoriteRelayList.flowNoDefaults.value)
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.IO)
+        }
+
+    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.favoriteRelayList.flowNoDefaults.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)

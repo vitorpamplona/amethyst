@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 
 @Immutable
@@ -66,7 +67,7 @@ class MessagesTabItem(
 @Composable
 fun MessagesTabHeader(
     pagerState: PagerState,
-    tabs: List<MessagesTabItem>,
+    tabs: ImmutableList<MessagesTabItem>,
     onMarkKnownAsRead: () -> Unit,
     onMarkNewAsRead: () -> Unit,
 ) {

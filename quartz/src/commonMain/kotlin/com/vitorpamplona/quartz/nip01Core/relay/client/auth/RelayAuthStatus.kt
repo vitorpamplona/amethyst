@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.auth
 
+import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class RelayAuthStatus {
     // Keeps track of auth responses to update the relay with all filters
     // after the authentication happen
-    private val authResponseWatcher: MutableMap<HexKey, AuthEventReceiptStatus> = mutableMapOf()
+    private val authResponseWatcher: LruCache<HexKey, AuthEventReceiptStatus> = LruCache(10)
 
     // Avoids sending multiple replies for each auth.
-    private val uniqueAuthChallengesSent: MutableSet<ChallengePair> = mutableSetOf()
+    private val uniqueAuthChallengesSent: LruCache<ChallengePair, ChallengePair> = LruCache(10)
 
     enum class AuthEventReceiptStatus {
         AUTHENTICATING,
@@ -43,15 +44,14 @@ class RelayAuthStatus {
     )
 
     fun saveAuthSubmission(authEvent: RelayAuthEvent): Boolean {
-        val challenge = authEvent.challenge()
-        if (challenge == null) return false
+        val challenge = authEvent.challenge() ?: return false
 
         val challengePair = ChallengePair(authEvent.pubKey, challenge)
 
         // only send replies to new challenges to avoid infinite loop:
-        return if (challengePair !in uniqueAuthChallengesSent) {
-            authResponseWatcher[authEvent.id] = AuthEventReceiptStatus.AUTHENTICATING
-            uniqueAuthChallengesSent.add(challengePair)
+        return if (uniqueAuthChallengesSent[challengePair] == null) {
+            authResponseWatcher.put(authEvent.id, AuthEventReceiptStatus.AUTHENTICATING)
+            uniqueAuthChallengesSent.put(challengePair, challengePair)
             true
         } else {
             false
@@ -61,10 +61,9 @@ class RelayAuthStatus {
     fun checkAuthResults(
         eventId: HexKey,
         success: Boolean,
-    ): Boolean =
-        if (authResponseWatcher.containsKey(eventId)) {
-            val wasAlreadyAuthenticated = authResponseWatcher[eventId]
-
+    ): Boolean {
+        val wasAlreadyAuthenticated = authResponseWatcher[eventId]
+        return if (wasAlreadyAuthenticated != null) {
             if (success) {
                 authResponseWatcher.put(eventId, AuthEventReceiptStatus.AUTHENTICATED)
             } else {
@@ -75,6 +74,7 @@ class RelayAuthStatus {
         } else {
             false
         }
+    }
 
-    fun hasFinishedAllAuths() = authResponseWatcher.all { it.value != AuthEventReceiptStatus.AUTHENTICATING }
+    fun hasFinishedAllAuths() = authResponseWatcher.snapshot().all { it.value != AuthEventReceiptStatus.AUTHENTICATING }
 }

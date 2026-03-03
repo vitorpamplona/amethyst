@@ -36,10 +36,10 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
@@ -83,18 +83,28 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info.nip05 ?: ""
             lnAddress.value = it.info.lud16 ?: ""
             lnURL.value = it.info.lud06 ?: ""
+        }
 
-            twitter.value = ""
-            github.value = ""
-            mastodon.value = ""
+        twitter.value = ""
+        github.value = ""
+        mastodon.value = ""
 
-            // TODO: Validate Telegram input, somehow.
-            it.identities.forEach { identity ->
-                when (identity) {
-                    is TwitterIdentity -> twitter.value = identity.toProofUrl()
-                    is GitHubIdentity -> github.value = identity.toProofUrl()
-                    is MastodonIdentity -> mastodon.value = identity.toProofUrl()
-                }
+        // Load identities from kind 10011 first, fall back to kind 0 for backwards compat
+        val identities =
+            account.userMetadata.getExternalIdentitiesEvent()?.identityClaims()
+                ?: account
+                    .userProfile()
+                    .metadataOrNull()
+                    ?.flow
+                    ?.value
+                    ?.identities
+                ?: emptyList()
+
+        identities.forEach { identity ->
+            when (identity) {
+                is TwitterIdentity -> twitter.value = identity.toProofUrl()
+                is GitHubIdentity -> github.value = identity.toProofUrl()
+                is MastodonIdentity -> mastodon.value = identity.toProofUrl()
             }
         }
     }
@@ -112,12 +122,17 @@ class NewUserMetadataViewModel : ViewModel() {
                 nip05 = nip05.value,
                 lnAddress = lnAddress.value,
                 lnURL = lnURL.value,
+            )
+
+        val identities =
+            account.userMetadata.sendNewUserIdentities(
                 twitter = twitter.value,
                 mastodon = mastodon.value,
                 github = github.value,
             )
 
         account.sendLiterallyEverywhere(metadata)
+        account.sendLiterallyEverywhere(identities)
 
         clear()
     }
@@ -144,12 +159,12 @@ class NewUserMetadataViewModel : ViewModel() {
     ) {
         accountViewModel.launchSigner {
             upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForPicture = it },
-                onUploaded = { picture.value = it },
+                galleryUri = uri,
+                context = context,
                 onError = onError,
-            )
+            )?.let {
+                picture.value = it
+            }
         }
     }
 
@@ -160,27 +175,44 @@ class NewUserMetadataViewModel : ViewModel() {
     ) {
         accountViewModel.launchSigner {
             upload(
-                uri,
-                context,
-                onUploading = { isUploadingImageForBanner = it },
-                onUploaded = { banner.value = it },
+                galleryUri = uri,
+                context = context,
                 onError = onError,
-            )
+            )?.let {
+                banner.value = it
+            }
+        }
+    }
+
+    fun uploadPictureAndSave(
+        uri: SelectedMedia,
+        context: Context,
+        onError: (String, String) -> Unit,
+    ) {
+        load()
+        accountViewModel.launchSigner {
+            upload(
+                galleryUri = uri,
+                context = context,
+                onError = onError,
+            )?.let {
+                picture.value = it
+            }
+
+            create()
         }
     }
 
     private suspend fun upload(
         galleryUri: SelectedMedia,
         context: Context,
-        onUploading: (Boolean) -> Unit,
-        onUploaded: (String) -> Unit,
         onError: (String, String) -> Unit,
-    ) {
-        onUploading(true)
+    ): String? {
+        isUploadingImageForPicture = true
 
         val compResult = MediaCompressor().compress(galleryUri.uri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
-        try {
+        return try {
             val result =
                 if (account.settings.defaultFileServer.type == ServerType.NIP96) {
                     Nip96Uploader().upload(
@@ -209,20 +241,17 @@ class NewUserMetadataViewModel : ViewModel() {
                     )
                 }
 
-            if (result.url != null) {
-                onUploading(false)
-                onUploaded(result.url)
-            } else {
-                onUploading(false)
+            if (result.url == null) {
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
             }
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            onUploading(false)
-            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
+
+            result.url
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            onUploading(false)
             onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
+            null
+        } finally {
+            isUploadingImageForPicture = false
         }
     }
 }

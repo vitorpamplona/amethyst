@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels.thread
 
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
+@Stable
 abstract class LevelFeedViewModel(
     localFilter: FeedFilter<Note>,
     cacheProvider: ICacheProvider,

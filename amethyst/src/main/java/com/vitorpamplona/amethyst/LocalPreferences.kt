@@ -25,9 +25,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
-import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -54,6 +53,7 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -102,6 +102,7 @@ private object PrefKeys {
     const val LATEST_NIP65_RELAY_LIST = "latestNIP65RelayList"
     const val LATEST_SEARCH_RELAY_LIST = "latestSearchRelayList"
     const val LATEST_INDEX_RELAY_LIST = "latestIndexRelayList"
+    const val LATEST_FAVORITE_RELAY_LIST = "latestFavoriteRelayList"
     const val LATEST_BLOCKED_RELAY_LIST = "latestBlockedRelayList"
     const val LATEST_TRUSTED_RELAY_LIST = "latestTrustedRelayList"
     const val LATEST_MUTE_LIST = "latestMuteList"
@@ -320,16 +321,11 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_FILE_SERVER,
                         JsonMapper.toJson(settings.defaultFileServer),
                     )
-                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, settings.defaultHomeFollowList.value)
-                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, settings.defaultStoriesFollowList.value)
-                    putString(
-                        PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST,
-                        settings.defaultNotificationFollowList.value,
-                    )
-                    putString(
-                        PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST,
-                        settings.defaultDiscoveryFollowList.value,
-                    )
+
+                    putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
+                    putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
+                    putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNotificationFollowList.value))
+                    putString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, JsonMapper.toJson(settings.defaultDiscoveryFollowList.value))
 
                     putOrRemove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, settings.zapPaymentRequest.value?.denormalize())
 
@@ -340,6 +336,7 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_NIP65_RELAY_LIST, settings.backupNIP65RelayList)
                     putOrRemove(PrefKeys.LATEST_SEARCH_RELAY_LIST, settings.backupSearchRelayList)
                     putOrRemove(PrefKeys.LATEST_INDEX_RELAY_LIST, settings.backupIndexRelayList)
+                    putOrRemove(PrefKeys.LATEST_FAVORITE_RELAY_LIST, settings.backupIndexRelayList)
                     putOrRemove(PrefKeys.LATEST_BLOCKED_RELAY_LIST, settings.backupBlockedRelayList)
                     putOrRemove(PrefKeys.LATEST_TRUSTED_RELAY_LIST, settings.backupTrustedRelayList)
 
@@ -457,14 +454,10 @@ object LocalPreferences {
                         getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
                             ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
-                    val defaultHomeFollowList =
-                        getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: ALL_FOLLOWS
-                    val defaultStoriesFollowList =
-                        getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
-                    val defaultNotificationFollowList =
-                        getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
-                    val defaultDiscoveryFollowList =
-                        getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
+                    val defaultHomeFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_HOME_FOLLOW_LIST) ?: TopFilter.AllFollows
+                    val defaultStoriesFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST) ?: TopFilter.Global
+                    val defaultNotificationFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST) ?: TopFilter.Global
+                    val defaultDiscoveryFollowList = parseOrNull<TopFilter>(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST) ?: TopFilter.Global
 
                     val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
                     val defaultFileServer = parseOrNull<ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: DEFAULT_MEDIA_SERVERS[0]
@@ -478,6 +471,7 @@ object LocalPreferences {
                     val latestNip65RelayList = parseEventOrNull<AdvertisedRelayListEvent>(PrefKeys.LATEST_NIP65_RELAY_LIST)
                     val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                     val latestIndexRelayList = parseEventOrNull<IndexerRelayListEvent>(PrefKeys.LATEST_INDEX_RELAY_LIST)
+                    val latestFavoriteRelayList = parseEventOrNull<FavoriteRelayListEvent>(PrefKeys.LATEST_FAVORITE_RELAY_LIST)
                     val latestBlockedRelayList = parseEventOrNull<BlockedRelayListEvent>(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
                     val latestTrustedRelayList = parseEventOrNull<TrustedRelayListEvent>(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
                     val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
@@ -523,6 +517,7 @@ object LocalPreferences {
                         backupDMRelayList = latestDmRelayList,
                         backupSearchRelayList = latestSearchRelayList,
                         backupIndexRelayList = latestIndexRelayList,
+                        backupFavoriteRelayList = latestFavoriteRelayList,
                         backupBlockedRelayList = latestBlockedRelayList,
                         backupTrustedRelayList = latestTrustedRelayList,
                         backupPrivateHomeRelayList = latestPrivateHomeRelayList,

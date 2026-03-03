@@ -26,14 +26,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginPage
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.signup.SignUpPage
 
 @Composable
 fun LoginOrSignupScreen(
     newAccountKey: String?,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
     isFirstLogin: Boolean,
 ) {
     var wantsNewUser by remember {
@@ -42,11 +42,11 @@ fun LoginOrSignupScreen(
 
     Crossfade(wantsNewUser, label = "LoginOrSignupScreen") {
         if (it) {
-            SignUpPage(accountStateViewModel) {
+            SignUpPage(accountSessionManager) {
                 wantsNewUser = false
             }
         } else {
-            LoginPage(accountStateViewModel, isFirstLogin, newAccountKey) {
+            LoginPage(accountSessionManager, isFirstLogin, newAccountKey) {
                 wantsNewUser = true
             }
         }

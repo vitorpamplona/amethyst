@@ -48,7 +48,7 @@ class Nav(
 
     override fun nav(route: Route) {
         navigationScope.launch {
-            if (getRouteWithArguments(controller) != route) {
+            if (getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
             }
         }
@@ -57,7 +57,7 @@ class Nav(
     override fun nav(computeRoute: suspend () -> Route?) {
         navigationScope.launch {
             val route = computeRoute()
-            if (route != null && getRouteWithArguments(controller) != route) {
+            if (route != null && getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
             }
         }

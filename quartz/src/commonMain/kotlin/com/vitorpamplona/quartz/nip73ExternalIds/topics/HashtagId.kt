@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip73ExternalIds.topics
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.utils.ensure
 
+@Stable
 class HashtagId(
     val topic: String,
     val hint: String? = null,

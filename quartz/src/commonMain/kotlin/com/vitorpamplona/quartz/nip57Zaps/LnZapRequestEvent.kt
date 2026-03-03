@@ -104,7 +104,7 @@ class LnZapRequestEvent(
                     AltTag.assemble(ALT),
                 )
             if (zappedEvent is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", zappedEvent.aTag().toTag()))
+                tags = tags + listOf(ATag.assemble(zappedEvent.address(), null))
             }
             if (pollOption != null && pollOption >= 0) {
                 tags = tags + listOf(arrayOf(PollOptionTag.TAG_NAME, pollOption.toString()))

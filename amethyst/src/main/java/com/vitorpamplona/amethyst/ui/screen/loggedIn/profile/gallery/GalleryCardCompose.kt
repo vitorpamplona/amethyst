@@ -24,10 +24,12 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -45,7 +47,6 @@ fun GalleryCardCompose(
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
-    ratio: Float = 1.0f,
 ) {
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav, shortPreview = true) {
         CheckHiddenFeedWatchBlockAndReport(
@@ -66,15 +67,15 @@ fun GalleryCardCompose(
                 }
 
             if (redirectToEventId != null) {
-                LoadNote(baseNoteHex = redirectToEventId, accountViewModel = accountViewModel) { sourceNote ->
-                    if (sourceNote != null) {
+                LoadNote(baseNoteHex = redirectToEventId, accountViewModel = accountViewModel) { baseSourceNote ->
+                    if (baseSourceNote != null) {
+                        val sourceNote by observeNote(baseSourceNote, accountViewModel)
                         RedirectableGalleryCard(
                             galleryNote = baseNote,
-                            sourceNote = sourceNote,
+                            sourceNote = sourceNote.note,
                             modifier = modifier,
                             accountViewModel = accountViewModel,
                             nav = nav,
-                            ratio = ratio,
                         )
                     } else {
                         RedirectableGalleryCard(
@@ -83,7 +84,6 @@ fun GalleryCardCompose(
                             modifier = modifier,
                             accountViewModel = accountViewModel,
                             nav = nav,
-                            ratio = ratio,
                         )
                     }
                 }
@@ -94,7 +94,6 @@ fun GalleryCardCompose(
                     modifier = modifier,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                    ratio = ratio,
                 )
             }
         }
@@ -108,7 +107,6 @@ fun RedirectableGalleryCard(
     modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
-    ratio: Float = 1.0f,
 ) {
     QuickActionGallery(baseNote = galleryNote, accountViewModel = accountViewModel) { showPopup ->
         ClickableNote(
@@ -127,7 +125,7 @@ fun RedirectableGalleryCard(
                 note = galleryNote,
                 accountViewModel = accountViewModel,
             ) {
-                GalleryThumbnail(galleryNote, accountViewModel, nav, ratio = ratio)
+                GalleryThumbnail(galleryNote, accountViewModel, nav)
             }
         }
     }

@@ -92,7 +92,7 @@ class CardFeedContentState(
         viewModelScope.launch(Dispatchers.IO) { _scrollToTop.emit(_scrollToTop.value + 1) }
     }
 
-    suspend fun sentToTop() {
+    fun sentToTop() {
         scrolltoTopPending = false
     }
 
@@ -212,7 +212,7 @@ class CardFeedContentState(
 
                         val zapRequest = event.zapRequest
                         if (zapRequest != null) {
-                            val zapRequestNote = LocalCache.getNoteIfExists(zapRequest.id)
+                            val zapRequestNote = getNoteIfExists(zapRequest.id)
                             if (zapRequestNote != null) {
                                 zapsPerUser
                                     .getOrPut(author, { mutableListOf() })
@@ -352,6 +352,7 @@ class CardFeedContentState(
     }
 
     fun deleteFromFeed(deletedNotes: Set<Note>) {
+        // TODO: Implement deletion of notes from the notification feed
     }
 
     private fun refreshFromOldState(newItems: Set<Note>) {

@@ -36,7 +36,6 @@ import androidx.media3.session.MediaSession
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -99,10 +98,11 @@ class MediaSessionPool(
                 .Builder(context, exoPlayerPool.acquirePlayer(context))
                 .apply {
                     setBitmapLoader(
-                        DataSourceBitmapLoader(
-                            DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get(),
-                            OkHttpDataSource.Factory(okHttpClient),
-                        ),
+                        DataSourceBitmapLoader
+                            .Builder(context)
+                            .setExecutorService(DataSourceBitmapLoader.DEFAULT_EXECUTOR_SERVICE.get())
+                            .setDataSourceFactory(OkHttpDataSource.Factory(okHttpClient))
+                            .build(),
                     )
                     setId(id)
                     setCallback(globalCallback)
@@ -125,11 +125,9 @@ class MediaSessionPool(
             session.player.removeListener(listener.playerListener)
         }
 
-        cache.remove(session.id)
         playingMap.remove(session.id)
+        cache.remove(session.id)
         session.release()
-        exoPlayerPool.releasePlayerAsync(session.player as ExoPlayer)
-
         cleanupUnused()
     }
 
@@ -144,7 +142,6 @@ class MediaSessionPool(
                 // but not connected yet.
                 // delay(10000)
                 snap.values.forEach {
-                    Log.d("MediaSessionPoll", "Clean Up Unused ${it.session.connectedControllers.size} ${it.session.id}")
                     if (it.session.connectedControllers.isEmpty()) {
                         releaseSession(it.session)
                         counter++

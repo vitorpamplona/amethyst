@@ -61,7 +61,6 @@ import com.vitorpamplona.quartz.experimental.trustedAssertions.list.TrustProvide
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
@@ -133,6 +132,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
@@ -148,6 +148,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -168,6 +169,13 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -180,6 +188,8 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
@@ -193,6 +203,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -219,7 +230,9 @@ interface ILocalCache {
     fun markAsSeen(
         eventId: String,
         relay: NormalizedRelayUrl,
-    ) {}
+    ) {
+        // Default no-op; implementations may override to track seen events per relay
+    }
 }
 
 object LocalCache : ILocalCache, ICacheProvider {
@@ -411,18 +424,18 @@ object LocalCache : ILocalCache, ICacheProvider {
         return null
     }
 
-    override fun checkGetOrCreateNote(key: String): Note? {
-        if (ATag.isATag(key)) {
-            return checkGetOrCreateAddressableNote(key)
+    override fun checkGetOrCreateNote(hexKey: String): Note? {
+        if (ATag.isATag(hexKey)) {
+            return checkGetOrCreateAddressableNote(hexKey)
         }
-        if (isValidHex(key)) {
-            val note = getOrCreateNote(key)
+        if (isValidHex(hexKey)) {
+            val note = getOrCreateNote(hexKey)
             val noteEvent = note.event
             return if (noteEvent is AddressableEvent) {
                 // upgrade to the latest
-                val newNote = checkGetOrCreateAddressableNote(noteEvent.aTag().toTag())
+                val newNote = getOrCreateAddressableNote(noteEvent.address())
 
-                if (newNote != null && newNote.event == null) {
+                if (newNote.event == null) {
                     val author = note.author ?: getOrCreateUser(noteEvent.pubKey)
                     newNote.loadEvent(noteEvent as Event, author, emptyList())
                     note.moveAllReferencesTo(newNote)
@@ -550,6 +563,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         return false
     }
+
+    fun consume(
+        event: ExternalIdentitiesEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: ContactListEvent,
@@ -714,6 +733,49 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
+
+    // Chess events (NIP-64 live chess)
+    fun consume(
+        event: ChessGameEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: JesterEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessGameChallengeEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessGameAcceptEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessMoveEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessGameEndEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    fun consume(
+        event: LiveChessDrawOfferEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: NipTextEvent,
@@ -1151,6 +1213,12 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
+        event: FavoriteRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
         event: TrustProviderListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -1355,10 +1423,13 @@ object LocalCache : ILocalCache, ICacheProvider {
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consumeBaseReplaceable(
-        event: BaseAddressableEvent,
+        event: Event,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        // TODO: Redo the Event sctructure in Quartz to avoid this check
+        check(event is AddressableEvent) { "Event must be addressable: ${event.kind}" }
+
         val version = getOrCreateNote(event.id)
         val replaceableNote = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
@@ -1518,6 +1589,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (deleteNote is AddressableNote && deletedEvent is StatusEvent) {
             deleteNote.author?.statusStateOrNull()?.removeStatus(deleteNote)
+        }
+
+        if (deletedEvent is PollResponseEvent) {
+            deletedEvent.poll()?.eventId?.let {
+                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(deleteNote)
+            }
         }
 
         if (deletedEvent is TorrentCommentEvent) {
@@ -1997,6 +2074,38 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CodeSnippetEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: PollEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: PollResponseEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val pollId = event.poll()?.eventId
+        if (pollId != null) {
+            val pollNote = getOrCreateNote(pollId)
+            val responseNote = getOrCreateNote(event.id)
+
+            val new = consumeRegularEvent(event, relay, wasVerified)
+            if (new) {
+                pollNote.pollState().addResponse(responseNote)
+            }
+            return new
+        }
+
+        return false
+    }
 
     fun consume(
         event: FileStorageEvent,
@@ -2611,6 +2720,12 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.author?.statusStateOrNull()?.removeStatus(note)
         }
 
+        if (noteEvent is PollResponseEvent) {
+            noteEvent.poll()?.eventId?.let {
+                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(note)
+            }
+        }
+
         note.clearFlow()
 
         notes.remove(note.idHex)
@@ -2677,7 +2792,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         note?.event?.let { noteEvent ->
             if (noteEvent is AddressableEvent) {
-                getAddressableNoteIfExists(noteEvent.aTag().toTag())?.addRelay(relay)
+                getAddressableNoteIfExists(noteEvent.address())?.addRelay(relay)
             }
         }
 
@@ -2951,6 +3066,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is EmojiPackSelectionEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatListEvent -> consume(event, relay, wasVerified)
+                is ExternalIdentitiesEvent -> consume(event, relay, wasVerified)
                 is GenericRepostEvent -> consume(event, relay, wasVerified)
                 is FhirResourceEvent -> consume(event, relay, wasVerified)
                 is FileHeaderEvent -> consume(event, relay, wasVerified)
@@ -2966,6 +3082,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitReplyEvent -> consume(event, relay, wasVerified)
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
+                is ChessGameEvent -> consume(event, relay, wasVerified)
+                is FavoriteRelayListEvent -> consume(event, relay, wasVerified)
+                is JesterEvent -> consume(event, relay, wasVerified)
+                is LiveChessGameChallengeEvent -> consume(event, relay, wasVerified)
+                is LiveChessGameAcceptEvent -> consume(event, relay, wasVerified)
+                is LiveChessMoveEvent -> consume(event, relay, wasVerified)
+                is LiveChessGameEndEvent -> consume(event, relay, wasVerified)
+                is LiveChessDrawOfferEvent -> consume(event, relay, wasVerified)
                 is HashtagListEvent -> consume(event, relay, wasVerified)
                 is HighlightEvent -> consume(event, relay, wasVerified)
                 is IndexerRelayListEvent -> consume(event, relay, wasVerified)
@@ -2997,7 +3121,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
+                is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)
+                is PollEvent -> consume(event, relay, wasVerified)
+                is PollResponseEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)
                 is ContactCardEvent -> consume(event, relay, wasVerified)
                 is RelaySetEvent -> consume(event, relay, wasVerified)

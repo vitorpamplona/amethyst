@@ -116,6 +116,31 @@ fun ReplyInformationChannel(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ReplyToLabel(
+    replyingDirectlyTo: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val user = replyingDirectlyTo.author ?: return
+
+    FlowRow {
+        Text(
+            stringRes(id = R.string.replying_to),
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+
+        ReplyInfoMention(
+            user = user,
+            prefix = "",
+            accountViewModel = accountViewModel,
+            onUserTagClick = { nav.nav(routeFor(it)) },
+        )
+    }
+}
+
 @Composable
 private fun ReplyInfoMention(
     user: User,

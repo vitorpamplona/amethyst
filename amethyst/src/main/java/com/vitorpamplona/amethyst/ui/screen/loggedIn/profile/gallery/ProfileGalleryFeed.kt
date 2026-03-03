@@ -115,7 +115,6 @@ private fun GalleryFeedLoaded(
                         .animateItem(),
                 accountViewModel = accountViewModel,
                 nav = nav,
-                ratio = ratio,
             )
         }
     }

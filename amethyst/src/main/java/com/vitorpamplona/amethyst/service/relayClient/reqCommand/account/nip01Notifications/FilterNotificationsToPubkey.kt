@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 
 val SummaryKinds =
     listOf(
@@ -64,6 +66,8 @@ val NotificationsPerKeyKinds =
         EphemeralChatEvent.KIND,
         BadgeAwardEvent.KIND,
         PollNoteEvent.KIND,
+        PollEvent.KIND,
+        PollResponseEvent.KIND,
         PublicMessageEvent.KIND,
     )
 

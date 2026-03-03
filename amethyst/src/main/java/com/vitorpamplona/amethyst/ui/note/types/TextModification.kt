@@ -184,7 +184,7 @@ fun RenderTextModificationEvent(
                             NoteBody(
                                 baseNote = baseNote,
                                 showAuthorPicture = true,
-                                unPackReply = false,
+                                unPackReply = ReplyRenderType.NONE,
                                 makeItShort = false,
                                 canPreview = true,
                                 showSecondRow = false,

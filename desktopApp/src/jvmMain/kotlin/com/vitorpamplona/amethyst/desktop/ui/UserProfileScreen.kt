@@ -37,8 +37,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,7 +48,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,6 +64,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
+import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastBanner
+import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -76,6 +82,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createUserPostsSubscript
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +117,13 @@ fun UserProfileScreen(
     var picture by remember { mutableStateOf<String?>(null) }
     var followersCount by remember { mutableStateOf(0) }
     var followingCount by remember { mutableStateOf(0) }
+
+    // Profile editing state (only for own profile)
+    val isOwnProfile = account != null && pubKeyHex == account.pubKeyHex
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingDisplayName by remember { mutableStateOf("") }
+    var broadcastStatus by remember { mutableStateOf<ProfileBroadcastStatus>(ProfileBroadcastStatus.Idle) }
+    var latestMetadataEvent by remember { mutableStateOf<MetadataEvent?>(null) }
 
     val scope = rememberCoroutineScope()
 
@@ -187,13 +201,25 @@ fun UserProfileScreen(
                 relays = configuredRelays,
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
-                    try {
-                        val content = event.content
-                        displayName = extractJsonField(content, "display_name") ?: extractJsonField(content, "name")
-                        about = extractJsonField(content, "about")
-                        picture = extractJsonField(content, "picture")
-                    } catch (e: Exception) {
-                        // Ignore parse errors
+                    if (event is MetadataEvent) {
+                        try {
+                            val metadata = event.contactMetaData()
+                            if (metadata != null) {
+                                displayName = metadata.displayName ?: metadata.name
+                                about = metadata.about
+                                picture = metadata.picture
+                            }
+
+                            // Store MetadataEvent for editing (only for own profile)
+                            if (isOwnProfile) {
+                                val current = latestMetadataEvent
+                                if (current == null || event.createdAt > current.createdAt) {
+                                    latestMetadataEvent = event
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Ignore parse errors
+                        }
                     }
                 },
             )
@@ -281,6 +307,19 @@ fun UserProfileScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Broadcast banner for profile updates
+        ProfileBroadcastBanner(
+            status = broadcastStatus,
+            onTap = {
+                // Clear banner on tap (could add retry logic for failed)
+                if (broadcastStatus is ProfileBroadcastStatus.Success ||
+                    broadcastStatus is ProfileBroadcastStatus.Failed
+                ) {
+                    broadcastStatus = ProfileBroadcastStatus.Idle
+                }
+            },
+        )
+
         // Header with back button
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -298,6 +337,25 @@ fun UserProfileScreen(
                 )
             }
 
+            // Edit button for own profile
+            if (isOwnProfile && account?.isReadOnly == false) {
+                OutlinedButton(
+                    onClick = {
+                        editingDisplayName = displayName ?: ""
+                        showEditDialog = true
+                    },
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit profile",
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Edit Profile")
+                }
+            }
+
+            // Follow/Unfollow button for other profiles
             if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
                 Column(horizontalAlignment = Alignment.End) {
                     Button(
@@ -569,7 +627,7 @@ fun UserProfileScreen(
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(events, key = { it.id }) { event ->
+                        items(events.distinctBy { it.id }, key = { it.id }) { event ->
                             FeedNoteCard(
                                 event = event,
                                 relayManager = relayManager,
@@ -586,17 +644,52 @@ fun UserProfileScreen(
             }
         }
     }
-}
 
-/**
- * Simple JSON field extractor (not production-ready, just for demo).
- */
-private fun extractJsonField(
-    json: String,
-    field: String,
-): String? {
-    val regex = """"$field"\s*:\s*"([^"]*)"""".toRegex()
-    return regex.find(json)?.groupValues?.get(1)
+    // Edit Profile Dialog
+    if (showEditDialog && account != null) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Profile") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editingDisplayName,
+                        onValueChange = { editingDisplayName = it },
+                        label = { Text("Display Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showEditDialog = false
+                        scope.launch {
+                            updateProfileDisplayName(
+                                newDisplayName = editingDisplayName,
+                                account = account,
+                                relayManager = relayManager,
+                                latestMetadataEvent = latestMetadataEvent,
+                                currentDisplayName = displayName,
+                                currentAbout = about,
+                                currentPicture = picture,
+                                onStatusUpdate = { broadcastStatus = it },
+                                onSuccess = { displayName = editingDisplayName },
+                            )
+                        }
+                    },
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
 }
 
 /**
@@ -648,3 +741,62 @@ private suspend fun unfollowUser(
             throw IllegalStateException("Cannot unfollow: No contact list available")
         }
     }
+
+/**
+ * Updates the user's profile display name by creating and broadcasting a new MetadataEvent.
+ */
+private suspend fun updateProfileDisplayName(
+    newDisplayName: String,
+    account: AccountState.LoggedIn,
+    relayManager: DesktopRelayConnectionManager,
+    latestMetadataEvent: MetadataEvent?,
+    currentDisplayName: String?,
+    currentAbout: String?,
+    currentPicture: String?,
+    onStatusUpdate: (ProfileBroadcastStatus) -> Unit,
+    onSuccess: () -> Unit,
+) = withContext(Dispatchers.IO) {
+    val connectedRelays = relayManager.connectedRelays.value
+    if (connectedRelays.isEmpty()) {
+        onStatusUpdate(ProfileBroadcastStatus.Failed("display name", "No connected relays"))
+        return@withContext
+    }
+
+    val totalRelays = connectedRelays.size
+    onStatusUpdate(ProfileBroadcastStatus.Broadcasting("display name", 0, totalRelays))
+
+    try {
+        // Create the new MetadataEvent
+        val template =
+            if (latestMetadataEvent != null) {
+                MetadataEvent.updateFromPast(
+                    latest = latestMetadataEvent,
+                    displayName = newDisplayName,
+                )
+            } else {
+                MetadataEvent.createNew(
+                    name = currentDisplayName,
+                    displayName = newDisplayName,
+                    picture = currentPicture,
+                    about = currentAbout,
+                )
+            }
+
+        // Sign the event
+        val signedEvent = account.signer.sign(template)
+
+        // Broadcast to all relays
+        relayManager.broadcastToAll(signedEvent)
+
+        // Update progress (simplified - just show success after broadcast)
+        // In a full implementation, you'd track OK responses from each relay
+        onStatusUpdate(ProfileBroadcastStatus.Success("display name", totalRelays))
+        onSuccess()
+
+        // Auto-hide banner after delay
+        delay(3000)
+        onStatusUpdate(ProfileBroadcastStatus.Idle)
+    } catch (e: Exception) {
+        onStatusUpdate(ProfileBroadcastStatus.Failed("display name", e.message ?: "Unknown error"))
+    }
+}

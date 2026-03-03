@@ -433,6 +433,10 @@ fun ObserveAndDrawInnerUserPicture(
     )
 }
 
+private const val PREVIEW_USER_HEX = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"
+private const val PREVIEW_PICTURE_URL = "http://null"
+private const val PREVIEW_USER_NAME = "vitor"
+
 @Preview
 @Composable
 fun ScoreTag55Preview() {
@@ -442,9 +446,9 @@ fun ScoreTag55Preview() {
             var size = 75.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
-                    userPicture = "http://null",
-                    userName = "vitor",
+                    userHex = PREVIEW_USER_HEX,
+                    userPicture = PREVIEW_PICTURE_URL,
+                    userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
                     accountViewModel = accountViewModel,
@@ -455,9 +459,9 @@ fun ScoreTag55Preview() {
             size = 55.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
-                    userPicture = "http://null",
-                    userName = "vitor",
+                    userHex = PREVIEW_USER_HEX,
+                    userPicture = PREVIEW_PICTURE_URL,
+                    userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
                     accountViewModel = accountViewModel,
@@ -468,9 +472,9 @@ fun ScoreTag55Preview() {
             size = 35.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
-                    userPicture = "http://null",
-                    userName = "vitor",
+                    userHex = PREVIEW_USER_HEX,
+                    userPicture = PREVIEW_PICTURE_URL,
+                    userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
                     accountViewModel = accountViewModel,
@@ -481,9 +485,9 @@ fun ScoreTag55Preview() {
             size = 25.dp
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
-                    userHex = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799",
-                    userPicture = "http://null",
-                    userName = "vitor",
+                    userHex = PREVIEW_USER_HEX,
+                    userPicture = PREVIEW_PICTURE_URL,
+                    userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
                     accountViewModel = accountViewModel,
@@ -495,8 +499,8 @@ fun ScoreTag55Preview() {
             Box(Modifier.size(size), contentAlignment = Alignment.TopEnd) {
                 InnerUserPicture(
                     userHex = "AABBCC",
-                    userPicture = "http://null",
-                    userName = "vitor",
+                    userPicture = PREVIEW_PICTURE_URL,
+                    userName = PREVIEW_USER_NAME,
                     size = size,
                     modifier = Modifier,
                     accountViewModel = accountViewModel,

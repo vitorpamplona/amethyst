@@ -65,8 +65,7 @@ fun VideoView(
     dimensions: DimensionTag? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
-    onDialog: ((Boolean) -> Unit)? = null,
-    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
+    onDialog: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
 ) {
@@ -79,7 +78,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, onControllerVisibilityChanged, accountViewModel, alwaysShowVideo)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel)
 }
 
 @Composable
@@ -96,11 +95,10 @@ fun VideoView(
     dimensions: DimensionTag? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
-    onDialog: ((Boolean) -> Unit)? = null,
-    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
-    accountViewModel: AccountViewModel,
+    onDialog: (() -> Unit)? = null,
     alwaysShowVideo: Boolean = false,
     showControls: Boolean = true,
+    accountViewModel: AccountViewModel,
 ) {
     val automaticallyStartPlayback =
         remember {
@@ -137,9 +135,8 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    onDialog = onDialog,
+                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    onZoom = onDialog,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )
@@ -184,9 +181,8 @@ fun VideoView(
                     artworkUri = artworkUri,
                     authorName = authorName,
                     nostrUriCallback = nostrUriCallback,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    onDialog = onDialog,
+                    automaticallyStartPlayback = automaticallyStartPlayback.value,
+                    onZoom = onDialog,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
                 )

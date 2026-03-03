@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.ui.platform.LocalView
 import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -33,16 +32,16 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 @Composable
 fun ControlWhenPlayerIsActive(
     mediaControllerState: MediaControllerState,
-    automaticallyStartPlayback: State<Boolean>,
+    automaticallyStartPlayback: Boolean,
     isClosestToTheCenterOfTheScreen: MutableState<Boolean>,
 ) {
-    val controller = mediaControllerState.controller ?: return
+    val controller = mediaControllerState.controller
 
     LaunchedEffect(key1 = isClosestToTheCenterOfTheScreen.value, key2 = mediaControllerState) {
         // active means being fully visible
         if (isClosestToTheCenterOfTheScreen.value) {
             // should auto start video from settings?
-            if (!automaticallyStartPlayback.value) {
+            if (!automaticallyStartPlayback) {
                 if (controller.isPlaying) {
                     // if it is visible, it's playing but it wasn't supposed to start automatically.
                     controller.pause()

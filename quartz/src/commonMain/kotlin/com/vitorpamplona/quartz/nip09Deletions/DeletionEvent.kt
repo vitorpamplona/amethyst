@@ -89,7 +89,7 @@ class DeletionEvent(
             deleteEvents.forEach {
                 eTag(ETag(it.id))
                 if (it is AddressableEvent) {
-                    aTag(it.aTag())
+                    aTag(it.address())
                 }
             }
 
@@ -108,7 +108,7 @@ class DeletionEvent(
 
             deleteEvents.forEach {
                 if (it is AddressableEvent) {
-                    aTag(it.aTag())
+                    aTag(it.address())
                 }
             }
 

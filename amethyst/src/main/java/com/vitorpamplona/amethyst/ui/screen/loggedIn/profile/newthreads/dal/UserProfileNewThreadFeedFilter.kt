@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 
@@ -80,6 +81,7 @@ class UserProfileNewThreadFeedFilter(
                     it.event is WikiNoteEvent ||
                     it.event is NipTextEvent ||
                     it.event is PollNoteEvent ||
+                    it.event is PollEvent ||
                     it.event is HighlightEvent ||
                     it.event is InteractiveStoryPrologueEvent ||
                     it.event is AudioTrackEvent ||

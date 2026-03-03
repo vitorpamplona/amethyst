@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
@@ -255,12 +254,9 @@ private fun NewProductBody(
                     ImageVideoDescription(
                         uris = it,
                         defaultServer = accountViewModel.account.settings.defaultFileServer,
-                        includeNIP95 = false,
                         onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                             postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
-                            if (server.type != ServerType.NIP95) {
-                                accountViewModel.account.settings.changeDefaultFileServer(server)
-                            }
+                            accountViewModel.account.settings.changeDefaultFileServer(server)
                         },
                         onDelete = postViewModel::deleteMediaToUpload,
                         onCancel = { postViewModel.multiOrchestrator = null },

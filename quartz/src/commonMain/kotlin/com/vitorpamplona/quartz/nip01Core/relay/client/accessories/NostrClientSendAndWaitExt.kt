@@ -45,7 +45,18 @@ suspend fun INostrClient.sendAndWaitForResponse(
     event: Event,
     relayList: Set<NormalizedRelayUrl>,
     timeoutInSeconds: Long = 15,
-): Boolean {
+): Boolean = sendAndWaitForResponseDetailed(event, relayList, timeoutInSeconds).any { it.value }
+
+/**
+ * Sends an event to the given relays and waits for OK responses.
+ * Returns per-relay results: relay URL -> accepted (true/false).
+ */
+@OptIn(DelicateCoroutinesApi::class)
+suspend fun INostrClient.sendAndWaitForResponseDetailed(
+    event: Event,
+    relayList: Set<NormalizedRelayUrl>,
+    timeoutInSeconds: Long = 15,
+): Map<NormalizedRelayUrl, Boolean> {
     val resultChannel = Channel<Result>(UNLIMITED)
 
     Log.d("sendAndWaitForResponse", "Waiting for ${relayList.size} responses")
@@ -124,5 +135,5 @@ suspend fun INostrClient.sendAndWaitForResponse(
 
     Log.d("sendAndWaitForResponse", "Finished with ${receivedResults.size} results")
 
-    return receivedResults.any { it.value }
+    return receivedResults
 }

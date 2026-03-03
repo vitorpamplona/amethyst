@@ -117,6 +117,8 @@ fun RenderContentAsMarkdown(
     }
 }
 
+private const val PREVIEW_CALLBACK_URI = "nostr:something"
+
 @Preview
 @Composable
 fun RenderContentAsMarkdownPreview() {
@@ -162,7 +164,7 @@ fun RenderContentAsMarkdownPreview() {
                 remember {
                     mutableStateOf(background)
                 },
-            callbackUri = "nostr:something",
+            callbackUri = PREVIEW_CALLBACK_URI,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -212,7 +214,7 @@ fun RenderContentAsMarkdownListsPreview() {
                 remember {
                     mutableStateOf(background)
                 },
-            callbackUri = "nostr:something",
+            callbackUri = PREVIEW_CALLBACK_URI,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -266,7 +268,7 @@ fun RenderContentAsMarkdownCodePreview() {
                 remember {
                     mutableStateOf(background)
                 },
-            callbackUri = "nostr:something",
+            callbackUri = PREVIEW_CALLBACK_URI,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -306,7 +308,7 @@ fun RenderContentAsMarkdownTablesPreview() {
                     remember {
                         mutableStateOf(background)
                     },
-                callbackUri = "nostr:something",
+                callbackUri = PREVIEW_CALLBACK_URI,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -344,7 +346,7 @@ fun RenderContentAsMarkdownFootNotesPreview() {
                 remember {
                     mutableStateOf(background)
                 },
-            callbackUri = "nostr:something",
+            callbackUri = PREVIEW_CALLBACK_URI,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -405,7 +407,7 @@ fun RenderContentAsMarkdownUserPreview() {
                     remember {
                         mutableStateOf(background)
                     },
-                callbackUri = "nostr:something",
+                callbackUri = PREVIEW_CALLBACK_URI,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -455,7 +457,7 @@ fun RenderContentAsMarkdownNotePreview() {
                 remember {
                     mutableStateOf(background)
                 },
-            callbackUri = "nostr:something",
+            callbackUri = PREVIEW_CALLBACK_URI,
             accountViewModel = accountViewModel,
             nav = nav,
         )
