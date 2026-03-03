@@ -89,7 +89,6 @@ class AppModules(
         }
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
-    val applicationDefaultScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {
@@ -161,7 +160,7 @@ class AppModules(
         TorRelayState(
             okHttpClients,
             torPrefs.value,
-            applicationDefaultScope,
+            applicationIOScope,
         )
 
     // Connects the NostrClient class with okHttp
@@ -175,7 +174,7 @@ class AppModules(
     val cache: LocalCache = LocalCache
 
     // Provides a relay pool
-    val client: INostrClient = NostrClient(websocketBuilder, applicationDefaultScope)
+    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
 
     // Watches for changes on Tor and Relay List Settings
     val relayProxyClientConnector =
@@ -185,7 +184,7 @@ class AppModules(
             connManager,
             torManager,
             client,
-            applicationDefaultScope,
+            applicationIOScope,
         )
 
     // Verifies and inserts in the cache from all relays, all subscriptions
@@ -195,10 +194,10 @@ class AppModules(
     val notifyCoordinator = NotifyCoordinator(client)
 
     // Authenticates with relays.
-    val authCoordinator = AuthCoordinator(client, applicationDefaultScope)
+    val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
     // Tries to verify new OTS events when they arrive.
-    val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationDefaultScope)
+    val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationIOScope)
 
     // Tracks if it is possible to connect to relays.
     val failureTracker = RelayOfflineTracker(client)
@@ -218,7 +217,7 @@ class AppModules(
             client,
             authCoordinator.receiver,
             failureTracker,
-            applicationDefaultScope,
+            applicationIOScope,
         )
 
     // keeps all accounts live
@@ -237,7 +236,7 @@ class AppModules(
 
     // as new accounts are loaded, updates the state of the TorRelaySettings, which produces new TorRelayEvaluator
     // and reconnects relays if the configuration has been changed.
-    val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationDefaultScope)
+    val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationIOScope)
 
     // saves the .content of NIP-95 blobs in disk to save memory
     val nip95cache: File by lazy { Nip95CacheFactory.new(appContext) }
@@ -306,12 +305,11 @@ class AppModules(
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
         applicationIOScope.cancel("Application onTerminate $appContext")
-        applicationDefaultScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }
 
     fun trim() {
-        applicationDefaultScope.launch {
+        applicationIOScope.launch {
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
         }
