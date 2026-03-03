@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-    id("io.github.frankois944.spmForKmp") version "1.4.0"
+    id("io.github.frankois944.spmForKmp") version "1.4.8"
 }
 
 kotlin {

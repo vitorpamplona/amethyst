@@ -26,7 +26,7 @@ import platform.Foundation.precomposedStringWithCompatibilityMapping
 actual class UnicodeNormalizer {
     actual fun normalizeNFKC(input: String): String {
         @Suppress("CAST_NEVER_SUCCEEDS")
-        val platformString = this as NSString
+        val platformString = input as NSString
         return platformString.precomposedStringWithCompatibilityMapping
     }
 }
