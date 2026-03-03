@@ -57,5 +57,6 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
             .sorted()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+        // Connected relays are read-only; saving is not applicable
     }
 }

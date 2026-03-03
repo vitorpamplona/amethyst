@@ -229,7 +229,9 @@ interface ILocalCache {
     fun markAsSeen(
         eventId: String,
         relay: NormalizedRelayUrl,
-    ) {}
+    ) {
+        // Default no-op; implementations may override to track seen events per relay
+    }
 }
 
 object LocalCache : ILocalCache, ICacheProvider {

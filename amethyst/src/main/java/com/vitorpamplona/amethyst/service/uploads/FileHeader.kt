@@ -110,5 +110,7 @@ class ByteArrayMediaDataSource(
     }
 
     @Throws(IOException::class)
-    override fun close() {}
+    override fun close() {
+        // No resources to release; data is an in-memory byte array
+    }
 }

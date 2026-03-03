@@ -1542,33 +1542,38 @@ fun ReactionChoicePopupContent(
     }
 }
 
+private const val EMOJI_ROCKET = "\uD83D\uDE80"
+private const val EMOJI_THINKING = "\uD83E\uDD14"
+private const val EMOJI_SCREAM = "\uD83D\uDE31"
+private const val EMOJI_PARTY = "\uD83C\uDF89"
+
 @Preview()
 @Composable
 fun ReactionChoicePopupPeeview() {
     ThemeComparisonColumn {
         ReactionChoicePopupContent(
             persistentListOf(
-                "\uD83D\uDE80",
+                EMOJI_ROCKET,
                 "\uD83E\uDEC2",
                 "\uD83D\uDC40",
                 "\uD83D\uDE02",
-                "\uD83C\uDF89",
-                "\uD83E\uDD14",
-                "\uD83D\uDE31",
-                "\uD83E\uDD14",
-                "\uD83D\uDE31",
+                EMOJI_PARTY,
+                EMOJI_THINKING,
+                EMOJI_SCREAM,
+                EMOJI_THINKING,
+                EMOJI_SCREAM,
                 "+",
                 "-",
-                "\uD83C\uDF89",
-                "\uD83E\uDD14",
-                "\uD83D\uDE31",
-                "\uD83E\uDD14",
-                "\uD83D\uDE31",
+                EMOJI_PARTY,
+                EMOJI_THINKING,
+                EMOJI_SCREAM,
+                EMOJI_THINKING,
+                EMOJI_SCREAM,
                 "\uD83D\uDE80\uDB40\uDD58\uDB40\uDD64\uDB40\uDD64\uDB40\uDD60\uDB40\uDD63\uDB40\uDD2A\uDB40\uDD1F\uDB40\uDD1F\uDB40\uDD53\uDB40\uDD54\uDB40\uDD5E\uDB40\uDD1E\uDB40\uDD63\uDB40\uDD51\uDB40\uDD64\uDB40\uDD55\uDB40\uDD5C\uDB40\uDD5C\uDB40\uDD59\uDB40\uDD64\uDB40\uDD55\uDB40\uDD1E\uDB40\uDD55\uDB40\uDD51\uDB40\uDD62\uDB40\uDD64\uDB40\uDD58\uDB40\uDD1F\uDB40\uDD29\uDB40\uDD24\uDB40\uDD27\uDB40\uDD55\uDB40\uDD24\uDB40\uDD51\uDB40\uDD52\uDB40\uDD22\uDB40\uDD54\uDB40\uDD23\uDB40\uDD21\uDB40\uDD21\uDB40\uDD25\uDB40\uDD52\uDB40\uDD55\uDB40\uDD25\uDB40\uDD26\uDB40\uDD25\uDB40\uDD51\uDB40\uDD24\uDB40\uDD29\uDB40\uDD53\uDB40\uDD56\uDB40\uDD25\uDB40\uDD54\uDB40\uDD52\uDB40\uDD20\uDB40\uDD22\uDB40\uDD25\uDB40\uDD25\uDB40\uDD29\uDB40\uDD56\uDB40\uDD23\uDB40\uDD21\uDB40\uDD20\uDB40\uDD53\uDB40\uDD51\uDB40\uDD20\uDB40\uDD51\uDB40\uDD26\uDB40\uDD54\uDB40\uDD54\uDB40\uDD56\uDB40\uDD54\uDB40\uDD54\uDB40\uDD52\uDB40\uDD54\uDB40\uDD24\uDB40\uDD52\uDB40\uDD54\uDB40\uDD28\uDB40\uDD53\uDB40\uDD52\uDB40\uDD55\uDB40\uDD53\uDB40\uDD24\uDB40\uDD24\uDB40\uDD29\uDB40\uDD29\uDB40\uDD25\uDB40\uDD53\uDB40\uDD22\uDB40\uDD55\uDB40\uDD27\uDB40\uDD1E\uDB40\uDD67\uDB40\uDD55\uDB40\uDD52\uDB40\uDD60",
             ),
             onClick = {},
             onChangeAmount = {},
-            toRemove = persistentSetOf("\uD83D\uDE80", "\uD83E\uDD14", "\uD83D\uDE31"),
+            toRemove = persistentSetOf(EMOJI_ROCKET, EMOJI_THINKING, EMOJI_SCREAM),
         )
     }
 }

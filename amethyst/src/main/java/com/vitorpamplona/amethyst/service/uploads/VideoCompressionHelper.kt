@@ -199,12 +199,16 @@ object VideoCompressionHelper {
                             ),
                         listener =
                             object : CompressionListener {
-                                override fun onStart(index: Int) {}
+                                override fun onStart(index: Int) {
+                                    // No action needed on compression start
+                                }
 
                                 override fun onProgress(
                                     index: Int,
                                     percent: Float,
-                                ) {}
+                                ) {
+                                    // Progress tracking not needed for this use case
+                                }
 
                                 override fun onSuccess(
                                     index: Int,

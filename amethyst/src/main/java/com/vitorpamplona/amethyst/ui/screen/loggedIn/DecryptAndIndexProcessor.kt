@@ -141,6 +141,7 @@ class EventProcessor(
 }
 
 interface EventHandler<T : IEvent> {
+    // Default no-ops; implementations override only the operations they handle
     suspend fun add(
         event: T,
         eventNote: Note,
