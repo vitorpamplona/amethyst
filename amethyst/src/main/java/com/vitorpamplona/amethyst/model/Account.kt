@@ -908,12 +908,15 @@ class Account(
                                 note.relays.associateWith { relay ->
                                     listOf(
                                         Filter(
+                                            kinds = listOf(host.kind),
+                                            tags = mapOf("p" to listOf(pubKey)),
                                             ids = listOf(host.id),
                                         ),
                                     )
                                 },
                         )?.let { downloadedEvent ->
-                            client.send(downloadedEvent, computeRelayListToBroadcast(downloadedEvent))
+                            val toRelays = computeRelayListToBroadcast(downloadedEvent)
+                            client.send(downloadedEvent, toRelays)
                         }
                 }
             } else {
