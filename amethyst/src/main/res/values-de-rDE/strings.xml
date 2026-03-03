@@ -447,6 +447,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_zap_amount">Zap-Betrag</string>
     <string name="one_vote_per_user_on_atomic_votes">Es ist nur eine Stimme pro Benutzer für diesen Umfragetyp erlaubt</string>
     <string name="looking_for_event">"Veranstaltung suchen %1$s"</string>
+    <string name="send_zap">Zap senden</string>
     <string name="custom_zaps_add_a_message">Füge eine öffentliche Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_private">Füge eine private Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_nonzap">Füge eine Rechnungsnachricht hinzu</string>
@@ -798,6 +799,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="spamming_users">Spammer</string>
     <string name="muted_button">Stummgeschaltet. Drücken, um Ton einzuschalten</string>
     <string name="mute_button">Ton ein. Zur Stummschaltung drücken</string>
+    <string name="skip_back">Springe %d Sekunden zurück</string>
+    <string name="skip_forward">Springe %d Sekunden vor</string>
+    <string name="picture_in_picture">Bild-in-Bild</string>
     <string name="search_button">Lokale und entfernte Einträge durchsuchen</string>
     <string name="nip05_verified">Nostr-Adresse verifiziert</string>
     <string name="nip05_failed">Nostr-Adresse konnte nicht verifiziert werden</string>
@@ -1316,11 +1320,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="badge_and_n_others"> und %1$d weitere</string>
     <string name="remove_language">%1$s entfernen</string>
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="send_zap">Zap senden</string>
-    <string name="kind_relay_discovery">Relay-Entdeckung</string>
-    <string name="kind_relay_monitor">Relay-Monitor-Ankündigung</string>
     <string name="kind_outbox_relays">Outbox-Relays</string>
-    <string name="kind_apps">Apps</string>
     <string name="kind_app_recommendations">App-Empfehlungen</string>
     <string name="kind_user_settings">Benutzereinstellungen</string>
     <string name="kind_audio_header">Audio-Header</string>
@@ -1373,9 +1373,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="kind_blob_headers">Blob-Header</string>
     <string name="kind_medical_data">Medizinische Daten</string>
     <string name="kind_follow_packs">Follow-Pakete</string>
-    <string name="kind_reposts_16">Reposts (16)</string>
     <string name="kind_geohash_follows">Geohash-Follows</string>
-    <string name="skip_back">Springe %d Sekunden zurück</string>
-    <string name="skip_forward">Springe %d Sekunden vor</string>
-    <string name="picture_in_picture">Bild-in-Bild</string>
+    <string name="kind_relay_discovery">Relay-Entdeckung</string>
+    <string name="kind_relay_monitor">Relay-Monitor-Ankündigung</string>
 </resources>
