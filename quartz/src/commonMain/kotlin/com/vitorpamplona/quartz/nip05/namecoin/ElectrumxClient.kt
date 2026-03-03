@@ -115,6 +115,8 @@ class ElectrumxClient(
                 ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
                 ElectrumxServer("ulrichard.ch", 50006, useSsl = true),
                 ElectrumxServer("nmc2.lelux.fi", 50006, useSsl = true),
+                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
+                ElectrumxServer("46.229.238.187", 57002, useSsl = true, trustAllCerts = true),
             )
 
         /** Tor-preferred server list: onion primary, clearnet fallback. */
@@ -127,6 +129,7 @@ class ElectrumxClient(
                     trustAllCerts = true,
                 ),
                 ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
+                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
             )
 
         private const val PROTOCOL_VERSION = "1.4"
