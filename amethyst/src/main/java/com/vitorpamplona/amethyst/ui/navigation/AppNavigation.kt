@@ -168,18 +168,18 @@ fun AppNavigation(
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
-            composableFromBottom<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
+            composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
             composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
-            composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
-            composableFromBottomArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
+            composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
+            composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
-            composableFromBottom<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
+            composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
