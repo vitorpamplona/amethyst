@@ -441,6 +441,7 @@
     <string name="poll_zap_amount">Částka zapsu</string>
     <string name="one_vote_per_user_on_atomic_votes">U tohoto typu hlasování je povolen pouze jeden hlas na uživatele</string>
     <string name="looking_for_event">"Hledá se událost %1$s"</string>
+    <string name="send_zap">Odeslat Zap</string>
     <string name="custom_zaps_add_a_message">Přidat veřejnou zprávu</string>
     <string name="custom_zaps_add_a_message_private">Přidat soukromou zprávu</string>
     <string name="custom_zaps_add_a_message_nonzap">Přidat fakturu</string>
@@ -793,6 +794,9 @@
     <string name="spamming_users">Spamovací uživatelé</string>
     <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>
     <string name="mute_button">Zvuk zapnutý. Klikněte pro ztlumení</string>
+    <string name="skip_back">Přeskočit zpět o %d sekund</string>
+    <string name="skip_forward">Přeskočit vpřed o %d sekund</string>
+    <string name="picture_in_picture">Obraz v obraze</string>
     <string name="search_button">Hledat lokální a vzdálené záznamy</string>
     <string name="nip05_verified">Adresa Nostr byla ověřena</string>
     <string name="nip05_failed">Ověření adresy Nostr se nezdařilo</string>
@@ -1311,9 +1315,6 @@
     <string name="badge_and_n_others"> a %1$d dalších</string>
     <string name="remove_language">Odebrat %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="send_zap">Odeslat Zap</string>
-    <string name="kind_relay_discovery">Objevování relayí</string>
-    <string name="kind_relay_monitor">Oznámení monitoru relayí</string>
     <string name="kind_outbox_relays">Outbox relaye</string>
     <string name="kind_apps">Aplikace</string>
     <string name="kind_app_recommendations">Doporučení aplikací</string>
@@ -1370,7 +1371,6 @@
     <string name="kind_follow_packs">Balíčky sledování</string>
     <string name="kind_reposts_16">Reposty (16)</string>
     <string name="kind_geohash_follows">Sledování geohashe</string>
-    <string name="skip_back">Přeskočit zpět o %d sekund</string>
-    <string name="skip_forward">Přeskočit vpřed o %d sekund</string>
-    <string name="picture_in_picture">Obraz v obraze</string>
+    <string name="kind_relay_discovery">Objevování relayí</string>
+    <string name="kind_relay_monitor">Oznámení monitoru relayí</string>
 </resources>

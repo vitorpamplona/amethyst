@@ -441,6 +441,7 @@
     <string name="poll_zap_amount">Zap belopp</string>
     <string name="one_vote_per_user_on_atomic_votes">Endast en röst per användare tillåts i denna typ av omröstning</string>
     <string name="looking_for_event">"Letar efter Event %1$s"</string>
+    <string name="send_zap">Skicka Zap</string>
     <string name="custom_zaps_add_a_message">Lägg till ett offentligt meddelande</string>
     <string name="custom_zaps_add_a_message_private">Lägg till ett privat meddelande</string>
     <string name="custom_zaps_add_a_message_nonzap">Lägg till ett fakturameddelande</string>
@@ -792,6 +793,9 @@
     <string name="spamming_users">Spammare</string>
     <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>
     <string name="mute_button">Ljud på. Klicka för att stänga av ljudet</string>
+    <string name="skip_back">Hoppa tillbaka %d sekunder</string>
+    <string name="skip_forward">Hoppa framåt %d sekunder</string>
+    <string name="picture_in_picture">Bild-i-bild</string>
     <string name="search_button">Sök lokala och externa poster</string>
     <string name="nip05_verified">Nostr-adress verifierad</string>
     <string name="nip05_failed">Verifikation av Nostr-adress misslyckades</string>
@@ -1310,9 +1314,6 @@
     <string name="badge_and_n_others"> och %1$d andra</string>
     <string name="remove_language">Ta bort %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="send_zap">Skicka Zap</string>
-    <string name="kind_relay_discovery">Relay upptäckt</string>
-    <string name="kind_relay_monitor">Relay övervakningsmeddelande</string>
     <string name="kind_outbox_relays">Outbox relayer</string>
     <string name="kind_apps">Appar</string>
     <string name="kind_app_recommendations">Apprekommendationer</string>
@@ -1367,9 +1368,7 @@
     <string name="kind_blob_headers">Blob-huvuden</string>
     <string name="kind_medical_data">Medicinska data</string>
     <string name="kind_follow_packs">Följ-paket</string>
-    <string name="kind_reposts_16">Reposts (16)</string>
     <string name="kind_geohash_follows">Geohash-följer</string>
-    <string name="skip_back">Hoppa tillbaka %d sekunder</string>
-    <string name="skip_forward">Hoppa framåt %d sekunder</string>
-    <string name="picture_in_picture">Bild-i-bild</string>
+    <string name="kind_relay_discovery">Relay upptäckt</string>
+    <string name="kind_relay_monitor">Relay övervakningsmeddelande</string>
 </resources>

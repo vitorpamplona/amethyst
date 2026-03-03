@@ -441,6 +441,7 @@
     <string name="poll_zap_amount">Valor do Zap</string>
     <string name="one_vote_per_user_on_atomic_votes">Apenas um voto por usuário é permitido neste tipo de enquete</string>
     <string name="looking_for_event">"Procurando o evento %1$s"</string>
+    <string name="send_zap">Enviar Zap</string>
     <string name="custom_zaps_add_a_message">Adicionar uma mensagem pública</string>
     <string name="custom_zaps_add_a_message_private">Adicionar uma mensagem privada</string>
     <string name="custom_zaps_add_a_message_nonzap">Adicionar uma mensagem</string>
@@ -793,6 +794,8 @@
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Clique para ativar o som</string>
     <string name="mute_button">Som ligado. Clique para silenciar</string>
+    <string name="skip_back">Voltar %d segundos</string>
+    <string name="skip_forward">Avançar %d segundos</string>
     <string name="search_button">Pesquise registros locais e remotos</string>
     <string name="nip05_verified">O endereço Nostr foi verificado</string>
     <string name="nip05_failed">Endereço Nostr falhou na verificação</string>
@@ -1311,11 +1314,7 @@
     <string name="badge_and_n_others"> e mais %1$d</string>
     <string name="remove_language">Remover %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
-    <string name="send_zap">Enviar Zap</string>
-    <string name="kind_relay_discovery">Descoberta de Relays</string>
-    <string name="kind_relay_monitor">Anúncio de Monitor de Relay</string>
     <string name="kind_outbox_relays">Relays de Saída</string>
-    <string name="kind_apps">Apps</string>
     <string name="kind_app_recommendations">Recomendações de Apps</string>
     <string name="kind_user_settings">Configurações do Usuário</string>
     <string name="kind_audio_header">Cabeçalho de Áudio</string>
@@ -1368,9 +1367,7 @@
     <string name="kind_blob_headers">Cabeçalhos Blob</string>
     <string name="kind_medical_data">Dados Médicos</string>
     <string name="kind_follow_packs">Pacotes de Seguir</string>
-    <string name="kind_reposts_16">Reposts (16)</string>
     <string name="kind_geohash_follows">Seguindo Geohash</string>
-    <string name="skip_back">Voltar %d segundos</string>
-    <string name="skip_forward">Avançar %d segundos</string>
-    <string name="picture_in_picture">Picture-in-Picture</string>
+    <string name="kind_relay_discovery">Descoberta de Relays</string>
+    <string name="kind_relay_monitor">Anúncio de Monitor de Relay</string>
 </resources>
