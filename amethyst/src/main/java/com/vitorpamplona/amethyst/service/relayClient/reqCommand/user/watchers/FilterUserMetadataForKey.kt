@@ -30,12 +30,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 val UserMetadataForKeyKinds =
     listOf(
         MetadataEvent.KIND,
+        ExternalIdentitiesEvent.KIND,
         StatusEvent.KIND,
         AdvertisedRelayListEvent.KIND,
         ChatMessageRelayListEvent.KIND,

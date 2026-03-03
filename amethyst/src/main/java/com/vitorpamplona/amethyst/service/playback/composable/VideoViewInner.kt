@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -46,9 +46,9 @@ fun VideoViewInner(
     artworkUri: String? = null,
     authorName: String? = null,
     nostrUriCallback: String? = null,
-    automaticallyStartPlayback: State<Boolean>,
-    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
-    onDialog: ((Boolean) -> Unit)? = null,
+    automaticallyStartPlayback: Boolean,
+    controllerVisible: MutableState<Boolean> = mutableStateOf(true),
+    onZoom: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
@@ -80,8 +80,8 @@ fun VideoViewInner(
                     contentScale = contentScale,
                     borderModifier = borderModifier,
                     videoModifier = videoModifier,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    onDialog = onDialog,
+                    controllerVisible = controllerVisible,
+                    onDialog = onZoom,
                     accountViewModel = accountViewModel,
                 )
             }

@@ -20,36 +20,43 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
-import kotlinx.coroutines.flow.MutableStateFlow
 
 object BackgroundMedia {
     // background playing mutex.
-    val bgInstance = MutableStateFlow<MediaControllerState?>(null)
+    var bgInstance: MediaControllerState? = null
 
-    fun hasInstance() = bgInstance.value != null
+    fun hasInstance() = bgInstance != null
 
-    fun isPlaying() = bgInstance.value?.isPlaying() == true
+    fun isPlaying() = bgInstance?.isPlaying() == true
 
-    fun isMutex(controller: MediaControllerState): Boolean = controller.id == bgInstance.value?.id
+    fun isMutex(controller: MediaControllerState): Boolean = controller.id == bgInstance?.id
 
     fun hasBackgroundButNot(mediaControllerState: MediaControllerState): Boolean = hasInstance() && !isMutex(mediaControllerState)
 
     fun removeBackgroundControllerAndReleaseIt() {
-        bgInstance.value?.let {
-            PlaybackServiceClient.removeController(it)
-            bgInstance.tryEmit(null)
-        }
+        bgInstance = null
     }
 
     fun switchKeepPlaying(mediaControllerState: MediaControllerState) {
-        bgInstance.tryEmit(mediaControllerState)
+        bgInstance = mediaControllerState
     }
 
     fun clearBackground(mediaControllerState: MediaControllerState) {
-        if (bgInstance.value == mediaControllerState) {
-            bgInstance.tryEmit(null)
+        if (bgInstance == mediaControllerState) {
+            bgInstance = null
+        }
+    }
+}
+
+@Composable
+fun RegisterBackgroundMedia(controllerState: MediaControllerState) {
+    DisposableEffect(controllerState) {
+        BackgroundMedia.switchKeepPlaying(controllerState)
+        onDispose {
+            BackgroundMedia.clearBackground(controllerState)
         }
     }
 }

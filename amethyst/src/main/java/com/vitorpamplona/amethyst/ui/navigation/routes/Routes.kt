@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.serialization.Serializable
+import kotlin.reflect.KClass
 
 sealed class Route {
     @Serializable object Home : Route()
@@ -39,6 +40,8 @@ sealed class Route {
     @Serializable object Discover : Route()
 
     @Serializable object Notification : Route()
+
+    @Serializable object Chess : Route()
 
     @Serializable object Search : Route()
 
@@ -77,6 +80,10 @@ sealed class Route {
 
     @Serializable object Drafts : Route()
 
+    @Serializable object AllSettings : Route()
+
+    @Serializable object AccountBackup : Route()
+
     @Serializable object Settings : Route()
 
     @Serializable object UserSettings : Route()
@@ -109,7 +116,13 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object UpdateReactionType : Route()
+
     @Serializable data class Nip47NWCSetup(
+        val nip47: String? = null,
+    ) : Route()
+
+    @Serializable data class UpdateZapAmount(
         val nip47: String? = null,
     ) : Route()
 
@@ -135,6 +148,10 @@ sealed class Route {
 
     @Serializable data class Geohash(
         val geohash: String,
+    ) : Route()
+
+    @Serializable data class ChessGame(
+        val gameId: String,
     ) : Route()
 
     @Serializable data class Community(
@@ -176,6 +193,10 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class RelayInfo(
+        val url: String,
+    ) : Route()
+
+    @Serializable data class RelayFeed(
         val url: String,
     ) : Route()
 
@@ -302,59 +323,17 @@ sealed class Route {
 
 inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
 
-fun getRouteWithArguments(navController: NavHostController): Route? {
+fun <T : Route> getRouteWithArguments(
+    klazz: KClass<T>,
+    navController: NavHostController,
+): Route? {
     val entry = navController.currentBackStackEntry ?: return null
     val dest = entry.destination
 
-    return when {
-        dest.hasRoute<Route.Home>() -> entry.toRoute<Route.Home>()
-        dest.hasRoute<Route.Message>() -> entry.toRoute<Route.Message>()
-        dest.hasRoute<Route.Video>() -> entry.toRoute<Route.Video>()
-        dest.hasRoute<Route.Discover>() -> entry.toRoute<Route.Discover>()
-        dest.hasRoute<Route.Notification>() -> entry.toRoute<Route.Notification>()
-        dest.hasRoute<Route.Search>() -> entry.toRoute<Route.Search>()
-        dest.hasRoute<Route.SecurityFilters>() -> entry.toRoute<Route.SecurityFilters>()
-        dest.hasRoute<Route.PrivacyOptions>() -> entry.toRoute<Route.PrivacyOptions>()
-        dest.hasRoute<Route.Bookmarks>() -> entry.toRoute<Route.Bookmarks>()
-        dest.hasRoute<Route.ContentDiscovery>() -> entry.toRoute<Route.ContentDiscovery>()
-        dest.hasRoute<Route.Drafts>() -> entry.toRoute<Route.Drafts>()
-        dest.hasRoute<Route.Settings>() -> entry.toRoute<Route.Settings>()
-        dest.hasRoute<Route.EditProfile>() -> entry.toRoute<Route.EditProfile>()
-        dest.hasRoute<Route.Profile>() -> entry.toRoute<Route.Profile>()
-        dest.hasRoute<Route.Note>() -> entry.toRoute<Route.Note>()
-        dest.hasRoute<Route.Hashtag>() -> entry.toRoute<Route.Hashtag>()
-        dest.hasRoute<Route.Geohash>() -> entry.toRoute<Route.Geohash>()
-        dest.hasRoute<Route.Community>() -> entry.toRoute<Route.Community>()
-        dest.hasRoute<Route.QRDisplay>() -> entry.toRoute<Route.QRDisplay>()
-        dest.hasRoute<Route.RelayInfo>() -> entry.toRoute<Route.RelayInfo>()
-        dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
-        dest.hasRoute<Route.PublicChatChannel>() -> entry.toRoute<Route.PublicChatChannel>()
-        dest.hasRoute<Route.LiveActivityChannel>() -> entry.toRoute<Route.LiveActivityChannel>()
-        dest.hasRoute<Route.ChannelMetadataEdit>() -> entry.toRoute<Route.ChannelMetadataEdit>()
-        dest.hasRoute<Route.EphemeralChat>() -> entry.toRoute<Route.EphemeralChat>()
-        dest.hasRoute<Route.NewEphemeralChat>() -> entry.toRoute<Route.NewEphemeralChat>()
-        dest.hasRoute<Route.EventRedirect>() -> entry.toRoute<Route.EventRedirect>()
-        dest.hasRoute<Route.EditRelays>() -> entry.toRoute<Route.EditRelays>()
-        dest.hasRoute<Route.EditMediaServers>() -> entry.toRoute<Route.EditMediaServers>()
-        dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
-        dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
-        dest.hasRoute<Route.NewShortNote>() -> entry.toRoute<Route.NewShortNote>()
-        dest.hasRoute<Route.VoiceReply>() -> entry.toRoute<Route.VoiceReply>()
-        dest.hasRoute<Route.NewProduct>() -> entry.toRoute<Route.NewProduct>()
-        dest.hasRoute<Route.GeoPost>() -> entry.toRoute<Route.GeoPost>()
-        dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
-        dest.hasRoute<Route.GenericCommentPost>() -> entry.toRoute<Route.GenericCommentPost>()
-        dest.hasRoute<Route.NewPublicMessage>() -> entry.toRoute<Route.NewPublicMessage>()
-        dest.hasRoute<Route.Lists>() -> entry.toRoute<Route.Lists>()
-        dest.hasRoute<Route.MyPeopleListView>() -> entry.toRoute<Route.MyPeopleListView>()
-        dest.hasRoute<Route.MyFollowPackView>() -> entry.toRoute<Route.MyFollowPackView>()
-        dest.hasRoute<Route.PeopleListMetadataEdit>() -> entry.toRoute<Route.PeopleListMetadataEdit>()
-        dest.hasRoute<Route.FollowPackMetadataEdit>() -> entry.toRoute<Route.FollowPackMetadataEdit>()
-        dest.hasRoute<Route.PeopleListManagement>() -> entry.toRoute<Route.PeopleListManagement>()
-        dest.hasRoute<Route.NewGroupDM>() -> entry.toRoute<Route.NewGroupDM>()
-        dest.hasRoute<Route.UserSettings>() -> entry.toRoute<Route.UserSettings>()
-        dest.hasRoute<Route.ManualZapSplitPayment>() -> entry.toRoute<Route.ManualZapSplitPayment>()
-        else -> null
+    return if (dest.hasRoute(klazz)) {
+        entry.toRoute(klazz)
+    } else {
+        null
     }
 }
 

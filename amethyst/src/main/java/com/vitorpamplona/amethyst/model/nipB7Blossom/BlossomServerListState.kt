@@ -24,10 +24,14 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -57,6 +61,13 @@ class BlossomServerListState(
         return event?.servers() ?: emptyList()
     }
 
+    fun host(url: String): String =
+        try {
+            Rfc3986.host(url).removePrefix("cdn.").removePrefix("blossom.")
+        } catch (e: Exception) {
+            url.removePrefix("cdn.").removePrefix("blossom.")
+        }
+
     val flow =
         getBlossomServersListFlow()
             .map { normalizeServers(it.note) }
@@ -66,6 +77,21 @@ class BlossomServerListState(
                 scope,
                 SharingStarted.Eagerly,
                 emptyList(),
+            )
+
+    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) } ?: emptyList()
+
+    val hostNameFlow: StateFlow<List<ServerName>> =
+        flow
+            .map { blossoms ->
+                mergeServerList(blossoms)
+            }.onStart {
+                emit(mergeServerList(flow.value))
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                DEFAULT_MEDIA_SERVERS,
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {

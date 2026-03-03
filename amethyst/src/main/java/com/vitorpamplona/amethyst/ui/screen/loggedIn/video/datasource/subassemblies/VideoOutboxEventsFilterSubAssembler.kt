@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
@@ -53,7 +54,7 @@ import kotlinx.coroutines.launch
 class VideoOutboxEventsFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<VideoQueryState>,
-) : PerUserAndFollowListEoseManager<VideoQueryState, String>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<VideoQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(
         key: VideoQueryState,
         since: SincePerRelayMap?,

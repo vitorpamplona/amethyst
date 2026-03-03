@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -130,6 +131,12 @@ open class Note(
         removeZapPayment(note)
         removeReport(note)
     }
+
+    var poll: PollResponsesCache? = null
+
+    fun pollStateOrNull(): PollResponsesCache? = poll
+
+    fun pollState(): PollResponsesCache = poll ?: PollResponsesCache().also { poll = it }
 
     // These fields are updated every time an event related to this note is received.
     var replies = listOf<Note>()
@@ -1007,6 +1014,34 @@ public inline fun <T> Iterable<Note>.anyEvent(predicate: (T) -> Boolean): Boolea
     return false
 }
 
+public inline fun <T> Iterable<Note>.filterEvents(predicate: (T) -> Boolean): List<T> {
+    if (this is Collection && isEmpty()) return emptyList()
+
+    val dest = ArrayList<T>()
+    for (note in this) {
+        val noteEvent = note.event as? T
+        if (noteEvent != null && predicate(noteEvent)) {
+            dest.add(noteEvent)
+        }
+    }
+    return dest
+}
+
+public inline fun <T> Iterable<Note>.filterAuthoredEvents(pubkey: HexKey): List<T> {
+    if (this is Collection && isEmpty()) return emptyList()
+
+    val dest = ArrayList<T>()
+    for (note in this) {
+        if (note.author?.pubkeyHex != pubkey) {
+            val noteEvent = note.event as? T
+            if (noteEvent != null) {
+                dest.add(noteEvent)
+            }
+        }
+    }
+    return dest
+}
+
 public inline fun Iterable<Note>.anyNotNullEvent(predicate: (Event) -> Boolean): Boolean {
     if (this is Collection && isEmpty()) return false
     for (note in this) {
@@ -1014,4 +1049,22 @@ public inline fun Iterable<Note>.anyNotNullEvent(predicate: (Event) -> Boolean):
         if (noteEvent != null && predicate(noteEvent)) return true
     }
     return false
+}
+
+fun <T : Event> List<Note>.latestByAuthor(): Map<User, T> {
+    val oneResponsePerUser = mutableMapOf<User, T>()
+
+    forEach { note ->
+        val author = note.author ?: return@forEach
+        val event = note.event as? T ?: return@forEach
+
+        val currentResponse = oneResponsePerUser[author]
+        if (currentResponse == null) {
+            oneResponsePerUser[author] = event
+        } else if (event.createdAt > currentResponse.createdAt) {
+            oneResponsePerUser[author] = event
+        }
+    }
+
+    return oneResponsePerUser
 }

@@ -58,7 +58,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
@@ -84,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.MessageFieldRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -197,7 +197,7 @@ fun PublicMessageScreenContent(
                             baseNote = replyTo,
                             modifier = MaterialTheme.colorScheme.imageModifier,
                             isQuotedNote = true,
-                            unPackReply = false,
+                            unPackReply = ReplyRenderType.NONE,
                             makeItShort = true,
                             quotesLeft = 1,
                             accountViewModel = accountViewModel,
@@ -233,9 +233,7 @@ fun PublicMessageScreenContent(
                             accountViewModel.account.settings.defaultFileServer,
                             onAdd = { alt, server, sensitiveContent, mediaQuality, _ ->
                                 postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
-                                if (server.type != ServerType.NIP95) {
-                                    accountViewModel.account.settings.changeDefaultFileServer(server)
-                                }
+                                accountViewModel.account.settings.changeDefaultFileServer(server)
                             },
                             onDelete = postViewModel::deleteMediaToUpload,
                             onCancel = { postViewModel.multiOrchestrator = null },

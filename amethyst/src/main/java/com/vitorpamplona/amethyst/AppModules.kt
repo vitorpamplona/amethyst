@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -73,6 +74,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -88,7 +90,6 @@ class AppModules(
         }
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
-    val applicationDefaultScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {
@@ -160,7 +161,7 @@ class AppModules(
         TorRelayState(
             okHttpClients,
             torPrefs.value,
-            applicationDefaultScope,
+            applicationIOScope,
         )
 
     // Connects the NostrClient class with okHttp
@@ -174,7 +175,7 @@ class AppModules(
     val cache: LocalCache = LocalCache
 
     // Provides a relay pool
-    val client: INostrClient = NostrClient(websocketBuilder, applicationDefaultScope)
+    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
 
     // Watches for changes on Tor and Relay List Settings
     val relayProxyClientConnector =
@@ -184,7 +185,7 @@ class AppModules(
             connManager,
             torManager,
             client,
-            applicationDefaultScope,
+            applicationIOScope,
         )
 
     // Verifies and inserts in the cache from all relays, all subscriptions
@@ -194,10 +195,10 @@ class AppModules(
     val notifyCoordinator = NotifyCoordinator(client)
 
     // Authenticates with relays.
-    val authCoordinator = AuthCoordinator(client, applicationDefaultScope)
+    val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
     // Tries to verify new OTS events when they arrive.
-    val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationDefaultScope)
+    val otsEventVerifier = IncomingOtsEventVerifier(otsVerifCache, cache, applicationIOScope)
 
     // Tracks if it is possible to connect to relays.
     val failureTracker = RelayOfflineTracker(client)
@@ -217,7 +218,7 @@ class AppModules(
             client,
             authCoordinator.receiver,
             failureTracker,
-            applicationDefaultScope,
+            applicationIOScope,
         )
 
     // keeps all accounts live
@@ -231,12 +232,21 @@ class AppModules(
             client = client,
         )
 
+    val sessionManager =
+        AccountSessionManager(
+            accountsCache = accountsCache,
+            nip05Client = nip05Client,
+            client = client,
+            localPreferences = LocalPreferences,
+            scope = applicationIOScope,
+        )
+
     // Organizes cache clearing
     val trimmingService = MemoryTrimmingService(cache)
 
     // as new accounts are loaded, updates the state of the TorRelaySettings, which produces new TorRelayEvaluator
     // and reconnects relays if the configuration has been changed.
-    val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationDefaultScope)
+    val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torEvaluatorFlow, applicationIOScope)
 
     // saves the .content of NIP-95 blobs in disk to save memory
     val nip95cache: File by lazy { Nip95CacheFactory.new(appContext) }
@@ -274,6 +284,7 @@ class AppModules(
         applicationIOScope.launch {
             // loads main account quickly.
             LocalPreferences.loadAccountConfigFromEncryptedStorage()
+            sessionManager.loginWithDefaultAccountIfLoggedOff()
         }
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
@@ -293,17 +304,23 @@ class AppModules(
 
         // registers to receive events
         pokeyReceiver.register(appContext)
+
+        // initializes diskcache on an IO thread.
+        applicationIOScope.launch {
+            // Sets Coil - Tor - OkHttp link
+            delay(3000)
+            videoCache
+        }
     }
 
     fun terminate(appContext: Context) {
         pokeyReceiver.unregister(appContext)
         applicationIOScope.cancel("Application onTerminate $appContext")
-        applicationDefaultScope.cancel("Application onTerminate $appContext")
         accountsCache.clear()
     }
 
     fun trim() {
-        applicationDefaultScope.launch {
+        applicationIOScope.launch {
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
         }

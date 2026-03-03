@@ -34,8 +34,8 @@ class KeyPair(
         if (privKey == null) {
             if (pubKey == null) {
                 // create new, random keys
-                this.privKey = Nip01.privKeyCreate()
-                this.pubKey = Nip01.pubKeyCreate(this.privKey)
+                this.privKey = Nip01Crypto.privKeyCreate()
+                this.pubKey = Nip01Crypto.pubKeyCreate(this.privKey)
             } else {
                 // this is a read-only account
                 check(pubKey.size == 32)
@@ -46,7 +46,7 @@ class KeyPair(
             // as private key is provided, ignore the public key and set keys according to private key
             this.privKey = privKey
             if (pubKey == null || forceReplacePubkey) {
-                this.pubKey = Nip01.pubKeyCreate(privKey)
+                this.pubKey = Nip01Crypto.pubKeyCreate(privKey)
             } else {
                 this.pubKey = pubKey
             }

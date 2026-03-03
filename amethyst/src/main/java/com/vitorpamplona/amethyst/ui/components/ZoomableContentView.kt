@@ -166,9 +166,7 @@ fun ZoomableContentView(
                         roundedCorner = roundedCorner,
                         contentScale = contentScale,
                         nostrUriCallback = content.uri,
-                        onDialog = {
-                            dialogOpen = true
-                        },
+                        onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -701,7 +699,6 @@ fun ShareMediaAction(
 ) {
     if (content is MediaUrlContent) {
         ShareMediaAction(
-            accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.url,
             postNostrUri = content.uri,
@@ -711,10 +708,10 @@ fun ShareMediaAction(
             mimeType = content.mimeType,
             onDismiss = onDismiss,
             content = content,
+            accountViewModel = accountViewModel,
         )
     } else if (content is MediaPreloadedContent) {
         ShareMediaAction(
-            accountViewModel = accountViewModel,
             popupExpanded = popupExpanded,
             videoUri = content.localFile?.toUri().toString(),
             postNostrUri = content.uri,
@@ -724,6 +721,7 @@ fun ShareMediaAction(
             mimeType = content.mimeType,
             onDismiss = onDismiss,
             content = content,
+            accountViewModel = accountViewModel,
         )
     }
 }
@@ -731,7 +729,6 @@ fun ShareMediaAction(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ShareMediaAction(
-    accountViewModel: AccountViewModel,
     popupExpanded: MutableState<Boolean>,
     videoUri: String?,
     postNostrUri: String?,
@@ -741,6 +738,7 @@ fun ShareMediaAction(
     mimeType: String?,
     onDismiss: () -> Unit,
     content: BaseMediaContent? = null,
+    accountViewModel: AccountViewModel,
 ) {
     val scope = accountViewModel.viewModelScope
 

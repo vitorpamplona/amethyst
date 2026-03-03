@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Stable
 class BlossomServersViewModel : ViewModel() {
     private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account

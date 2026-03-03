@@ -20,113 +20,109 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
-import android.content.Context
-import android.content.Intent
+import android.content.Context.RECEIVER_EXPORTED
+import android.os.Build
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.util.Consumer
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.state.rememberMuteButtonState
+import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.theme.VoiceHeightModifier
 
+@OptIn(UnstableApi::class)
 @Composable
-fun PipVideo() {
-    val activity = LocalContext.current.getActivity()
-    var videoData by remember(activity) {
-        mutableStateOf(IntentExtras.loadBundle(activity.intent.extras))
-    }
+fun RenderPipVideo(
+    controller: MediaControllerState,
+    waveformData: WaveformData?,
+) {
+    val modifier =
+        remember {
+            val ratio =
+                controller.currrentMedia()?.let {
+                    MediaAspectRatioCache.get(it)
+                }
 
-    DisposableEffect(activity) {
-        val consumer =
-            Consumer<Intent> { intent ->
-                videoData = IntentExtras.loadBundle(intent.extras)
-                val bounds = IntentExtras.loadBounds(intent.extras)
-                val ratio = videoData?.aspectRatio ?: videoData?.videoUri?.let { MediaAspectRatioCache.get(it) }
-
-                activity.enterPipMode(ratio, bounds)
+            if (ratio != null) {
+                Modifier.aspectRatio(ratio)
+            } else {
+                Modifier
             }
+        }
 
-        activity.addOnNewIntentListener(consumer)
-        onDispose { activity.removeOnNewIntentListener(consumer) }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        ContentFrame(
+            player = controller.controller,
+            keepContentOnReset = true,
+            contentScale = ContentScale.Crop,
+        )
+
+        Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
+            waveformData?.let { Waveform(it, controller, Modifier) }
+        }
     }
+}
 
-    videoData?.let {
-        GetMediaItem(it) { mediaItem ->
-            GetVideoController(mediaItem, false) { controller ->
-                PipVideo(controller, it.waveformData)
-            }
+@Composable
+fun RegisterControllerReceiver(controllerState: MediaControllerState) {
+    val context = LocalContext.current
+
+    // Use DisposableEffect to manage the receiver's lifecycle
+    DisposableEffect(context) {
+        val receiver =
+            ActionReceiver(
+                onMute = controllerState::toggleMute,
+                onPlayPause = controllerState::togglePlayPause,
+            )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, receiver.filterMute, RECEIVER_EXPORTED)
+            context.registerReceiver(receiver, receiver.filterPlayPause, RECEIVER_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, receiver.filterMute)
+            context.registerReceiver(receiver, receiver.filterPlayPause)
+        }
+
+        onDispose {
+            context.unregisterReceiver(receiver)
         }
     }
 }
 
 @OptIn(UnstableApi::class)
 @Composable
-fun PipVideo(
-    controller: MediaControllerState,
-    waveformData: WaveformData?,
+fun WatchControllerForActions(
+    mediaItemData: MediaItemData,
+    controllerState: MediaControllerState,
 ) {
-    DisposableEffect(controller) {
-        BackgroundMedia.switchKeepPlaying(controller)
-        onDispose {
-            BackgroundMedia.clearBackground(controller)
-        }
-    }
+    val playPauseState = rememberPlayPauseButtonState(controllerState.controller)
+    val muteState = rememberMuteButtonState(controllerState.controller)
 
-    val ratio =
-        controller.currrentMedia()?.let {
-            MediaAspectRatioCache.get(it)
-        }
-
-    val modifier =
-        if (ratio != null) {
-            Modifier.aspectRatio(ratio)
-        } else {
-            Modifier
-        }
-
-    Box(modifier, contentAlignment = Alignment.Center) {
-        AndroidView(
-            modifier = Modifier,
-            factory = { context: Context ->
-                PlayerView(context).apply {
-                    clipToOutline = true
-                    player = controller.controller
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-
-                    controllerAutoShow = false
-                    useController = false
-
-                    hideController()
-
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
-
-                    controller.controller?.playWhenReady = true
-                }
-            },
+    val activity = LocalContext.current.getActivity()
+    LaunchedEffect(activity, playPauseState.showPlay, muteState.showMuted) {
+        activity.setPictureInPictureParams(
+            activity.makePipParams(
+                isPlaying = !playPauseState.showPlay,
+                isMuted = !muteState.showMuted,
+                ratio = mediaItemData.aspectRatio,
+                bounds = null,
+            ),
         )
-
-        Row(VoiceHeightModifier, verticalAlignment = Alignment.CenterVertically) {
-            waveformData?.let { Waveform(it, controller, Modifier) }
-        }
     }
 }

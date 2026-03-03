@@ -24,20 +24,28 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,8 +76,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
-import com.vitorpamplona.amethyst.ui.components.TextSpinner
-import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -85,7 +91,6 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 
 class ZapOptionViewModel : ViewModel() {
@@ -102,9 +107,12 @@ class ZapOptionViewModel : ViewModel() {
 
     fun value(): Long? = customAmount.text.trim().toLongOrNull()
 
-    fun cancel() {}
+    fun cancel() {
+        // No cleanup needed; dialog state is reset on close
+    }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ZapCustomDialog(
     onZapStarts: () -> Unit,
@@ -144,13 +152,10 @@ fun ZapCustomDialog(
             ),
         )
 
-    val zapOptions =
-        remember {
-            zapTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList()
-        }
-
     var selectedZapType by
         remember(accountViewModel) { mutableStateOf(accountViewModel.defaultZapType()) }
+
+    val presetAmounts = remember(accountViewModel) { accountViewModel.zapAmountChoices() }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -160,110 +165,166 @@ fun ZapCustomDialog(
                 usePlatformDefaultWidth = false,
             ),
     ) {
-        Surface {
-            Column(modifier = Modifier.padding(10.dp)) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .padding(16.dp)
+                        .imePadding(),
+            ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Text(
+                        text = stringRes(id = R.string.send_zap),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
                     CloseButton(
                         onPress = {
                             postViewModel.cancel()
                             onClose()
                         },
                     )
+                }
 
-                    ZapButton(
-                        isActive = postViewModel.canSend() && !baseNote.isDraft(),
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Preset amount quick-select chips
+                if (presetAmounts.isNotEmpty()) {
+                    FlowRow(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        onZapStarts()
-                        accountViewModel.zap(
-                            baseNote,
-                            postViewModel.value()!! * 1000L,
-                            null,
-                            postViewModel.customMessage.text,
-                            context,
-                            onError = onError,
-                            onProgress = onProgress,
-                            onPayViaIntent = onPayViaIntent,
-                            zapType = selectedZapType,
-                        )
-                        onClose()
+                        presetAmounts.forEach { amount ->
+                            SuggestionChip(
+                                onClick = {
+                                    postViewModel.customAmount = TextFieldValue(amount.toString())
+                                },
+                                label = { Text("⚡ ${showAmount(amount.toBigDecimal())}") },
+                            )
+                        }
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        // stringRes(R.string.new_amount_in_sats
-                        label = { Text(text = stringRes(id = R.string.amount_in_sats)) },
-                        value = postViewModel.customAmount,
-                        onValueChange = { postViewModel.customAmount = it },
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.None,
-                                keyboardType = KeyboardType.Number,
-                            ),
-                        placeholder = {
-                            Text(
-                                text = "100, 1000, 5000",
-                                color = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        },
-                        singleLine = true,
-                        modifier = Modifier.padding(end = 5.dp).weight(1f),
-                    )
+                // Amount input
+                OutlinedTextField(
+                    label = { Text(text = stringRes(id = R.string.amount_in_sats)) },
+                    value = postViewModel.customAmount,
+                    onValueChange = { postViewModel.customAmount = it },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.None,
+                            keyboardType = KeyboardType.Number,
+                        ),
+                    placeholder = {
+                        Text(
+                            text = "100, 1000, 5000",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    suffix = { Text(text = stringRes(id = R.string.sats)) },
+                    singleLine = true,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                )
 
-                    TextSpinner(
-                        label = stringRes(id = R.string.zap_type),
-                        placeholder = zapTypes.first { it.first == accountViewModel.defaultZapType() }.second,
-                        options = zapOptions,
-                        onSelect = { selectedZapType = zapTypes[it].first },
-                        modifier = Modifier.weight(1f).padding(end = 5.dp),
-                    )
+                // Zap type label
+                Text(
+                    text = stringRes(id = R.string.zap_type),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+
+                // Zap type selection chips
+                FlowRow(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    zapTypes.forEach { (type, label, _) ->
+                        FilterChip(
+                            selected = selectedZapType == type,
+                            onClick = { selectedZapType = type },
+                            label = { Text(label) },
+                            colors =
+                                FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                        )
+                    }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        // stringRes(R.string.new_amount_in_sats
-                        label = {
-                            when (selectedZapType) {
-                                LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
-                                    Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
-                                }
-
-                                LnZapEvent.ZapType.PRIVATE -> {
-                                    Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
-                                }
-
-                                LnZapEvent.ZapType.NONZAP -> {
-                                    Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
-                                }
+                // Message input
+                OutlinedTextField(
+                    label = {
+                        when (selectedZapType) {
+                            LnZapEvent.ZapType.PUBLIC, LnZapEvent.ZapType.ANONYMOUS -> {
+                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message))
                             }
-                        },
-                        value = postViewModel.customMessage,
-                        onValueChange = { postViewModel.customMessage = it },
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.None,
-                                keyboardType = KeyboardType.Text,
-                            ),
-                        placeholder = {
-                            Text(
-                                text = stringRes(id = R.string.custom_zaps_add_a_message_example),
-                                color = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        },
-                        singleLine = true,
-                        modifier = Modifier.padding(end = 5.dp).weight(1f),
+
+                            LnZapEvent.ZapType.PRIVATE -> {
+                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_private))
+                            }
+
+                            LnZapEvent.ZapType.NONZAP -> {
+                                Text(text = stringRes(id = R.string.custom_zaps_add_a_message_nonzap))
+                            }
+                        }
+                    },
+                    value = postViewModel.customMessage,
+                    onValueChange = { postViewModel.customMessage = it },
+                    keyboardOptions =
+                        KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            keyboardType = KeyboardType.Text,
+                        ),
+                    placeholder = {
+                        Text(
+                            text = stringRes(id = R.string.custom_zaps_add_a_message_example),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    singleLine = true,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                )
+
+                // Full-width send button
+                ZapButton(
+                    isActive = postViewModel.canSend() && !baseNote.isDraft(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    onZapStarts()
+                    accountViewModel.zap(
+                        baseNote,
+                        postViewModel.value()!! * 1000L,
+                        null,
+                        postViewModel.customMessage.text,
+                        context,
+                        onError = onError,
+                        onProgress = onProgress,
+                        onPayViaIntent = onPayViaIntent,
+                        zapType = selectedZapType,
                     )
+                    onClose()
                 }
             }
         }
@@ -273,11 +334,13 @@ fun ZapCustomDialog(
 @Composable
 fun ZapButton(
     isActive: Boolean,
+    modifier: Modifier = Modifier,
     onPost: () -> Unit,
 ) {
     Button(
         onClick = { if (isActive) onPost() },
         shape = ButtonBorder,
+        modifier = modifier,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,

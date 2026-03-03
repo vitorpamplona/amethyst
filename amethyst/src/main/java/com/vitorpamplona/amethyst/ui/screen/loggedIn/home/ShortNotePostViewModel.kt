@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -49,7 +48,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
@@ -70,15 +68,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaA
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.closedAt
-import com.vitorpamplona.quartz.experimental.zapPolls.consensusThreshold
-import com.vitorpamplona.quartz.experimental.zapPolls.maxAmount
-import com.vitorpamplona.quartz.experimental.zapPolls.minAmount
-import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
@@ -112,6 +103,8 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -128,6 +121,8 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -224,17 +219,8 @@ open class ShortNotePostViewModel :
     // Polls
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
-    var zapRecipients = mutableStateListOf<HexKey>()
-    var pollOptions = newStateMapPollOptions()
-    var valueMaximum by mutableStateOf<Long?>(null)
-    var valueMinimum by mutableStateOf<Long?>(null)
-    var consensusThreshold: Int? = null
-    var closedAt: Long? = null
-
-    var isValidValueMaximum = mutableStateOf(true)
-    var isValidValueMinimum = mutableStateOf(true)
-    var isValidConsensusThreshold = mutableStateOf(true)
-    var isValidClosedAt = mutableStateOf(true)
+    var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
+    var closedAt by mutableStateOf(TimeUtils.oneDayAhead())
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -411,9 +397,13 @@ open class ShortNotePostViewModel :
 
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
-        if (draftEvent !is TextNoteEvent) return
+        if (draftEvent is TextNoteEvent) {
+            loadFromDraft(draftEvent)
+        }
 
-        loadFromDraft(draftEvent)
+        if (draftEvent is PollEvent) {
+            loadFromDraft(draftEvent)
+        }
     }
 
     private fun loadFromDraft(draftEvent: TextNoteEvent) {
@@ -486,21 +476,70 @@ open class ShortNotePostViewModel :
             wantsForwardZapTo = true
         }
 
-        val polls = draftEvent.tags.filter { it.size > 1 && it[0] == "poll_option" }
+        wantsPoll = false
+
+        message = TextFieldValue(draftEvent.content)
+
+        iMetaAttachments.addAll(draftEvent.imetas())
+
+        urlPreviews.update(message)
+    }
+
+    private fun loadFromDraft(draftEvent: PollEvent) {
+        canAddInvoice = accountViewModel.userProfile().lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().lnAddress() != null
+        multiOrchestrator = null
+
+        val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
+        forwardZapTo.value = SplitBuilder()
+        localForwardZapTo.forEach {
+            val user = LocalCache.getOrCreateUser(it[1])
+            val value = it.last().toFloatOrNull() ?: 0f
+            forwardZapTo.value.addItem(user, value)
+        }
+        forwardZapToEditting.value = TextFieldValue("")
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
+
+        wantsToMarkAsSensitive = draftEvent.isSensitive()
+
+        val geohash = draftEvent.getGeoHash()
+        wantsToAddGeoHash = geohash != null
+        if (geohash != null) {
+            wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
+        }
+
+        val zapRaiser = draftEvent.zapraiserAmount()
+        wantsZapRaiser = zapRaiser != null
+        zapRaiserAmount.value = null
+        if (zapRaiser != null) {
+            zapRaiserAmount.value = zapRaiser
+        }
+
+        eTags =
+            draftEvent.tags.filter { it.size > 1 && (it[0] == "e" || it[0] == "a") && it.getOrNull(3) != "fork" }.mapNotNull {
+                val note = LocalCache.checkGetOrCreateNote(it[1])
+                note
+            }
+
+        pTags =
+            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.map {
+                LocalCache.getOrCreateUser(it[1])
+            }
+
+        canUsePoll = originalNote == null
+
+        if (forwardZapTo.value.items.isNotEmpty()) {
+            wantsForwardZapTo = true
+        }
+
+        val polls = draftEvent.options()
         wantsPoll = polls.isNotEmpty()
 
-        polls.forEach {
-            pollOptions[it[1].toInt()] = it[2]
+        polls.forEachIndexed { index, tag ->
+            pollOptions[index] = tag
         }
 
-        val minMax = draftEvent.tags.filter { it.size > 1 && (it[0] == "value_minimum" || it[0] == "value_maximum") }
-        minMax.forEach {
-            if (it[0] == "value_maximum") {
-                valueMaximum = it[1].toLong()
-            } else if (it[0] == "value_minimum") {
-                valueMinimum = it[1].toLong()
-            }
-        }
+        closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
 
         message = TextFieldValue(draftEvent.content)
 
@@ -523,8 +562,8 @@ open class ShortNotePostViewModel :
                 return
             }
             // Update default server if voice message was successfully uploaded
-            if (voiceSelectedServer != null && voiceSelectedServer?.type != ServerType.NIP95) {
-                account.settings.changeDefaultFileServer(voiceSelectedServer!!)
+            voiceSelectedServer?.let {
+                account.settings.changeDefaultFileServer(it)
             }
         }
 
@@ -648,18 +687,16 @@ open class ShortNotePostViewModel :
         val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
 
         return if (wantsPoll) {
-            val options = pollOptions.map { PollOptionTag(it.key, it.value) }
+            val options = pollOptions.map { it.value }
 
             if (options.isEmpty()) return null
 
             val quotes = findNostrUris(tagger.message)
+            val relays =
+                accountViewModel.account.nip65RelayList.outboxFlow.value
+                    .toList()
 
-            PollNoteEvent.build(tagger.message, options) {
-                valueMinimum?.let { minAmount(it) }
-                valueMaximum?.let { maxAmount(it) }
-                closedAt?.let { closedAt(it) }
-                consensusThreshold?.let { consensusThreshold(it / 100.0) }
-
+            PollEvent.build(tagger.message, options, closedAt, relays) {
                 pTags(tagger.directMentionsUsers.map { it.toPTag() })
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
@@ -849,12 +886,8 @@ open class ShortNotePostViewModel :
         pTags = null
 
         wantsPoll = false
-        zapRecipients = mutableStateListOf()
         pollOptions = newStateMapPollOptions()
-        valueMaximum = null
-        valueMinimum = null
-        consensusThreshold = null
-        closedAt = null
+        closedAt = TimeUtils.oneDayAhead()
 
         wantsInvoice = false
         wantsZapRaiser = false
@@ -962,7 +995,11 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> = mutableStateMapOf(Pair(0, ""), Pair(1, ""))
+    private fun newStateMapPollOptions(): SnapshotStateMap<Int, OptionTag> =
+        mutableStateMapOf(
+            0 to OptionTag(RandomInstance.randomChars(6), ""),
+            1 to OptionTag(RandomInstance.randomChars(6), ""),
+        )
 
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
@@ -979,9 +1016,8 @@ open class ShortNotePostViewModel :
             (
                 !wantsPoll ||
                     (
-                        pollOptions.values.all { it.isNotEmpty() } &&
-                            isValidValueMinimum.value &&
-                            isValidValueMaximum.value
+                        pollOptions.isNotEmpty() && pollOptions.all { it.value.label.isNotEmpty() } &&
+                            closedAt > TimeUtils.oneMinuteFromNow()
                     )
             ) &&
             multiOrchestrator == null
@@ -1131,28 +1167,6 @@ open class ShortNotePostViewModel :
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
     }
 
-    fun updateMinZapAmountForPoll(textMin: String) {
-        valueMinimum = textMin.toLongOrNull()?.takeIf { it > 0 }
-        checkMinMax()
-        draftTag.newVersion()
-    }
-
-    fun updateMaxZapAmountForPoll(textMax: String) {
-        valueMaximum = textMax.toLongOrNull()?.takeIf { it > 0 }
-        checkMinMax()
-        draftTag.newVersion()
-    }
-
-    fun checkMinMax() {
-        if ((valueMinimum ?: 0) > (valueMaximum ?: Long.MAX_VALUE)) {
-            isValidValueMinimum.value = false
-            isValidValueMaximum.value = false
-        } else {
-            isValidValueMinimum.value = true
-            isValidValueMaximum.value = true
-        }
-    }
-
     override fun updateZapPercentage(
         index: Int,
         sliderValue: Float,
@@ -1178,33 +1192,34 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    fun removePollOption(optionIndex: Int) {
-        pollOptions.removeOrdered(optionIndex)
+    fun removePollOption(index: Int) {
+        pollOptions.removeOrdered(index)
         draftTag.newVersion()
     }
 
-    private fun MutableMap<Int, String>.removeOrdered(index: Int) {
+    fun updatePollOption(
+        index: Int,
+        label: String,
+    ) {
+        val current = pollOptions[index]
+        pollOptions[index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), label)
+        draftTag.newVersion()
+    }
+
+    private fun MutableMap<Int, OptionTag>.removeOrdered(index: Int) {
         val keyList = keys
         val elementList = values.toMutableList()
         run stop@{
             for (i in index until elementList.size) {
                 val nextIndex = i + 1
                 if (nextIndex == elementList.size) return@stop
-                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = "null" }
+                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = OptionTag(RandomInstance.randomChars(6), "") }
             }
         }
         elementList.removeAt(elementList.size - 1)
         val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
         this.clear()
         this.putAll(newEntries)
-    }
-
-    fun updatePollOption(
-        optionIndex: Int,
-        text: String,
-    ) {
-        pollOptions[optionIndex] = text
-        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {

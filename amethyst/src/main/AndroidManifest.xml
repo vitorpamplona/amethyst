@@ -76,7 +76,6 @@
             android:launchMode="singleInstance"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout"
-            android:taskAffinity=".service.playback.pip.PipVideoActivity"
             android:theme="@style/Theme.Amethyst">
 
             <intent-filter android:label="Amethyst">

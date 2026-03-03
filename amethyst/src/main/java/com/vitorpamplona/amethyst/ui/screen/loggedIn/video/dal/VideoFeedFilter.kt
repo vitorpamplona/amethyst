@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
@@ -32,8 +33,6 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -53,13 +52,19 @@ class VideoFeedFilter(
             supportedFileExtensions = (RichTextParser.videoExtensions + RichTextParser.imageExtensions).toSet(),
         )
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value.code
 
     override fun limit() = 300
 
-    override fun showHiddenKey(): Boolean =
-        account.settings.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+    fun followList(): TopFilter = account.settings.defaultStoriesFollowList.value
+
+    fun TopFilter.isMuteList() = this is TopFilter.MuteList
+
+    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
+
+    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
+
+    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)

@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.model.nip11RelayInfo
 
 import android.util.LruCache
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import okhttp3.OkHttpClient
 
+@Stable
 class Nip11CachedRetriever(
     val okHttpClient: (NormalizedRelayUrl) -> OkHttpClient,
 ) {

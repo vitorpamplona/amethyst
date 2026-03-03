@@ -428,8 +428,8 @@
     <string name="tor_use_money_operations_explainer">تور را برای زپ، لایتنینگ و انتقال کَشو الزامی کن</string>
     <string name="tor_use_nip05_verification">تایید آدرس ناستر</string>
     <string name="tor_use_nip05_verification_explainer">تور را برای تایید آدرس های NIP-05 الزامی کن</string>
-    <string name="tor_use_nip96_uploads">بارگذاری رسانه</string>
-    <string name="tor_use_nip96_uploads_explainer">تور را برای بارگذاری محتوا الزامی کن</string>
+    <string name="tor_use_media_uploads">بارگذاری رسانه</string>
+    <string name="tor_use_media_uploads_explainer">تور را برای بارگذاری محتوا الزامی کن</string>
     <string name="tor_internal">داخلی</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">خاموش</string>

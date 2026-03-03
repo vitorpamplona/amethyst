@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.toasts.ThrowableToastMsg
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -52,25 +53,23 @@ import java.io.StringWriter
 
 @Composable
 fun InformationDialog(
-    title: String,
-    textContent: String?,
-    throwable: Throwable,
+    obj: ThrowableToastMsg,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onDismiss: () -> Unit,
 ) {
-    val str = textContent ?: throwable.localizedMessage ?: throwable.message ?: throwable.javaClass.simpleName
+    val str = obj.msg ?: obj.throwable.localizedMessage ?: obj.throwable.message ?: obj.throwable.javaClass.simpleName
 
     val stack =
-        remember(throwable) {
+        remember(obj) {
             val writer = StringWriter()
             writer.append("\n")
 
-            throwable.printStackTrace(PrintWriter(writer))
+            obj.throwable.printStackTrace(PrintWriter(writer))
 
             writer.toString()
         }
 
-    InformationDialog(title = title, textContent = str, moreInfo = stack, buttonColors, onDismiss)
+    InformationDialog(title = stringRes(obj.titleResId), textContent = str, moreInfo = stack, buttonColors, onDismiss)
 }
 
 @Composable

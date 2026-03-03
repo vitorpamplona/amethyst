@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip04Dm
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Encryption
 import org.junit.Assert.assertEquals
@@ -34,8 +34,8 @@ class EncryptionTest {
 
     val sk1 = "91ba716fa9e7ea2fcbad360cf4f8e0d312f73984da63d90f524ad61a6a1e7dbe".hexToByteArray()
     val sk2 = "96f6fa197aa07477ab88f6981118466ae3a982faab8ad5db9d5426870c73d220".hexToByteArray()
-    val pk1 = Nip01.pubKeyCreate(sk1)
-    val pk2 = Nip01.pubKeyCreate(sk2)
+    val pk1 = Nip01Crypto.pubKeyCreate(sk1)
+    val pk2 = Nip01Crypto.pubKeyCreate(sk2)
 
     val expectedShared = "7ce22696eb0e303ddaa491bdf2a56b79d249f2d861b8e012a933e01dc4beba81"
 

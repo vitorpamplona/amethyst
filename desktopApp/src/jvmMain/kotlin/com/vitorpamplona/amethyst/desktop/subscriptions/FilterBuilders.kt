@@ -96,6 +96,19 @@ object FilterBuilders {
         )
 
     /**
+     * Creates a filter for user metadata (kind 0) from multiple authors.
+     * Alias for userMetadataBatch for API compatibility.
+     *
+     * @param pubKeys List of author public keys (hex-encoded, 64 chars each)
+     * @return Filter for user metadata
+     */
+    fun userMetadataMultiple(pubKeys: List<String>): Filter =
+        Filter(
+            kinds = listOf(0),
+            authors = pubKeys,
+        )
+
+    /**
      * Creates a filter for contact list (kind 3) from a specific author.
      *
      * @param pubKeyHex Author public key (hex-encoded, 64 chars)
@@ -198,6 +211,103 @@ object FilterBuilders {
     fun byIds(ids: List<String>): Filter =
         Filter(
             ids = ids,
+        )
+
+    /**
+     * Creates a filter for chess game challenges (kind 30064).
+     * Includes open challenges (no opponent) and challenges directed at a specific user.
+     *
+     * @param userPubkey The user's public key to filter challenges for
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for chess challenges
+     */
+    fun chessChallengesToUser(
+        userPubkey: String,
+        limit: Int? = 50,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064), // LiveChessGameChallengeEvent.KIND
+            tags = mapOf("p" to listOf(userPubkey)),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for open chess challenges (kind 30064, no specific opponent).
+     *
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for open chess challenges
+     */
+    fun chessOpenChallenges(
+        limit: Int? = 50,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064), // LiveChessGameChallengeEvent.KIND
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for all chess events (challenges, accepts, moves, ends, draw offers).
+     * Useful for loading the chess lobby.
+     *
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for all chess events
+     */
+    fun chessAllEvents(
+        limit: Int? = 100,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064, 30065, 30066, 30067, 30068),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for chess events involving a specific user.
+     * Includes challenges to/from user, moves in their games, draw offers, etc.
+     *
+     * @param userPubkey The user's public key
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for chess events involving the user
+     */
+    fun chessEventsForUser(
+        userPubkey: String,
+        limit: Int? = 100,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064, 30065, 30066, 30067, 30068),
+            tags = mapOf("p" to listOf(userPubkey)),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for chess events by the user (their own events).
+     *
+     * @param userPubkey The user's public key
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time ≥ this value
+     * @return Filter for chess events by the user
+     */
+    fun chessEventsByUser(
+        userPubkey: String,
+        limit: Int? = 100,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(30064, 30065, 30066, 30067, 30068),
+            authors = listOf(userPubkey),
+            limit = limit,
+            since = since,
         )
 
     /**
@@ -373,6 +483,77 @@ object FilterBuilders {
             kinds = listOf(6), // RepostEvent.KIND
             tags = mapOf("e" to eventIds),
             limit = limit,
+        )
+
+    /**
+     * Creates a filter for NIP-04 DMs (kind 4) sent to a user.
+     *
+     * @param pubKeyHex Recipient public key (hex-encoded, 64 chars)
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time >= this value
+     * @return Filter for DMs addressed to the specified user
+     */
+    fun nip04DmsToUser(
+        pubKeyHex: String,
+        limit: Int? = null,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(4), // PrivateDmEvent.KIND
+            tags = mapOf("p" to listOf(pubKeyHex)),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for NIP-04 DMs (kind 4) sent from a user.
+     *
+     * @param pubKeyHex Author public key (hex-encoded, 64 chars)
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time >= this value
+     * @return Filter for DMs authored by the specified user
+     */
+    fun nip04DmsFromUser(
+        pubKeyHex: String,
+        limit: Int? = null,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(4), // PrivateDmEvent.KIND
+            authors = listOf(pubKeyHex),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for NIP-59 gift-wrapped events (kind 1059) to a user.
+     * Gift wraps contain encrypted NIP-17 DMs.
+     *
+     * @param pubKeyHex Recipient public key (hex-encoded, 64 chars)
+     * @param since Timestamp (adjusted -2 days due to randomized created_at)
+     * @return Filter for gift wraps addressed to the specified user
+     */
+    fun giftWrapsToUser(
+        pubKeyHex: String,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(1059), // GiftWrapEvent.KIND
+            tags = mapOf("p" to listOf(pubKeyHex)),
+            since = since,
+        )
+
+    /**
+     * Creates a filter for DM relay list events (kind 10050, NIP-17).
+     *
+     * @param pubKeyHex Author public key (hex-encoded, 64 chars)
+     * @return Filter for DM relay list (limit=1 since only latest is needed)
+     */
+    fun dmRelayList(pubKeyHex: String): Filter =
+        Filter(
+            kinds = listOf(10050), // ChatMessageRelayListEvent.KIND
+            authors = listOf(pubKeyHex),
+            limit = 1,
         )
 
     /**

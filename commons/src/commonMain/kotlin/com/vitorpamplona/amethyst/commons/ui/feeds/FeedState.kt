@@ -28,14 +28,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
 sealed class FeedState {
+    @Stable
     object Loading : FeedState()
 
+    @Stable
     class Loaded(
         val feed: MutableStateFlow<LoadedFeedState<Note>>,
     ) : FeedState()
 
+    @Stable
     object Empty : FeedState()
 
+    @Stable
     class FeedError(
         val errorMessage: String,
     ) : FeedState()

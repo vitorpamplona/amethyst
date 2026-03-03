@@ -24,7 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertNotNull
@@ -42,17 +42,17 @@ class SignVerifyBenchmark {
         val keyPair = KeyPair()
         val msg = sha256(RandomInstance.bytes(1000))
 
-        benchmarkRule.measureRepeated { assertNotNull(Nip01.sign(msg, keyPair.privKey!!)) }
+        benchmarkRule.measureRepeated { assertNotNull(Nip01Crypto.sign(msg, keyPair.privKey!!)) }
     }
 
     @Test
     fun verify() {
         val keyPair = KeyPair()
         val msg = sha256(RandomInstance.bytes(1000))
-        val signature = Nip01.sign(msg, keyPair.privKey!!)
+        val signature = Nip01Crypto.sign(msg, keyPair.privKey!!)
 
         benchmarkRule.measureRepeated {
-            assertTrue(Nip01.verify(signature, msg, keyPair.pubKey))
+            assertTrue(Nip01Crypto.verify(signature, msg, keyPair.pubKey))
         }
     }
 }

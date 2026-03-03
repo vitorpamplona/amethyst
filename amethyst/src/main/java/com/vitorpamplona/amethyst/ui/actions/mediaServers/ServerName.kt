@@ -26,22 +26,24 @@ import kotlinx.serialization.Serializable
 data class ServerName(
     val name: String,
     val baseUrl: String,
-    val type: ServerType = ServerType.NIP96,
+    val type: ServerType = ServerType.Blossom,
 )
 
 enum class ServerType {
-    NIP96,
-    NIP95,
     Blossom,
+    NIP95,
+    NIP96,
 }
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(
-        ServerName("Nostr.Build", "https://nostr.build", ServerType.NIP96),
-        ServerName("NostrCheck.me (NIP-96)", "https://nostrcheck.me", ServerType.NIP96),
-        ServerName("Sovbit", "https://files.sovbit.host", ServerType.NIP96),
-        ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
-        ServerName("NostrCheck.me (Blossom)", "https://cdn.nostrcheck.me", ServerType.Blossom),
+        ServerName("Nostr.Build", "https://blossom.band/", ServerType.Blossom),
+        ServerName("24242.io", "https://24242.io/", ServerType.Blossom),
+        ServerName("Azzamo", "https://blossom.azzamo.media", ServerType.Blossom),
+        ServerName("YakiHonne", "https://blossom.yakihonne.com/", ServerType.Blossom),
+        ServerName("Primal", "https://blossom.primal.net/", ServerType.Blossom),
+        ServerName("Sovbit", "https://cdn.sovbit.host", ServerType.Blossom),
         ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),
+        ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
         ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
     )

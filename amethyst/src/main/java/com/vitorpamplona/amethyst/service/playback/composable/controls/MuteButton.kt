@@ -41,20 +41,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@Preview
+@Composable
+fun MuteButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.background(BitcoinOrange)) {
+            MuteButton(
+                controllerVisible = remember { mutableStateOf(true) },
+                startingMuteState = true,
+                modifier = Modifier,
+            ) {}
+        }
+    }
+}
+
 @Composable
 fun MuteButton(
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     toggle: (Boolean) -> Unit,
 ) {
     val holdOn =
@@ -83,7 +100,7 @@ fun MuteButton(
             Box(
                 Modifier
                     .clip(CircleShape)
-                    .fillMaxSize(0.6f)
+                    .fillMaxSize(0.7f)
                     .align(Alignment.Center)
                     .background(MaterialTheme.colorScheme.background),
             )

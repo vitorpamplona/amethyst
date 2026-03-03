@@ -20,9 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.vitorpamplona.amethyst.commons.model.ListChange
-import kotlinx.coroutines.flow.MutableSharedFlow
-
-interface ChangesFlowFilter<T> : IAdditiveFeedFilter<T> {
-    fun changesFlow(): MutableSharedFlow<ListChange<T>>
-}
+// Re-export from commons for backwards compatibility
+typealias ChangesFlowFilter<T> = com.vitorpamplona.amethyst.commons.ui.feeds.ChangesFlowFilter<T>

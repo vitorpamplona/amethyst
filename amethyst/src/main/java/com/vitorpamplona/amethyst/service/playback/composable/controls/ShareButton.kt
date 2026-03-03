@@ -40,16 +40,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+
+@Preview
+@Composable
+fun AnimatedShareButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.background(BitcoinOrange)) {
+            AnimatedShareButton(
+                controllerVisible = remember { mutableStateOf(true) },
+                modifier = Modifier,
+            ) { _, _ -> }
+        }
+    }
+}
 
 @Composable
 fun AnimatedShareButton(
     controllerVisible: State<Boolean>,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit,
 ) {
     AnimatedVisibility(
@@ -64,13 +80,13 @@ fun AnimatedShareButton(
 
 @Composable
 fun ShareButton(innerAction: @Composable (MutableState<Boolean>, () -> Unit) -> Unit) {
-    Box(modifier = PinBottomIconSize) {
+    Box(modifier = PinBottomIconSize, contentAlignment = Alignment.Center) {
         Box(
-            Modifier
-                .clip(CircleShape)
-                .fillMaxSize(0.6f)
-                .align(Alignment.Center)
-                .background(MaterialTheme.colorScheme.background),
+            modifier =
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.7f)
+                    .background(MaterialTheme.colorScheme.background),
         )
 
         val popupExpanded = remember { mutableStateOf(false) }

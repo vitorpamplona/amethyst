@@ -584,7 +584,8 @@ fun FeedScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(events, key = { it.id }) { event ->
+                // Use distinctBy to prevent duplicate key crashes from events with same ID
+                items(events.distinctBy { it.id }, key = { it.id }) { event ->
                     FeedNoteCard(
                         event = event,
                         relayManager = relayManager,

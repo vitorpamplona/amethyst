@@ -171,4 +171,5 @@
     <string name="torrent_file">Torrenta datne</string>
     <string name="torrent_download">Lejupielādēt</string>
     <string name="torrent_no_apps">Nav uzstādītas torrent lietotnes, kas atvērtu un lejupielādētu datni.</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

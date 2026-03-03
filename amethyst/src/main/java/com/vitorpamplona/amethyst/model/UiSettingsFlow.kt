@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 
+@Stable
 class UiSettingsFlow(
     val theme: MutableStateFlow<ThemeType> = MutableStateFlow(ThemeType.SYSTEM),
     val preferredLanguage: MutableStateFlow<String?> = MutableStateFlow(null),

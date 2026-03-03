@@ -423,7 +423,7 @@ fun ThreadScreen(
                 }
 
                 // Reply notes with level indicators
-                items(replyEvents, key = { it.id }) { event ->
+                items(replyEvents.distinctBy { it.id }, key = { it.id }) { event ->
                     val level = calculateLevel(event)
 
                     Column(

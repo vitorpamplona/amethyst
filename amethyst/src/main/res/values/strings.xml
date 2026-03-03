@@ -123,7 +123,7 @@
     <string name="optional_picture_url">Picture Url(Optional)</string>
     <string name="description">Description</string>
     <string name="no_description">Description not found</string>
-    <string name="about_us">"About us.. "</string>
+    <string name="about_us">"About us… "</string>
     <string name="what_s_on_your_mind">What\'s on your mind?</string>
     <string name="write_a_message">Write a message…</string>
     <string name="post">Post</string>
@@ -191,7 +191,7 @@
     <string name="voice_anonymize_title">Anonymize</string>
     <string name="voice_anonymize_description">Alters your voice pitch. Note: basic pitch changes can potentially be reversed by determined listeners.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
-    <string name="reply_here">"reply here.. "</string>
+    <string name="reply_here">"reply here… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copy Channel ID (Note) to the Clipboard</string>
     <string name="edits_the_channel_metadata">Edits the Channel Metadata</string>
@@ -281,7 +281,7 @@
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
         can participate on them. They are great for open communities around specific topics.
-        Moderation can be controlled by deleting posts on the its relays</string>
+        Moderation can be controlled by deleting posts on its relays</string>
 
     <string name="public_chat_relays_title">Relays</string>
     <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group.
@@ -460,6 +460,7 @@
     <string name="poll_heading_required">Required fields:</string>
     <string name="poll_zap_recipients">Zap recipients</string>
     <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option">Option</string>
     <string name="poll_option_index">Option %s</string>
     <string name="poll_option_description">Poll option description</string>
     <string name="poll_heading_optional">Optional fields:</string>
@@ -467,6 +468,8 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
+    <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>
     <string name="poll_unable_to_vote">Unable to vote</string>
@@ -476,6 +479,7 @@
 
     <string name="looking_for_event">"Looking for Event %1$s"</string>
 
+    <string name="send_zap">Send Zap</string>
     <string name="custom_zaps_add_a_message">Add a public message</string>
     <string name="custom_zaps_add_a_message_private">Add a private message</string>
     <string name="custom_zaps_add_a_message_nonzap">Add an invoice message</string>
@@ -532,6 +536,7 @@
     <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 
+    <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_media_servers_title">Built-in Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>
@@ -570,6 +575,7 @@
     <string name="follow_list_kind3follows_proxy">Follows via Proxy</string>
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
+    <string name="follow_list_chess">Chess</string>
     <string name="follow_list_mute_list">Mute List</string>
 
     <string name="follow_sets">Follow Lists</string>
@@ -676,8 +682,8 @@
     <string name="tor_use_nip05_verification">Nostr Address Verification</string>
     <string name="tor_use_nip05_verification_explainer">Force Tor when verifying NIP-05 addresses</string>
 
-    <string name="tor_use_nip96_uploads">Media Uploads</string>
-    <string name="tor_use_nip96_uploads_explainer">Force Tor when uploading content</string>
+    <string name="tor_use_media_uploads">Media Uploads</string>
+    <string name="tor_use_media_uploads_explainer">Force Tor when uploading content</string>
 
     <string name="tor_internal">Internal</string>
     <string name="tor_external">Orbot</string>
@@ -787,6 +793,17 @@
     <string name="terms_and_conditions">Terms &amp; Conditions</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Errors and Notices from this Relay</string>
+    <string name="relay_active_subscriptions">Active Subscriptions</string>
+    <string name="relay_active_outbox">Pending Outbox Events</string>
+    <string name="relay_req_subscriptions">REQ Subscriptions (%1$d)</string>
+    <string name="relay_count_subscriptions">COUNT Subscriptions (%1$d)</string>
+    <string name="relay_outbox_events">Outbox Events (%1$d)</string>
+    <string name="relay_no_active_subscriptions">No active subscriptions for this relay</string>
+    <string name="relay_filter_authors">%1$d authors</string>
+    <string name="relay_filter_ids">%1$d ids</string>
+    <string name="relay_filter_since">since %1$s</string>
+    <string name="relay_filter_until">until %1$s</string>
+    <string name="relay_filter_limit">limit %1$d</string>
     <string name="message_length">Message length</string>
     <string name="subscriptions">Subscriptions</string>
     <string name="filters">Filters</string>
@@ -855,10 +872,15 @@
     <string name="add_sensitive_content_label">Sensitive Content</string>
     <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
 
+    <string name="ui_preferences">UI Preferences</string>
     <string name="preferences">App Preferences</string>
     <string name="user_preferences">User Preferences</string>
+    <string name="translations">Translations</string>
+    <string name="reactions">Reactions</string>
 
     <string name="settings">Settings</string>
+    <string name="account_settings">Account Settings</string>
+    <string name="app_settings">App Settings</string>
     <string name="connectivity_type_always">Always</string>
     <string name="connectivity_type_wifi_only">Wifi-only</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>
@@ -896,6 +918,9 @@
 
     <string name="muted_button">Muted. Click to unmute</string>
     <string name="mute_button">Sound on. Click to mute</string>
+    <string name="skip_back">Skip back %d seconds</string>
+    <string name="skip_forward">Skip forward %d seconds</string>
+    <string name="picture_in_picture">Picture-in-Picture</string>
     <string name="search_button">Search local and remote records</string>
 
     <string name="nip05_verified">Nostr address was verified</string>
@@ -1190,6 +1215,7 @@
     <string name="route_notifications">Notifications</string>
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
+    <string name="route_chess">Chess</string>
     <string name="route_security_filters">Security Filters</string>
 
     <string name="new_post">New Post</string>
@@ -1295,6 +1321,10 @@
     <string name="trusted_section">Trusted Relays</string>
     <string name="trusted_section_explainer">Relays you trust to not need a Tor connection for</string>
 
+    <string name="favorite_relays_title">Favorite Relay Feeds</string>
+    <string name="favorite_section">Favorite Relay Feeds</string>
+    <string name="favorite_section_explainer">Relays you frequently go to see their Global feed</string>
+
     <string name="proxy_relays_title">Proxy Relays</string>
     <string name="proxy_section">Proxy Relays</string>
     <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>
@@ -1349,6 +1379,7 @@
     <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Scan QR code</string>
     <string name="accessibility_navigate_to_alby">Navigate to the third-party wallet provider Alby</string>
+    <string name="accessibility_select_date">Select date</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>
     <string name="it_s_not_possible_to_quote_to_a_draft_note">It\'s not possible to quote a draft note</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">It\'s not possible to react a draft note</string>
@@ -1494,7 +1525,7 @@
     <string name="share_of">%1$d/%2$d</string>
     <string name="broadcasting">Broadcasting</string>
     <string name="broadcasting_name">Broadcasting %1$s</string>
-    <string name="broadcasting_number_events">Broadcasting %1$d events...</string>
+    <string name="broadcasting_number_events">Broadcasting %1$d events…</string>
     <string name="sent_number_events">%1$d events sent</string>
 
     <string name="bradcasting_result_partial">Some events failed</string>
@@ -1504,4 +1535,155 @@
     <string name="reaction">Reaction</string>
     <string name="voice_post">Voice Post</string>
     <string name="voice_reply">Voice Reply</string>
+    <string name="closing_time">Closing Time</string>
+    <string name="confirm">Confirm</string>
+    <string name="next">Next</string>
+    <string name="add_poll_option_button">Add poll option button</string>
+
+    <string name="go_back">Go Back</string>
+    <string name="approve">Approve</string>
+    <string name="connected">Connected</string>
+    <string name="social_proof">Social proof</string>
+    <string name="poll_submit">Submit</string>
+    <string name="restart">Restart</string>
+    <string name="chess_accept">Accept</string>
+    <string name="chess_decline">Decline</string>
+    <string name="chess_new_game">New Game</string>
+    <string name="new_chess_game">New Chess Game</string>
+    <string name="chess_loading_game">Loading game\u2026</string>
+    <string name="chess_game_not_found">Game Not Found</string>
+    <string name="chess_game_waiting">This game may have ended or is waiting for opponent.</string>
+    <string name="chess_game_id">Game ID: %1$s\u2026</string>
+    <string name="badge_and_n_others"> and %1$d others</string>
+    <string name="remove_language">Remove %1$s</string>
+
+    <!-- Kind display names for relay subscription filter chips -->
+    <string name="kind_outbox_relays">Outbox Relays</string>
+    <string name="kind_apps">Apps</string>
+    <string name="kind_app_recommendations">App Recommendations</string>
+    <string name="kind_user_settings">User Settings</string>
+    <string name="kind_audio_header">Audio Header</string>
+    <string name="kind_audio_track">Audio Track</string>
+    <string name="kind_badge_awards">Badge Awards</string>
+    <string name="kind_badge_definitions">Badge Definitions</string>
+    <string name="kind_profile_badges">Profile Badges</string>
+    <string name="kind_blocked_relays">Blocked Relays</string>
+    <string name="kind_blossom_servers">Blossom Servers</string>
+    <string name="kind_blossom_auth">Blossom Auth</string>
+    <string name="kind_broadcast_relays">Broadcast Relays</string>
+    <string name="kind_bookmark_list">Bookmark List</string>
+    <string name="kind_day_appointment">Day Appointment</string>
+    <string name="kind_calendar">Calendar</string>
+    <string name="kind_appointment">Appointment</string>
+    <string name="kind_appt_rsvp">Appt RSVP</string>
+    <string name="kind_chess_games">Chess Games</string>
+    <string name="kind_chess_auth">Chess Auth</string>
+    <string name="kind_favorite_relays">Favorite Relays</string>
+    <string name="kind_chess_challenges">Chess Challenges</string>
+    <string name="kind_chess_game_accept">Chess Game Accept</string>
+    <string name="kind_chess_move">Chess Move</string>
+    <string name="kind_chess_game_end">Chess Game End</string>
+    <string name="kind_chess_draw_offer">Chess Draw Offer</string>
+    <string name="kind_channel_definition">Channel Definition</string>
+    <string name="kind_channel_hide_msg">Channel Hide Msg</string>
+    <string name="kind_channel_list">Channel List</string>
+    <string name="kind_channel_message">Channel Message</string>
+    <string name="kind_channel_metadata">Channel Metadata</string>
+    <string name="kind_channel_mute_user">Channel Mute User</string>
+    <string name="kind_dm_file">DM File</string>
+    <string name="kind_dm_message">DM Message</string>
+    <string name="kind_dm_relays">DM Relays</string>
+    <string name="kind_classifieds">Classifieds</string>
+    <string name="kind_comments">Comments</string>
+    <string name="kind_community_def">Community Def</string>
+    <string name="kind_community_list">Community List</string>
+    <string name="kind_community_post">Community Post</string>
+    <string name="kind_follow_list">Follow List</string>
+    <string name="kind_deletions">Deletions</string>
+    <string name="kind_drafts">Drafts</string>
+    <string name="kind_emoji_packs">Emoji Packs</string>
+    <string name="kind_emoji_pack_list">Emoji Pack List</string>
+    <string name="kind_ephemeral_chat">Ephemeral Chat</string>
+    <string name="kind_ephemeral_chatrooms">Ephemeral Chatrooms</string>
+    <string name="kind_file_headers">File Headers</string>
+    <string name="kind_profile_gallery">Profile Gallery</string>
+    <string name="kind_file_servers">File Servers</string>
+    <string name="kind_blob_data">Blob Data</string>
+    <string name="kind_blob_headers">Blob Headers</string>
+    <string name="kind_medical_data">Medical Data</string>
+    <string name="kind_follow_packs">Follow Packs</string>
+    <string name="kind_reposts_16">Reposts (16)</string>
+    <string name="kind_geohash_follows">Geohash Follows</string>
+    <string name="kind_gift_wraps">GiftWraps</string>
+    <string name="kind_git_issue">Git Issue</string>
+    <string name="kind_git_patch">Git Patch</string>
+    <string name="kind_git_repo">Git Repo</string>
+    <string name="kind_git_reply">Git Reply</string>
+    <string name="kind_zap_goals">Zap Goals</string>
+    <string name="kind_hashtag_follows">Hashtag Follows</string>
+    <string name="kind_highlights">Highlights</string>
+    <string name="kind_http_auth">Http Auth</string>
+    <string name="kind_index_relay_list">Index Relay List</string>
+    <string name="kind_adventure_prologue">Adventure Prologue</string>
+    <string name="kind_adventure_scene">Adventure Scene</string>
+    <string name="kind_adventure_reading">Adventure Reading</string>
+    <string name="kind_named_bookmarks">Named Bookmarks</string>
+    <string name="kind_live_chats">Live Chats</string>
+    <string name="kind_live_streams">Live Streams</string>
+    <string name="kind_zaps">Zaps</string>
+    <string name="kind_nwc_request">NWC Request</string>
+    <string name="kind_nwc_response">NWC Response</string>
+    <string name="kind_private_zaps">Private Zaps</string>
+    <string name="kind_zap_req">Zap Req</string>
+    <string name="kind_blogs">Blogs</string>
+    <string name="kind_meeting_room">Meeting Room</string>
+    <string name="kind_room_presence">Room Presence</string>
+    <string name="kind_meeting_space">Meeting Space</string>
+    <string name="kind_profile">Profile</string>
+    <string name="kind_mute_list">Mute List</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
+    <string name="kind_dvm_status">DVM Status</string>
+    <string name="kind_dvm_content_req">DVM Content Req</string>
+    <string name="kind_dvm_content_resp">DVM Content Resp</string>
+    <string name="kind_dvm_user_req">DVM User Req</string>
+    <string name="kind_dvm_user_resp">DVM User Resp</string>
+    <string name="kind_ots">OTS</string>
+    <string name="kind_pay_to">PayTo</string>
+    <string name="kind_people_lists">People Lists</string>
+    <string name="kind_pictures">Pictures</string>
+    <string name="kind_pins">Pins</string>
+    <string name="kind_zap_poll">Zap Poll</string>
+    <string name="kind_poll">Poll</string>
+    <string name="kind_poll_response">Poll Response</string>
+    <string name="kind_nip04_dms">NIP-04 DMs</string>
+    <string name="kind_private_relays">Private Relays</string>
+    <string name="kind_proxy_relays">Proxy Relays</string>
+    <string name="kind_public_message">Public Message</string>
+    <string name="kind_reactions">Reactions</string>
+    <string name="kind_contact_card">Contact Card</string>
+    <string name="kind_relay_auth">Relay Auth</string>
+    <string name="kind_relay_discovery">Relay Discovery</string>
+    <string name="kind_relay_monitor">Relay Monitor Announcement</string>
+    <string name="kind_relay_set">Relay Set</string>
+    <string name="kind_reports">Reports</string>
+    <string name="kind_reposts">Reposts</string>
+    <string name="kind_user_delete">User Delete</string>
+    <string name="kind_seals">Seals</string>
+    <string name="kind_search_relays">Search Relays</string>
+    <string name="kind_user_status">User Status</string>
+    <string name="kind_notes">Notes</string>
+    <string name="kind_edits">Edits</string>
+    <string name="kind_torrents">Torrents</string>
+    <string name="kind_torrent_comments">Torrent Comments</string>
+    <string name="kind_trusted_relays">Trusted Relays</string>
+    <string name="kind_trusted_providers">Trusted Providers</string>
+    <string name="kind_video_repl">Video (Repl)</string>
+    <string name="kind_shorts_repl">Shorts (Repl)</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_shorts">Shorts</string>
+    <string name="kind_voice_msg">Voice Msg</string>
+    <string name="kind_voice_reply">Voice Reply</string>
+    <string name="kind_wiki">Wiki</string>
 </resources>

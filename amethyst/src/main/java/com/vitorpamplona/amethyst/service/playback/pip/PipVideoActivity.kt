@@ -23,15 +23,18 @@ package com.vitorpamplona.amethyst.service.playback.pip
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.media3.common.util.UnstableApi
-import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
+import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 
 class PipVideoActivity : ComponentActivity() {
@@ -39,22 +42,22 @@ class PipVideoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        var videoData = IntentExtras.loadBundle(this.intent.extras)
-        val bounds = IntentExtras.loadBounds(this.intent.extras)
-        val ratio = videoData?.aspectRatio ?: videoData?.videoUri?.let { MediaAspectRatioCache.get(it) }
-
-        enterPipMode(ratio, bounds)
-
         setContent {
-            PipVideo()
-        }
-    }
+            val videoData by rememberVideoDataFromIntents()
+            videoData?.let { mediaItemData ->
+                // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
+                val muted = remember(mediaItemData) { DEFAULT_MUTED_SETTING.value }
 
-    override fun onPictureInPictureModeChanged(
-        isInPictureInPictureMode: Boolean,
-        newConfig: Configuration,
-    ) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+                GetMediaItem(mediaItemData) { mediaItem ->
+                    GetVideoController(mediaItem, muted, true) { controllerState ->
+                        RegisterBackgroundMedia(controllerState)
+                        RegisterControllerReceiver(controllerState)
+                        WatchControllerForActions(mediaItemData, controllerState)
+                        RenderPipVideo(controllerState, mediaItemData.waveformData)
+                    }
+                }
+            }
+        }
     }
 
     override fun onStop() {
@@ -65,11 +68,6 @@ class PipVideoActivity : ComponentActivity() {
     override fun finish() {
         finishAndRemoveTask()
         super.finish()
-    }
-
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        finishAndRemoveTask()
     }
 
     companion object {
@@ -86,13 +84,10 @@ class PipVideoActivity : ComponentActivity() {
                 } else {
                     ActivityOptions.makeBasic()
                 }
-            options.setLaunchBounds(videoBounds)
 
             context.startActivity(
-                Intent(context, PipVideoActivity::class.java).apply {
+                Intent(context.applicationContext, PipVideoActivity::class.java).apply {
                     putExtras(IntentExtras.createBundle(videoData, videoBounds))
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 },
                 options.toBundle(),
             )

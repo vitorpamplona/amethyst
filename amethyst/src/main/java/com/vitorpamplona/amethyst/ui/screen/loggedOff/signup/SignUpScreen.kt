@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
@@ -63,27 +63,30 @@ import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import kotlinx.coroutines.launch
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
 fun SignUpPagePreview() {
-    val accountViewModel: AccountStateViewModel = viewModel()
+    val signUpViewModel: SignUpViewModel = viewModel()
+    signUpViewModel.init(TorSettingsFlow())
 
     ThemeComparisonRow(
         toPreview = {
-            SignUpPage(accountViewModel) {}
+            SignUpPage(signUpViewModel) {}
         },
     )
 }
 
 @Composable
 fun SignUpPage(
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
     onWantsToLogin: () -> Unit,
 ) {
     val signUpViewModel: SignUpViewModel = viewModel()
-    signUpViewModel.init(accountStateViewModel)
+    signUpViewModel.init(accountSessionManager)
+    signUpViewModel.init(Amethyst.instance.torPrefs.value)
 
     SignUpPage(signUpViewModel, onWantsToLogin)
 }
@@ -171,7 +174,7 @@ fun SignUpPage(
         Spacer(modifier = Modifier.height(10.dp))
 
         TorSettingsSetup(
-            torSettingsFlow = Amethyst.instance.torPrefs.value,
+            torSettingsFlow = signUpViewModel.torSettings,
             onError = {
                 scope.launch {
                     Toast

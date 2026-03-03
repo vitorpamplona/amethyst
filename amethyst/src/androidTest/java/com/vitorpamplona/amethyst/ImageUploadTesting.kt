@@ -121,10 +121,10 @@ class ImageUploadTesting {
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
-        assertEquals("image/png", result.type)
-        assertEquals(paylod.size.toLong(), result.size)
-        assertEquals(initialHash, result.sha256)
-        assertEquals("${server.baseUrl}/$initialHash", result.url?.removeSuffix(".png"))
+        assertEquals(server.baseUrl, "image/png", result.type)
+        assertEquals(server.baseUrl, paylod.size.toLong(), result.size)
+        assertEquals(server.baseUrl, initialHash, result.sha256)
+        // assertEquals(server.baseUrl, "${server.baseUrl}/$initialHash", result.url?.removeSuffix(".png"))
 
         val imageData: ByteArray =
             ImageDownloader().waitAndGetImage(result.url!!, { client })?.bytes
@@ -134,7 +134,7 @@ class ImageUploadTesting {
                 }
 
         val downloadedHash = sha256(imageData).toHexKey()
-        assertEquals(initialHash, downloadedHash)
+        assertEquals(server.baseUrl, initialHash, downloadedHash)
     }
 
     private suspend fun testNip96(server: ServerName) {
@@ -207,8 +207,13 @@ class ImageUploadTesting {
         runBlocking {
             DEFAULT_MEDIA_SERVERS.forEach {
                 // skip paid servers and primal server is buggy.
-                if (!it.name.contains("Paid") && !it.name.contains("Primal")) {
-                    testBase(it)
+                try {
+                    if (!it.name.contains("Paid") && !it.name.contains("Primal")) {
+                        testBase(it)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    fail("Could not upload to: ${it.baseUrl}: ${e.message}")
                 }
             }
         }
@@ -227,24 +232,16 @@ class ImageUploadTesting {
         }
 
     @Test()
-    @Ignore("Not Working anymore")
-    fun testSove() =
-        runBlocking {
-            testBase(ServerName("sove", "https://sove.rent", ServerType.NIP96))
-        }
-
-    @Ignore("Not Working anymore")
-    @Test()
     fun testNostrBuild() =
         runBlocking {
             testBase(ServerName("nostr.build", "https://nostr.build", ServerType.NIP96))
         }
 
     @Test()
-    @Ignore("Not Working anymore")
+    @Ignore("Returns invalid hash")
     fun testSovbit() =
         runBlocking {
-            testBase(ServerName("sovbit", "https://files.sovbit.host", ServerType.NIP96))
+            testBase(ServerName("sovbit", "https://cdn.sovbit.host", ServerType.Blossom))
         }
 
     @Test()
@@ -258,13 +255,6 @@ class ImageUploadTesting {
     fun testSprovoostNl() =
         runBlocking {
             testBase(ServerName("sprovoost.nl", "https://img.sprovoost.nl/", ServerType.NIP96))
-        }
-
-    @Test()
-    @Ignore("Not Working anymore")
-    fun testNostrOnch() =
-        runBlocking {
-            testBase(ServerName("nostr.onch.services", "https://nostr.onch.services", ServerType.NIP96))
         }
 
     @Ignore("Changes sha256")

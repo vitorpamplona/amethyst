@@ -45,7 +45,7 @@ class ExoPlayerPool(
     // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
         CoroutineExceptionHandler { _, throwable ->
-            Log.e("BundledInsert", "Caught exception: ${throwable.message}", throwable)
+            Log.e("PlaybackService", "Caught exception: ${throwable.message}", throwable)
         }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
@@ -75,15 +75,19 @@ class ExoPlayerPool(
 
     suspend fun releasePlayer(player: ExoPlayer) {
         mutex.withLock {
-            player.pause()
-            player.stop()
-            player.clearMediaItems()
-            if (playerPool.size < poolSize) {
-                if (!playerPool.contains(player)) {
-                    playerPool.add(player)
+            if (!player.isReleased) {
+                player.pause()
+                player.stop()
+                player.clearVideoSurface()
+                player.clearMediaItems()
+
+                if (playerPool.size < poolSize) {
+                    if (!playerPool.contains(player)) {
+                        playerPool.add(player)
+                    }
+                } else {
+                    player.release() // Release if pool is full.
                 }
-            } else {
-                player.release() // Release if pool is full.
             }
         }
     }

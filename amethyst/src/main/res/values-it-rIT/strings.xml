@@ -432,4 +432,5 @@
     <string name="active_for_chats">Chat</string>
     <string name="active_for_global">Globale</string>
     <string name="active_for_search">Cerca</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

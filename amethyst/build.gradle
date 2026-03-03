@@ -280,7 +280,7 @@ dependencies {
     // view videos
     implementation libs.androidx.media3.exoplayer
     implementation libs.androidx.media3.exoplayer.hls
-    implementation libs.androidx.media3.ui
+    implementation libs.androidx.media3.ui.compose.material3
     implementation libs.androidx.media3.session
 
     // important for proxy / tor
@@ -294,6 +294,10 @@ dependencies {
     implementation libs.coil.svg
     // enables network for coil
     implementation libs.coil.okhttp
+    // loads thumbnails for media3
+    // TODO: Replace this to the FrameExtractor in media 3
+    // when FrameExtractor accepts custom data sources.
+    implementation(libs.coil.video)
 
     // Permission to upload pictures:
     implementation libs.accompanist.permissions

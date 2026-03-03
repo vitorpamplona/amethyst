@@ -1,19 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Defense-in-depth: allowBackup="false" is set in AndroidManifest.xml.
+     These rules provide additional protection if backup is ever enabled. -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- Exclude encrypted secrets (device-bound KeyStore encryption) -->
+        <exclude domain="sharedpref" path="secret_keeper.xml" />
+        <exclude domain="sharedpref" path="." requireFlags="clientSideEncryption" />
+
+        <!-- Exclude all DataStore files (encrypted keys and account preferences) -->
+        <exclude domain="file" path="datastore" />
+
+        <!-- Exclude external storage -->
+        <exclude domain="external" path="." />
     </cloud-backup>
-    <!--
+
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <!-- Exclude encrypted secrets (device-bound, unusable on target device) -->
+        <exclude domain="sharedpref" path="secret_keeper.xml" />
+        <exclude domain="sharedpref" path="." requireFlags="clientSideEncryption" />
+
+        <!-- Exclude all DataStore files (encrypted keys and account preferences) -->
+        <exclude domain="file" path="datastore" />
+
+        <!-- Exclude external storage -->
+        <exclude domain="external" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>

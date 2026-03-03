@@ -24,7 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,8 +68,8 @@ class Nip44v1Test {
     fun encryptDecrypt() {
         val msg = "Hi"
 
-        val privateKey = Nip01.privKeyCreate()
-        val publicKey = Nip01.pubKeyCreate(privateKey)
+        val privateKey = Nip01Crypto.privKeyCreate()
+        val publicKey = Nip01Crypto.pubKeyCreate(privateKey)
 
         val encrypted = nip44v1.encrypt(msg, privateKey, publicKey)
         val decrypted = nip44v1.decrypt(encrypted, privateKey, publicKey)
@@ -81,8 +81,8 @@ class Nip44v1Test {
     fun encryptDecryptSharedSecret() {
         val msg = "Hi"
 
-        val privateKey = Nip01.privKeyCreate()
-        val publicKey = Nip01.pubKeyCreate(privateKey)
+        val privateKey = Nip01Crypto.privKeyCreate()
+        val publicKey = Nip01Crypto.pubKeyCreate(privateKey)
 
         val sharedSecret = nip44v1.getSharedSecret(privateKey, publicKey)
 

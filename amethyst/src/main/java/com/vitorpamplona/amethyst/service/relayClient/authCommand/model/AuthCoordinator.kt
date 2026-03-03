@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -32,6 +33,7 @@ class ScreenAuthAccount(
     val account: Account,
 )
 
+@Stable
 class AuthCoordinator(
     client: INostrClient,
     scope: CoroutineScope,

@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
+import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -148,7 +150,7 @@ fun RichTextViewer(
 fun RenderStrangeNamePreview() {
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
-            "If you want to stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm can you here",
+            "If you want to FreeFrom Official \uD80C\uDD66 stream or download the music from  nostr:npub1sctag667a7np6p6ety2up94pnwwxhd2ep8n8afr2gtr47cwd4ewsvdmmjm at wss://relay.damus.io can you here",
             EmptyTagList,
         ) { paragraph, state, spaceWidth, modifier ->
             RenderTextParagraph(paragraph, spaceWidth, modifier) { word ->
@@ -162,6 +164,10 @@ fun RenderStrangeNamePreview() {
 
                     is RegularTextSegment -> {
                         Text(word.segmentText)
+                    }
+
+                    is RelayUrlSegment -> {
+                        ClickableRelayUrl(word.segmentText, EmptyNav())
                     }
                 }
             }
@@ -254,6 +260,8 @@ fun RenderRegularPreview2() {
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
 
                 is RegularTextSegment -> Text(word.segmentText)
+
+                is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
             }
         }
     }
@@ -302,6 +310,8 @@ fun RenderRegularPreview3() {
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
 
                 is RegularTextSegment -> Text(word.segmentText)
+
+                is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, EmptyNav())
             }
         }
     }
@@ -478,6 +488,8 @@ private fun RenderWordWithoutPreview(
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
 
         is RegularTextSegment -> Text(word.segmentText)
+
+        is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
     }
 }
 
@@ -509,6 +521,7 @@ private fun RenderWordWithPreview(
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
         is RegularTextSegment -> Text(word.segmentText)
         is Base64Segment -> ZoomableContentView(word.segmentText, state, accountViewModel)
+        is RelayUrlSegment -> ClickableRelayUrl(word.segmentText, nav)
     }
 }
 
@@ -595,6 +608,7 @@ fun DisplayFullNote(
         baseNote = note,
         modifier = MaterialTheme.colorScheme.innerPostModifier,
         isQuotedNote = true,
+        unPackReply = ReplyRenderType.LINE,
         quotesLeft = quotesLeft - 1,
         parentBackgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
@@ -867,6 +881,7 @@ private fun DisplayNoteFromTag(
             baseNote = baseNote,
             modifier = MaterialTheme.colorScheme.innerPostModifier,
             isQuotedNote = true,
+            unPackReply = ReplyRenderType.LINE,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,

@@ -33,7 +33,7 @@ fun Event.verifyId(): Boolean {
 
 fun Event.verifySignature(): Boolean {
     if (id.isEmpty() || sig.isEmpty()) return false
-    return Nip01.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+    return Nip01Crypto.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
 }
 
 /** Checks if the ID is correct and then if the pubKey's secret key signed the event. */

@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
@@ -128,8 +127,6 @@ class WikiNoteEvent(
     }
 
     override fun dTag() = tags.dTag()
-
-    override fun aTag(relayHint: NormalizedRelayUrl?) = ATag(kind, pubKey, dTag(), relayHint)
 
     override fun address() = Address(kind, pubKey, dTag())
 

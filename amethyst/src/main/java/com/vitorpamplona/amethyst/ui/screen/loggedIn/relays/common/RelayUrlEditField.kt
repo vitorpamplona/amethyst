@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -61,64 +62,73 @@ fun RelayUrlEditFieldPreview() {
 @Composable
 fun RelayUrlEditField(onNewRelay: (NormalizedRelayUrl) -> Unit) {
     var url by remember { mutableStateOf("") }
+    val relaySuggestions = remember { RelaySuggestionState() }
 
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Size10dp)) {
-        OutlinedTextField(
-            label = { Text(text = stringRes(R.string.add_a_relay)) },
-            modifier = Modifier.weight(1f),
-            value = url,
-            onValueChange = { url = it },
-            placeholder = {
-                Text(
-                    text = "server.com",
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1,
-                )
-            },
-            singleLine = true,
-            keyboardOptions =
-                KeyboardOptions.Default.copy(
-                    autoCorrectEnabled = false,
-                    imeAction = ImeAction.Go,
-                    capitalization = KeyboardCapitalization.None,
-                    keyboardType = KeyboardType.Text,
-                ),
-            keyboardActions =
-                KeyboardActions(
-                    onGo = {
-                        if (url.isNotBlank() && url != "/") {
-                            val relay = RelayUrlNormalizer.normalizeOrNull(url)
-                            if (relay != null) {
-                                onNewRelay(relay)
-                                url = ""
-                            }
-                        }
-                    },
-                ),
-        )
-
-        Button(
-            onClick = {
-                if (url.isNotBlank() && url != "/") {
-                    val relay = RelayUrlNormalizer.normalizeOrNull(url)
-                    if (relay != null) {
-                        onNewRelay(relay)
-                        url = ""
-                    }
-                }
-            },
-            shape = ButtonBorder,
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor =
-                        if (url.isNotBlank()) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.placeholderText
-                        },
-                ),
-        ) {
-            Text(text = stringRes(id = R.string.add), color = Color.White)
+    fun submitRelay() {
+        if (url.isNotBlank() && url != "/") {
+            val relay = RelayUrlNormalizer.normalizeOrNull(url)
+            if (relay != null) {
+                onNewRelay(relay)
+                url = ""
+                relaySuggestions.reset()
+            }
         }
+    }
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Size10dp)) {
+            OutlinedTextField(
+                label = { Text(text = stringRes(R.string.add_a_relay)) },
+                modifier = Modifier.weight(1f),
+                value = url,
+                onValueChange = {
+                    url = it
+                    relaySuggestions.processInput(it)
+                },
+                placeholder = {
+                    Text(
+                        text = "server.com",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 1,
+                    )
+                },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions.Default.copy(
+                        autoCorrectEnabled = false,
+                        imeAction = ImeAction.Go,
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Text,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onGo = { submitRelay() },
+                    ),
+            )
+
+            Button(
+                onClick = { submitRelay() },
+                shape = ButtonBorder,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor =
+                            if (url.isNotBlank()) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.placeholderText
+                            },
+                    ),
+            ) {
+                Text(text = stringRes(id = R.string.add), color = Color.White)
+            }
+        }
+
+        ShowRelaySuggestionList(
+            relaySuggestions = relaySuggestions,
+            onSelect = { relay ->
+                url = relay.url
+                relaySuggestions.reset()
+            },
+        )
     }
 }

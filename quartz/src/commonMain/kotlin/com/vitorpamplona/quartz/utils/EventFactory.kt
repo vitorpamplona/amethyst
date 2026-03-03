@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
@@ -88,6 +89,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -112,7 +114,16 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -124,6 +135,8 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
@@ -139,6 +152,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 
 interface EventBuilder {
     fun build(
@@ -183,6 +197,15 @@ class EventFactory {
                 CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
+                ChessGameEvent.KIND -> ChessGameEvent(id, pubKey, createdAt, tags, content, sig)
+                CodeSnippetEvent.KIND -> CodeSnippetEvent(id, pubKey, createdAt, tags, content, sig)
+                FavoriteRelayListEvent.KIND -> FavoriteRelayListEvent(id, pubKey, createdAt, tags, content, sig)
+                JesterEvent.KIND -> JesterEvent(id, pubKey, createdAt, tags, content, sig)
+                LiveChessGameChallengeEvent.KIND -> LiveChessGameChallengeEvent(id, pubKey, createdAt, tags, content, sig)
+                LiveChessGameAcceptEvent.KIND -> LiveChessGameAcceptEvent(id, pubKey, createdAt, tags, content, sig)
+                LiveChessMoveEvent.KIND -> LiveChessMoveEvent(id, pubKey, createdAt, tags, content, sig)
+                LiveChessGameEndEvent.KIND -> LiveChessGameEndEvent(id, pubKey, createdAt, tags, content, sig)
+                LiveChessDrawOfferEvent.KIND -> LiveChessDrawOfferEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelCreateEvent.KIND -> ChannelCreateEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelHideMessageEvent.KIND -> ChannelHideMessageEvent(id, pubKey, createdAt, tags, content, sig)
                 ChannelListEvent.KIND -> ChannelListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -204,6 +227,7 @@ class EventFactory {
                 EmojiPackSelectionEvent.KIND -> EmojiPackSelectionEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatEvent.KIND -> EphemeralChatEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
+                ExternalIdentitiesEvent.KIND -> ExternalIdentitiesEvent(id, pubKey, createdAt, tags, content, sig)
                 FileHeaderEvent.KIND -> FileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
                 ProfileGalleryEntryEvent.KIND -> ProfileGalleryEntryEvent(id, pubKey, createdAt, tags, content, sig)
                 FileServersEvent.KIND -> FileServersEvent(id, pubKey, createdAt, tags, content, sig)
@@ -254,6 +278,8 @@ class EventFactory {
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
                 PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
                 PollNoteEvent.KIND -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
+                PollEvent.KIND -> PollEvent(id, pubKey, createdAt, tags, content, sig)
+                PollResponseEvent.KIND -> PollResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
                 PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 ProxyRelayListEvent.KIND -> ProxyRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -261,6 +287,8 @@ class EventFactory {
                 ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
                 ContactCardEvent.KIND -> ContactCardEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayAuthEvent.KIND -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayDiscoveryEvent.KIND -> RelayDiscoveryEvent(id, pubKey, createdAt, tags, content, sig)
+                RelayMonitorEvent.KIND -> RelayMonitorEvent(id, pubKey, createdAt, tags, content, sig)
                 RelaySetEvent.KIND -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
                 ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
                 RepostEvent.KIND -> RepostEvent(id, pubKey, createdAt, tags, content, sig)

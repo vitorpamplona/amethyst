@@ -239,4 +239,5 @@
     <string name="wallet_connect_service_relay">錢包綁定中繼</string>
     <string name="pledge_amount_in_sats">聰數量</string>
     <string name="looking_for_event">"“正在查找事件%1$s”"</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

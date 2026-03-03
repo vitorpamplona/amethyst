@@ -27,8 +27,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 
 open class NIP90ContentDiscoveryResponseFilter(
@@ -39,12 +37,6 @@ open class NIP90ContentDiscoveryResponseFilter(
     var latestNote: Note? = null
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + request
-
-    open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
-
-    override fun showHiddenKey(): Boolean =
-        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     fun acceptableEvent(note: Note): Boolean {
         val noteEvent = note.event

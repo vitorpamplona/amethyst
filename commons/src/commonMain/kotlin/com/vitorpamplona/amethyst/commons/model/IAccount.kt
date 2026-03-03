@@ -20,11 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
 
 /**
@@ -73,6 +79,9 @@ interface IAccount {
     /** Whether account has write permissions */
     fun isWriteable(): Boolean
 
+    /** Nostr signer for signing/encrypting events */
+    val signer: NostrSigner
+
     /** Current user's public key */
     val pubKey: String
 
@@ -86,4 +95,19 @@ interface IAccount {
     fun followingKeySet(): Set<String>
 
     fun isHidden(user: User): Boolean
+
+    /** Chatroom list for private DM conversations */
+    val chatroomList: ChatroomList
+
+    /** Whether a note is acceptable (not hidden, not blocked, etc.) */
+    fun isAcceptable(note: Note): Boolean
+
+    /** Send a NIP-04 encrypted direct message */
+    suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>)
+
+    /** Send a NIP-17 gift-wrapped direct message */
+    suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>)
+
+    /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
+    suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
 }

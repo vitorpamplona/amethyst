@@ -25,8 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.lang.ref.WeakReference
-import kotlin.collections.mapOf
-import kotlin.collections.plus
 
 @Stable
 data class RelayInfo(

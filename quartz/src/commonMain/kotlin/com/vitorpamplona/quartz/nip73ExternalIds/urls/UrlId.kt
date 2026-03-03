@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip73ExternalIds.urls
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.ensure
 
+@Stable
 class UrlId(
     val url: String,
     val hint: String? = null,

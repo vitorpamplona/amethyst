@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
+@Stable
 class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun relayListBuilder(): List<BasicRelaySetupInfo> {
         val relayList = getRelayList()
@@ -55,5 +57,6 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
             .sorted()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+        // Connected relays are read-only; saving is not applicable
     }
 }

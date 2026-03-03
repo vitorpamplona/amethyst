@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
+@Stable
 class TrustedRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun getRelayList(): List<NormalizedRelayUrl>? =
         account.trustedRelayList.flow.value

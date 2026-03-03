@@ -106,7 +106,9 @@ class ChannelFeedContentState(
         }
     }
 
-    fun deleteFromFeed(deletedNotes: Set<Note>) {}
+    fun deleteFromFeed(deletedNotes: Set<Note>) {
+        // TODO: Implement deletion of notes from the channel feed
+    }
 
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value

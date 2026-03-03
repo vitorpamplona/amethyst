@@ -66,7 +66,7 @@ class RelayAuthenticator(
             }
 
             override fun onConnecting(relay: IRelayClient) {
-                authStatus.put(relay.url, RelayAuthStatus())
+                authStatus[relay.url] = RelayAuthStatus()
             }
 
             override fun onDisconnected(relay: IRelayClient) {

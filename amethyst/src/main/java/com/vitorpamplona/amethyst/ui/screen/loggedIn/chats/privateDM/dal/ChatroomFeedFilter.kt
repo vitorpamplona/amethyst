@@ -20,31 +20,5 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChangesFlowFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-
-class ChatroomFeedFilter(
-    val withUser: ChatroomKey,
-    val account: Account,
-) : AdditiveFeedFilter<Note>(),
-    ChangesFlowFilter<Note> {
-    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
-
-    override fun changesFlow() = chatroom().changesFlow()
-
-    // returns the last Note of each user.
-    override fun feedKey(): String = withUser.hashCode().toString()
-
-    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
-
-    override fun applyFilter(newItems: Set<Note>): Set<Note> {
-        val chatroom = chatroom()
-        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
-    }
-
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-}
+// Re-export from commons for backwards compatibility
+typealias ChatroomFeedFilter = com.vitorpamplona.amethyst.commons.ui.feeds.ChatroomFeedFilter

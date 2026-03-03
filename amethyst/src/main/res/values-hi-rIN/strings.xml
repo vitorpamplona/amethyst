@@ -426,6 +426,7 @@
     <string name="poll_heading_required">अनिवार्य प्रपत्रस्थान :</string>
     <string name="poll_zap_recipients">ज्साप के ग्राहक</string>
     <string name="poll_primary_description">प्रमुख मतदान विवरण…</string>
+    <string name="poll_option">विकल्प</string>
     <string name="poll_option_index">विकल्प %s</string>
     <string name="poll_option_description">मतदान विकल्प विवरण</string>
     <string name="poll_heading_optional">प्रपत्रस्थान जो अनिवार्य नहीं :</string>
@@ -433,6 +434,8 @@
     <string name="poll_zap_value_max">ज्साप अधिकतम</string>
     <string name="poll_consensus_threshold">सर्वसम्मति</string>
     <string name="poll_consensus_threshold_percent">(० से १००) प्रतिशत</string>
+    <string name="poll_closing_date_time">मतदान समापन दिनांक तथा समय</string>
+    <string name="poll_closing_in">मतदान %1$s में समाप्त होगा</string>
     <string name="poll_closing_time">के पश्चात समाप्त करें</string>
     <string name="poll_closing_time_days">दिन</string>
     <string name="poll_unable_to_vote">निर्वाचन करने में असफल</string>
@@ -476,6 +479,7 @@
     <string name="set_preferred_media_servers">आपके प्रसारसंगणक आद्यताएँ स्थापित करें।</string>
     <string name="no_nip96_server_message">आपका कोई निप॰-९६ सेवासंगणक स्थापित नहीं। आप अमेथिस्ट की सूची का प्रयोग कर सकते हैं अथवा नीचे एक जोड सकते हैं ↓</string>
     <string name="no_blossom_server_message">आपका कोई ब्लोस्सम॰ प्रसारसंगणक स्थापित नहीं। आप अमेथिस्ट की सूची का प्रयोग कर सकते हैं अथवा नीचे एक जोड सकते हैं ↓</string>
+    <string name="recommended_media_servers">अनुशम्सित प्रसारसंगणक</string>
     <string name="built_in_media_servers_title">अन्तर्निहित प्रसारसंगणक</string>
     <string name="built_in_servers_description">अमेथिस्त की मूलविकल्प सूची। आप एक एक करके जोड सकते हैं अथवा सूची जोड सकते हैं।</string>
     <string name="use_default_servers">मूलविकल्प सूची का प्रयोग करें</string>
@@ -507,6 +511,7 @@
     <string name="follow_list_kind3follows_proxy">प्रतिनिधि द्वारा अनुचरित</string>
     <string name="follow_list_aroundme">मेरे आसपास</string>
     <string name="follow_list_global">वैश्विक</string>
+    <string name="follow_list_chess">चतुरंग</string>
     <string name="follow_list_mute_list">मौन सूची</string>
     <string name="follow_sets">अनुचरण सूचियाँ</string>
     <string name="follow_sets_explainer">ये अनुचरण सूचियाँ आपके उपयोग के लिए रूपांकित हैं। आप प्रयोक्ताओं का अनुचरण कर सकते हैं निजी अथवा सार्वजनिक रूप से</string>
@@ -595,8 +600,8 @@
     <string name="tor_use_money_operations_explainer">ज्साप लैटनिंग तथा काशयु व्यापार के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_use_nip05_verification">नोस्ट्र पता सत्यापन</string>
     <string name="tor_use_nip05_verification_explainer">निप॰-०५ पता सत्यापन के लिए टोर का प्रयोग अवश्य करें</string>
-    <string name="tor_use_nip96_uploads">चित्र चलचित्र अभिलेख आरोहण</string>
-    <string name="tor_use_nip96_uploads_explainer">चित्र चलचित्र अभिलेख आरोहण के लिए टोर का प्रयोग अवश्य करें</string>
+    <string name="tor_use_media_uploads">चित्र चलचित्र अभिलेख आरोहण</string>
+    <string name="tor_use_media_uploads_explainer">चित्र चलचित्र अभिलेख आरोहण के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_internal">आन्तरीय</string>
     <string name="tor_external">ओर्बोट</string>
     <string name="tor_off">निष्क्रिय</string>
@@ -1008,6 +1013,7 @@
     <string name="route_notifications">सूचनाएँ</string>
     <string name="route_global">वैश्विक</string>
     <string name="route_video">छोटे</string>
+    <string name="route_chess">चतुरंग</string>
     <string name="route_security_filters">सुरक्षार्थ छलनियाँ</string>
     <string name="new_post">नया पत्र प्रकाशन</string>
     <string name="new_short">नये छोटे : चित्र अथवा चलचित्र</string>
@@ -1242,4 +1248,36 @@
     <string name="follow_set_delete">सूची मिटाएँ</string>
     <string name="follow_pack_delete">पोटली मिटाएँ</string>
     <string name="kinds">प्रकार</string>
+    <string name="retry_failed">पुनःप्रयास असफल</string>
+    <string name="tap_to_view_details">विवरण देखने के लिए दबाएँ</string>
+    <string name="event_sent">%1$s प्रेषित</string>
+    <string name="broadcast_results">प्रसारण फल</string>
+    <string name="broadcasts_number">प्रसारण (%1$d)</string>
+    <string name="collapse">संकुचित करें</string>
+    <string name="expand">विस्तृत करें</string>
+    <string name="retry_failed_number">पुनःप्रयास असफल (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d अधिक प्रसारण</string>
+    <string name="number_in_progress">" (%1$d चालू)"</string>
+    <string name="share_of_relays">%1$d/%2$d पुनःप्रसारक</string>
+    <string name="timeout">समयान्त</string>
+    <string name="retrying">पुनःप्रयास चालू…</string>
+    <string name="retry">पुनःप्रयास करें</string>
+    <string name="view">देखें</string>
+    <string name="dismiss">हटाएँ</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">प्रसारण चालू</string>
+    <string name="broadcasting_name">%1$s का प्रसारण चालू</string>
+    <string name="broadcasting_number_events">%1$d घटनाओं का प्रसारण चालू</string>
+    <string name="sent_number_events">%1$d घटनाएँ प्रेषित</string>
+    <string name="bradcasting_result_partial">कुछ घटनाएँ असफल</string>
+    <string name="bradcasting_result_success">सभी घटनाएँ सफल</string>
+    <string name="bradcasting_result_failure">सभी घटनाएँ असफल</string>
+    <string name="reaction">प्रतिक्रिया</string>
+    <string name="voice_post">ध्वनि सन्देश</string>
+    <string name="voice_reply">ध्वनि उत्तर</string>
+    <string name="closing_time">समापन समय</string>
+    <string name="confirm">पुष्टि करें</string>
+    <string name="next">अगला</string>
+    <string name="add_poll_option_button">मतदान विकल्प घुण्डी जोडें</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

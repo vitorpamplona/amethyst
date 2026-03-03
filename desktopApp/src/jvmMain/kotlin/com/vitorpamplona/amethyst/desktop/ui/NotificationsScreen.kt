@@ -226,7 +226,7 @@ fun NotificationsScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(notifications, key = { it.event.id }) { notification ->
+                items(notifications.distinctBy { it.event.id }, key = { it.event.id }) { notification ->
                     NotificationCard(notification)
                 }
             }

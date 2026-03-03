@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.ClipData
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +32,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +42,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,18 +50,26 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
+import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataViewModel
+import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelectSingle
+import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
@@ -70,6 +83,7 @@ import kotlinx.coroutines.launch
 fun ProfileHeader(
     baseUser: User,
     appRecommendations: UserAppRecommendationsFeedViewModel,
+    externalIdentities: UserExternalIdentitiesViewModel,
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
@@ -126,7 +140,7 @@ fun ProfileHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom,
             ) {
-                ZoomableUserPicture(
+                ProfilePictureWithUploadOverlay(
                     baseUser = baseUser,
                     accountViewModel = accountViewModel,
                     size = Size100dp,
@@ -142,7 +156,7 @@ fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
+            DrawAdditionalInfo(baseUser, appRecommendations, externalIdentities, accountViewModel, nav)
 
             HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
         }
@@ -187,5 +201,78 @@ fun ZoomableUserPicture(
             onDismiss = { zoomImageUrl = null },
             accountViewModel = accountViewModel,
         )
+    }
+}
+
+@Composable
+fun ProfilePictureWithUploadOverlay(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+    size: Dp,
+) {
+    val isMe by remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
+    val picture by observeUserPicture(baseUser, accountViewModel)
+
+    Box(contentAlignment = Alignment.Center) {
+        ZoomableUserPicture(
+            baseUser = baseUser,
+            accountViewModel = accountViewModel,
+            size = size,
+        )
+        if (isMe && picture.isNullOrBlank()) {
+            ProfilePictureUploadButton(accountViewModel, size)
+        }
+    }
+}
+
+@Composable
+private fun ProfilePictureUploadButton(
+    accountViewModel: AccountViewModel,
+    size: Dp,
+) {
+    val postViewModel: NewUserMetadataViewModel = viewModel()
+    postViewModel.init(accountViewModel)
+    val context = LocalContext.current
+
+    var showGallerySelect by remember { mutableStateOf(false) }
+    if (showGallerySelect) {
+        GallerySelectSingle(
+            onImageUri = { media ->
+                showGallerySelect = false
+                if (media != null) {
+                    postViewModel.uploadPictureAndSave(media, context, accountViewModel.toastManager::toast)
+                }
+            },
+        )
+    }
+
+    if (postViewModel.isUploadingImageForPicture) {
+        Box(
+            modifier =
+                Modifier
+                    .size(size)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            LoadingAnimation()
+        }
+    } else {
+        Box(
+            modifier =
+                Modifier
+                    .size(size)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                    .clickable { showGallerySelect = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = stringRes(R.string.upload_image),
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }

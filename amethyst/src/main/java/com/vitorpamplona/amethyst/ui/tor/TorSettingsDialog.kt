@@ -291,9 +291,9 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
             )
 
             SwitchSettingsRow(
-                R.string.tor_use_nip96_uploads,
-                R.string.tor_use_nip96_uploads_explainer,
-                dialogViewModel.nip96UploadsViaTor,
+                R.string.tor_use_media_uploads,
+                R.string.tor_use_media_uploads_explainer,
+                dialogViewModel.mediaUploadsViaTor,
             )
         }
     }

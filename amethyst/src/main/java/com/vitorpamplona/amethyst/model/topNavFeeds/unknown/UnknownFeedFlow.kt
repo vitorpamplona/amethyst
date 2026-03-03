@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class UnknownFeedFlow(
-    val feedName: String,
+    val feedName: TopFilter,
 ) : IFeedFlowsType {
     override fun flow() = MutableStateFlow(UnknownTopNavFilter(feedName))
 

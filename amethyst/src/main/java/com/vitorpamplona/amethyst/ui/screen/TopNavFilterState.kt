@@ -24,37 +24,16 @@ import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
-import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
-import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -68,6 +47,7 @@ import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transform
 
 @Stable
 class TopNavFilterState(
@@ -75,55 +55,45 @@ class TopNavFilterState(
     val scope: CoroutineScope,
 ) {
     val allFollows =
-        PeopleListOutBoxFeedDefinition(
-            code = ALL_FOLLOWS,
+        FeedDefinition(
+            code = TopFilter.AllFollows,
             name = ResourceName(R.string.follow_list_kind3follows),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
     val userFollows =
-        PeopleListOutBoxFeedDefinition(
-            code = ALL_USER_FOLLOWS,
+        FeedDefinition(
+            code = TopFilter.AllUserFollows,
             name = ResourceName(R.string.follow_list_kind3follows_users_only),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
     val kind3Follows =
-        PeopleListOutBoxFeedDefinition(
-            code = KIND3_FOLLOWS,
+        FeedDefinition(
+            code = TopFilter.DefaultFollows,
             name = ResourceName(R.string.follow_list_kind3_follows_users_only),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(ContactListEvent.blockListFor(account.signer.pubKey)),
         )
 
     val globalFollow =
-        GlobalFeedDefinition(
-            code = GLOBAL_FOLLOWS,
+        FeedDefinition(
+            code = TopFilter.Global,
             name = ResourceName(R.string.follow_list_global),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
         )
 
     val aroundMe =
-        AroundMeFeedDefinition(
-            code = AROUND_ME,
+        FeedDefinition(
+            code = TopFilter.AroundMe,
             name = ResourceName(R.string.follow_list_aroundme),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
         )
 
     val muteListFollow =
-        PeopleListOutBoxFeedDefinition(
-            code = MuteListEvent.blockListFor(account.userProfile().pubkeyHex),
+        FeedDefinition(
+            code = TopFilter.MuteList(account.muteList.getMuteListAddress()),
             name = ResourceName(R.string.follow_list_mute_list),
-            type = CodeNameType.HARDCODED,
-            kinds = DEFAULT_FEED_KINDS,
-            unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
+        )
+
+    val chessFollow =
+        FeedDefinition(
+            code = TopFilter.Chess,
+            name = ResourceName(R.string.follow_list_chess),
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
@@ -134,23 +104,17 @@ class TopNavFilterState(
     ): List<FeedDefinition> {
         val peopleListsDefs =
             peopleLists.map {
-                PeopleListOutBoxFeedDefinition(
-                    it.idHex,
+                FeedDefinition(
+                    TopFilter.PeopleList(it.address),
                     PeopleListName(it),
-                    CodeNameType.PEOPLE_LIST,
-                    kinds = DEFAULT_FEED_KINDS,
-                    listOf(it.idHex),
                 )
             }
 
         val followListsDefs =
             followLists.map {
-                PeopleListOutBoxFeedDefinition(
-                    it.idHex,
+                FeedDefinition(
+                    TopFilter.PeopleList(it.address),
                     PeopleListName(it),
-                    CodeNameType.PEOPLE_LIST,
-                    kinds = DEFAULT_FEED_KINDS,
-                    listOf(it.idHex),
                 )
             }
 
@@ -175,44 +139,45 @@ class TopNavFilterState(
         hashtagList: Set<String>,
         geotagList: Set<String>,
         communityList: List<AddressableNote>,
+        relayList: Set<NormalizedRelayUrl>,
     ): List<FeedDefinition> {
         val hashtags =
             hashtagList.map {
-                TagFeedDefinition(
-                    "Hashtag/$it",
+                FeedDefinition(
+                    TopFilter.Hashtag(it),
                     HashtagName(it),
-                    CodeNameType.ROUTE,
                     route = Route.Hashtag(it),
-                    kinds = DEFAULT_FEED_KINDS,
-                    tTags = listOf(it),
                 )
             }
 
         val geotags =
             geotagList.map {
-                TagFeedDefinition(
-                    "Geohash/$it",
+                FeedDefinition(
+                    TopFilter.Geohash(it),
                     GeoHashName(it),
-                    CodeNameType.ROUTE,
                     route = Route.Geohash(it),
-                    kinds = DEFAULT_FEED_KINDS,
-                    gTags = listOf(it),
                 )
             }
 
         val communities =
             communityList.map { communityNote ->
-                TagFeedDefinition(
-                    "Community/${communityNote.idHex}",
+                FeedDefinition(
+                    TopFilter.Community(communityNote.address),
                     CommunityName(communityNote),
-                    CodeNameType.ROUTE,
                     route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
-                    kinds = DEFAULT_COMMUNITY_FEEDS,
-                    aTags = listOf(communityNote.idHex),
                 )
             }
 
-        return (communities + hashtags + geotags).sortedBy { it.name.name() }
+        val relays =
+            relayList.map { relayUrl ->
+                FeedDefinition(
+                    TopFilter.Relay(relayUrl.url),
+                    RelayName(relayUrl),
+                    route = Route.RelayFeed(relayUrl.url),
+                )
+            }
+
+        return (communities + hashtags + geotags + relays).sortedBy { it.name.name() }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -221,6 +186,7 @@ class TopNavFilterState(
             account.hashtagList.flow,
             account.geohashList.flow,
             account.communityList.flowNotes,
+            account.favoriteRelayList.flow,
             ::mergeInterests,
         ).onStart {
             emit(
@@ -228,6 +194,7 @@ class TopNavFilterState(
                     account.hashtagList.flow.value,
                     account.geohashList.flow.value,
                     account.communityList.flowNotes.value,
+                    account.favoriteRelayList.flow.value,
                 ),
             )
         }
@@ -236,28 +203,25 @@ class TopNavFilterState(
         combineTransform(
             livePeopleListsFlow,
             liveInterestFlows,
-        ) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+        ) { peopleLists, interests ->
             checkNotInMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
-                    myLivePeopleListsFlow,
-                    myLiveKind3FollowsFlow,
+                    peopleLists,
+                    interests,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
         }
 
     private val _kind3GlobalPeople =
-        combineTransform(
-            livePeopleListsFlow,
-            liveInterestFlows,
-        ) { myLivePeopleListsFlow, myLiveKind3FollowsFlow ->
+        livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
-                    myLivePeopleListsFlow,
+                    peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
@@ -278,30 +242,35 @@ class TopNavFilterState(
     }
 }
 
-enum class CodeNameType {
-    HARDCODED,
-    PEOPLE_LIST,
-    ROUTE,
-}
-
+@Stable
 abstract class Name {
     abstract fun name(): String
 
     open fun name(context: Context) = name()
 }
 
+@Stable
 class GeoHashName(
     val geoHashTag: String,
 ) : Name() {
     override fun name() = "/g/$geoHashTag"
 }
 
+@Stable
 class HashtagName(
     val hashTag: String,
 ) : Name() {
     override fun name() = "#$hashTag"
 }
 
+@Stable
+class RelayName(
+    val url: NormalizedRelayUrl,
+) : Name() {
+    override fun name() = url.displayUrl()
+}
+
+@Stable
 class ResourceName(
     val resourceId: Int,
 ) : Name() {
@@ -310,6 +279,7 @@ class ResourceName(
     override fun name(context: Context) = stringRes(context, resourceId)
 }
 
+@Stable
 class PeopleListName(
     val note: AddressableNote,
 ) : Name() {
@@ -325,6 +295,7 @@ class PeopleListName(
     }
 }
 
+@Stable
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
@@ -332,83 +303,8 @@ class CommunityName(
 }
 
 @Immutable
-abstract class FeedDefinition(
-    val code: String,
+class FeedDefinition(
+    val code: TopFilter,
     val name: Name,
-    val type: CodeNameType,
-    val route: Route?,
+    val route: Route? = null,
 )
-
-@Immutable
-class GlobalFeedDefinition(
-    code: String,
-    name: Name,
-    type: CodeNameType,
-    val kinds: List<Int>,
-) : FeedDefinition(code, name, type, null)
-
-@Immutable
-class TagFeedDefinition(
-    code: String,
-    name: Name,
-    type: CodeNameType,
-    route: Route?,
-    val kinds: List<Int>,
-    val pTags: List<String>? = null,
-    val eTags: List<String>? = null,
-    val aTags: List<String>? = null,
-    val tTags: List<String>? = null,
-    val gTags: List<String>? = null,
-) : FeedDefinition(code, name, type, route)
-
-@Immutable
-class AroundMeFeedDefinition(
-    code: String,
-    name: Name,
-    type: CodeNameType,
-    val kinds: List<Int>,
-) : FeedDefinition(code, name, type, null)
-
-@Immutable
-class PeopleListOutBoxFeedDefinition(
-    code: String,
-    name: Name,
-    type: CodeNameType,
-    val kinds: List<Int>,
-    val unpackList: List<String>,
-) : FeedDefinition(code, name, type, null)
-
-val DEFAULT_FEED_KINDS =
-    listOf(
-        TextNoteEvent.KIND,
-        RepostEvent.KIND,
-        GenericRepostEvent.KIND,
-        ClassifiedsEvent.KIND,
-        LongTextNoteEvent.KIND,
-        PollNoteEvent.KIND,
-        HighlightEvent.KIND,
-        AudioTrackEvent.KIND,
-        AudioHeaderEvent.KIND,
-        PinListEvent.KIND,
-        LiveActivitiesChatMessageEvent.KIND,
-        LiveActivitiesEvent.KIND,
-        WikiNoteEvent.KIND,
-        NipTextEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
-    )
-
-val DEFAULT_COMMUNITY_FEEDS =
-    listOf(
-        TextNoteEvent.KIND,
-        CommentEvent.KIND,
-        LongTextNoteEvent.KIND,
-        ClassifiedsEvent.KIND,
-        HighlightEvent.KIND,
-        AudioHeaderEvent.KIND,
-        AudioTrackEvent.KIND,
-        PinListEvent.KIND,
-        WikiNoteEvent.KIND,
-        NipTextEvent.KIND,
-        CommunityPostApprovalEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
-    )

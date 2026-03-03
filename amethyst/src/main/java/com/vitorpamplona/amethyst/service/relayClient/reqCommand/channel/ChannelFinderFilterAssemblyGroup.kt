@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive.ChannelMetadataAndLiveActivityWatcherSubAssembler
@@ -27,10 +28,12 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28Pu
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
+@Stable
 class ChannelFinderQueryState(
     val channel: Channel,
 )
 
+@Stable
 class ChannelFinderFilterAssemblyGroup(
     client: INostrClient,
 ) : ComposeSubscriptionManager<ChannelFinderQueryState>() {

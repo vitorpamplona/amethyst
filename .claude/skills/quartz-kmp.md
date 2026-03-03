@@ -1,165 +1,23 @@
-# Quartz KMP Conversion Skill
+# Quartz KMP (Legacy Skill — Migration Complete)
 
-When working with Quartz library conversion to Kotlin Multiplatform:
+> The KMP migration of Quartz is **complete**. This file is kept for historical reference.
+>
+> For integrating Quartz into external projects, use the **`quartz-integration`** skill instead.
+> For working with Quartz internals within Amethyst, use the **`nostr-expert`** skill.
 
-## Current Structure (Android-only)
-```
-quartz/
-├── build.gradle
-└── src/
-    ├── main/kotlin/          # All Nostr code here
-    ├── test/
-    └── androidTest/
-```
+## What was migrated
 
-## Target Structure (KMP)
+The Quartz library was successfully converted from Android-only to full KMP supporting:
+- **commonMain** — All Nostr protocol logic, events, filters, tags
+- **jvmAndroid** — OkHttp WebSocket, Jackson JSON, relay serializers
+- **androidMain** — SQLite event store, NIP-55 Android signer
+- **jvmMain** — Desktop JVM crypto (lazysodium-java, secp256k1-jni-jvm)
+- **iosMain** — iOS targets (XCFramework `quartz-kmpKit`)
+
+## Current artifact
+
 ```
-quartz/
-├── build.gradle.kts
-└── src/
-    ├── commonMain/kotlin/    # Shared protocol code
-    ├── commonTest/kotlin/    # Shared tests
-    ├── androidMain/kotlin/   # Android crypto, storage
-    ├── androidTest/kotlin/
-    ├── jvmMain/kotlin/       # Desktop crypto, storage
-    └── jvmTest/kotlin/
+com.vitorpamplona.quartz:quartz:1.05.1
 ```
 
-## Platform Abstractions Required
-
-### 1. Cryptography (expect/actual)
-```kotlin
-// commonMain
-expect object Secp256k1 {
-    fun sign(data: ByteArray, privateKey: ByteArray): ByteArray
-    fun verify(data: ByteArray, signature: ByteArray, pubKey: ByteArray): Boolean
-    fun pubKeyCreate(privateKey: ByteArray): ByteArray
-}
-
-// androidMain - uses secp256k1-kmp-jni-android
-actual object Secp256k1 {
-    actual fun sign(data: ByteArray, privateKey: ByteArray): ByteArray {
-        return fr.acinq.secp256k1.Secp256k1.sign(data, privateKey)
-    }
-    // ...
-}
-
-// jvmMain - uses secp256k1-kmp-jni-jvm
-actual object Secp256k1 {
-    actual fun sign(data: ByteArray, privateKey: ByteArray): ByteArray {
-        return fr.acinq.secp256k1.Secp256k1.sign(data, privateKey)
-    }
-    // ...
-}
-```
-
-### 2. NIP-44 Encryption (Sodium)
-```kotlin
-// commonMain
-expect object Nip44 {
-    fun encrypt(plaintext: String, sharedSecret: ByteArray): String
-    fun decrypt(ciphertext: String, sharedSecret: ByteArray): String
-}
-
-// androidMain - lazysodium-android
-// jvmMain - lazysodium-java or libsodium-jni
-```
-
-### 3. Secure Random
-```kotlin
-// commonMain
-expect fun secureRandomBytes(size: Int): ByteArray
-
-// androidMain
-actual fun secureRandomBytes(size: Int): ByteArray {
-    return SecureRandom().let { random ->
-        ByteArray(size).also { random.nextBytes(it) }
-    }
-}
-
-// jvmMain
-actual fun secureRandomBytes(size: Int): ByteArray {
-    return java.security.SecureRandom().let { random ->
-        ByteArray(size).also { random.nextBytes(it) }
-    }
-}
-```
-
-## Build Configuration
-
-```kotlin
-// quartz/build.gradle.kts
-plugins {
-    kotlin("multiplatform")
-    id("com.android.library")
-}
-
-kotlin {
-    androidTarget {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
-        }
-    }
-
-    jvm("desktop") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
-        }
-    }
-
-    sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.collections.immutable)
-            }
-        }
-
-        val androidMain by getting {
-            dependencies {
-                implementation(libs.secp256k1.kmp.jni.android)
-                implementation(libs.lazysodium.android)
-            }
-        }
-
-        val desktopMain by getting {
-            dependencies {
-                implementation(libs.secp256k1.kmp.jni.jvm)
-                // lazysodium-java or alternative
-            }
-        }
-    }
-}
-
-android {
-    namespace = "com.vitorpamplona.quartz"
-    compileSdk = 35
-    defaultConfig.minSdk = 26
-}
-```
-
-## Migration Steps
-
-1. **Convert build.gradle to build.gradle.kts** with KMP plugin
-2. **Move pure Kotlin code** to `commonMain/`
-3. **Identify platform dependencies** (crypto, JNA, Android APIs)
-4. **Create expect declarations** for platform-specific APIs
-5. **Implement actuals** in androidMain and jvmMain
-6. **Update imports** in amethyst module
-7. **Test on both platforms**
-
-## Files to Move to commonMain
-
-Most of Quartz can be shared:
-- Event classes and parsing
-- Filter definitions
-- Relay message types
-- NIP implementations (logic only)
-- Utilities (hex encoding, bech32)
-
-## Files Needing expect/actual
-
-- `Secp256k1.kt` - Signature operations
-- `Nip04.kt` - Legacy encryption (uses AES)
-- `Nip44.kt` - Modern encryption (uses ChaCha)
-- `KeyPair.kt` - Key generation
+See `.claude/skills/quartz-integration/SKILL.md` for full integration guide.

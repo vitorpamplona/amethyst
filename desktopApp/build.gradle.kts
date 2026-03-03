@@ -33,6 +33,9 @@ dependencies {
     // Commons library
     implementation(project(":commons"))
 
+    // Lifecycle ViewModel (needed to access ViewModel supertype from commons)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)

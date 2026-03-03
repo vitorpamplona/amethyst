@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -40,11 +41,11 @@ import kotlinx.coroutines.launch
 class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
     client: INostrClient,
     allKeys: () -> Set<DiscoveryQueryState>,
-) : PerUserAndFollowListEoseManager<DiscoveryQueryState, String>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<DiscoveryQueryState, TopFilter>(client, allKeys) {
     override fun updateFilter(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? {
+    ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
 
         return makeLongFormFilter(feedSettings, since, key.feedStates.discoverReads.lastNoteCreatedAtIfFilled()) +

@@ -97,7 +97,7 @@ fun RenderReport(
             baseNote = it,
             modifier = MaterialTheme.colorScheme.replyModifier,
             isQuotedNote = true,
-            unPackReply = false,
+            unPackReply = ReplyRenderType.NONE,
             makeItShort = true,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,

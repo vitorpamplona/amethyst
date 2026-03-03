@@ -20,11 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.aTag
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun <T : Event> TagArrayBuilder<T>.aTag(tag: ATag) = add(tag.toATagArray())
+
+fun <T : Event> TagArrayBuilder<T>.aTag(
+    address: Address,
+    relayHint: NormalizedRelayUrl? = null,
+) = add(ATag.assemble(address, relayHint))
 
 fun <T : Event> TagArrayBuilder<T>.aTags(tag: List<ATag>) = addAll(tag.map { it.toATagArray() })
 
 fun <T : Event> TagArrayBuilder<T>.removeATag(tag: ATag) = this.removeIf(ATag::isSameAddress, tag.toATagArray())
+
+fun <T : Event> TagArrayBuilder<T>.removeAddress(address: Address) = this.removeIf(ATag::isSameAddress, ATag.assemble(address, null))

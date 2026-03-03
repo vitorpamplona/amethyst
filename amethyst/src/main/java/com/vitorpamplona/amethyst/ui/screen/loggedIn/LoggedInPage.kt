@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
 fun LoggedInPage(
     account: Account,
     route: Route?,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     val accountViewModel: AccountViewModel =
         viewModel(
@@ -99,7 +99,7 @@ fun LoggedInPage(
 
     AppNavigation(
         accountViewModel = accountViewModel,
-        accountStateViewModel = accountStateViewModel,
+        accountSessionManager = accountSessionManager,
     )
 }
 

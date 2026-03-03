@@ -71,6 +71,10 @@ import com.vitorpamplona.amethyst.ui.theme.SpacedBy2dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
+private const val PREVIEW_LIST_TITLE = "Sample List Title"
+private const val PREVIEW_LIST_DESCRIPTION = "Sample List Description"
+private const val PREVIEW_LIST_IMAGE = "http://some.com/image.png"
+
 @Preview()
 @Composable
 private fun PeopleListItemPreview() {
@@ -82,8 +86,8 @@ private fun PeopleListItemPreview() {
         PeopleList(
             identifierTag = "00001-2222",
             title = "Sample List Title, Very long title, very very very long",
-            description = "Sample List Description",
-            image = "http://some.com/image.png",
+            description = PREVIEW_LIST_DESCRIPTION,
+            image = PREVIEW_LIST_IMAGE,
             emptySet(),
             emptySet(),
         )
@@ -91,9 +95,9 @@ private fun PeopleListItemPreview() {
     val samplePeopleList2 =
         PeopleList(
             identifierTag = "00001-2223",
-            title = "Sample List Title",
-            description = "Sample List Description",
-            image = "http://some.com/image.png",
+            title = PREVIEW_LIST_TITLE,
+            description = PREVIEW_LIST_DESCRIPTION,
+            image = PREVIEW_LIST_IMAGE,
             setOf(user1, user3),
             emptySet(),
         )
@@ -101,9 +105,9 @@ private fun PeopleListItemPreview() {
     val samplePeopleList3 =
         PeopleList(
             identifierTag = "00001-2224",
-            title = "Sample List Title",
-            description = "Sample List Description",
-            image = "http://some.com/image.png",
+            title = PREVIEW_LIST_TITLE,
+            description = PREVIEW_LIST_DESCRIPTION,
+            image = PREVIEW_LIST_IMAGE,
             emptySet(),
             setOf(user1, user3),
         )
@@ -111,9 +115,9 @@ private fun PeopleListItemPreview() {
     val samplePeopleList4 =
         PeopleList(
             identifierTag = "00001-2225",
-            title = "Sample List Title",
-            description = "Sample List Description",
-            image = "http://some.com/image.png",
+            title = PREVIEW_LIST_TITLE,
+            description = PREVIEW_LIST_DESCRIPTION,
+            image = PREVIEW_LIST_IMAGE,
             setOf(user3),
             setOf(user1, user2, user3),
         )

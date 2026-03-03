@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
@@ -145,18 +144,14 @@ private fun ImageVideoPostChat(
     fileUploadState: ChatFileUploadState,
     accountViewModel: AccountViewModel,
 ) {
-    val fileServers by accountViewModel.account.serverLists.liveServerList
+    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =
         remember(fileServers) {
             fileServers
-                .mapNotNull {
-                    if (it.type != ServerType.NIP95) {
-                        TitleExplainer(it.name, it.baseUrl)
-                    } else {
-                        null
-                    }
+                .map {
+                    TitleExplainer(it.name, it.baseUrl)
                 }.toImmutableList()
         }
 
