@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -142,22 +141,13 @@ fun AllSettingsScreen(
                 onClick = { nav.nav(Route.UserSettings) },
             )
             accountViewModel.account.settings.keyPair.privKey?.let {
-                var backupDialogOpen by remember { mutableStateOf(false) }
-
                 HorizontalDivider()
                 SettingsNavigationRow(
                     title = R.string.backup_keys,
                     icon = Icons.Outlined.Key,
                     tint = tint,
-                    onClick = {
-                        nav.closeDrawer()
-                        backupDialogOpen = true
-                    },
+                    onClick = { nav.nav(Route.AccountBackup) },
                 )
-
-                if (backupDialogOpen) {
-                    AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
-                }
             }
             HorizontalDivider(thickness = 4.dp)
             SettingsSectionHeader(R.string.app_settings)

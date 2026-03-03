@@ -80,8 +80,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
@@ -91,6 +89,7 @@ import com.halilibo.richtext.ui.material3.RichText
 import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.authenticate
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -112,23 +111,18 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun AccountBackupDialog(
+fun AccountBackupScreen(
     accountViewModel: AccountViewModel,
-    onClose: () -> Unit,
+    nav: INav,
 ) {
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        DialogContents(accountViewModel, onClose)
-    }
+    AccountBackupScreenContent(accountViewModel, nav::popBack)
 }
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
-fun DialogContentsPreview() {
+fun AccountBackupScreenPreview() {
     ThemeComparisonRow {
-        DialogContents(
+        AccountBackupScreenContent(
             mockAccountViewModel(),
         ) {}
     }
@@ -136,7 +130,7 @@ fun DialogContentsPreview() {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun DialogContents(
+private fun AccountBackupScreenContent(
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
 ) {
