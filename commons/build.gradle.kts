@@ -19,7 +19,7 @@ kotlin {
         }
     }
 
-    androidLibrary {
+    android {
         namespace = "com.vitorpamplona.amethyst.commons"
         compileSdk =
             libs.versions.android.compileSdk
@@ -33,6 +33,8 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
         }
+
+        androidResources.enable = true
 
         withHostTest {}
 
