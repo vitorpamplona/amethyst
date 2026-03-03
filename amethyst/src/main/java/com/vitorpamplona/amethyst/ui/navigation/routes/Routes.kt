@@ -81,6 +81,8 @@ sealed class Route {
 
     @Serializable object AllSettings : Route()
 
+    @Serializable object AccountBackup : Route()
+
     @Serializable object Settings : Route()
 
     @Serializable object UserSettings : Route()
@@ -332,6 +334,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.ContentDiscovery>() -> entry.toRoute<Route.ContentDiscovery>()
         dest.hasRoute<Route.Drafts>() -> entry.toRoute<Route.Drafts>()
         dest.hasRoute<Route.AllSettings>() -> entry.toRoute<Route.AllSettings>()
+        dest.hasRoute<Route.AccountBackup>() -> entry.toRoute<Route.AccountBackup>()
         dest.hasRoute<Route.Settings>() -> entry.toRoute<Route.Settings>()
         dest.hasRoute<Route.EditProfile>() -> entry.toRoute<Route.EditProfile>()
         dest.hasRoute<Route.Profile>() -> entry.toRoute<Route.Profile>()
