@@ -800,12 +800,7 @@ class Account(
                         .dmInboxRelayList()
                         ?.relays()
                         ?.ifEmpty { null }
-                if (relayList != null) {
-                    client.send(event, relayList.toSet())
-                } else {
-                    val publicRelayList = computeRelayListForLinkedUser(receiver)
-                    client.send(event, publicRelayList)
-                }
+                return relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
             } else {
                 return emptySet()
             }
