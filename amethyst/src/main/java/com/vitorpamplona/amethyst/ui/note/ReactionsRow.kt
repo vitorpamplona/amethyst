@@ -1030,7 +1030,6 @@ fun ZapReaction(
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
-    var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -1081,7 +1080,7 @@ fun ZapReaction(
                         )
                     }
                 },
-                onLongClick = { wantsToChangeZapAmount = true },
+                onLongClick = { nav.nav(Route.UpdateZapAmount()) },
                 onDoubleClick = { wantsToSetCustomZap = true },
             ),
     ) {
@@ -1098,7 +1097,7 @@ fun ZapReaction(
                 onChangeAmount = {
                     scope.launch {
                         wantsToZap = false
-                        wantsToChangeZapAmount = true
+                        nav.nav(Route.UpdateZapAmount())
                     }
                 },
                 onError = { _, message, user ->
@@ -1121,13 +1120,6 @@ fun ZapReaction(
                         nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
-            )
-        }
-
-        if (wantsToChangeZapAmount) {
-            UpdateZapAmountDialog(
-                onClose = { wantsToChangeZapAmount = false },
-                accountViewModel = accountViewModel,
             )
         }
 

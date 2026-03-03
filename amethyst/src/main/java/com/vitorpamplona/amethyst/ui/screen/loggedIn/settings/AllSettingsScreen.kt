@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -81,15 +80,6 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val tint = MaterialTheme.colorScheme.onBackground
-
-    var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-
-    if (wantsToChangeZapAmount) {
-        UpdateZapAmountDialog(
-            onClose = { wantsToChangeZapAmount = false },
-            accountViewModel = accountViewModel,
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -124,7 +114,7 @@ fun AllSettingsScreen(
                 title = R.string.zaps,
                 icon = Icons.Outlined.Bolt,
                 tint = tint,
-                onClick = { wantsToChangeZapAmount = true },
+                onClick = { nav.nav(Route.UpdateZapAmount()) },
             )
             HorizontalDivider()
             SettingsNavigationRow(

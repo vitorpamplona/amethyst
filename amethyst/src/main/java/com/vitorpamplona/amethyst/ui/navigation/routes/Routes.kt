@@ -121,6 +121,10 @@ sealed class Route {
         val nip47: String? = null,
     ) : Route()
 
+    @Serializable data class UpdateZapAmount(
+        val nip47: String? = null,
+    ) : Route()
+
     @Serializable data class Profile(
         val id: String,
     ) : Route()
@@ -358,6 +362,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.EditMediaServers>() -> entry.toRoute<Route.EditMediaServers>()
         dest.hasRoute<Route.UpdateReactionType>() -> entry.toRoute<Route.UpdateReactionType>()
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
+        dest.hasRoute<Route.UpdateZapAmount>() -> entry.toRoute<Route.UpdateZapAmount>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
         dest.hasRoute<Route.NewShortNote>() -> entry.toRoute<Route.NewShortNote>()
         dest.hasRoute<Route.VoiceReply>() -> entry.toRoute<Route.VoiceReply>()
