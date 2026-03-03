@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
+import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
@@ -174,6 +175,7 @@ fun AppNavigation(
             composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+            composableFromBottom<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }

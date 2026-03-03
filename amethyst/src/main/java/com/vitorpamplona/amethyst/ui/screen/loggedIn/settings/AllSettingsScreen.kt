@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeDialog
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountDialog
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -84,16 +83,7 @@ fun AllSettingsScreen(
 ) {
     val tint = MaterialTheme.colorScheme.onBackground
 
-    var showReactionDialog by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-
-    if (showReactionDialog) {
-        UpdateReactionTypeDialog(
-            onClose = { showReactionDialog = false },
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
 
     if (wantsToChangeZapAmount) {
         UpdateZapAmountDialog(
@@ -128,7 +118,7 @@ fun AllSettingsScreen(
                 title = R.string.reactions,
                 icon = Icons.Outlined.FavoriteBorder,
                 tint = tint,
-                onClick = { showReactionDialog = true },
+                onClick = { nav.nav(Route.UpdateReactionType) },
             )
             HorizontalDivider()
             SettingsNavigationRow(
