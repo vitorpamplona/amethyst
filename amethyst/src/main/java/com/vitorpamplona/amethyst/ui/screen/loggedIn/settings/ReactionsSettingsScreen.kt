@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,25 +34,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ReactionRowAction
@@ -87,6 +94,10 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
         accountViewModel.changeReactionRowItems(newItems)
     }
 
+    var draggedItemIndex by remember { mutableIntStateOf(-1) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    val itemHeights = remember { mutableStateMapOf<Int, Float>() }
+
     Column(
         modifier =
             Modifier
@@ -104,10 +115,18 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
         )
 
         items.forEachIndexed { index, item ->
+            val isDragging = draggedItemIndex == index
+            val targetElevation = if (isDragging) 8f else 0f
+            val animatedElevation by animateFloatAsState(
+                targetValue = targetElevation,
+                label = "dragElevation",
+            )
+
             ReactionRowItemCard(
                 item = item,
-                canMoveUp = index > 0,
-                canMoveDown = index < items.lastIndex,
+                isDragging = isDragging,
+                dragOffsetY = if (isDragging) dragOffset else 0f,
+                elevation = animatedElevation,
                 onToggleEnabled = {
                     val newItems = items.toMutableList()
                     newItems[index] = item.copy(enabled = !item.enabled)
@@ -118,24 +137,73 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
                     newItems[index] = item.copy(showCounter = !item.showCounter)
                     save(newItems)
                 },
-                onMoveUp = {
-                    if (index > 0) {
-                        val newItems = items.toMutableList()
-                        val temp = newItems[index - 1]
-                        newItems[index - 1] = newItems[index]
-                        newItems[index] = temp
-                        save(newItems)
+                onMeasured = { height ->
+                    itemHeights[index] = height
+                },
+                onDragStart = {
+                    draggedItemIndex = index
+                    dragOffset = 0f
+                },
+                onDrag = { dragAmount ->
+                    dragOffset += dragAmount
+
+                    val currentIndex = draggedItemIndex
+                    if (currentIndex < 0) return@ReactionRowItemCard
+
+                    // Check if we should swap with the item above
+                    if (dragOffset < 0 && currentIndex > 0) {
+                        val aboveHeight = itemHeights[currentIndex - 1] ?: 0f
+                        if (-dragOffset > aboveHeight / 2f) {
+                            val newItems = items.toMutableList()
+                            val temp = newItems[currentIndex - 1]
+                            newItems[currentIndex - 1] = newItems[currentIndex]
+                            newItems[currentIndex] = temp
+                            items = newItems
+
+                            // Transfer heights
+                            val h1 = itemHeights[currentIndex]
+                            val h2 = itemHeights[currentIndex - 1]
+                            if (h1 != null) itemHeights[currentIndex - 1] = h1
+                            if (h2 != null) itemHeights[currentIndex] = h2
+
+                            dragOffset += aboveHeight
+                            draggedItemIndex = currentIndex - 1
+                        }
+                    }
+
+                    // Check if we should swap with the item below
+                    if (dragOffset > 0 && currentIndex < items.lastIndex) {
+                        val belowHeight = itemHeights[currentIndex + 1] ?: 0f
+                        if (dragOffset > belowHeight / 2f) {
+                            val newItems = items.toMutableList()
+                            val temp = newItems[currentIndex + 1]
+                            newItems[currentIndex + 1] = newItems[currentIndex]
+                            newItems[currentIndex] = temp
+                            items = newItems
+
+                            // Transfer heights
+                            val h1 = itemHeights[currentIndex]
+                            val h2 = itemHeights[currentIndex + 1]
+                            if (h1 != null) itemHeights[currentIndex + 1] = h1
+                            if (h2 != null) itemHeights[currentIndex] = h2
+
+                            dragOffset -= belowHeight
+                            draggedItemIndex = currentIndex + 1
+                        }
                     }
                 },
-                onMoveDown = {
-                    if (index < items.lastIndex) {
-                        val newItems = items.toMutableList()
-                        val temp = newItems[index + 1]
-                        newItems[index + 1] = newItems[index]
-                        newItems[index] = temp
-                        save(newItems)
-                    }
+                onDragEnd = {
+                    draggedItemIndex = -1
+                    dragOffset = 0f
+                    save(items)
                 },
+                onDragCancel = {
+                    draggedItemIndex = -1
+                    dragOffset = 0f
+                },
+                modifier =
+                    Modifier
+                        .zIndex(if (isDragging) 1f else 0f),
             )
             if (index < items.lastIndex) {
                 HorizontalDivider()
@@ -149,20 +217,36 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
 @Composable
 private fun ReactionRowItemCard(
     item: ReactionRowItem,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
+    isDragging: Boolean,
+    dragOffsetY: Float,
+    elevation: Float,
     onToggleEnabled: () -> Unit,
     onToggleCounter: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
+    onMeasured: (Float) -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val actionName = reactionActionName(item.action)
     val actionDescription = reactionActionDescription(item.action)
 
     Column(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    onMeasured(coordinates.size.height.toFloat())
+                }
+                .graphicsLayer {
+                    translationY = dragOffsetY
+                    shadowElevation = elevation
+                    if (isDragging) {
+                        scaleX = 1.02f
+                        scaleY = 1.02f
+                    }
+                }
                 .padding(vertical = 8.dp),
     ) {
         Row(
@@ -186,32 +270,25 @@ private fun ReactionRowItemCard(
                 )
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                IconButton(
-                    onClick = onMoveUp,
-                    enabled = canMoveUp,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowUp,
-                        contentDescription = stringRes(R.string.reactions_settings_move_up),
-                        modifier = Modifier.size(20.dp),
-                        tint = if (canMoveUp) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                    )
-                }
-                IconButton(
-                    onClick = onMoveDown,
-                    enabled = canMoveDown,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowDown,
-                        contentDescription = stringRes(R.string.reactions_settings_move_down),
-                        modifier = Modifier.size(20.dp),
-                        tint = if (canMoveDown) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                    )
-                }
-            }
+            Icon(
+                Icons.Default.DragHandle,
+                contentDescription = stringRes(R.string.reactions_settings_reorder),
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { onDragStart() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onDrag(dragAmount.y)
+                                },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragCancel() },
+                            )
+                        },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))

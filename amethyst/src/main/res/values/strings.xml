@@ -1238,8 +1238,7 @@
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
     <string name="reactions_settings_show_counter">Show Count</string>
-    <string name="reactions_settings_move_up">Move up</string>
-    <string name="reactions_settings_move_down">Move down</string>
+    <string name="reactions_settings_reorder">Reorder</string>
     <string name="reactions_settings_reply">Reply</string>
     <string name="reactions_settings_reply_description">Reply to this note</string>
     <string name="reactions_settings_boost">Boost</string>
