@@ -227,7 +227,7 @@ class CustomBitSet(
     }
 
     fun clear() {
-        for (i in 0..words.size) words[i] = 0
+        for (i in words.indices) words[i] = 0
     }
 
     private constructor(longArray: LongArray) : this(0) {

@@ -31,7 +31,7 @@ actual object Rfc3986 {
     actual fun normalize(uri: String): String =
         rfc3986UriBridge
             .normalizeUrlWithUrl(uri, null)
-            .let { if (it?.last() == '/') it else "$it/" }
+            ?.let { if (it.last() == '/') it else "$it/" } ?: throw Exception("Could not normalize URI: $uri")
 
     actual fun isValidUrl(url: String): Boolean = rfc3986UriBridge.isUrlValidWithUrl(url)
 

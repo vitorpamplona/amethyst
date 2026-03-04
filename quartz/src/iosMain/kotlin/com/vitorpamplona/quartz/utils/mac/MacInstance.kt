@@ -38,7 +38,7 @@ actual class MacInstance actual constructor(
             .keyDecoder(digestForAlgorithm(algorithm))
             .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
 
-    private val hmacSignFunction = internalMacInstance.signatureGenerator().createSignFunction()
+    private var hmacSignFunction = internalMacInstance.signatureGenerator().createSignFunction()
 
     actual fun init(
         key: ByteArray,
@@ -49,6 +49,8 @@ actual class MacInstance actual constructor(
                 .get(HMAC)
                 .keyDecoder(digestForAlgorithm(algorithm))
                 .decodeFromByteArrayBlocking(HMAC.Key.Format.RAW, key)
+
+        hmacSignFunction = internalMacInstance.signatureGenerator().createSignFunction()
     }
 
     actual fun getMacLength(): Int = hmacSignFunction.signIntoByteArray(internalMacInstance.encodeToByteArrayBlocking(HMAC.Key.Format.RAW))

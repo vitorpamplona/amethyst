@@ -3,7 +3,6 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import io.github.frankois944.spmForKmp.swiftPackageConfig
 import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
-import org.gradle.kotlin.dsl.androidLibrary
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
@@ -25,7 +24,7 @@ kotlin {
         }
     }
 
-    androidLibrary {
+    android {
         namespace = "com.vitorpamplona.quartz"
         compileSdk =
             libs.versions.android.compileSdk

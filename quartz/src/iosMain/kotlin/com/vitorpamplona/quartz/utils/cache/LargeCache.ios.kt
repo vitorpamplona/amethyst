@@ -80,7 +80,7 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
             } else {
                 val newObject = builder(key)
                 concurrentMap.put(key, newObject)
-                concurrentMap[key] == null
+                concurrentMap[key] != null
             }
         }
 
@@ -108,7 +108,7 @@ actual class LargeCache<K, V> : ICacheOperations<K, V> {
 
     actual override fun <R> mapNotNullIntoSet(consumer: CacheCollectors.BiMapper<K, V, R?>): Set<R> = mapNotNull(consumer).toSet()
 
-    actual override fun <R> mapFlatten(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): List<R> = concurrentMap.flatMap { consumer.map(it.key, it.value) as Iterable<R> }
+    actual override fun <R> mapFlatten(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): List<R> = concurrentMap.flatMap { entry -> consumer.map(entry.key, entry.value) ?: emptyList() }
 
     actual override fun <R> mapFlattenIntoSet(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): Set<R> = mapFlatten(consumer).toSet()
 
@@ -312,9 +312,13 @@ fun <K, V> CacheMap<K, V>.subMapAlt(
     val keySet = keys
     val fromIndex = keySet.indexOf(from)
     val toIndex = keySet.indexOf(to)
-    for (index in fromIndex..toIndex) {
+    for (index in fromIndex until toIndex) {
         val correspondingEntry = entries.elementAt(index)
         resultMap[correspondingEntry.key] = correspondingEntry.value
+    }
+    if (toInclusive) {
+        val correspondingToEntry = entries.elementAt(toIndex)
+        resultMap[correspondingToEntry.key] = correspondingToEntry.value
     }
 
     return resultMap
@@ -332,10 +336,6 @@ fun <K, V> Map<K, V>.maxOrNullOf(
 ): V? {
     var maxK: K? = null
     var maxV: V? = null
-
-    val finalMaxK: K? = maxK
-    val finalMaxV: V? = maxV
-
     forEach {
         if (filter.filter(it.key, it.value)) {
             if (maxK == null || (maxV != null && comparator.compare(it.value, maxV) > 0)) {
@@ -345,21 +345,22 @@ fun <K, V> Map<K, V>.maxOrNullOf(
         }
     }
 
+    val finalMaxK: K? = maxK
+    val finalMaxV: V? = maxV
+
     return finalMaxV
 }
 
 fun <K, V> Map<K, V>.sumOf(consumer: CacheCollectors.BiSumOf<K, V>): Int {
     var sum = 0
-    val totalSum = sum
     forEach { sum += consumer.map(it.key, it.value) }
-    return totalSum
+    return sum
 }
 
 fun <K, V> Map<K, V>.sumOfLong(consumer: CacheCollectors.BiSumOfLong<K, V>): Long {
     var sum = 0L
-    val totalSum = sum
     forEach { sum += consumer.map(it.key, it.value) }
-    return totalSum
+    return sum
 }
 
 fun <K, V, R> Map<K, V>.groupBy(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, List<V>> {
