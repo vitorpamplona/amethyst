@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -538,7 +539,8 @@ fun NoteActionsRow(
                     if (!isLiked) {
                         scope.launch {
                             reactToNote(
-                                event = event,
+                                // TODO: Bring a hint to where the event came from
+                                event = EventHintBundle(event, null),
                                 reaction = "+",
                                 account = account,
                                 relayManager = relayManager,
@@ -578,7 +580,8 @@ fun NoteActionsRow(
                     if (!isReposted) {
                         scope.launch {
                             repostNote(
-                                event = event,
+                                // TODO: Bring a hint to where the event came from
+                                event = EventHintBundle(event, null),
                                 account = account,
                                 relayManager = relayManager,
                             )
@@ -808,7 +811,7 @@ fun NoteActionsRow(
  * Creates a reaction event and broadcasts to relays.
  */
 private suspend fun reactToNote(
-    event: Event,
+    event: EventHintBundle<Event>,
     reaction: String,
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
@@ -893,7 +896,7 @@ private suspend fun removeBookmark(
  * Creates a repost event and broadcasts to relays.
  */
 private suspend fun repostNote(
-    event: Event,
+    event: EventHintBundle<Event>,
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
 ) {

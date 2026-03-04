@@ -23,26 +23,29 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 
 open class DiscoverLongFormFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 100
 
-    open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
+    open fun followList(): TopFilter = account.settings.defaultDiscoveryFollowList.value
 
-    override fun showHiddenKey(): Boolean =
-        followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
-            followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
+    fun TopFilter.isMuteList() = this is TopFilter.MuteList
+
+    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
+
+    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
+
+    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)

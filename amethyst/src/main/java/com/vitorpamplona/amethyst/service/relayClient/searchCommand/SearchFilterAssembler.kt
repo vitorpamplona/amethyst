@@ -40,6 +40,7 @@ class SearchQueryState(
     override fun flow(): Flow<String> = searchQuery
 }
 
+@Stable
 class SearchFilterAssembler(
     client: INostrClient,
     scope: CoroutineScope,

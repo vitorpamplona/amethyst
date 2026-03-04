@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -129,6 +130,7 @@ fun DeckColumnType.icon(): ImageVector =
         DeckColumnType.Bookmarks -> com.vitorpamplona.amethyst.commons.icons.Bookmark
         DeckColumnType.GlobalFeed -> Icons.Default.Public
         DeckColumnType.MyProfile -> Icons.Default.Person
+        DeckColumnType.Chess -> Icons.Default.Extension
         DeckColumnType.Settings -> Icons.Default.Settings
         is DeckColumnType.Profile -> Icons.Default.Person
         is DeckColumnType.Thread -> Icons.Default.Home

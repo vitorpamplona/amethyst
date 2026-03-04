@@ -30,7 +30,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -40,7 +39,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerSta
 import kotlin.math.abs
 
 // This keeps the position of all visible videos in the current screen.
-val trackingVideos = mutableListOf<MediaControllerState>()
+val trackingVideos = mutableSetOf<MediaControllerState>()
 
 /**
  * This function selects only one Video to be active. The video that is closest to the center of the
@@ -52,17 +51,21 @@ fun VideoPlayerActiveMutex(
     inner: @Composable (Modifier, MutableState<Boolean>) -> Unit,
 ) {
     // Is the current video the closest to the center?
-    val isClosestToTheCenterOfTheScreen = remember(controller) { mutableStateOf<Boolean>(false) }
+    val isClosestToTheCenterOfTheScreen = remember(controller) { mutableStateOf(false) }
 
     // Keep track of all available videos.
     DisposableEffect(key1 = controller) {
         trackingVideos.add(controller)
-        onDispose { trackingVideos.remove(controller) }
+        onDispose {
+            trackingVideos.remove(controller)
+        }
     }
+
+    val view = LocalView.current
 
     val videoModifier =
         remember(controller) {
-            Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges { bounds, distanceToCenter ->
+            Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges(view) { bounds, distanceToCenter ->
                 controller.visibility.bounds = bounds
                 controller.visibility.distanceToCenter = distanceToCenter
 
@@ -93,15 +96,14 @@ fun VideoPlayerActiveMutex(
     inner(videoModifier, isClosestToTheCenterOfTheScreen)
 }
 
-fun Modifier.onVisiblePositionChanges(onVisiblePosition: (Rect, Float?) -> Unit): Modifier =
-    composed {
-        val view = LocalView.current
-
-        onGloballyPositioned { coordinates ->
-            val bounds = coordinates.boundsInWindow()
-            val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
-            onVisiblePosition(boundRect, coordinates.getDistanceToVertCenterIfVisible(boundRect, view))
-        }
+fun Modifier.onVisiblePositionChanges(
+    view: View,
+    onVisiblePosition: (Rect, Float?) -> Unit,
+): Modifier =
+    onGloballyPositioned { coordinates ->
+        val bounds = coordinates.boundsInWindow()
+        val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
+        onVisiblePosition(boundRect, coordinates.getDistanceToVertCenterIfVisible(boundRect, view))
     }
 
 fun LayoutCoordinates.getDistanceToVertCenterIfVisible(

@@ -237,6 +237,7 @@ class DeckState {
                 "bookmarks" -> DeckColumnType.Bookmarks
                 "global" -> DeckColumnType.GlobalFeed
                 "my_profile" -> DeckColumnType.MyProfile
+                "chess" -> DeckColumnType.Chess
                 "settings" -> DeckColumnType.Settings
                 "profile" -> param?.let { DeckColumnType.Profile(it) }
                 "thread" -> param?.let { DeckColumnType.Thread(it) }

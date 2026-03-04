@@ -131,7 +131,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                             trailingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove $languageCode",
+                                    contentDescription = stringRes(R.string.remove_language, languageCode),
                                     tint = Color.Red,
                                     modifier = Modifier.size(16.dp),
                                 )

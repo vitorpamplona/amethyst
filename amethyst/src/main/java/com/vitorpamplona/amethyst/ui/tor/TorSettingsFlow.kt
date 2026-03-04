@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 
+@Stable
 class TorSettingsFlow(
     val torType: MutableStateFlow<TorType> = MutableStateFlow(TorType.INTERNAL),
     val externalSocksPort: MutableStateFlow<Int> = MutableStateFlow(9050),
@@ -36,7 +38,7 @@ class TorSettingsFlow(
     val videosViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val moneyOperationsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val nip05VerificationsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
-    val nip96UploadsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val mediaUploadsViaTor: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     // emits at every change in any of the properties.
     val propertyWatchFlow =
@@ -54,7 +56,7 @@ class TorSettingsFlow(
                 videosViaTor,
                 moneyOperationsViaTor,
                 nip05VerificationsViaTor,
-                nip96UploadsViaTor,
+                mediaUploadsViaTor,
             ),
         ) { flows ->
             TorSettings(
@@ -88,7 +90,7 @@ class TorSettingsFlow(
             videosViaTor.value,
             moneyOperationsViaTor.value,
             nip05VerificationsViaTor.value,
-            nip96UploadsViaTor.value,
+            mediaUploadsViaTor.value,
         )
 
     fun update(torSettings: TorSettings): Boolean {
@@ -143,8 +145,8 @@ class TorSettingsFlow(
             nip05VerificationsViaTor.tryEmit(torSettings.nip05VerificationsViaTor)
             any = true
         }
-        if (nip96UploadsViaTor.value != torSettings.nip96UploadsViaTor) {
-            nip96UploadsViaTor.tryEmit(torSettings.nip96UploadsViaTor)
+        if (mediaUploadsViaTor.value != torSettings.mediaUploadsViaTor) {
+            mediaUploadsViaTor.tryEmit(torSettings.mediaUploadsViaTor)
             any = true
         }
 
@@ -166,7 +168,7 @@ class TorSettingsFlow(
                 MutableStateFlow(torSettings.videosViaTor),
                 MutableStateFlow(torSettings.moneyOperationsViaTor),
                 MutableStateFlow(torSettings.nip05VerificationsViaTor),
-                MutableStateFlow(torSettings.nip96UploadsViaTor),
+                MutableStateFlow(torSettings.mediaUploadsViaTor),
             )
     }
 }

@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.Chat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun MessagesSinglePane(
@@ -60,7 +61,7 @@ fun MessagesSinglePane(
     val tabs by
         remember(knownFeedContentState) {
             derivedStateOf {
-                listOf(
+                persistentListOf(
                     MessagesTabItem(R.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
                     MessagesTabItem(R.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
                 )

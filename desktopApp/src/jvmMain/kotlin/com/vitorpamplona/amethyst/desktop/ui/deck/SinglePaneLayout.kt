@@ -37,6 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -86,6 +87,7 @@ private val navItems =
         NavItem(DeckColumnType.Messages, Icons.Default.Email, "Messages"),
         NavItem(DeckColumnType.Notifications, Icons.Default.Notifications, "Notifications"),
         NavItem(DeckColumnType.MyProfile, Icons.Default.Person, "Profile"),
+        NavItem(DeckColumnType.Chess, Icons.Default.Extension, "Chess"),
         NavItem(DeckColumnType.Settings, Icons.Default.Settings, "Settings"),
     )
 

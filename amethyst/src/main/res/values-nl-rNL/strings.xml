@@ -537,8 +537,8 @@
     <string name="tor_use_money_operations_explainer">Forceer Tor op zaps, lightning en cashu transfers</string>
     <string name="tor_use_nip05_verification">Nostr Adres verificatie</string>
     <string name="tor_use_nip05_verification_explainer">Forceer Tor bij het verifiëren van NIP-05 adressen</string>
-    <string name="tor_use_nip96_uploads">Mediauploads</string>
-    <string name="tor_use_nip96_uploads_explainer">Forceer Tor bij het uploaden van content</string>
+    <string name="tor_use_media_uploads">Mediauploads</string>
+    <string name="tor_use_media_uploads_explainer">Forceer Tor bij het uploaden van content</string>
     <string name="tor_internal">Intern</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Uit</string>
@@ -1144,4 +1144,5 @@
     <string name="follow_pack_broadcast">Uitzendpakket</string>
     <string name="follow_set_delete">Verwijder lijst</string>
     <string name="follow_pack_delete">Verwijder pakket</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

@@ -443,4 +443,5 @@
     <string name="active_for_chats">Soga</string>
     <string name="active_for_global">Ulimwenguni</string>
     <string name="active_for_search">Tafuta</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

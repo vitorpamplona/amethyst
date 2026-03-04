@@ -71,11 +71,13 @@ import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AddColumnDialog
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
@@ -113,6 +115,8 @@ sealed class DesktopScreen {
     object Messages : DesktopScreen()
 
     object Notifications : DesktopScreen()
+
+    object Chess : DesktopScreen()
 
     object MyProfile : DesktopScreen()
 
@@ -323,6 +327,7 @@ fun main() =
                             Item("Bookmarks", onClick = { deckState.addColumn(DeckColumnType.Bookmarks) })
                             Item("Global Feed", onClick = { deckState.addColumn(DeckColumnType.GlobalFeed) })
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
+                            Item("Chess", onClick = { deckState.addColumn(DeckColumnType.Chess) })
                         }
                     }
                 }
@@ -399,38 +404,6 @@ fun App(
         onDispose {
             subscriptionsCoordinator.clear()
             relayManager.disconnect()
-        }
-    }
-
-    // Subscribe to DMs when user logs in; unsubscribe on account change
-    LaunchedEffect(accountState) {
-        // Clean up previous DM subscriptions on any account change (logout, switch)
-        subscriptionsCoordinator.unsubscribeFromDms()
-
-        val currentAccount = accountState
-        if (currentAccount is AccountState.LoggedIn) {
-            // Wait for at least one relay to connect before subscribing
-            relayManager.connectedRelays.first { it.isNotEmpty() }
-
-            val dmRelayState =
-                DesktopDmRelayState(
-                    dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
-                    connectedRelays = relayManager.connectedRelays,
-                    scope = scope,
-                )
-            subscriptionsCoordinator.subscribeToDms(
-                userPubKeyHex = currentAccount.pubKeyHex,
-                dmRelayState = dmRelayState,
-                onDmEvent = { event, relay ->
-                    // Store event as a note in cache so ChatroomFeedViewModel can display it
-                    val note = localCache.getOrCreateNote(event.id)
-                    val author = localCache.getOrCreateUser(event.pubKey)
-                    if (note.event == null) {
-                        note.loadEvent(event, author, emptyList())
-                        note.addRelay(relay)
-                    }
-                },
-            )
         }
     }
 
@@ -516,6 +489,97 @@ fun MainContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // DM infrastructure — hoisted here so it survives screen navigation
+    val dmSendTracker =
+        remember(relayManager) {
+            DmSendTracker(relayManager.client)
+        }
+    val iAccount =
+        remember(account, localCache, relayManager, dmSendTracker) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
+        }
+
+    // Subscribe to incoming DMs and process into chatroomList
+    LaunchedEffect(account) {
+        relayManager.connectedRelays.first { it.isNotEmpty() }
+
+        val dmRelayState =
+            DesktopDmRelayState(
+                dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
+                connectedRelays = relayManager.connectedRelays,
+                scope = scope,
+            )
+        subscriptionsCoordinator.subscribeToDms(
+            userPubKeyHex = account.pubKeyHex,
+            dmRelayState = dmRelayState,
+            onDmEvent = { event, relay ->
+                // Store raw event in cache
+                val note = localCache.getOrCreateNote(event.id)
+                val author = localCache.getOrCreateUser(event.pubKey)
+                if (note.event == null) {
+                    note.loadEvent(event, author, emptyList())
+                    note.addRelay(relay)
+                }
+
+                // Process into chatroomList based on event type
+                when (event) {
+                    is com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent -> {
+                        iAccount.chatroomList.addMessage(
+                            event.chatroomKey(iAccount.pubKey),
+                            note,
+                        )
+                    }
+
+                    is com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent -> {
+                        // NIP-17: unwrap gift wrap → seal → inner event
+                        scope.launch {
+                            val seal =
+                                event.unwrapOrNull(iAccount.signer)
+                                    as? com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+                                    ?: return@launch
+                            val innerEvent = seal.unsealOrNull(iAccount.signer) ?: return@launch
+                            when (innerEvent) {
+                                is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent -> {
+                                    val innerNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (innerNote.event == null) {
+                                        innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                    }
+                                    iAccount.chatroomList.addMessage(
+                                        innerEvent.chatroomKey(iAccount.pubKey),
+                                        innerNote,
+                                    )
+                                }
+
+                                is com.vitorpamplona.quartz.nip25Reactions.ReactionEvent -> {
+                                    val reactionNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val reactionAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (reactionNote.event == null) {
+                                        reactionNote.loadEvent(innerEvent, reactionAuthor, emptyList())
+                                    }
+                                    // Attach reaction to the target message note
+                                    innerEvent.originalPost().forEach { targetId ->
+                                        val targetNote = localCache.getNoteIfExists(targetId)
+                                        targetNote?.addReaction(reactionNote)
+                                    }
+                                }
+
+                                else -> {
+                                    println("Unhandled NIP-17 inner event: ${innerEvent.kind}")
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    // Clean up DM subscriptions when this composable leaves (logout)
+    DisposableEffect(Unit) {
+        onDispose { subscriptionsCoordinator.unsubscribeFromDms() }
+    }
 
     val onZapFeedback: (ZapFeedback) -> Unit = { feedback ->
         scope.launch {

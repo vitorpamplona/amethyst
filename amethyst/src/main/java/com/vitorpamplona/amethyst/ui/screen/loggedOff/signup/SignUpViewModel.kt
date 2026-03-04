@@ -20,17 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.signup
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
+import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 
+@Stable
 class SignUpViewModel : ViewModel() {
-    lateinit var accountStateViewModel: AccountStateViewModel
+    lateinit var accountSessionManager: AccountSessionManager
+    lateinit var torSettings: TorSettingsFlow
 
     val errorManager = LoginErrorManager()
 
@@ -39,8 +43,12 @@ class SignUpViewModel : ViewModel() {
     var acceptedTerms by mutableStateOf(false)
     var termsAcceptanceIsRequiredError by mutableStateOf(false)
 
-    fun init(accountStateViewModel: AccountStateViewModel) {
-        this.accountStateViewModel = accountStateViewModel
+    fun init(accountSessionManager: AccountSessionManager) {
+        this.accountSessionManager = accountSessionManager
+    }
+
+    fun init(torSettings: TorSettingsFlow) {
+        this.torSettings = torSettings
     }
 
     fun updateDisplayName(value: TextFieldValue) {
@@ -73,7 +81,7 @@ class SignUpViewModel : ViewModel() {
 
     fun signup() {
         if (checkCanSignup()) {
-            accountStateViewModel.newKey(displayName.text)
+            accountSessionManager.newKey(displayName.text)
         }
     }
 }

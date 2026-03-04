@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -123,7 +125,7 @@ private fun VoiceReplyScreenBody(
                 baseNote = note,
                 modifier = MaterialTheme.colorScheme.replyModifier,
                 isQuotedNote = true,
-                unPackReply = false,
+                unPackReply = ReplyRenderType.NONE,
                 makeItShort = true,
                 quotesLeft = 1,
                 accountViewModel = accountViewModel,
@@ -164,10 +166,10 @@ private fun VoiceReplyScreenBody(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Server selection
-        val fileServers =
-            accountViewModel.account.serverLists.liveServerList
+        val fileServers by
+            accountViewModel.account.blossomServers.hostNameFlow
                 .collectAsState()
-                .value
+
         FileServerSelectionRow(
             fileServers = fileServers,
             selectedServer = viewModel.voiceSelectedServer ?: accountViewModel.account.settings.defaultFileServer,

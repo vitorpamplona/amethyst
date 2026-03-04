@@ -191,3 +191,7 @@ class RelayUrlNormalizer {
         }
     }
 }
+
+fun String.normalizeRelayUrl() = RelayUrlNormalizer.normalize(this)
+
+fun String.normalizeRelayUrlOrNull() = RelayUrlNormalizer.normalizeOrNull(this)

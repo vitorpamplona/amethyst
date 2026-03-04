@@ -26,29 +26,27 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.RandomInstance
 
-class EventAssembler {
-    companion object {
-        fun <T : Event> hashAndSign(
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-            privKey: ByteArray,
-            nonce: ByteArray? = RandomInstance.bytes(32),
-        ): T {
-            val id = EventHasher.hashIdBytes(pubKey, createdAt, kind, tags, content)
-            val sig = Nip01.sign(id, privKey, nonce).toHexKey()
+object EventAssembler {
+    fun <T : Event> hashAndSign(
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+        privKey: ByteArray,
+        nonce: ByteArray? = RandomInstance.bytes(32),
+    ): T {
+        val id = EventHasher.hashIdBytes(pubKey, createdAt, kind, tags, content)
+        val sig = Nip01Crypto.sign(id, privKey, nonce).toHexKey()
 
-            return EventFactory.create(
-                id.toHexKey(),
-                pubKey,
-                createdAt,
-                kind,
-                tags,
-                content,
-                sig,
-            )
-        }
+        return EventFactory.create(
+            id.toHexKey(),
+            pubKey,
+            createdAt,
+            kind,
+            tags,
+            content,
+            sig,
+        )
     }
 }

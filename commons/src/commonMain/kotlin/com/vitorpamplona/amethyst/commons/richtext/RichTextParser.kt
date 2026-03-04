@@ -64,10 +64,10 @@ class RichTextParser {
 
         if (contentType != null) {
             isImage = contentType.startsWith("image/")
-            isVideo = contentType.startsWith("video/")
+            isVideo = contentType.startsWith("video/") || contentType.startsWith("audio/")
         } else if (fullUrl.startsWith("data:")) {
             isImage = fullUrl.startsWith("data:image/")
-            isVideo = fullUrl.startsWith("data:video/")
+            isVideo = fullUrl.startsWith("data:video/") || fullUrl.startsWith("data:audio/")
         } else {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
             isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
@@ -175,13 +175,18 @@ class RichTextParser {
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.trimEnd().split(' ')
-            val segments = ArrayList<Segment>(wordList.size)
-            wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
-            }
+            val wordList = paragraph.trimEnd().split(wordBoundaryRegex).filter { it.isNotEmpty() }
 
-            paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
+            if (wordList.isEmpty()) {
+                paragraphSegments.add(ParagraphState(persistentListOf(RegularTextSegment("")), isRTL))
+            } else {
+                val segments = ArrayList<Segment>(wordList.size)
+                wordList.forEach { word ->
+                    segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
+                }
+
+                paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
+            }
         }
 
         val segmentsWithGalleries = GalleryParser().processParagraphs(paragraphSegments)
@@ -244,6 +249,8 @@ class RichTextParser {
         if (images.contains(word)) return ImageSegment(word)
 
         if (videos.contains(word)) return VideoSegment(word)
+
+        if (word.startsWith("ws://") || word.startsWith("wss://")) return RelayUrlSegment(word)
 
         if (urls.contains(word)) return LinkSegment(word)
 
@@ -334,17 +341,14 @@ class RichTextParser {
         val shortDatePattern: Regex = Regex("^\\d{2}-\\d{2}-\\d{2}$")
         val numberPattern: Regex = Regex("^(-?[\\d.]+)([a-zA-Z%]*)$")
 
-        // Android9 seems to have an issue starting this regex.
         val noProtocolUrlValidator =
-            try {
-                Regex(
-                    "(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+[^\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])*\\/?)(.*)",
-                )
-            } catch (e: Exception) {
-                Regex(
-                    "(([\\w\\d-]+\\.)*[a-zA-Z][\\w-]+[\\.\\:]\\w+([\\/\\?\\=\\&\\#\\.]?[\\w-]+)*\\/?)(.*)",
-                )
-            }
+            Regex(
+                "(([a-zA-Z0-9_-]+\\.)*[a-zA-Z][a-zA-Z0-9_-]+[\\.\\:][a-zA-Z0-9_]+([\\/ \\?\\=\\&\\#\\.]?[a-zA-Z0-9_-]+)*\\/?)(.*)",
+            )
+
+        // Splits at spaces AND at ASCII/multibyte character boundaries
+        // e.g. "ああexample.com" -> ["ああ", "example.com"]
+        private val wordBoundaryRegex = Regex("(?<=[\\u0000-\\u007F])(?=[\\u0080-\\uFFFF])|(?<=[\\u0080-\\uFFFF])(?=[\\u0000-\\u007F])| +")
 
         val additionalUrlSchema =
             """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""
@@ -355,7 +359,7 @@ class RichTextParser {
                 .toRegex(RegexOption.IGNORE_CASE)
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
+        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a")
 
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }

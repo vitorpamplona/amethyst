@@ -21,15 +21,18 @@
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +45,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -52,11 +56,20 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.viewmodels.SearchBarState
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 @Composable
 fun NewDmDialog(
     cacheProvider: ICacheProvider,
+    relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     onUserSelected: (ChatroomKey) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -65,7 +78,62 @@ fun NewDmDialog(
     val searchText by searchState.searchText.collectAsState()
     val bech32Results by searchState.bech32Results.collectAsState()
     val cachedUsers by searchState.cachedUserResults.collectAsState()
+    val relaySearchResults by searchState.relaySearchResults.collectAsState()
+    val isSearchingRelays by searchState.isSearchingRelays.collectAsState()
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
     val focusRequester = remember { FocusRequester() }
+
+    // NIP-50 relay search when local cache has few/no results
+    rememberSubscription(relayStatuses, searchText, cachedUsers.size, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty()) return@rememberSubscription null
+
+        if (searchState.shouldSearchRelays) {
+            searchState.startRelaySearch()
+            createSearchPeopleSubscription(
+                relays = configuredRelays,
+                searchQuery = searchText,
+                limit = 20,
+                onEvent = { event, _, _, _ ->
+                    if (event is MetadataEvent) {
+                        localCache.consumeMetadata(event)
+                        val user = localCache.getUserIfExists(event.pubKey)
+                        if (user != null) {
+                            searchState.addRelaySearchResult(user)
+                        }
+                    }
+                },
+                onEose = { _, _ ->
+                    searchState.endRelaySearch()
+                },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Bech32 npub metadata loading
+    rememberSubscription(relayStatuses, searchText, relayManager = relayManager) {
+        val configuredRelays = relayStatuses.keys
+        if (configuredRelays.isEmpty() || searchText.length < 2) {
+            return@rememberSubscription null
+        }
+
+        val pubkeyHex = decodePublicKeyAsHexOrNull(searchText)
+        if (pubkeyHex != null) {
+            createMetadataSubscription(
+                relays = configuredRelays,
+                pubKeyHex = pubkeyHex,
+                onEvent = { event, _, _, _ ->
+                    if (event is MetadataEvent) {
+                        localCache.consumeMetadata(event)
+                    }
+                },
+            )
+        } else {
+            null
+        }
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -154,10 +222,39 @@ fun NewDmDialog(
                         )
                     }
 
+                    // Relay search results
+                    items(relaySearchResults) { user ->
+                        UserSearchCard(
+                            user = user,
+                            onClick = {
+                                onUserSelected(
+                                    ChatroomKey(setOf(user.pubkeyHex)),
+                                )
+                            },
+                        )
+                    }
+
+                    // Relay search loading indicator
+                    if (isSearchingRelays) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
+                        }
+                    }
+
                     // No results hint
                     if (searchText.length >= 2 &&
+                        !isSearchingRelays &&
                         userResults.isEmpty() &&
-                        cachedUsers.isEmpty()
+                        cachedUsers.isEmpty() &&
+                        relaySearchResults.isEmpty()
                     ) {
                         item {
                             Text(

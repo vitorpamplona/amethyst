@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,8 +69,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -80,7 +79,6 @@ import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMapNotNull
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -99,6 +97,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
+@Stable
 class UpdateReactionTypeViewModel : ViewModel() {
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
@@ -151,8 +150,7 @@ class UpdateReactionTypeViewModel : ViewModel() {
 }
 
 @Composable
-fun UpdateReactionTypeDialog(
-    onClose: () -> Unit,
+fun UpdateReactionTypeScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -163,119 +161,106 @@ fun UpdateReactionTypeDialog(
         postViewModel.load()
     }
 
-    UpdateReactionTypeDialog(postViewModel, onClose, accountViewModel, nav)
+    UpdateReactionTypeScreen(postViewModel, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun UpdateReactionTypeDialog(
+fun UpdateReactionTypeScreen(
     postViewModel: UpdateReactionTypeViewModel,
-    onClose: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Dialog(
-        onDismissRequest = { onClose() },
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false,
-                decorFitsSystemWindows = false,
-            ),
-    ) {
-        SetDialogToEdgeToEdge()
-
-        Scaffold(
-            topBar = {
-                SavingTopBar(
-                    isActive = postViewModel::hasChanged,
-                    onCancel = {
-                        postViewModel.cancel()
-                        onClose()
-                    },
-                    onPost = {
-                        postViewModel.sendPost()
-                        onClose()
-                    },
-                )
-            },
-        ) { pad ->
-            Surface(
-                modifier =
-                    Modifier
-                        .padding(pad)
-                        .consumeWindowInsets(pad)
-                        .imePadding(),
+    Scaffold(
+        topBar = {
+            SavingTopBar(
+                isActive = postViewModel::hasChanged,
+                onCancel = {
+                    postViewModel.cancel()
+                    nav.popBack()
+                },
+                onPost = {
+                    postViewModel.sendPost()
+                    nav.popBack()
+                },
+            )
+        },
+    ) { pad ->
+        Surface(
+            modifier =
+                Modifier
+                    .padding(pad)
+                    .consumeWindowInsets(pad)
+                    .imePadding(),
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(10.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
                     ) {
-                        Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState()),
-                        ) {
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.animateContentSize()) {
-                                    FlowRow(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.Center,
-                                    ) {
-                                        postViewModel.reactionSet.forEach { reactionType ->
-                                            RenderReactionOption(reactionType, postViewModel)
-                                        }
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.animateContentSize()) {
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    postViewModel.reactionSet.forEach { reactionType ->
+                                        RenderReactionOption(reactionType, postViewModel)
                                     }
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            OutlinedTextField(
+                                label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
+                                value = postViewModel.nextChoice,
+                                onValueChange = { postViewModel.nextChoice = it },
+                                keyboardOptions =
+                                    KeyboardOptions.Default.copy(
+                                        capitalization = KeyboardCapitalization.None,
+                                        keyboardType = KeyboardType.Text,
+                                    ),
+                                placeholder = {
+                                    Text(
+                                        text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
+                                        color = MaterialTheme.colorScheme.placeholderText,
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.padding(end = 10.dp).weight(1f),
+                            )
+
+                            Button(
+                                onClick = { postViewModel.addChoice() },
+                                shape = ButtonBorder,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
                             ) {
-                                OutlinedTextField(
-                                    label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
-                                    value = postViewModel.nextChoice,
-                                    onValueChange = { postViewModel.nextChoice = it },
-                                    keyboardOptions =
-                                        KeyboardOptions.Default.copy(
-                                            capitalization = KeyboardCapitalization.None,
-                                            keyboardType = KeyboardType.Text,
-                                        ),
-                                    placeholder = {
-                                        Text(
-                                            text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
-                                            color = MaterialTheme.colorScheme.placeholderText,
-                                        )
-                                    },
-                                    singleLine = true,
-                                    modifier = Modifier.padding(end = 10.dp).weight(1f),
-                                )
-
-                                Button(
-                                    onClick = { postViewModel.addChoice() },
-                                    shape = ButtonBorder,
-                                    colors =
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                        ),
-                                ) {
-                                    Text(text = stringRes(R.string.add), color = Color.White)
-                                }
+                                Text(text = stringRes(R.string.add), color = Color.White)
                             }
                         }
                     }
+                }
 
-                    Spacer(StdVertSpacer)
+                Spacer(StdVertSpacer)
 
-                    EmojiSelector(
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    ) {
-                        postViewModel.addChoice(it)
-                    }
+                EmojiSelector(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                ) {
+                    postViewModel.addChoice(it)
                 }
             }
         }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -32,11 +33,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 
 // This allows multiple screen to be listening to tags, even the same tag
+@Stable
 class UserFinderQueryState(
     val user: User,
     val account: Account,
 )
 
+@Stable
 class UserFinderFilterAssembler(
     client: INostrClient,
     cache: LocalCache,

@@ -24,16 +24,17 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 
 fun MetadataEvent.identityClaims() = tags.mapNotNull(IdentityClaimTag::parse)
 
-fun MetadataEvent.replaceClaims(
+fun ExternalIdentitiesEvent.identityClaims() = tags.mapNotNull(IdentityClaimTag::parse)
+
+fun List<IdentityClaimTag>.replaceClaims(
     twitter: String?,
     mastodon: String?,
     github: String?,
 ): List<IdentityClaimTag> {
-    var claims = identityClaims()
+    var claims = this
 
     // null leave as is. blank deletes it.
     if (twitter != null) {
-        // delete twitter
         claims = claims.filter { it !is TwitterIdentity }
         if (twitter.isNotBlank()) {
             TwitterIdentity.parseProofUrl(twitter)?.let { claims = claims + it }
@@ -42,7 +43,6 @@ fun MetadataEvent.replaceClaims(
 
     // null leave as is. blank deletes it.
     if (github != null) {
-        // delete github
         claims = claims.filter { it !is GitHubIdentity }
         if (github.isNotBlank()) {
             GitHubIdentity.parseProofUrl(github)?.let { claims = claims + it }
@@ -59,3 +59,15 @@ fun MetadataEvent.replaceClaims(
 
     return claims
 }
+
+fun MetadataEvent.replaceClaims(
+    twitter: String?,
+    mastodon: String?,
+    github: String?,
+): List<IdentityClaimTag> = identityClaims().replaceClaims(twitter, mastodon, github)
+
+fun ExternalIdentitiesEvent.replaceClaims(
+    twitter: String?,
+    mastodon: String?,
+    github: String?,
+): List<IdentityClaimTag> = identityClaims().replaceClaims(twitter, mastodon, github)

@@ -111,6 +111,9 @@ class DesktopIAccount(
         val signedEvent = signer.sign<PrivateDmEvent>(eventTemplate)
         val recipient = signedEvent.verifiedRecipientPubKey()
 
+        // Optimistic local add so the message appears immediately
+        addEventToChatroom(signedEvent, signedEvent.chatroomKey(pubKey))
+
         // Broadcast to connected relays + recipient's DM inbox relays
         val targetRelays = relayManager.connectedRelays.value.toMutableSet()
         if (recipient != null) {
@@ -127,43 +130,63 @@ class DesktopIAccount(
 
         val result = NIP17Factory().createMessageNIP17(template, signer)
 
-        // Broadcast each gift wrap to the recipient's inbox relays with tracking
-        result.wraps.forEach { wrap ->
-            val recipientKey = wrap.recipientPubKey()
-            val targetRelays =
-                if (recipientKey != null) {
-                    val dmRelays =
-                        localCache
-                            .getOrCreateUser(recipientKey)
-                            .dmInboxRelays()
-                            ?.toSet()
-                    dmRelays?.ifEmpty { null }
-                        ?: relayManager.connectedRelays.value
-                } else {
-                    relayManager.connectedRelays.value
-                }
+        // Optimistic local add — use the inner ChatMessageEvent, not the wraps
+        val innerMsg = result.msg as ChatMessageEvent
+        addEventToChatroom(innerMsg, innerMsg.chatroomKey(pubKey))
 
-            scope.launch { dmSendTracker.sendAndTrack(wrap, targetRelays) }
-        }
+        // Collect all wraps with their target relays for batch sending
+        val batch =
+            result.wraps.map { wrap ->
+                val recipientKey = wrap.recipientPubKey()
+                val targetRelays =
+                    if (recipientKey != null) {
+                        val dmRelays =
+                            localCache
+                                .getOrCreateUser(recipientKey)
+                                .dmInboxRelays()
+                                ?.toSet()
+                        dmRelays?.ifEmpty { null }
+                            ?: relayManager.connectedRelays.value
+                    } else {
+                        relayManager.connectedRelays.value
+                    }
+                wrap to targetRelays
+            }
+
+        scope.launch { dmSendTracker.sendBatch(batch) }
     }
 
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
-        wraps.forEach { wrap ->
-            val recipientKey = wrap.recipientPubKey()
-            val targetRelays =
-                if (recipientKey != null) {
-                    val dmRelays =
-                        localCache
-                            .getOrCreateUser(recipientKey)
-                            .dmInboxRelays()
-                            ?.toSet()
-                    dmRelays?.ifEmpty { null }
-                        ?: relayManager.connectedRelays.value
-                } else {
-                    relayManager.connectedRelays.value
-                }
+        val batch =
+            wraps.map { wrap ->
+                val recipientKey = wrap.recipientPubKey()
+                val targetRelays =
+                    if (recipientKey != null) {
+                        val dmRelays =
+                            localCache
+                                .getOrCreateUser(recipientKey)
+                                .dmInboxRelays()
+                                ?.toSet()
+                        dmRelays?.ifEmpty { null }
+                            ?: relayManager.connectedRelays.value
+                    } else {
+                        relayManager.connectedRelays.value
+                    }
+                wrap to targetRelays
+            }
 
-            scope.launch { dmSendTracker.sendAndTrack(wrap, targetRelays) }
+        scope.launch { dmSendTracker.sendBatch(batch) }
+    }
+
+    private fun addEventToChatroom(
+        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+        roomKey: com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey,
+    ) {
+        val note = localCache.getOrCreateNote(event.id)
+        val author = localCache.getOrCreateUser(event.pubKey)
+        if (note.event == null) {
+            note.loadEvent(event, author, emptyList())
         }
+        chatroomList.addMessage(roomKey, note)
     }
 }

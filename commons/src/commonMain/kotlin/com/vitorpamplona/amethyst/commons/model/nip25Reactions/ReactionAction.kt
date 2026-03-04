@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
@@ -49,17 +48,13 @@ object ReactionAction {
      * @throws IllegalStateException if signer is not writeable
      */
     suspend fun reactTo(
-        event: Event,
+        eventHint: EventHintBundle<Event>,
         reaction: String,
         signer: NostrSigner,
-        relayHint: String? = null,
     ): ReactionEvent {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot react: signer is not writeable")
         }
-
-        val normalizedRelayHint = relayHint?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-        val eventHint = EventHintBundle(event, normalizedRelayHint)
 
         // Handle custom emoji reactions (format: ":emoji_name:")
         val template =
@@ -82,10 +77,9 @@ object ReactionAction {
      * Creates a "like" reaction ("+").
      */
     suspend fun like(
-        event: Event,
+        event: EventHintBundle<Event>,
         signer: NostrSigner,
-        relayHint: String? = null,
-    ): ReactionEvent = reactTo(event, "+", signer, relayHint)
+    ): ReactionEvent = reactTo(event, "+", signer)
 
     /**
      * Advanced: React to an event with support for NIP-17 private groups.
@@ -102,7 +96,6 @@ object ReactionAction {
      * @param onPrivate Callback for private group reactions (returns NIP17Factory.Result)
      */
     suspend fun reactToWithGroupSupport(
-        event: Event,
         eventHint: EventHintBundle<Event>,
         reaction: String,
         signer: NostrSigner,
@@ -112,6 +105,8 @@ object ReactionAction {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot react: signer is not writeable")
         }
+
+        val event = eventHint.event
 
         // Check if this is a NIP-17 private group event
         if (event is NIP17Group) {
@@ -185,9 +180,8 @@ object ReactionAction {
         if (!signer.isWriteable()) return
         if (note.hasReacted(by, reaction)) return
 
-        val noteEvent = note.event ?: return
         val eventHint = note.toEventHint<Event>() ?: return
 
-        reactToWithGroupSupport(noteEvent, eventHint, reaction, signer, onPublic, onPrivate)
+        reactToWithGroupSupport(eventHint, reaction, signer, onPublic, onPrivate)
     }
 }

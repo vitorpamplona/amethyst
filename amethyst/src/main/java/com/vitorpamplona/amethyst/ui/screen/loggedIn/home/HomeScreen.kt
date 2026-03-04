@@ -59,7 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.model.AROUND_ME
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -234,21 +234,29 @@ fun HomeScreenFloatingButton(
         accountViewModel.account.settings.defaultHomeFollowList
             .collectAsStateWithLifecycle()
 
-    if (list.value == AROUND_ME) {
-        val location by Amethyst.instance.locationManager.geohashStateFlow
-            .collectAsStateWithLifecycle()
+    when (list.value) {
+        TopFilter.AroundMe -> {
+            val location by Amethyst.instance.locationManager.geohashStateFlow
+                .collectAsStateWithLifecycle()
 
-        when (val myLocation = location) {
-            is LocationState.LocationResult.Success -> {
-                NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+            when (val myLocation = location) {
+                is LocationState.LocationResult.Success -> {
+                    NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
+                }
+
+                is LocationState.LocationResult.LackPermission -> { }
+
+                is LocationState.LocationResult.Loading -> { }
             }
-
-            is LocationState.LocationResult.LackPermission -> { }
-
-            is LocationState.LocationResult.Loading -> { }
         }
-    } else {
-        NewNoteButton(nav)
+
+        TopFilter.Chess -> {
+            NewChessGameButton(accountViewModel, nav)
+        }
+
+        else -> {
+            NewNoteButton(nav)
+        }
     }
 }
 

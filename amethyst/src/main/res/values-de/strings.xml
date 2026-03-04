@@ -449,8 +449,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="tor_use_money_operations_explainer">Erzwingen Sie Tor bei Zaps, Lightning und Cashu-Transfers</string>
     <string name="tor_use_nip05_verification">Nostr Adressverifizierung</string>
     <string name="tor_use_nip05_verification_explainer">Erzwingen Sie Tor bei der Überprüfung von NIP-05-Adressen</string>
-    <string name="tor_use_nip96_uploads">Medien-Uploads</string>
-    <string name="tor_use_nip96_uploads_explainer">Erzwingen Sie Tor beim Hochladen von Inhalten</string>
+    <string name="tor_use_media_uploads">Medien-Uploads</string>
+    <string name="tor_use_media_uploads_explainer">Erzwingen Sie Tor beim Hochladen von Inhalten</string>
     <string name="tor_internal">Intern</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Aus</string>

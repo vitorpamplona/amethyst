@@ -28,6 +28,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -125,9 +126,7 @@ fun ZoomableImageDialog(
         }
 
         Surface(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize(), Alignment.TopCenter) {
-                DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
-            }
+            DialogContent(allImages, imageUrl, onDismiss, accountViewModel)
         }
     }
 }
@@ -158,136 +157,143 @@ private fun DialogContent(
         }
     }
 
-    if (allImages.size > 1) {
-        SlidingCarousel(
-            pagerState = pagerState,
-        ) { index ->
-            allImages.getOrNull(index)?.let {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    RenderImageOrVideo(
-                        content = it,
-                        roundedCorner = false,
-                        isFiniteHeight = true,
-                        controllerVisible = controllerVisible,
-                        onControllerVisibilityChanged = { controllerVisible.value = it },
-                        onToggleControllerVisibility = {
-                            controllerVisible.value = !controllerVisible.value
-                        },
-                        accountViewModel = accountViewModel,
-                    )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clickable(
+                onClick = {
+                    controllerVisible.value = !controllerVisible.value
+                },
+            ),
+        Alignment.TopCenter,
+    ) {
+        if (allImages.size > 1) {
+            SlidingCarousel(
+                pagerState = pagerState,
+            ) { index ->
+                allImages.getOrNull(index)?.let {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        RenderImageOrVideo(
+                            content = it,
+                            roundedCorner = false,
+                            isFiniteHeight = true,
+                            controllerVisible = controllerVisible,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
             }
-        }
-    } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            RenderImageOrVideo(
-                content = imageUrl,
-                roundedCorner = false,
-                isFiniteHeight = true,
-                controllerVisible = controllerVisible,
-                onControllerVisibilityChanged = { controllerVisible.value = it },
-                onToggleControllerVisibility = { controllerVisible.value = !controllerVisible.value },
-                accountViewModel = accountViewModel,
-            )
-        }
-    }
-
-    AnimatedVisibility(
-        visible = controllerVisible.value,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .padding(horizontal = Size15dp, vertical = Size10dp)
-                    .statusBarsPadding()
-                    .systemBarsPadding()
-                    .fillMaxWidth(),
-            horizontalArrangement = spacedBy(Size10dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedButton(
-                onClick = onDismiss,
-                contentPadding = PaddingValues(horizontal = Size5dp),
-                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringRes(R.string.back),
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                RenderImageOrVideo(
+                    content = imageUrl,
+                    roundedCorner = false,
+                    isFiniteHeight = true,
+                    controllerVisible = controllerVisible,
+                    accountViewModel = accountViewModel,
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
-                val popupExpanded = remember { mutableStateOf(false) }
-
+        AnimatedVisibility(
+            visible = controllerVisible.value,
+            enter = remember { fadeIn() },
+            exit = remember { fadeOut() },
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .padding(horizontal = Size15dp, vertical = Size10dp)
+                        .statusBarsPadding()
+                        .systemBarsPadding()
+                        .fillMaxWidth(),
+                horizontalArrangement = spacedBy(Size10dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 OutlinedButton(
-                    onClick = { popupExpanded.value = true },
+                    onClick = onDismiss,
                     contentPadding = PaddingValues(horizontal = Size5dp),
                     colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Share,
-                        modifier = Size20Modifier,
-                        contentDescription = stringRes(R.string.quick_action_share),
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringRes(R.string.back),
                     )
-
-                    ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
-                if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
-                    val localContext = LocalContext.current
+                Spacer(modifier = Modifier.weight(1f))
 
-                    val scope = rememberCoroutineScope()
+                allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
+                    if (myContent is MediaUrlImage || myContent is MediaLocalImage) {
+                        val popupExpanded = remember { mutableStateOf(false) }
 
-                    val writeStoragePermissionState =
-                        rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                            if (isGranted) {
-                                scope.launch {
-                                    saveMediaToGallery(myContent, localContext, accountViewModel)
-                                }
-                                scope.launch {
-                                    Toast
-                                        .makeText(
-                                            localContext,
-                                            stringRes(localContext, R.string.media_download_has_started_toast),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                }
-                            }
+                        OutlinedButton(
+                            onClick = { popupExpanded.value = true },
+                            contentPadding = PaddingValues(horizontal = Size5dp),
+                            colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                modifier = Size20Modifier,
+                                contentDescription = stringRes(R.string.quick_action_share),
+                            )
+
+                            ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                         }
 
-                    OutlinedButton(
-                        onClick = {
-                            if (
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                                writeStoragePermissionState.status.isGranted
+                        if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
+                            val localContext = LocalContext.current
+
+                            val scope = rememberCoroutineScope()
+
+                            val writeStoragePermissionState =
+                                rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
+                                    if (isGranted) {
+                                        scope.launch {
+                                            saveMediaToGallery(myContent, localContext, accountViewModel)
+                                        }
+                                        scope.launch {
+                                            Toast
+                                                .makeText(
+                                                    localContext,
+                                                    stringRes(localContext, R.string.media_download_has_started_toast),
+                                                    Toast.LENGTH_SHORT,
+                                                ).show()
+                                        }
+                                    }
+                                }
+
+                            OutlinedButton(
+                                onClick = {
+                                    if (
+                                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                                        writeStoragePermissionState.status.isGranted
+                                    ) {
+                                        scope.launch(Dispatchers.IO) {
+                                            saveMediaToGallery(myContent, localContext, accountViewModel)
+                                        }
+                                        scope.launch {
+                                            Toast
+                                                .makeText(
+                                                    localContext,
+                                                    stringRes(localContext, R.string.media_download_has_started_toast),
+                                                    Toast.LENGTH_SHORT,
+                                                ).show()
+                                        }
+                                    } else {
+                                        writeStoragePermissionState.launchPermissionRequest()
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = Size5dp),
+                                colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
                             ) {
-                                scope.launch(Dispatchers.IO) {
-                                    saveMediaToGallery(myContent, localContext, accountViewModel)
-                                }
-                                scope.launch {
-                                    Toast
-                                        .makeText(
-                                            localContext,
-                                            stringRes(localContext, R.string.media_download_has_started_toast),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                }
-                            } else {
-                                writeStoragePermissionState.launchPermissionRequest()
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    modifier = Size20Modifier,
+                                    contentDescription = stringRes(R.string.save_to_gallery),
+                                )
                             }
-                        },
-                        contentPadding = PaddingValues(horizontal = Size5dp),
-                        colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            modifier = Size20Modifier,
-                            contentDescription = stringRes(R.string.save_to_gallery),
-                        )
+                        }
                     }
                 }
             }
@@ -347,11 +353,8 @@ private fun RenderImageOrVideo(
     roundedCorner: Boolean,
     isFiniteHeight: Boolean,
     controllerVisible: MutableState<Boolean>,
-    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
-    onToggleControllerVisibility: (() -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
-    val automaticallyStartPlayback = remember { mutableStateOf(true) }
     val contentScale =
         if (isFiniteHeight) {
             ContentScale.Fit
@@ -368,9 +371,7 @@ private fun RenderImageOrVideo(
                         .zoomable(
                             rememberZoomState(),
                             onTap = {
-                                if (onToggleControllerVisibility != null) {
-                                    onToggleControllerVisibility()
-                                }
+                                controllerVisible.value = !controllerVisible.value
                             },
                         )
 
@@ -412,8 +413,9 @@ private fun RenderImageOrVideo(
                         authorName = content.authorName,
                         borderModifier = borderModifier,
                         contentScale = contentScale,
-                        automaticallyStartPlayback = automaticallyStartPlayback,
-                        onControllerVisibilityChanged = onControllerVisibilityChanged,
+                        nostrUriCallback = content.uri,
+                        automaticallyStartPlayback = true,
+                        controllerVisible = controllerVisible,
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -426,9 +428,7 @@ private fun RenderImageOrVideo(
                         .zoomable(
                             rememberZoomState(),
                             onTap = {
-                                if (onToggleControllerVisibility != null) {
-                                    onToggleControllerVisibility()
-                                }
+                                controllerVisible.value = !controllerVisible.value
                             },
                         )
 
@@ -471,8 +471,9 @@ private fun RenderImageOrVideo(
                             authorName = content.authorName,
                             borderModifier = borderModifier,
                             contentScale = contentScale,
-                            automaticallyStartPlayback = automaticallyStartPlayback,
-                            onControllerVisibilityChanged = onControllerVisibilityChanged,
+                            nostrUriCallback = content.uri,
+                            automaticallyStartPlayback = true,
+                            controllerVisible = controllerVisible,
                             accountViewModel = accountViewModel,
                         )
                     }

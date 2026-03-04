@@ -55,8 +55,9 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
+import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.default.BookmarkListScreen
@@ -74,6 +75,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -87,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
@@ -99,12 +103,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.RelayFeedScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
@@ -121,11 +128,11 @@ import java.net.URI
 @Composable
 fun AppNavigation(
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     val nav = rememberNav()
 
-    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountStateViewModel, nav) {
+    AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
         NavHost(
             navController = nav.controller,
             startDestination = Route.Home,
@@ -137,6 +144,7 @@ fun AppNavigation(
             composable<Route.Video> { VideoScreen(accountViewModel, nav) }
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(accountViewModel, nav) }
+            composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
@@ -159,21 +167,27 @@ fun AppNavigation(
             composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
+            composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
+            composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
             composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(Amethyst.instance.torPrefs.value, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Settings> { SettingsScreen(accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
-            composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
+            composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
+            composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
             composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+            composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+            composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
+            composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
             composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
             composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
             composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
@@ -306,7 +320,7 @@ fun AppNavigation(
         }
     }
 
-    NavigateIfIntentRequested(nav, accountViewModel, accountStateViewModel)
+    NavigateIfIntentRequested(nav, accountViewModel, accountSessionManager)
 
     DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
     DisplayNotifyMessages(accountViewModel, nav)
@@ -318,13 +332,13 @@ fun AppNavigation(
 private fun NavigateIfIntentRequested(
     nav: Nav,
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
-    accountViewModel.firstRoute?.let {
+    accountViewModel.firstRoute?.let { newRoute ->
         accountViewModel.firstRoute = null
-        val currentRoute = getRouteWithArguments(nav.controller)
-        if (!isSameRoute(currentRoute, it)) {
-            nav.newStack(it)
+        val currentRoute = getRouteWithArguments(newRoute::class, nav.controller)
+        if (!isSameRoute(currentRoute, newRoute)) {
+            nav.newStack(newRoute)
         }
     }
 
@@ -372,10 +386,10 @@ private fun NavigateIfIntentRequested(
                 if (actionableNextPage != null) {
                     actionableNextPage?.let { nextRoute ->
                         val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                        if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
-                            accountStateViewModel.checkAndSwitchUserSync(npub, nextRoute)
+                        if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
+                            accountSessionManager.checkAndSwitchUserSync(npub, nextRoute)
                         } else {
-                            val currentRoute = getRouteWithArguments(nav.controller)
+                            val currentRoute = getRouteWithArguments(nextRoute::class, nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
                                 nav.newStack(nextRoute)
                             }
@@ -428,10 +442,10 @@ private fun NavigateIfIntentRequested(
                             if (newPage != null) {
                                 scope.launch {
                                     val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                                    if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
-                                        accountStateViewModel.checkAndSwitchUserSync(npub, newPage)
+                                    if (npub != null && accountSessionManager.currentAccountNPub() != npub) {
+                                        accountSessionManager.checkAndSwitchUserSync(npub, newPage)
                                     } else {
-                                        val currentRoute = getRouteWithArguments(nav.controller)
+                                        val currentRoute = getRouteWithArguments(newPage::class, nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {
                                             nav.newStack(newPage)
                                         }
@@ -460,7 +474,7 @@ private fun NavigateIfIntentRequested(
         }
 
         if (newAccount != null) {
-            AddAccountDialog(newAccount, accountStateViewModel) { newAccount = null }
+            AddAccountDialog(newAccount, accountSessionManager) { newAccount = null }
         }
     }
 }

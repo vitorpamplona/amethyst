@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
@@ -28,12 +29,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to tags, even the same tag
+
+@Stable
 class HomeQueryState(
     val account: Account,
     val feedState: AccountFeedContentStates,
     val scope: CoroutineScope,
 )
 
+@Stable
 class HomeFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<HomeQueryState>() {

@@ -23,7 +23,9 @@ package com.vitorpamplona.quartz.nip01Core.core
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.runtime.Stable
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Stable
 actual data class Address actual constructor(
     actual val kind: Kind,

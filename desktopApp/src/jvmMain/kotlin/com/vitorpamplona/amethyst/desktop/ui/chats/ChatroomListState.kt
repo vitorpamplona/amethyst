@@ -25,6 +25,14 @@ import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +79,8 @@ enum class ConversationTab {
 class ChatroomListState(
     private val account: IAccount,
     private val cacheProvider: ICacheProvider,
+    private val relayManager: RelayConnectionManager,
+    private val localCache: DesktopLocalCache,
     private val scope: CoroutineScope,
 ) {
     private val _selectedTab = MutableStateFlow(ConversationTab.KNOWN)
@@ -85,10 +95,13 @@ class ChatroomListState(
     private val _newRooms = MutableStateFlow<List<ConversationItem>>(emptyList())
     val newRooms: StateFlow<List<ConversationItem>> = _newRooms.asStateFlow()
 
+    // Cache decrypted NIP-04 content by event id to avoid re-decrypting every poll
+    private val decryptedContentCache = mutableMapOf<String, String>()
+
+    // Track pubkeys we've already requested metadata for
+    private val fetchedMetadataKeys = mutableSetOf<String>()
+
     init {
-        // Periodically refresh the room list from the account's chatroom list.
-        // This is a simple polling approach; a production implementation would
-        // observe the chatroom list's changesFlow per room.
         scope.launch(Dispatchers.IO) {
             while (isActive) {
                 refreshRooms()
@@ -109,13 +122,93 @@ class ChatroomListState(
         _selectedRoom.value = null
     }
 
-    private fun refreshRooms() {
+    private suspend fun decryptPreview(event: com.vitorpamplona.quartz.nip01Core.core.Event?): String {
+        if (event == null) return ""
+        return when (event) {
+            is PrivateDmEvent -> {
+                decryptedContentCache.getOrPut(event.id) {
+                    try {
+                        event.decryptContent(account.signer)
+                    } catch (_: Exception) {
+                        event.content
+                    }
+                }
+            }
+
+            else -> {
+                event.content
+            }
+        }.take(80)
+    }
+
+    private var metadataSubCounter = 0
+
+    private fun fetchMetadataIfNeeded(pubkeys: List<String>) {
+        val needed = pubkeys.filter { it !in fetchedMetadataKeys && it.length == 64 }
+        if (needed.isEmpty()) return
+
+        val relays = relayManager.relayStatuses.value.keys
+        if (relays.isEmpty()) return
+
+        fetchedMetadataKeys.addAll(needed)
+
+        val subId = "dm-meta-${metadataSubCounter++}"
+        val filter =
+            Filter(
+                kinds = listOf(MetadataEvent.KIND),
+                authors = needed,
+                limit = needed.size,
+            )
+
+        val listener =
+            object : IRequestListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (event is MetadataEvent) {
+                        localCache.consumeMetadata(event)
+                    }
+                }
+            }
+
+        relayManager.subscribe(subId, listOf(filter), relays, listener)
+
+        // Auto-close after 15s — enough time for all relays to respond
+        scope.launch {
+            delay(15_000)
+            relayManager.unsubscribe(subId)
+        }
+    }
+
+    private suspend fun refreshRooms() {
         val chatroomList = account.chatroomList
         val known = mutableListOf<ConversationItem>()
         val new = mutableListOf<ConversationItem>()
 
-        chatroomList.rooms.forEach { key, chatroom ->
+        // Collect room entries (forEach is non-suspend)
+        val entries = mutableListOf<Pair<ChatroomKey, Chatroom>>()
+        chatroomList.rooms.forEach { key, chatroom -> entries.add(key to chatroom) }
+
+        // Collect pubkeys needing metadata across all rooms
+        val pubkeysNeedingMetadata = mutableListOf<String>()
+
+        for ((key, chatroom) in entries) {
+            // Skip rooms with no messages
+            if (chatroom.messages.isEmpty()) continue
+
             val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }
+
+            // Collect pubkeys without profile info
+            for (pubkey in key.users) {
+                val user = cacheProvider.getUserIfExists(pubkey) as? User
+                if (user == null || user.metadataOrNull() == null) {
+                    pubkeysNeedingMetadata.add(pubkey)
+                }
+            }
+
             val displayName =
                 if (users.isNotEmpty()) {
                     users.joinToString(", ") { it.toBestDisplayName() }
@@ -127,11 +220,8 @@ class ChatroomListState(
                 }
 
             val newestMessage = chatroom.newestMessage
-            val lastPreview = newestMessage?.event?.content?.take(80) ?: ""
+            val lastPreview = decryptPreview(newestMessage?.event)
             val lastTimestamp = newestMessage?.createdAt() ?: 0L
-
-            // Skip rooms with no messages
-            if (chatroom.messages.isEmpty()) return@forEach
 
             val item =
                 ConversationItem(
@@ -151,6 +241,9 @@ class ChatroomListState(
                 new.add(item)
             }
         }
+
+        // Batch-request metadata for all users who need it
+        fetchMetadataIfNeeded(pubkeysNeedingMetadata)
 
         // Sort by most recent message
         _knownRooms.value = known.sortedByDescending { it.lastMessageTimestamp }

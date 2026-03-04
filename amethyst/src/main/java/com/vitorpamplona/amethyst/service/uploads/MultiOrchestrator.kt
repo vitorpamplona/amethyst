@@ -32,6 +32,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
+@Stable
 class MultiOrchestrator(
     uris: List<SelectedMedia>,
 ) {

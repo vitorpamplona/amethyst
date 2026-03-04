@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
-import androidx.media3.session.MediaController
 import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
@@ -56,31 +55,25 @@ fun Waveform(
 
     val restartFlow = remember { mutableIntStateOf(0) }
 
-    val myController = mediaControllerState.controller
-
     // Keeps the screen on while playing and viewing videos.
-    if (myController != null) {
-        DisposableEffect(key1 = myController) {
-            val listener =
-                object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        // doesn't consider the mutex because the screen can turn off if the video
-                        // being played in the mutex is not visible.
-                        if (isPlaying) {
-                            restartFlow.intValue += 1
-                        }
+    DisposableEffect(key1 = mediaControllerState.controller) {
+        val listener =
+            object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    // doesn't consider the mutex because the screen can turn off if the video
+                    // being played in the mutex is not visible.
+                    if (isPlaying) {
+                        restartFlow.intValue += 1
                     }
                 }
+            }
 
-            myController.addListener(listener)
-            onDispose { myController.removeListener(listener) }
-        }
+        mediaControllerState.controller.addListener(listener)
+        onDispose { mediaControllerState.controller.removeListener(listener) }
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {
-        mediaControllerState.controller?.let {
-            pollCurrentDuration(it).collect { value -> waveformProgress.floatValue = value }
-        }
+        pollCurrentDuration(mediaControllerState.controller).collect { value -> waveformProgress.floatValue = value }
     }
 
     LaunchedEffect(Unit) {
@@ -90,7 +83,7 @@ fun Waveform(
     }
 }
 
-private fun pollCurrentDuration(controller: MediaController) =
+private fun pollCurrentDuration(controller: Player) =
     flow {
         while (controller.currentPosition <= controller.duration) {
             emit(controller.currentPosition / controller.duration.toFloat())

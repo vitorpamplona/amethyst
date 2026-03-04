@@ -39,7 +39,11 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 
@@ -54,6 +58,8 @@ class HomeNewThreadFeedFilter(
                 WikiNoteEvent.KIND,
                 ClassifiedsEvent.KIND,
                 LongTextNoteEvent.KIND,
+                LiveChessGameChallengeEvent.KIND,
+                LiveChessGameEndEvent.KIND,
             )
     }
 
@@ -111,12 +117,16 @@ class HomeNewThreadFeedFilter(
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is PollNoteEvent ||
+                noteEvent is PollEvent ||
                 noteEvent is HighlightEvent ||
                 noteEvent is InteractiveStoryPrologueEvent ||
                 noteEvent is CommentEvent ||
                 noteEvent is AudioTrackEvent ||
                 noteEvent is VoiceEvent ||
-                noteEvent is AudioHeaderEvent
+                noteEvent is AudioHeaderEvent ||
+                noteEvent is ChessGameEvent ||
+                noteEvent is LiveChessGameChallengeEvent ||
+                noteEvent is LiveChessGameEndEvent
         ) &&
             filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()

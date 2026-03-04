@@ -27,91 +27,77 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 object PlaybackServiceClient {
     val executorService: ExecutorService = Executors.newCachedThreadPool()
 
-    fun removeController(mediaControllerState: MediaControllerState) {
-        mediaControllerState.active.value = false
-        mediaControllerState.readyToDisplay.value = false
-
-        val myController = mediaControllerState.controller
-        // release when can
-        if (myController != null) {
-            mediaControllerState.controller = null
-            @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.Main) {
-                // myController.pause()
-                // myController.stop()
-                myController.release()
-                Log.d("PlaybackService", "Releasing Video $mediaControllerState")
-            }
-        }
-    }
-
-    fun prepareController(
-        mediaControllerState: MediaControllerState,
+    @OptIn(ExperimentalUuidApi::class)
+    fun controllerAsFlow(
         videoUri: String,
         proxyPort: Int? = 0,
         keepPlaying: Boolean = true,
         context: Context,
-        onReady: (MediaControllerState) -> Unit,
-    ) {
+    ) = callbackFlow {
         val appContext = context.applicationContext
+        val id = Uuid.random().toString()
 
-        mediaControllerState.active.value = true
-
-        try {
-            val bundle =
-                Bundle().apply {
-                    // link the id with the client's id to make sure it can return the
-                    // same session on background media.
-                    putString("id", mediaControllerState.id)
-                    putBoolean("keepPlaying", keepPlaying)
-                    proxyPort?.let {
-                        putInt("proxyPort", it)
-                    }
+        val bundle =
+            Bundle().apply {
+                // link the id with the client's id to make sure it can return the
+                // same session on background media.
+                putString("id", id)
+                putBoolean("keepPlaying", keepPlaying)
+                proxyPort?.let {
+                    putInt("proxyPort", it)
                 }
+            }
 
-            val session = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
+        val session = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
 
-            val controllerFuture =
-                MediaController
-                    .Builder(appContext, session)
-                    .setConnectionHints(bundle)
-                    .buildAsync()
+        val controllerFuture =
+            MediaController
+                .Builder(appContext, session)
+                .setConnectionHints(bundle)
+                .buildAsync()
 
-            Log.d("PlaybackService", "Preparing Controller ${mediaControllerState.id} $videoUri")
+        Log.d("PlaybackService", "Preparing Controller $id $videoUri")
 
-            controllerFuture.addListener(
-                {
-                    try {
-                        val controller = controllerFuture.get()
-                        mediaControllerState.controller = controller
+        controllerFuture.addListener(
+            {
+                try {
+                    val controller = controllerFuture.get(5, TimeUnit.SECONDS)
 
-                        // checks if the player is still active before engaging further
-                        if (mediaControllerState.isActive()) {
-                            onReady(mediaControllerState)
-                        } else {
-                            removeController(mediaControllerState)
-                        }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e("Playback Client", "Failed to load Playback Client for $videoUri", e)
-                    }
-                },
-                executorService,
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e("Playback Client", "Failed to load Playback Client for $videoUri", e)
+                    Log.d("PlaybackService", "Controller Ready $id $videoUri")
+
+                    // checks if the player is still active before engaging further
+                    trySend(
+                        MediaControllerState(
+                            id = id,
+                            controller = controller,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    Log.e("Playback Client", "Failed to load Playback Client for $id $videoUri", e)
+                    close(e)
+                }
+            },
+            executorService,
+        )
+
+        awaitClose {
+            Log.d("PlaybackService", "Releasing Controller $id $videoUri")
+            try {
+                MediaController.releaseFuture(controllerFuture)
+            } catch (e: Exception) {
+                Log.e("Playback Client", "Failed to release Playback Client for $id $videoUri ${e.message}")
+            }
         }
     }
 }

@@ -47,6 +47,8 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 val SearchPostsByTextKinds1 =
@@ -83,6 +85,8 @@ val SearchPostsByTextKinds3 =
         InteractiveStorySceneEvent.KIND,
         FollowListEvent.KIND,
         NipTextEvent.KIND,
+        PollEvent.KIND,
+        PollResponseEvent.KIND,
     )
 
 fun searchPostsByText(

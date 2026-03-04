@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 class UserProfileConversationsFeedFilter(
@@ -64,6 +65,7 @@ class UserProfileConversationsFeedFilter(
             (
                 it.event is TextNoteEvent ||
                     it.event is PollNoteEvent ||
+                    it.event is PollResponseEvent ||
                     it.event is ChannelMessageEvent ||
                     it.event is LiveActivitiesChatMessageEvent ||
                     it.event is CommentEvent ||

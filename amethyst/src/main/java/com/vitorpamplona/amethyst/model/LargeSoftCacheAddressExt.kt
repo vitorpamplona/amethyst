@@ -67,6 +67,18 @@ fun LargeSoftCache<Address, AddressableNote>.filter(
     consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
 ): List<AddressableNote> = filter(kindStart(kind, pubKey), kindEnd(kind, pubKey), consumer)
 
+fun LargeSoftCache<Address, AddressableNote>.filter(
+    kinds: List<Int>,
+    pubKey: HexKey,
+    consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,
+): Set<AddressableNote> {
+    val set = mutableSetOf<AddressableNote>()
+    kinds.forEach {
+        set.addAll(filterIntoSet(kindStart(it, pubKey), kindEnd(it, pubKey), consumer))
+    }
+    return set
+}
+
 fun LargeSoftCache<Address, AddressableNote>.filterIntoSet(
     kind: Int,
     consumer: CacheCollectors.BiFilter<Address, AddressableNote> = ACCEPT_ALL_FILTER,

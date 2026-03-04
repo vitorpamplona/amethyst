@@ -40,6 +40,7 @@ import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import coil3.util.Logger
+import coil3.video.VideoFrameDecoder
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Call
@@ -73,6 +74,7 @@ class ImageLoaderSetup {
                     .components {
                         add(gifFactory)
                         add(svgFactory)
+                        add(VideoFrameDecoder.Factory())
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
                         add(Base64Fetcher.BKeyer)

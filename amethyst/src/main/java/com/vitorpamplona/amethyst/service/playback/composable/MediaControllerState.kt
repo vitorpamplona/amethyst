@@ -21,10 +21,8 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import android.graphics.Rect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
-import androidx.media3.session.MediaController
+import androidx.media3.common.Player
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -34,25 +32,25 @@ class MediaControllerState(
     // each composable has an ID.
     val id: String = Uuid.random().toString(),
     // This is filled after the controller returns from this class
-    var controller: MediaController? = null,
-    // this set's the stage to keep playing on the background or not when the user leaves the screen
-    val pictureInPictureActive: MutableState<Boolean> = mutableStateOf(false),
-    // this will be false if the screen leaves before the controller connection comes back from the service.
-    val active: MutableState<Boolean> = mutableStateOf(true),
-    // this will be set to own when the controller is ready
-    val readyToDisplay: MutableState<Boolean> = mutableStateOf(false),
-    // isCurrentlyBeingRendered
-    var composed: Boolean = false,
+    var controller: Player,
     // visibility onscreen
     val visibility: VisibilityData = VisibilityData(),
 ) {
-    fun isPlaying() = controller?.isPlaying == true
+    fun isPlaying() = controller.isPlaying
 
-    fun currrentMedia() = controller?.currentMediaItem?.mediaId
+    fun currrentMedia() = controller.currentMediaItem?.mediaId
 
-    fun isActive() = active.value == true
+    fun toggleMute() {
+        controller.volume = if (controller.volume == 0f) 1f else 0f
+    }
 
-    fun needsController() = controller == null
+    fun togglePlayPause() {
+        if (controller.isPlaying) {
+            controller.pause()
+        } else {
+            controller.play()
+        }
+    }
 }
 
 @Stable

@@ -20,14 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery
 
-import android.content.Context
 import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,35 +37,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
-import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
-import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
+import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
@@ -76,7 +69,6 @@ fun GalleryThumbnail(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
-    ratio: Float = 1.0f,
 ) {
     val noteState by observeNote(baseNote, accountViewModel)
     val noteEvent = noteState.note.event ?: return
@@ -137,7 +129,7 @@ fun GalleryThumbnail(
             emptyList()
         }
 
-    InnerRenderGalleryThumb(content, baseNote, accountViewModel, ratio)
+    InnerRenderGalleryThumb(content, baseNote, accountViewModel)
 }
 
 @Composable
@@ -145,10 +137,9 @@ fun InnerRenderGalleryThumb(
     content: List<MediaUrlContent>,
     note: Note,
     accountViewModel: AccountViewModel,
-    ratio: Float = 1.0f,
 ) {
     if (content.isNotEmpty()) {
-        GalleryContentView(content, accountViewModel, ratio = ratio)
+        GalleryContentView(content, accountViewModel)
     } else {
         DisplayGalleryAuthorBanner(note, accountViewModel)
     }
@@ -160,28 +151,30 @@ fun DisplayGalleryAuthorBanner(
     accountViewModel: AccountViewModel,
 ) {
     WatchAuthor(note, accountViewModel) { author ->
-        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder), accountViewModel)
+        BannerImage(
+            author,
+            Modifier
+                .fillMaxSize()
+                .clip(QuoteBorder),
+            accountViewModel,
+        )
     }
 }
 
-@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class)
 @Composable
 fun GalleryContentView(
     contentList: List<MediaUrlContent>,
     accountViewModel: AccountViewModel,
-    ratio: Float = 1.0f,
 ) {
-    AutoNonlazyGrid(contentList.size) { contentIndex ->
+    AutoNonlazyGrid(contentList.size, modifier = Modifier.fillMaxSize()) { contentIndex ->
         when (val content = contentList[contentIndex]) {
-            is MediaUrlImage -> {
-                SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                    UrlImageView(content, accountViewModel, ratio = ratio)
-                }
-            }
-
-            is MediaUrlVideo -> {
-                SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                    UrlVideoView(content, accountViewModel, ratio = ratio)
+            is MediaUrlContent -> {
+                val hasSensitiveContent =
+                    (content is MediaUrlVideo && content.contentWarning != null) ||
+                        (content is MediaUrlImage && content.contentWarning != null)
+                SensitivityWarning(hasSensitiveContent, accountViewModel) {
+                    UrlImageView(content, accountViewModel)
                 }
             }
         }
@@ -190,17 +183,15 @@ fun GalleryContentView(
 
 @Composable
 fun UrlImageView(
-    content: MediaUrlImage,
+    content: MediaUrlContent,
     accountViewModel: AccountViewModel,
-    alwayShowImage: Boolean = false,
-    ratio: Float = 1.0f,
 ) {
-    val defaultModifier = Modifier.fillMaxSize().aspectRatio(ratio)
+    val defaultModifier = Modifier.fillMaxSize()
 
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                accountViewModel.settings.showImages(),
             )
         }
 
@@ -231,7 +222,14 @@ fun UrlImageView(
                     }
 
                     is AsyncImagePainter.State.Error -> {
-                        ClickableUrl(urlText = "${content.url} ", url = content.url)
+                        Box(defaultModifier, contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.PlayCircleOutline,
+                                contentDescription = stringRes(id = R.string.play),
+                                modifier = Size50Modifier,
+                                tint = Color.White,
+                            )
+                        }
                     }
 
                     is AsyncImagePainter.State.Success -> {
@@ -249,86 +247,19 @@ fun UrlImageView(
                     ContentScale.Crop,
                     defaultModifier.clickable { showImage.value = true },
                 )
-                IconButton(
-                    modifier = Modifier.size(Size75dp),
-                    onClick = { showImage.value = true },
-                ) {
-                    DownloadForOfflineIcon(Size75dp, Color.White)
-                }
+                Icon(
+                    imageVector = Icons.Default.PlayCircleOutline,
+                    contentDescription = stringRes(id = R.string.play),
+                    modifier = Size50Modifier,
+                    tint = Color.White,
+                )
             } else {
-                ImageUrlWithDownloadButton(content.url, showImage)
-            }
-        }
-    }
-}
-
-@OptIn(UnstableApi::class)
-@Composable
-fun UrlVideoView(
-    content: MediaUrlVideo,
-    accountViewModel: AccountViewModel,
-    ratio: Float = 1.0f,
-) {
-    val defaultModifier = Modifier.fillMaxSize().aspectRatio(ratio)
-
-    val automaticallyStartPlayback =
-        remember(content) {
-            mutableStateOf<Boolean>(accountViewModel.settings.startVideoPlayback())
-        }
-
-    Box(defaultModifier, contentAlignment = Alignment.Center) {
-        if (content.blurhash != null) {
-            // Always displays Blurharh to avoid size flickering
-            DisplayBlurHash(
-                content.blurhash,
-                null,
-                ContentScale.Crop,
-                defaultModifier,
-            )
-        }
-
-        if (!automaticallyStartPlayback.value) {
-            IconButton(
-                modifier = Modifier.size(Size75dp),
-                onClick = { automaticallyStartPlayback.value = true },
-            ) {
-                DownloadForOfflineIcon(Size75dp, Color.White)
-            }
-        } else {
-            GetMediaItem(
-                videoUri = content.url,
-                title = content.description,
-                artworkUri = content.artworkUri,
-                authorName = content.authorName,
-                callbackUri = content.uri,
-                mimeType = content.mimeType,
-                aspectRatio = ratio,
-                proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(content.url),
-            ) { mediaItem ->
-                GetVideoController(
-                    mediaItem = mediaItem,
-                    muted = true,
-                ) { controller ->
-                    AndroidView(
-                        modifier = Modifier,
-                        factory = { context: Context ->
-                            PlayerView(context).apply {
-                                clipToOutline = true
-                                player = controller.controller
-                                setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-
-                                controllerAutoShow = false
-                                useController = false
-
-                                hideController()
-
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
-
-                                controller.controller?.playWhenReady = true
-                            }
-                        },
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.PlayCircleOutline,
+                    contentDescription = stringRes(id = R.string.play),
+                    modifier = Size50Modifier,
+                    tint = Color.White,
+                )
             }
         }
     }

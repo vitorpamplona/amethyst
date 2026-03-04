@@ -46,13 +46,20 @@ private tailrec fun Context.getActivityWindow(): Window? =
     }
 
 @Composable
-fun getActivity(): Activity? = LocalContext.current.getActivity()
+fun getActivity(): Activity = LocalContext.current.getActivity()
 
 tailrec fun Context.getActivity(): ComponentActivity =
     when (this) {
         is ComponentActivity -> this
         is ContextWrapper -> baseContext.getActivity()
         else -> throw IllegalStateException("Requires a ComponentActivity to run")
+    }
+
+fun Context.getActivityOrNull(): ComponentActivity? =
+    when (this) {
+        is ComponentActivity -> this
+        is ContextWrapper -> baseContext.getActivity()
+        else -> null
     }
 
 @Composable

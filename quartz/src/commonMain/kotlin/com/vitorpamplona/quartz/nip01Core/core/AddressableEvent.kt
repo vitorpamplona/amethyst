@@ -21,14 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 
 @Immutable
 interface AddressableEvent : IEvent {
     fun dTag(): String
-
-    fun aTag(relayHint: NormalizedRelayUrl? = null): ATag
 
     fun address(): Address
 

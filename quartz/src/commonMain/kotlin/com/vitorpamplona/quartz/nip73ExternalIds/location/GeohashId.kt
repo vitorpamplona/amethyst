@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip73ExternalIds.location
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.utils.ensure
 
+@Stable
 class GeohashId(
     val geohash: String,
     val hint: String? = null,

@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui.chats
 import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitForResponse
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.sendAndWaitForResponseDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,29 +36,52 @@ class DmSendTracker(
     private val _status = MutableStateFlow<DmBroadcastStatus>(DmBroadcastStatus.Idle)
     val status: StateFlow<DmBroadcastStatus> = _status.asStateFlow()
 
-    suspend fun sendAndTrack(
-        event: Event,
-        relays: Set<NormalizedRelayUrl>,
-    ) {
-        if (relays.isEmpty()) {
+    /**
+     * Sends multiple event/relay pairs (e.g. NIP-17 wraps) and aggregates results.
+     * Shows per-relay success/failure across all wraps.
+     */
+    suspend fun sendBatch(events: List<Pair<Event, Set<NormalizedRelayUrl>>>) {
+        if (events.isEmpty()) return
+
+        val totalRelays = events.sumOf { it.second.size }
+        if (totalRelays == 0) {
             _status.value = DmBroadcastStatus.Failed("No relays available")
             delay(3000)
             _status.value = DmBroadcastStatus.Idle
             return
         }
 
-        _status.value = DmBroadcastStatus.Sending(0, relays.size)
+        _status.value = DmBroadcastStatus.Sending(0, totalRelays)
 
-        val success = client.sendAndWaitForResponse(event, relays, 10)
+        val allSuccessful = mutableSetOf<NormalizedRelayUrl>()
+
+        for ((event, relays) in events) {
+            val results = client.sendAndWaitForResponseDetailed(event, relays, 10)
+            allSuccessful.addAll(results.filter { it.value }.keys)
+            _status.value = DmBroadcastStatus.Sending(allSuccessful.size, totalRelays)
+        }
 
         _status.value =
-            if (success) {
-                DmBroadcastStatus.Sent(relays.size)
+            if (allSuccessful.isNotEmpty()) {
+                DmBroadcastStatus.Sent(
+                    relayCount = allSuccessful.size,
+                    relayUrls = allSuccessful.map { it.url },
+                )
             } else {
                 DmBroadcastStatus.Failed("No relay accepted the message")
             }
 
         delay(3000)
         _status.value = DmBroadcastStatus.Idle
+    }
+
+    /**
+     * Sends a single event to relays with tracking.
+     */
+    suspend fun sendAndTrack(
+        event: Event,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        sendBatch(listOf(event to relays))
     }
 }

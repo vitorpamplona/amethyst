@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner
 
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
@@ -28,4 +28,4 @@ fun signString(
     message: String,
     privKey: ByteArray,
     nonce: ByteArray = RandomInstance.bytes(32),
-): ByteArray = Nip01.sign(sha256(message.toByteArray()), privKey, nonce)
+): ByteArray = Nip01Crypto.sign(sha256(message.toByteArray()), privKey, nonce)

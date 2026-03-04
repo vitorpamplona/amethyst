@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AccountSwitchBottomSheet(
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -94,7 +94,7 @@ fun AccountSwitchBottomSheet(
         ) {
             Text(stringRes(R.string.account_switch_select_account), fontWeight = FontWeight.Bold)
         }
-        DisplayAllAccounts(accountViewModel, accountStateViewModel)
+        DisplayAllAccounts(accountViewModel, accountSessionManager)
         Row(
             modifier =
                 Modifier
@@ -110,24 +110,24 @@ fun AccountSwitchBottomSheet(
     }
 
     if (popupExpanded) {
-        AddAccountDialog(null, accountStateViewModel) { popupExpanded = false }
+        AddAccountDialog(null, accountSessionManager) { popupExpanded = false }
     }
 }
 
 @Composable
 private fun DisplayAllAccounts(
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     val accounts by LocalPreferences.accountsFlow().collectAsStateWithLifecycle()
-    accounts?.forEach { acc -> DisplayAccount(acc, accountViewModel, accountStateViewModel) }
+    accounts?.forEach { acc -> DisplayAccount(acc, accountViewModel, accountSessionManager) }
 }
 
 @Composable
 fun DisplayAccount(
     acc: AccountInfo,
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     var baseUser by remember(acc) {
         mutableStateOf<User?>(
@@ -153,7 +153,7 @@ fun DisplayAccount(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable { accountStateViewModel.switchUser(acc) }
+                    .clickable { accountSessionManager.switchUser(acc) }
                     .padding(16.dp, 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -179,7 +179,7 @@ fun DisplayAccount(
                 }
             }
 
-            LogoutButton(acc, accountStateViewModel)
+            LogoutButton(acc, accountSessionManager)
         }
     }
 }
@@ -247,7 +247,7 @@ private fun AccountName(
 @Composable
 private fun LogoutButton(
     acc: AccountInfo,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
 ) {
     var logoutDialog by remember { mutableStateOf(false) }
     if (logoutDialog) {
@@ -259,7 +259,7 @@ private fun LogoutButton(
                 TextButton(
                     onClick = {
                         logoutDialog = false
-                        accountStateViewModel.logOff(acc)
+                        accountSessionManager.logOff(acc)
                     },
                 ) {
                     Text(text = stringRes(R.string.log_out))

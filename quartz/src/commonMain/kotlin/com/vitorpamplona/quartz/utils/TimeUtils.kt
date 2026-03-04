@@ -55,6 +55,8 @@ object TimeUtils {
 
     fun oneDayAgo() = now() - ONE_DAY
 
+    fun oneDayAhead() = now() + ONE_DAY
+
     fun eightHoursAgo() = now() - EIGHT_HOURS
 
     fun twoDays() = ONE_DAY * 2

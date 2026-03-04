@@ -2,7 +2,7 @@
 accompanistAdaptive = "0.37.3"
 composeMultiplatform = "1.10.0"
 activityCompose = "1.12.4"
-agp = "9.0.0"
+agp = "9.1.0"
 android-compileSdk = "36"
 android-minSdk = "26"
 android-targetSdk = "36"
@@ -26,6 +26,7 @@ javaKeyring = "1.0.4"
 jna = "5.18.1"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
+kchesslib = "1.0.0"
 kotlin = "2.3.10"
 kotlinxCollectionsImmutable = "0.4.0"
 kotlinxCoroutinesCore = "1.10.2"
@@ -48,7 +49,7 @@ secp256k1KmpJniAndroid = "0.22.0"
 securityCryptoKtx = "1.1.0"
 spotless = "8.2.1"
 tarsosdsp = "2.5"
-torAndroid = "0.4.8.22"
+torAndroid = "0.4.9.5"
 translate = "17.0.3"
 unifiedpush = "3.0.10"
 urlDetector = "0.1.23"
@@ -99,6 +100,7 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+androidx-media3-ui-compose-material3 = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
 androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCryptoKtx" }
@@ -113,6 +115,7 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
@@ -123,6 +126,7 @@ java-keyring = { group = "com.github.javakeyring", name = "java-keyring", versio
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }

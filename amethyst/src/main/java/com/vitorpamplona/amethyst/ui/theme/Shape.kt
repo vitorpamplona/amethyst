@@ -221,8 +221,9 @@ val NotificationIconModifierSmaller = Modifier.width(55.dp).padding(end = 4.dp)
 val ZapPictureCommentModifier = Modifier.height(35.dp).widthIn(min = 35.dp)
 val ChatHeadlineBorders = StdPadding
 
-val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
-val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
+val VolumeBottomIconSize = Modifier.size(60.dp).padding(5.dp)
+val PinBottomIconSize = Modifier.size(60.dp).padding(5.dp)
+val PlayIconSize = Modifier.size(110.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
 val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = QuoteBorder)
@@ -375,6 +376,7 @@ val QuickActionPopupShadow = Modifier.shadow(elevation = Size6dp, shape = Smalle
 val SpacedBy2dp = Arrangement.spacedBy(Size2dp)
 val SpacedBy5dp = Arrangement.spacedBy(Size5dp)
 val SpacedBy10dp = Arrangement.spacedBy(Size10dp)
+val SpacedBy55dp = Arrangement.spacedBy(Size55dp)
 
 val PopupUpEffect = RoundedCornerShape(0.dp, 0.dp, 15.dp, 15.dp)
 

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip73ExternalIds
 
+import androidx.compose.runtime.Stable
+
+@Stable
 interface ExternalId {
     fun toScope(): String
 

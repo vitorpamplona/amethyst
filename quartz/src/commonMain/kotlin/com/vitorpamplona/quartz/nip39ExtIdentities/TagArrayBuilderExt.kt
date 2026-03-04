@@ -20,19 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip39ExtIdentities
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 
-fun TagArrayBuilder<MetadataEvent>.claims(identities: List<IdentityClaimTag>) = addAll(identities.map { it.toTagArray() })
+fun <T : Event> TagArrayBuilder<T>.claims(identities: List<IdentityClaimTag>) = addAll(identities.map { it.toTagArray() })
 
-fun TagArrayBuilder<MetadataEvent>.twitterClaim(twitter: TwitterIdentity) = add(twitter.toTagArray())
+fun <T : Event> TagArrayBuilder<T>.twitterClaim(twitter: TwitterIdentity) = add(twitter.toTagArray())
 
-fun TagArrayBuilder<MetadataEvent>.mastodonClaim(mastodon: MastodonIdentity) = add(mastodon.toTagArray())
+fun <T : Event> TagArrayBuilder<T>.mastodonClaim(mastodon: MastodonIdentity) = add(mastodon.toTagArray())
 
-fun TagArrayBuilder<MetadataEvent>.githubClaim(github: GitHubIdentity) = add(github.toTagArray())
+fun <T : Event> TagArrayBuilder<T>.githubClaim(github: GitHubIdentity) = add(github.toTagArray())
 
-fun TagArrayBuilder<MetadataEvent>.twitterClaim(twitterUrl: String) = TwitterIdentity.parseProofUrl(twitterUrl)?.let { twitterClaim(it) }
+fun <T : Event> TagArrayBuilder<T>.twitterClaim(twitterUrl: String) = TwitterIdentity.parseProofUrl(twitterUrl)?.let { twitterClaim(it) }
 
-fun TagArrayBuilder<MetadataEvent>.mastodonClaim(mastodonUrl: String) = MastodonIdentity.parseProofUrl(mastodonUrl)?.let { mastodonClaim(it) }
+fun <T : Event> TagArrayBuilder<T>.mastodonClaim(mastodonUrl: String) = MastodonIdentity.parseProofUrl(mastodonUrl)?.let { mastodonClaim(it) }
 
-fun TagArrayBuilder<MetadataEvent>.githubClaim(githubUrl: String) = GitHubIdentity.parseProofUrl(githubUrl)?.let { githubClaim(it) }
+fun <T : Event> TagArrayBuilder<T>.githubClaim(githubUrl: String) = GitHubIdentity.parseProofUrl(githubUrl)?.let { githubClaim(it) }

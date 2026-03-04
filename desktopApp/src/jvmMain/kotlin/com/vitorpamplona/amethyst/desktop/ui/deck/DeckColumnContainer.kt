@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.desktop.RelaySettingsScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -202,6 +203,8 @@ internal fun RootContent(
             DesktopMessagesScreen(
                 account = iAccount,
                 cacheProvider = localCache,
+                relayManager = relayManager,
+                localCache = localCache,
                 onNavigateToProfile = onNavigateToProfile,
             )
         }
@@ -265,6 +268,14 @@ internal fun RootContent(
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
                 onZapFeedback = onZapFeedback,
+            )
+        }
+
+        DeckColumnType.Chess -> {
+            ChessScreen(
+                relayManager = relayManager,
+                account = account,
+                onBack = {},
             )
         }
 

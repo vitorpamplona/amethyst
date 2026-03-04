@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +28,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,10 +35,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,7 +70,10 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -88,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.launch
@@ -195,7 +197,11 @@ fun ChatPane(
                         onAuthorClick = onNavigateToProfile,
                         onReaction = { note, emoji ->
                             scope.launch {
-                                sendWrappedReaction(note, emoji, roomKey, account)
+                                try {
+                                    sendWrappedReaction(note, emoji, roomKey, account)
+                                } catch (e: Exception) {
+                                    println("Failed to send reaction: ${e.message}")
+                                }
                             }
                         },
                     )
@@ -271,6 +277,7 @@ private fun MessageList(
                 note = note,
                 isMe = isMe,
                 isDraft = isDraft,
+                account = account,
                 onAuthorClick = onAuthorClick,
                 onReaction = { emoji -> onReaction(note, emoji) },
             )
@@ -290,7 +297,8 @@ private val QUICK_REACTIONS =
     )
 
 /**
- * Wraps a ChatMessageCompose with hover-triggered reaction bar.
+ * Wraps a ChatMessageCompose with reaction icon in the detail row
+ * and displays existing reactions below the bubble.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -298,10 +306,37 @@ private fun MessageWithReactions(
     note: Note,
     isMe: Boolean,
     isDraft: Boolean,
+    account: IAccount,
     onAuthorClick: (String) -> Unit,
     onReaction: (String) -> Unit,
 ) {
     var isHovered by remember { mutableStateOf(false) }
+    var showPicker by remember { mutableStateOf(false) }
+    val showIcon = (isHovered || showPicker) && !isDraft
+
+    // Decrypt NIP-04 content asynchronously; NIP-17 content is already plaintext
+    val event = note.event
+    var decryptedContent by remember(note.idHex) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(note.idHex, event) {
+        decryptedContent =
+            when (event) {
+                is PrivateDmEvent -> {
+                    try {
+                        event.decryptContent(account.signer)
+                    } catch (_: Exception) {
+                        event.content
+                    }
+                }
+
+                else -> {
+                    event?.content
+                }
+            }
+    }
+
+    // Observe reaction changes
+    val reactions = note.reactions
 
     Box(
         modifier =
@@ -310,60 +345,105 @@ private fun MessageWithReactions(
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false },
     ) {
-        ChatMessageCompose(
-            note = note,
-            isLoggedInUser = isMe,
-            isDraft = isDraft,
-            isComplete = true,
-            drawAuthorInfo = !isMe,
-            onClick = { false },
-            onAuthorClick = {
-                note.author?.pubkeyHex?.let { onAuthorClick(it) }
-            },
-            authorLine = {
-                note.author?.let { author ->
-                    Text(
-                        text = author.toBestDisplayName(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            },
-            detailRow = {
-                note.createdAt()?.let { timestamp ->
-                    Text(
-                        text = timestamp.toTimeAgo(withDot = false),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    )
-                }
-            },
-        ) { _ ->
-            // Message body content
-            Text(
-                text = note.event?.content ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+        Column {
+            ChatMessageCompose(
+                note = note,
+                isLoggedInUser = isMe,
+                isDraft = isDraft,
+                isComplete = true,
+                hasDetailsToShow = reactions.isNotEmpty(),
+                drawAuthorInfo = !isMe,
+                onClick = { false },
+                onAuthorClick = {
+                    note.author?.pubkeyHex?.let { onAuthorClick(it) }
+                },
+                authorLine = {
+                    note.author?.let { author ->
+                        Text(
+                            text = author.toBestDisplayName(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
+                detailRow = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        // Timestamp
+                        note.createdAt()?.let { timestamp ->
+                            Text(
+                                text = timestamp.toTimeAgo(withDot = false),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        }
 
-        // Reaction bar - shown on hover, positioned at top-right for others' messages,
-        // top-left for own messages
-        AnimatedVisibility(
-            visible = isHovered && !isDraft,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier =
-                Modifier
-                    .align(if (isMe) Alignment.TopStart else Alignment.TopEnd)
-                    .offset(
-                        x = if (isMe) 8.dp else (-8).dp,
-                        y = (-4).dp,
-                    ),
-        ) {
-            ReactionBar(onReaction = onReaction)
+                        // Reaction counts
+                        reactions.forEach { (emoji, notes) ->
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            ) {
+                                Text(
+                                    text =
+                                        if (notes.size > 1) {
+                                            "$emoji ${notes.size}"
+                                        } else {
+                                            emoji
+                                        },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                )
+                            }
+                        }
+
+                        // AddReaction icon on hover
+                        if (showIcon) {
+                            Box {
+                                IconButton(
+                                    onClick = { showPicker = !showPicker },
+                                    modifier = Modifier.size(20.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AddReaction,
+                                        contentDescription = "React",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+
+                                if (showPicker) {
+                                    Popup(
+                                        alignment = Alignment.TopCenter,
+                                        offset = IntOffset(0, -44),
+                                        onDismissRequest = { showPicker = false },
+                                        properties = PopupProperties(focusable = true),
+                                    ) {
+                                        ReactionBar(
+                                            onReaction = { emoji ->
+                                                onReaction(emoji)
+                                                showPicker = false
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+            ) { _ ->
+                SelectionContainer {
+                    Text(
+                        text = decryptedContent ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
         }
     }
 }
@@ -377,9 +457,14 @@ private suspend fun sendWrappedReaction(
     roomKey: ChatroomKey,
     account: IAccount,
 ) {
-    val event = note.event ?: return
+    val event = note.event
+    if (event == null) {
+        println("sendWrappedReaction: note.event is null for ${note.idHex}")
+        return
+    }
     val eventBundle = EventHintBundle(event)
     val recipients = roomKey.users.toList()
+    println("sendWrappedReaction: sending '$emoji' to ${recipients.size} recipients for event ${event.id.take(8)}")
 
     val result =
         NIP17Factory().createReactionWithinGroup(
@@ -389,6 +474,7 @@ private suspend fun sendWrappedReaction(
             signer = account.signer,
         )
 
+    println("sendWrappedReaction: created ${result.wraps.size} wraps, broadcasting...")
     account.sendGiftWraps(result.wraps)
 }
 

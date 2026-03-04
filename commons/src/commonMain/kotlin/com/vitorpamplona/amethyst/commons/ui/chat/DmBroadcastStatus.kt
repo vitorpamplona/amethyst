@@ -38,6 +38,7 @@ sealed class DmBroadcastStatus {
 
     data class Sent(
         val relayCount: Int,
+        val relayUrls: List<String> = emptyList(),
     ) : DmBroadcastStatus()
 
     data class Failed(

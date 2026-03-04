@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.R.attr.maxLines
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.InlineTextContent
@@ -550,7 +549,10 @@ fun CreateClickableTextWithEmoji(
                 text =
                     buildAnnotatedString {
                         withLink(
-                            LinkAnnotation.Clickable("me") {
+                            LinkAnnotation.Clickable(
+                                "me",
+                                TextLinkStyles(style = style.toSpanStyle()),
+                            ) {
                                 onClick()
                             },
                         ) {

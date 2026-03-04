@@ -26,8 +26,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
@@ -38,7 +36,6 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -68,13 +65,7 @@ class MainActivity : AppCompatActivity() {
         setContent {
             StringResSetup()
             AmethystTheme {
-                val accountStateViewModel: AccountStateViewModel = viewModel()
-
-                LaunchedEffect(key1 = Unit) {
-                    accountStateViewModel.loginWithDefaultAccountIfLoggedOff()
-                }
-
-                AccountScreen(accountStateViewModel)
+                AccountScreen(Amethyst.instance.sessionManager)
             }
         }
     }

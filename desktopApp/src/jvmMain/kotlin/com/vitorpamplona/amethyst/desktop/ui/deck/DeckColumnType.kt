@@ -39,6 +39,8 @@ sealed class DeckColumnType {
 
     object MyProfile : DeckColumnType()
 
+    object Chess : DeckColumnType()
+
     object Settings : DeckColumnType()
 
     data class Profile(
@@ -63,6 +65,7 @@ sealed class DeckColumnType {
             Bookmarks -> "Bookmarks"
             GlobalFeed -> "Global"
             MyProfile -> "Profile"
+            Chess -> "Chess"
             Settings -> "Settings"
             is Profile -> "Profile"
             is Thread -> "Thread"
@@ -79,6 +82,7 @@ sealed class DeckColumnType {
             Bookmarks -> "bookmarks"
             GlobalFeed -> "global"
             MyProfile -> "my_profile"
+            Chess -> "chess"
             Settings -> "settings"
             is Profile -> "profile"
             is Thread -> "thread"

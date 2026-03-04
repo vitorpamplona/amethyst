@@ -127,6 +127,15 @@ fun DmBroadcastBanner(
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
+
+                if (status is DmBroadcastStatus.Sent && status.relayUrls.isNotEmpty()) {
+                    Text(
+                        text = status.relayUrls.joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 28.dp),
+                    )
+                }
             }
         }
     }
