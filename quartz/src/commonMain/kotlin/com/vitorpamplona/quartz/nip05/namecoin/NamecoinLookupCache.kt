@@ -20,19 +20,21 @@
  */
 package com.vitorpamplona.quartz.nip05.namecoin
 
+import androidx.collection.LruCache
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 data class CachedResult(
     val result: NamecoinNostrResult?,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = TimeUtils.now(),
 )
 
 class NamecoinLookupCache(
     private val maxEntries: Int = 500,
-    private val ttlMs: Long = 3_600_000L, // 1 hour
+    private val ttlSecs: Long = 3_600L, // 1 hour
 ) {
-    private val cache = LinkedHashMap<String, CachedResult>(maxEntries, 0.75f, true)
+    private val cache = LruCache<String, CachedResult>(maxEntries)
     private val mutex = Mutex()
 
     /**
@@ -44,8 +46,8 @@ class NamecoinLookupCache(
         mutex.withLock {
             val key = cacheKey(identifier)
             val entry = cache[key] ?: return null
-            val age = System.currentTimeMillis() - entry.timestamp
-            if (age > ttlMs) {
+            val age = TimeUtils.now() - entry.timestamp
+            if (age > ttlSecs) {
                 cache.remove(key)
                 return null
             }
@@ -57,12 +59,7 @@ class NamecoinLookupCache(
         result: NamecoinNostrResult?,
     ) = mutex.withLock {
         val key = cacheKey(identifier)
-        if (cache.size >= maxEntries) {
-            // Remove eldest (LRU) entry
-            val eldest = cache.entries.firstOrNull()
-            if (eldest != null) cache.remove(eldest.key)
-        }
-        cache[key] = CachedResult(result)
+        cache.put(key, CachedResult(result))
     }
 
     suspend fun invalidate(identifier: String) =
@@ -72,6 +69,6 @@ class NamecoinLookupCache(
 
     suspend fun clear() =
         mutex.withLock {
-            cache.clear()
+            cache.evictAll()
         }
 }
