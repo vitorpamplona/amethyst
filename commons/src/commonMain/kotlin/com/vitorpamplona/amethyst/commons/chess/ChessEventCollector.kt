@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.chess
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip64Chess.JesterEvent
-import com.vitorpamplona.quartz.nip64Chess.JesterGameEvents
-import com.vitorpamplona.quartz.nip64Chess.JesterProtocol
-import com.vitorpamplona.quartz.nip64Chess.toJesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
+import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

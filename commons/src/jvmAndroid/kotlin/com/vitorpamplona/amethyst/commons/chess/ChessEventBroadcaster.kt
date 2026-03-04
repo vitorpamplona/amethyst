@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip64Chess.JesterProtocol
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import kotlinx.coroutines.delay
 
 /**

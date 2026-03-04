@@ -39,9 +39,9 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
