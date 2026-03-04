@@ -51,76 +51,74 @@ fun buildAnnotatedStringWithUrlHighlighting(
     color: Color,
 ): TransformedText {
     val substitutions = mutableListOf<RangesChanges>()
+    var originalPos = 0
+    var transformedPos = 0
 
     val newText =
         buildAnnotatedString {
-            val builderBefore = StringBuilder() // important to correctly measure Tag start and end
-            val builderAfter = StringBuilder() // important to correctly measure Tag start and end
-            append(
-                text.text.split('\n').joinToString("\n") { paragraph: String ->
-                    paragraph.split(' ').joinToString(" ") { word: String ->
-                        try {
-                            if (word.startsWith("@npub") && word.length >= 64) {
-                                val keyB32 = word.substring(0, 64)
-                                val restOfWord = word.substring(64)
+            val paragraphs = text.text.split('\n')
 
-                                val startIndex = builderBefore.toString().length
+            for ((paragraphIndex, paragraph) in paragraphs.withIndex()) {
+                if (paragraphIndex > 0) {
+                    append('\n')
+                    originalPos++
+                    transformedPos++
+                }
 
-                                builderBefore.append(
-                                    "$keyB32$restOfWord ",
-                                ) // accounts for the \n at the end of each paragraph
+                val words = paragraph.split(' ')
 
-                                val endIndex = startIndex + keyB32.length
-
-                                val key = decodePublicKey(keyB32.removePrefix("@"))
-                                val user = LocalCache.getOrCreateUser(key.toHexKey())
-
-                                val newWord = "@${user.toBestDisplayName()}"
-                                val startNew = builderAfter.toString().length
-
-                                builderAfter.append(
-                                    "$newWord$restOfWord ",
-                                ) // accounts for the \n at the end of each paragraph
-
-                                substitutions.add(
-                                    RangesChanges(
-                                        TextRange(startIndex, endIndex),
-                                        TextRange(startNew, startNew + newWord.length),
-                                    ),
-                                )
-                                newWord + restOfWord
-                            } else if (Patterns.WEB_URL.matcher(word).matches()) {
-                                val startIndex = builderBefore.toString().length
-                                val endIndex = startIndex + word.length
-
-                                val startNew = builderAfter.toString().length
-                                val endNew = startNew + word.length
-
-                                substitutions.add(
-                                    RangesChanges(
-                                        TextRange(startIndex, endIndex),
-                                        TextRange(startNew, endNew),
-                                    ),
-                                )
-
-                                builderBefore.append("$word ")
-                                builderAfter.append("$word ")
-                                word
-                            } else {
-                                builderBefore.append("$word ")
-                                builderAfter.append("$word ")
-                                word
-                            }
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            // if it can't parse the key, don't try to change.
-                            builderBefore.append("$word ")
-                            builderAfter.append("$word ")
-                            word
-                        }
+                for ((wordIndex, word) in words.withIndex()) {
+                    if (wordIndex > 0) {
+                        append(' ')
+                        originalPos++
+                        transformedPos++
                     }
-                },
-            )
+
+                    try {
+                        if (word.startsWith("@npub") && word.length >= 64) {
+                            val keyB32 = word.substring(0, 64)
+                            val restOfWord = word.substring(64)
+
+                            val key = decodePublicKey(keyB32.removePrefix("@"))
+                            val user = LocalCache.getOrCreateUser(key.toHexKey())
+                            val displayName = "@${user.toBestDisplayName()}"
+
+                            substitutions.add(
+                                RangesChanges(
+                                    TextRange(originalPos, originalPos + keyB32.length),
+                                    TextRange(transformedPos, transformedPos + displayName.length),
+                                ),
+                            )
+
+                            append(displayName)
+                            append(restOfWord)
+                            originalPos += word.length
+                            transformedPos += displayName.length + restOfWord.length
+                        } else if (Patterns.WEB_URL.matcher(word).matches()) {
+                            substitutions.add(
+                                RangesChanges(
+                                    TextRange(originalPos, originalPos + word.length),
+                                    TextRange(transformedPos, transformedPos + word.length),
+                                ),
+                            )
+
+                            append(word)
+                            originalPos += word.length
+                            transformedPos += word.length
+                        } else {
+                            append(word)
+                            originalPos += word.length
+                            transformedPos += word.length
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        // if it can't parse the key, don't try to change.
+                        append(word)
+                        originalPos += word.length
+                        transformedPos += word.length
+                    }
+                }
+            }
 
             substitutions.forEach {
                 addStyle(
@@ -135,49 +133,51 @@ fun buildAnnotatedStringWithUrlHighlighting(
             }
         }
 
-    val numberOffsetTranslator =
-        object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int {
-                val inInsideRange =
-                    substitutions.firstOrNull { offset > it.original.start && offset < it.original.end }
-
-                if (inInsideRange != null) {
-                    val percentInRange =
-                        (offset - inInsideRange.original.start) / (inInsideRange.original.length.toFloat())
-                    return (inInsideRange.modified.start + inInsideRange.modified.length * percentInRange).toInt()
-                }
-
-                val lastRangeThrough = substitutions.lastOrNull { offset >= it.original.end }
-
-                return if (lastRangeThrough != null) {
-                    lastRangeThrough.modified.end + (offset - lastRangeThrough.original.end)
-                } else {
-                    offset
-                }
-            }
-
-            override fun transformedToOriginal(offset: Int): Int {
-                val inInsideRange =
-                    substitutions.firstOrNull { offset > it.modified.start && offset < it.modified.end }
-
-                if (inInsideRange != null) {
-                    val percentInRange =
-                        (offset - inInsideRange.modified.start) / (inInsideRange.modified.length.toFloat())
-                    return (inInsideRange.original.start + inInsideRange.original.length * percentInRange).toInt()
-                }
-
-                val lastRangeThrough = substitutions.lastOrNull { offset >= it.modified.end }
-
-                return if (lastRangeThrough != null) {
-                    lastRangeThrough.original.end + (offset - lastRangeThrough.modified.end)
-                } else {
-                    offset
-                }
-            }
-        }
-
     return TransformedText(
         newText,
-        numberOffsetTranslator,
+        ProportionalOffsetMapping(substitutions),
     )
+}
+
+/**
+ * Maps cursor offsets between original and transformed text using proportional
+ * interpolation within substituted ranges (e.g. @npub... -> @DisplayName).
+ *
+ * For offsets inside a substitution, the cursor position is mapped proportionally
+ * so it lands at a visually corresponding position in the other text.
+ * For offsets outside substitutions, a 1:1 shift is applied based on the
+ * cumulative length difference from preceding substitutions.
+ */
+private class ProportionalOffsetMapping(
+    private val substitutions: List<RangesChanges>,
+) : OffsetMapping {
+    override fun originalToTransformed(offset: Int): Int {
+        val inside = substitutions.find { offset > it.original.start && offset < it.original.end }
+        if (inside != null) {
+            val fraction = (offset - inside.original.start) / inside.original.length.toFloat()
+            return (inside.modified.start + inside.modified.length * fraction).toInt()
+        }
+
+        val preceding = substitutions.lastOrNull { offset >= it.original.end }
+        return if (preceding != null) {
+            preceding.modified.end + (offset - preceding.original.end)
+        } else {
+            offset
+        }
+    }
+
+    override fun transformedToOriginal(offset: Int): Int {
+        val inside = substitutions.find { offset > it.modified.start && offset < it.modified.end }
+        if (inside != null) {
+            val fraction = (offset - inside.modified.start) / inside.modified.length.toFloat()
+            return (inside.original.start + inside.original.length * fraction).toInt()
+        }
+
+        val preceding = substitutions.lastOrNull { offset >= it.modified.end }
+        return if (preceding != null) {
+            preceding.original.end + (offset - preceding.modified.end)
+        } else {
+            offset
+        }
+    }
 }
