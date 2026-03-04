@@ -23,9 +23,15 @@ package com.vitorpamplona.quartz.nip52Calendar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class CalendarEvent(
@@ -36,16 +42,26 @@ class CalendarEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun calendarEventAddresses() = taggedAddresses()
+
     companion object {
         const val KIND = 31924
         const val ALT = "Calendar"
 
-        suspend fun create(
-            signer: NostrSigner,
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            title: String,
+            content: String = "",
+            dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-        ): CalendarEvent {
-            val tags = arrayOf(AltTag.assemble(ALT))
-            return signer.sign(createdAt, KIND, tags, "")
+            initializer: TagArrayBuilder<CalendarEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, content, createdAt) {
+            dTag(dTag)
+            title(title)
+            alt(ALT)
+            initializer()
         }
     }
 }

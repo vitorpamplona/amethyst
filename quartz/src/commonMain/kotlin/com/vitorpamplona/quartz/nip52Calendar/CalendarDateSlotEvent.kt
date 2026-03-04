@@ -23,10 +23,22 @@ package com.vitorpamplona.quartz.nip52Calendar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip52Calendar.tags.LocationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class CalendarDateSlotEvent(
@@ -37,25 +49,48 @@ class CalendarDateSlotEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun location() = tags.firstTagValue("location")
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
+
+    fun locations() = tags.mapNotNull(LocationTag::parse)
 
     fun start() = tags.firstTagValue("start")
 
     fun end() = tags.firstTagValue("end")
 
-    //  ["start", "<YYYY-MM-DD>"],
-    //  ["end", "<YYYY-MM-DD>"],
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    fun geohash() = tags.firstNotNullOfOrNull(GeoHashTag::parse)
+
+    fun hashtags() = tags.hashtags()
+
+    fun participants() = tags.mapNotNull(PTag::parse)
+
+    fun references() = tags.references()
 
     companion object {
         const val KIND = 31922
         const val ALT = "Full-day calendar event"
 
-        suspend fun create(
-            signer: NostrSigner,
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            title: String,
+            start: String,
+            content: String = "",
+            end: String? = null,
+            dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-        ): CalendarDateSlotEvent {
-            val tags = arrayOf(AltTag.assemble(ALT))
-            return signer.sign(createdAt, KIND, tags, "")
+            initializer: TagArrayBuilder<CalendarDateSlotEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, content, createdAt) {
+            dTag(dTag)
+            title(title)
+            startDate(start)
+            end?.let { endDate(it) }
+            alt(ALT)
+            initializer()
         }
     }
 }
