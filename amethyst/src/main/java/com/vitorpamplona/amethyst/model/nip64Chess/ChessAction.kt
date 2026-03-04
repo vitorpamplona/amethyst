@@ -25,9 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
-import com.vitorpamplona.quartz.nip64Chess.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 

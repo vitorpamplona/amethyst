@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip64Chess.jester
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -30,13 +31,6 @@ import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.serialization.json.Json
-
-private val json =
-    Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = false
-    }
 
 /**
  * Jester Chess Event (Kind 30)
@@ -58,7 +52,7 @@ class JesterEvent(
 ) : Event(id, pubKey, createdAt, JesterProtocol.KIND, tags, content, sig) {
     private val parsedContent: JesterContent? by lazy {
         try {
-            json.decodeFromString<JesterContent>(content)
+            JsonMapper.fromJson<JesterContent>(content)
         } catch (e: Exception) {
             null
         }
@@ -133,7 +127,7 @@ class JesterEvent(
                     nonce = nonce,
                     playerColor = if (playerColor == Color.WHITE) "white" else "black",
                 )
-            return eventTemplate(KIND, json.encodeToString(content), createdAt) {
+            return eventTemplate(KIND, JsonMapper.toJson(content), createdAt) {
                 // Reference the standard start position for game discovery
                 add(arrayOf("e", JesterProtocol.START_POSITION_HASH))
                 initializer()
@@ -163,7 +157,7 @@ class JesterEvent(
                     nonce = nonce,
                     playerColor = if (playerColor == Color.WHITE) "white" else "black",
                 )
-            return eventTemplate(KIND, json.encodeToString(content), createdAt) {
+            return eventTemplate(KIND, JsonMapper.toJson(content), createdAt) {
                 // Reference the standard start position
                 add(arrayOf("e", JesterProtocol.START_POSITION_HASH))
                 // Tag the opponent for notifications (only if valid pubkey)
@@ -202,7 +196,7 @@ class JesterEvent(
                     move = move,
                     history = history,
                 )
-            return eventTemplate(KIND, json.encodeToString(content), createdAt) {
+            return eventTemplate(KIND, JsonMapper.toJson(content), createdAt) {
                 // e-tags: [startId, headId]
                 add(arrayOf("e", startEventId))
                 add(arrayOf("e", headEventId))
@@ -241,7 +235,7 @@ class JesterEvent(
                     result = result.notation,
                     termination = termination.name.lowercase(),
                 )
-            return eventTemplate(KIND, json.encodeToString(content), createdAt) {
+            return eventTemplate(KIND, JsonMapper.toJson(content), createdAt) {
                 add(arrayOf("e", startEventId))
                 add(arrayOf("e", headEventId))
                 // Tag opponent for notifications (only if valid pubkey)
@@ -270,7 +264,7 @@ fun Event.isJesterEvent(): Boolean = kind == JesterProtocol.KIND
 fun Event.isJesterStartEvent(): Boolean {
     if (kind != JesterProtocol.KIND) return false
     return try {
-        val content = json.decodeFromString<JesterContent>(this.content)
+        val content = JsonMapper.fromJson<JesterContent>(this.content)
         content.kind == JesterProtocol.CONTENT_KIND_START && content.history.isEmpty()
     } catch (e: Exception) {
         false
@@ -283,7 +277,7 @@ fun Event.isJesterStartEvent(): Boolean {
 fun Event.isJesterMoveEvent(): Boolean {
     if (kind != JesterProtocol.KIND) return false
     return try {
-        val content = json.decodeFromString<JesterContent>(this.content)
+        val content = JsonMapper.fromJson<JesterContent>(this.content)
         content.kind == JesterProtocol.CONTENT_KIND_MOVE &&
             content.history.isNotEmpty() &&
             tags.count { it.size >= 2 && it[0] == "e" } == 2

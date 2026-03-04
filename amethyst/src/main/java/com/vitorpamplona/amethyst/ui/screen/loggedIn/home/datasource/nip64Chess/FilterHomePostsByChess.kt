@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.chess.ChessTopNavPerRelayFil
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 

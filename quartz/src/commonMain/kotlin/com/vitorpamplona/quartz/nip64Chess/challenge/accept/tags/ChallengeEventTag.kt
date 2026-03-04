@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.accept.tags
+package com.vitorpamplona.quartz.nip64Chess.challenge.accept.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 

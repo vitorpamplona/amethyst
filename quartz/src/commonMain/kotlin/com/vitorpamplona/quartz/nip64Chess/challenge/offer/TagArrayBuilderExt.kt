@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.accept
+package com.vitorpamplona.quartz.nip64Chess.challenge.offer
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.ChallengeEventTag
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.toOpponentTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.tags.PlayerColorTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.tags.TimeControlTag
 
-fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenge(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = addUnique(ChallengeEventTag.assemble(challengeHint))
+fun TagArrayBuilder<LiveChessGameChallengeEvent>.playerColor(color: Color) = addUnique(PlayerColorTag.assemble(color))
 
-fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenger(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = add(challengeHint.toOpponentTag().toTagArray())
+fun TagArrayBuilder<LiveChessGameChallengeEvent>.timeControl(timeControl: String) = addUnique(TimeControlTag.Companion.assemble(timeControl))

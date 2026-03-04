@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent

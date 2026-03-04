@@ -30,8 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip64Chess.accept.LiveChessGameAcceptEvent
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent

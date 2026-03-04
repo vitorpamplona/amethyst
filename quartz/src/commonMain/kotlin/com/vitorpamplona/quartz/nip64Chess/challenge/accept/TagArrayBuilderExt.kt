@@ -18,23 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.challenge.tags
+package com.vitorpamplona.quartz.nip64Chess.challenge.accept
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.tags.ChallengeEventTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.tags.toOpponentTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 
-class TimeControlTag {
-    companion object {
-        const val TAG_NAME = "time_control"
+fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenge(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = addUnique(ChallengeEventTag.assemble(challengeHint))
 
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
-        }
-
-        fun assemble(timeControl: String) = arrayOf(TAG_NAME, timeControl)
-    }
-}
+fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenger(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = add(challengeHint.toOpponentTag().toTagArray())

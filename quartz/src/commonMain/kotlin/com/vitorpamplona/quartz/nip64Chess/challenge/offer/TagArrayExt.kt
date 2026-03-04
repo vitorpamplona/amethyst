@@ -18,9 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.accept
+package com.vitorpamplona.quartz.nip64Chess.challenge.offer
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.ChallengeEventTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.tags.PlayerColorTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.tags.TimeControlTag
 
-fun TagArray.challengeEventId() = firstNotNullOfOrNull(ChallengeEventTag::parse)
+fun TagArray.playerColor() = firstNotNullOfOrNull(PlayerColorTag::parse)
+
+fun TagArray.timeControl() = firstNotNullOfOrNull(TimeControlTag.Companion::parse)

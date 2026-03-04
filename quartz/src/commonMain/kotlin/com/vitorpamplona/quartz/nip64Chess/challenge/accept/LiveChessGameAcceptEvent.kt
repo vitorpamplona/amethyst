@@ -18,35 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.challenge
+package com.vitorpamplona.quartz.nip64Chess.challenge.accept
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
-import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
-import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.let
 
 /**
- * Live Chess Game Challenge Event (Kind 30064)
+ * Live Chess Game Accept Event (Kind 30065)
  *
- * Challenge another player to a chess game or create an open challenge.
- * This is a parameterized replaceable event.
+ * Accept a chess game challenge
  *
  * Tags:
- * - d: game_id (unique identifier for this game)
- * - p: opponent pubkey (optional, for direct challenges)
- * - player_color: "white" or "black"
- * - time_control: optional time control (e.g., "10+0", "5+3")
+ * - d: game_id (same as challenge)
+ * - e: challenge event ID
+ * - p: challenger pubkey
  */
 @Immutable
-class LiveChessGameChallengeEvent(
+class LiveChessGameAcceptEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -54,28 +50,21 @@ class LiveChessGameChallengeEvent(
     content: String,
     sig: HexKey,
 ) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun gameId() = tags.dTag()
-
-    fun playerColor() = tags.playerColor()
-
-    fun timeControl() = tags.timeControl()
+    fun challengeEventId() = tags.challengeEventId()
 
     companion object {
-        const val KIND = 30064
-        const val ALT_DESCRIPTION = "Chess game challenge"
+        const val KIND = 30065
+        const val ALT_DESCRIPTION = "Chess game acceptance"
 
         fun build(
             gameId: String,
-            playerColor: Color,
-            opponent: OpponentTag? = null,
-            timeControl: String? = null,
+            challengeEvent: EventHintBundle<LiveChessGameChallengeEvent>,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<LiveChessGameChallengeEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<LiveChessGameAcceptEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(gameId)
-            playerColor(playerColor)
-            opponent?.let { opponent(opponent) }
-            timeControl?.let { timeControl(it) }
+            challenge(challengeEvent)
+            challenger(challengeEvent)
             alt(ALT_DESCRIPTION)
             initializer()
         }

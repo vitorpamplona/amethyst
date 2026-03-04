@@ -169,8 +169,8 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import com.vitorpamplona.quartz.nip64Chess.accept.LiveChessGameAcceptEvent
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent

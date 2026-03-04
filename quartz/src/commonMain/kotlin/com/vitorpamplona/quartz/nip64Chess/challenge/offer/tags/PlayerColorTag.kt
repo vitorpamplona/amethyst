@@ -18,12 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.challenge
+package com.vitorpamplona.quartz.nip64Chess.challenge.offer.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip64Chess.challenge.tags.PlayerColorTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.tags.TimeControlTag
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.utils.ensure
 
-fun TagArray.playerColor() = firstNotNullOfOrNull(PlayerColorTag::parse)
+class PlayerColorTag {
+    companion object {
+        const val TAG_NAME = "player_color"
 
-fun TagArray.timeControl() = firstNotNullOfOrNull(TimeControlTag::parse)
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        fun parse(tag: Array<String>): Color? {
+            ensure(tag.has(1) && tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return when (tag[1]) {
+                "white" -> Color.WHITE
+                "black" -> Color.BLACK
+                else -> null
+            }
+        }
+
+        fun assemble(color: Color) = arrayOf(TAG_NAME, if (color == Color.WHITE) "white" else "black")
+    }
+}

@@ -217,7 +217,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
