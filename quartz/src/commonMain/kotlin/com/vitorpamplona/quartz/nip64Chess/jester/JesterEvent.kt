@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess
+package com.vitorpamplona.quartz.nip64Chess.jester
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -26,64 +26,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameResult
+import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-
-/**
- * Jester Protocol Implementation
- *
- * Compatible with jesterui (https://github.com/jesterui/jesterui)
- *
- * Key differences from previous implementation:
- * - Single event kind (30) for all chess messages
- * - Content is JSON with: version, kind, fen, move, history, nonce
- * - Event linking via e-tags: [startId] or [startId, headId]
- * - Full move history included in every move event
- *
- * Content kind values:
- * - 0: Game start (challenge)
- * - 1: Move
- * - 2: Chat (not implemented)
- *
- * Reference: https://github.com/jesterui/jesterui/blob/devel/FLOW.md
- */
-object JesterProtocol {
-    /** Jester uses kind 30 for all chess events */
-    const val KIND = 30
-
-    /** SHA256 of starting FEN position - used as reference for game discovery */
-    const val START_POSITION_HASH = "b1791d7fc9ae3d38966568c257ffb3a02cbf8394cdb4805bc70f64fc3c0b6879"
-
-    /** Standard starting FEN */
-    const val FEN_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-    /** Content kind for game start */
-    const val CONTENT_KIND_START = 0
-
-    /** Content kind for move */
-    const val CONTENT_KIND_MOVE = 1
-
-    /** Content kind for chat */
-    const val CONTENT_KIND_CHAT = 2
-}
-
-/**
- * JSON content structure for Jester events
- */
-@Serializable
-data class JesterContent(
-    val version: String = "0",
-    val kind: Int,
-    val fen: String = JesterProtocol.FEN_START,
-    val move: String? = null,
-    val history: List<String> = emptyList(),
-    val nonce: String? = null,
-    // Extended fields for Amethyst (backward compatible - jesterui ignores unknown fields)
-    val playerColor: String? = null, // "white" or "black" - challenger's color choice
-    val result: String? = null, // "1-0", "0-1", "1/2-1/2" for game end
-    val termination: String? = null, // "checkmate", "resignation", "draw_agreement", etc.
-)
 
 private val json =
     Json {
@@ -351,31 +298,4 @@ fun Event.isJesterMoveEvent(): Boolean {
 fun Event.toJesterEvent(): JesterEvent? {
     if (kind != JesterProtocol.KIND) return null
     return JesterEvent(id, pubKey, createdAt, tags, content, sig)
-}
-
-/**
- * Game events container for Jester protocol
- */
-data class JesterGameEvents(
-    val startEvent: JesterEvent?,
-    val moves: List<JesterEvent>,
-) {
-    companion object {
-        fun empty() = JesterGameEvents(null, emptyList())
-    }
-
-    /** Get the latest move (with longest history) */
-    fun latestMove(): JesterEvent? = moves.maxByOrNull { it.history().size }
-
-    /** Get the current FEN position */
-    fun currentFen(): String = latestMove()?.fen() ?: startEvent?.fen() ?: JesterProtocol.FEN_START
-
-    /** Get the complete move history */
-    fun fullHistory(): List<String> = latestMove()?.history() ?: emptyList()
-
-    /** Check if game has ended */
-    fun isEnded(): Boolean = latestMove()?.result() != null
-
-    /** Get the game result if ended */
-    fun result(): String? = latestMove()?.result()
 }

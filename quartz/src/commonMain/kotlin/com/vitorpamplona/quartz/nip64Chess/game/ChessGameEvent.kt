@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess
+package com.vitorpamplona.quartz.nip64Chess.game
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -50,6 +50,16 @@ class ChessGameEvent(
     content: String, // PGN database format
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    /**
+     * Get PGN content from event
+     */
+    fun pgn(): String = content
+
+    /**
+     * Get alt text for non-supporting clients (NIP-31)
+     */
+    fun altText(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "alt" }?.get(1)
+
     companion object {
         const val KIND = 64
         const val ALT_DESCRIPTION = "Chess Game"
@@ -73,14 +83,4 @@ class ChessGameEvent(
             initializer()
         }
     }
-
-    /**
-     * Get PGN content from event
-     */
-    fun pgn(): String = content
-
-    /**
-     * Get alt text for non-supporting clients (NIP-31)
-     */
-    fun altText(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "alt" }?.get(1)
 }

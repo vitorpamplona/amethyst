@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.desktop.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -149,6 +151,7 @@ fun FeedScreen(
     account: AccountState.LoggedIn? = null,
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    initialFeedMode: FeedMode? = null,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -168,7 +171,7 @@ fun FeedScreen(
         }
     val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
-    var feedMode by remember { mutableStateOf(DesktopPreferences.feedMode) }
+    var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
     // Track reaction event IDs per target event to deduplicate
@@ -475,16 +478,17 @@ fun FeedScreen(
         )
     }
 
+    @OptIn(ExperimentalLayoutApi::class)
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header with compose button
-        Row(
+        // Header with compose button — wraps on narrow columns
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
+                    verticalArrangement = Arrangement.Center,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(

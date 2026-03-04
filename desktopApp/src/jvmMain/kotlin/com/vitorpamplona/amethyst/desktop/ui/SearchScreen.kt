@@ -78,6 +78,7 @@ fun SearchScreen(
     localCache: DesktopLocalCache,
     relayManager: DesktopRelayConnectionManager,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    initialQuery: String = "",
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     onNavigateToHashtag: (String) -> Unit = {},
@@ -86,6 +87,13 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     val searchState = remember { SearchBarState(localCache, scope) }
     val focusRequester = remember { FocusRequester() }
+
+    // Pre-fill initial query (e.g., hashtag column)
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank()) {
+            searchState.updateSearchText(initialQuery)
+        }
+    }
     val relayStatuses by relayManager.relayStatuses.collectAsState()
 
     // Collect state from SearchBarState

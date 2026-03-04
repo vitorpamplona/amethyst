@@ -1398,11 +1398,15 @@
     <string name="kind_meeting_space">Prostor schůzky</string>
     <string name="kind_profile">Profil</string>
     <string name="kind_mute_list">Seznam ztlumených</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nip">NIP</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_dvm_status">Stav DVM</string>
     <string name="kind_dvm_content_req">Požadavek na obsah DVM</string>
     <string name="kind_dvm_content_resp">Odpověď obsahu DVM</string>
     <string name="kind_dvm_user_req">Požadavek uživatele DVM</string>
     <string name="kind_dvm_user_resp">Odpověď uživatele DVM</string>
+    <string name="kind_ots">OTS</string>
     <string name="kind_pay_to">Platba na</string>
     <string name="kind_people_lists">Seznamy lidí</string>
     <string name="kind_pictures">Obrázky</string>
@@ -1434,7 +1438,9 @@
     <string name="kind_trusted_providers">Důvěryhodní poskytovatelé</string>
     <string name="kind_video_repl">Video (odpověď)</string>
     <string name="kind_shorts_repl">Krátká videa (odpověď)</string>
+    <string name="kind_video">Video</string>
     <string name="kind_shorts">Krátká videa</string>
     <string name="kind_voice_msg">Hlasová zpráva</string>
     <string name="kind_voice_reply">Hlasová odpověď</string>
+    <string name="kind_wiki">Wiki</string>
 </resources>
