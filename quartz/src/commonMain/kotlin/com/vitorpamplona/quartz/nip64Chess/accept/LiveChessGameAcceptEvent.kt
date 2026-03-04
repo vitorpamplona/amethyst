@@ -21,11 +21,14 @@
 package com.vitorpamplona.quartz.nip64Chess.accept
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -46,10 +49,8 @@ class LiveChessGameAcceptEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun challengeEventId() = tags.challengeEventId()
-
-    fun challengerPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
     companion object {
         const val KIND = 30065
@@ -57,14 +58,13 @@ class LiveChessGameAcceptEvent(
 
         fun build(
             gameId: String,
-            challengeEventId: String,
-            challengerPubkey: String,
+            challengeEvent: EventHintBundle<LiveChessGameChallengeEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LiveChessGameAcceptEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            add(arrayOf("d", gameId))
-            challengeEvent(challengeEventId)
-            add(arrayOf("p", challengerPubkey))
+            dTag(gameId)
+            challenge(challengeEvent)
+            challenger(challengeEvent)
             alt(ALT_DESCRIPTION)
             initializer()
         }

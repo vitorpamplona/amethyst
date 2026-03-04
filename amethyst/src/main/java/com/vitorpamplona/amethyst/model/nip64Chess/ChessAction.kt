@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model.nip64Chess
 
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.accept.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
@@ -46,7 +48,7 @@ class ChessAction {
         suspend fun createChallenge(
             gameId: String,
             playerColor: Color,
-            opponentPubkey: String? = null,
+            opponent: OpponentTag? = null,
             timeControl: String? = null,
             signer: NostrSigner,
         ): LiveChessGameChallengeEvent =
@@ -54,7 +56,7 @@ class ChessAction {
                 LiveChessGameChallengeEvent.build(
                     gameId = gameId,
                     playerColor = playerColor,
-                    opponentPubkey = opponentPubkey,
+                    opponent = opponent,
                     timeControl = timeControl,
                 ),
             )
@@ -69,15 +71,13 @@ class ChessAction {
          */
         suspend fun acceptChallenge(
             gameId: String,
-            challengeEventId: String,
-            challengerPubkey: String,
+            challengeEvent: EventHintBundle<LiveChessGameChallengeEvent>,
             signer: NostrSigner,
         ): LiveChessGameAcceptEvent =
             signer.sign(
                 LiveChessGameAcceptEvent.build(
                     gameId = gameId,
-                    challengeEventId = challengeEventId,
-                    challengerPubkey = challengerPubkey,
+                    challengeEvent = challengeEvent,
                 ),
             )
 
@@ -88,7 +88,7 @@ class ChessAction {
          * @param moveNumber Move number (1-based)
          * @param san Move in Standard Algebraic Notation
          * @param fen Resulting position in FEN notation
-         * @param opponentPubkey Opponent's pubkey
+         * @param opponent Opponent's pubkey
          * @param comment Optional move comment
          * @param signer Nostr signer
          */
@@ -97,7 +97,7 @@ class ChessAction {
             moveNumber: Int,
             san: String,
             fen: String,
-            opponentPubkey: String,
+            opponent: OpponentTag,
             comment: String = "",
             signer: NostrSigner,
         ): LiveChessMoveEvent =
@@ -107,7 +107,7 @@ class ChessAction {
                     moveNumber = moveNumber,
                     san = san,
                     fen = fen,
-                    opponentPubkey = opponentPubkey,
+                    opponent = opponent,
                     comment = comment,
                 ),
             )
@@ -119,7 +119,7 @@ class ChessAction {
          * @param result Game result (1-0, 0-1, or 1/2-1/2)
          * @param termination How the game ended
          * @param winnerPubkey Pubkey of winner (if applicable)
-         * @param opponentPubkey Opponent's pubkey
+         * @param opponent Opponent's pubkey
          * @param pgn Optional PGN of complete game
          * @param signer Nostr signer
          */
@@ -128,7 +128,7 @@ class ChessAction {
             result: GameResult,
             termination: GameTermination,
             winnerPubkey: String? = null,
-            opponentPubkey: String,
+            opponent: OpponentTag,
             pgn: String = "",
             signer: NostrSigner,
         ): LiveChessGameEndEvent =
@@ -138,7 +138,7 @@ class ChessAction {
                     result = result,
                     termination = termination,
                     winnerPubkey = winnerPubkey,
-                    opponentPubkey = opponentPubkey,
+                    opponent = opponent,
                     pgn = pgn,
                 ),
             )

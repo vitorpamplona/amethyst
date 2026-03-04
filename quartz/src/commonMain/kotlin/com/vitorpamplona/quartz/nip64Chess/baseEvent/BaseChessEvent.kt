@@ -18,14 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.accept
+package com.vitorpamplona.quartz.nip64Chess.baseEvent
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.ChallengeEventTag
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.toOpponentTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenge(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = addUnique(ChallengeEventTag.assemble(challengeHint))
+open class BaseChessEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    kind: Int,
+    tags: Array<Array<String>>,
+    content: String,
+    sig: HexKey,
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    fun opponent() = tags.opponent()
 
-fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenger(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = add(challengeHint.toOpponentTag().toTagArray())
+    fun opponentPubkey() = tags.opponentKey()
+}

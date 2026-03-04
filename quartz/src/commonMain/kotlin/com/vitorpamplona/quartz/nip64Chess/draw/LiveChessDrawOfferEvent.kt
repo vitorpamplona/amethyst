@@ -21,11 +21,14 @@
 package com.vitorpamplona.quartz.nip64Chess.draw
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -48,9 +51,7 @@ class LiveChessDrawOfferEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
-
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun message(): String = content
 
     companion object {
@@ -59,13 +60,13 @@ class LiveChessDrawOfferEvent(
 
         fun build(
             gameId: String,
-            opponentPubkey: String,
+            opponent: OpponentTag,
             message: String = "",
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LiveChessDrawOfferEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, message, createdAt) {
-            add(arrayOf("d", gameId))
-            add(arrayOf("p", opponentPubkey))
+            dTag(gameId)
+            opponent(opponent)
             alt(ALT_DESCRIPTION)
             initializer()
         }

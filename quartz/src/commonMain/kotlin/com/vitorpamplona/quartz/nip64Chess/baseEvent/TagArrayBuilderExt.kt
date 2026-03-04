@@ -18,14 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.accept
+package com.vitorpamplona.quartz.nip64Chess.baseEvent
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.ChallengeEventTag
-import com.vitorpamplona.quartz.nip64Chess.accept.tags.toOpponentTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 
-fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenge(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = addUnique(ChallengeEventTag.assemble(challengeHint))
-
-fun TagArrayBuilder<LiveChessGameAcceptEvent>.challenger(challengeHint: EventHintBundle<LiveChessGameChallengeEvent>) = add(challengeHint.toOpponentTag().toTagArray())
+fun <T : BaseChessEvent> TagArrayBuilder<T>.opponent(player: OpponentTag) = addUnique(player.toTagArray())

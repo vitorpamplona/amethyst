@@ -21,12 +21,16 @@
 package com.vitorpamplona.quartz.nip64Chess.move
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.json.JsonNull.content
 
 /**
  * Live Chess Move Event (Kind 30066)
@@ -50,7 +54,7 @@ class LiveChessMoveEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun gameId() = tags.gameId()
 
     fun moveNumber() = tags.moveNumber()
@@ -58,8 +62,6 @@ class LiveChessMoveEvent(
     fun san() = tags.san()
 
     fun fen() = tags.fen()
-
-    fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
     fun comment(): String = content
 
@@ -72,17 +74,17 @@ class LiveChessMoveEvent(
             moveNumber: Int,
             san: String,
             fen: String,
-            opponentPubkey: String,
+            opponent: OpponentTag,
             comment: String = "",
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LiveChessMoveEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, comment, createdAt) {
-            add(arrayOf("d", "$gameId-$moveNumber"))
+            dTag("$gameId-$moveNumber")
             gameId(gameId)
             moveNumber(moveNumber)
             san(san)
             fen(fen)
-            add(arrayOf("p", opponentPubkey))
+            opponent(opponent)
             alt("$ALT_DESCRIPTION: $san")
             initializer()
         }

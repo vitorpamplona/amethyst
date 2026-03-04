@@ -21,13 +21,16 @@
 package com.vitorpamplona.quartz.nip64Chess.end
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -52,14 +55,12 @@ class LiveChessGameEndEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun result() = tags.result()
 
     fun termination() = tags.termination()
 
     fun winnerPubkey() = tags.winnerPubkey()
-
-    fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
     fun pgn(): String = content
 
@@ -72,16 +73,16 @@ class LiveChessGameEndEvent(
             result: GameResult,
             termination: GameTermination,
             winnerPubkey: String? = null,
-            opponentPubkey: String,
+            opponent: OpponentTag,
             pgn: String = "",
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LiveChessGameEndEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, pgn, createdAt) {
-            add(arrayOf("d", gameId))
+            dTag(gameId)
             result(result)
             termination(termination)
             winnerPubkey?.let { winner(it) }
-            add(arrayOf("p", opponentPubkey))
+            opponent(opponent)
             alt("$ALT_DESCRIPTION: ${result.notation}")
             initializer()
         }

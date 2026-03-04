@@ -21,13 +21,17 @@
 package com.vitorpamplona.quartz.nip64Chess.challenge
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.BaseChessEvent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.opponent
+import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.let
 
 /**
  * Live Chess Game Challenge Event (Kind 30064)
@@ -49,12 +53,12 @@ class LiveChessGameChallengeEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseChessEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun gameId() = tags.dTag()
+
     fun playerColor() = tags.playerColor()
 
     fun timeControl() = tags.timeControl()
-
-    fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
     companion object {
         const val KIND = 30064
@@ -63,14 +67,14 @@ class LiveChessGameChallengeEvent(
         fun build(
             gameId: String,
             playerColor: Color,
-            opponentPubkey: String? = null,
+            opponent: OpponentTag? = null,
             timeControl: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<LiveChessGameChallengeEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
-            add(arrayOf("d", gameId))
+            dTag(gameId)
             playerColor(playerColor)
-            opponentPubkey?.let { add(arrayOf("p", it)) }
+            opponent?.let { opponent(opponent) }
             timeControl?.let { timeControl(it) }
             alt(ALT_DESCRIPTION)
             initializer()

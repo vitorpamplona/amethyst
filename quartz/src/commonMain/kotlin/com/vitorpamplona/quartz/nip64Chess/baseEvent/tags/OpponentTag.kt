@@ -18,89 +18,67 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip64Chess.accept.tags
+package com.vitorpamplona.quartz.nip64Chess.baseEvent.tags
 
+import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip64Chess.baseEvent.tags.OpponentTag
-import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
-data class ChallengeEventTag(
-    override val eventId: HexKey,
-) : GenericETag {
-    override var relay: NormalizedRelayUrl? = null
-    override var author: HexKey? = null
-
-    constructor(eventId: HexKey, relayHint: NormalizedRelayUrl? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
-        this.relay = relayHint
-        this.author = authorPubKeyHex
-    }
-
-    fun toNEvent(): String = NEvent.create(eventId, author, null, relay)
-
-    override fun toTagArray() = assemble(eventId, relay, author)
+@Immutable
+data class OpponentTag(
+    override val pubKey: HexKey,
+    override val relayHint: NormalizedRelayUrl? = null,
+) : PubKeyReferenceTag {
+    fun toTagArray() = assemble(pubKey, relayHint)
 
     companion object {
-        const val TAG_NAME = "e"
-
-        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].length == 64
+        const val TAG_NAME = "p"
 
         fun isTagged(
             tag: Array<String>,
-            eventId: HexKey,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == eventId
+            key: HexKey,
+        ): Boolean = tag.has(1) && tag[0] == TAG_NAME && tag[1] == key
 
-        fun isTagged(
-            tag: Array<String>,
-            eventIds: Set<HexKey>,
-        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in eventIds
-
-        fun parse(tag: Array<String>): ChallengeEventTag? {
+        fun parse(tag: Tag): OpponentTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.Companion.normalizeOrNull(it) }
 
-            return ChallengeEventTag(tag[1], hint, tag.getOrNull(3))
+            return OpponentTag(tag[1], hint)
         }
 
-        fun parseId(tag: Array<String>): String? {
+        fun parseKey(tag: Array<String>): HexKey? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 
-        fun parseAsHint(tag: Array<String>): EventIdHint? {
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val hint = RelayUrlNormalizer.Companion.normalizeOrNull(tag[2])
 
             ensure(hint != null) { return null }
 
-            return EventIdHint(tag[1], hint)
+            return PubKeyHint(tag[1], hint)
         }
 
         fun assemble(
-            eventId: HexKey,
-            relay: NormalizedRelayUrl?,
-            author: HexKey?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relay?.url, author)
-
-        fun assemble(eventHint: EventHintBundle<LiveChessGameChallengeEvent>) = assemble(eventHint.event.id, eventHint.relay, eventHint.event.pubKey)
+            pubkey: HexKey,
+            relayHint: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url)
     }
 }
-
-fun EventHintBundle<LiveChessGameChallengeEvent>.toOpponentTag() = OpponentTag(event.pubKey, authorHomeRelay)
