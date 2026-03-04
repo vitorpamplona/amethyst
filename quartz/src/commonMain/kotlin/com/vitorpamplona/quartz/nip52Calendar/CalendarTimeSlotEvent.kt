@@ -23,11 +23,23 @@ package com.vitorpamplona.quartz.nip52Calendar
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip52Calendar.tags.LocationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Immutable
 class CalendarTimeSlotEvent(
@@ -38,31 +50,56 @@ class CalendarTimeSlotEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun location() = tags.firstTagValue("location")
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
+
+    fun locations() = tags.mapNotNull(LocationTag::parse)
 
     fun start() = tags.firstTagValueAsLong("start")
 
     fun end() = tags.firstTagValueAsLong("end")
 
-    fun startTmz() = tags.firstTagValueAsLong("start_tzid")
+    fun startTzId() = tags.firstTagValue("start_tzid")
 
-    fun endTmz() = tags.firstTagValueAsLong("end_tzid")
+    fun endTzId() = tags.firstTagValue("end_tzid")
 
-    //    ["start", "<Unix timestamp in seconds>"],
-    //    ["end", "<Unix timestamp in seconds>"],
-    //    ["start_tzid", "<IANA Time Zone Database identifier>"],
-    //    ["end_tzid", "<IANA Time Zone Database identifier>"],
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    fun geohash() = tags.firstNotNullOfOrNull(GeoHashTag::parse)
+
+    fun hashtags() = tags.hashtags()
+
+    fun participants() = tags.mapNotNull(PTag::parse)
+
+    fun references() = tags.references()
 
     companion object {
         const val KIND = 31923
         const val ALT = "Calendar time-slot event"
 
-        suspend fun create(
-            signer: NostrSigner,
+        @OptIn(ExperimentalUuidApi::class)
+        fun build(
+            title: String,
+            start: Long,
+            content: String = "",
+            end: Long? = null,
+            startTzId: String? = null,
+            endTzId: String? = null,
+            dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-        ): CalendarTimeSlotEvent {
-            val tags = arrayOf(AltTag.assemble(ALT))
-            return signer.sign(createdAt, KIND, tags, "")
+            initializer: TagArrayBuilder<CalendarTimeSlotEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, content, createdAt) {
+            dTag(dTag)
+            title(title)
+            startTimestamp(start)
+            end?.let { endTimestamp(it) }
+            startTzId?.let { startTzId(it) }
+            endTzId?.let { endTzId(it) }
+            alt(ALT)
+            initializer()
         }
     }
 }
