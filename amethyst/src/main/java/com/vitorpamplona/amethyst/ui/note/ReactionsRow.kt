@@ -100,6 +100,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.ReactionRowAction
+import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
@@ -226,7 +228,7 @@ private fun InnerReactionRow(
         reactions = reactionRowItems,
         renderReaction = { item ->
             when (item.action) {
-                com.vitorpamplona.amethyst.model.ReactionRowAction.Reply ->
+                ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
                         baseNote,
                         MaterialTheme.colorScheme.placeholderText,
@@ -235,7 +237,9 @@ private fun InnerReactionRow(
                         showCounter = item.showCounter,
                         voiceRecordingState = voiceRecordingState,
                     )
-                com.vitorpamplona.amethyst.model.ReactionRowAction.Boost -> {
+                }
+
+                ReactionRowAction.Boost -> {
                     val isDM = baseNote.event is ChatroomKeyable
                     if (!isDM) {
                         BoostWithDialog(
@@ -248,7 +252,8 @@ private fun InnerReactionRow(
                         )
                     }
                 }
-                com.vitorpamplona.amethyst.model.ReactionRowAction.Like ->
+
+                ReactionRowAction.Like -> {
                     LikeReaction(
                         baseNote,
                         MaterialTheme.colorScheme.placeholderText,
@@ -256,7 +261,9 @@ private fun InnerReactionRow(
                         nav,
                         showCounter = item.showCounter,
                     )
-                com.vitorpamplona.amethyst.model.ReactionRowAction.Zap ->
+                }
+
+                ReactionRowAction.Zap -> {
                     ZapReaction(
                         baseNote,
                         MaterialTheme.colorScheme.placeholderText,
@@ -264,11 +271,14 @@ private fun InnerReactionRow(
                         nav = nav,
                         showCounter = item.showCounter,
                     )
-                com.vitorpamplona.amethyst.model.ReactionRowAction.Share ->
+                }
+
+                ReactionRowAction.Share -> {
                     ShareReaction(
                         note = baseNote,
                         grayTint = MaterialTheme.colorScheme.placeholderText,
                     )
+                }
             }
         },
     )
@@ -317,8 +327,8 @@ private fun GenericInnerReactionRow(
     addPadding: Boolean,
     weightTwo: Float = 1f,
     one: @Composable () -> Unit,
-    reactions: ImmutableList<com.vitorpamplona.amethyst.model.ReactionRowItem>,
-    renderReaction: @Composable (com.vitorpamplona.amethyst.model.ReactionRowItem) -> Unit,
+    reactions: ImmutableList<ReactionRowItem>,
+    renderReaction: @Composable (ReactionRowItem) -> Unit,
 ) {
     val enabledReactions = remember(reactions) { reactions.filter { it.enabled } }
     val lastIndex = enabledReactions.lastIndex
@@ -339,7 +349,7 @@ private fun GenericInnerReactionRow(
 
         enabledReactions.forEachIndexed { index, item ->
             val isLast = index == lastIndex
-            val itemWeight = if (item.action == com.vitorpamplona.amethyst.model.ReactionRowAction.Reply) weightTwo else 1f
+            val itemWeight = if (item.action == ReactionRowAction.Reply) weightTwo else 1f
             val mod = if (isLast) Modifier else Modifier.weight(itemWeight)
             Row(
                 verticalAlignment = CenterVertically,
