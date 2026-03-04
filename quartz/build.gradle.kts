@@ -3,6 +3,7 @@
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import io.github.frankois944.spmForKmp.swiftPackageConfig
 import io.github.frankois944.spmForKmp.utils.ExperimentalSpmForKmpFeature
+import org.gradle.kotlin.dsl.androidLibrary
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest
 
@@ -24,7 +25,7 @@ kotlin {
         }
     }
 
-    android {
+    androidLibrary {
         namespace = "com.vitorpamplona.quartz"
         compileSdk =
             libs.versions.android.compileSdk
@@ -241,7 +242,6 @@ kotlin {
             dependencies {
                 implementation(libs.charlietap.cachemap)
                 implementation(libs.net.thauvin.erik.urlencoder.lib)
-                implementation(libs.com.ditchoom.buffer.compression)
                 implementation(libs.dev.whyoleg.cryptography.provider.apple.optimal)
             }
         }
