@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip04Dm
 
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,8 +30,8 @@ class Nip04Test {
     fun encryptDecryptNIP4Test() {
         val msg = "Hi"
 
-        val privateKey = Nip01.privKeyCreate()
-        val publicKey = Nip01.pubKeyCreate(privateKey)
+        val privateKey = Nip01Crypto.privKeyCreate()
+        val publicKey = Nip01Crypto.pubKeyCreate(privateKey)
 
         val encrypted = Nip04.encrypt(msg, privateKey, publicKey)
         val decrypted = Nip04.decrypt(encrypted, privateKey, publicKey)
@@ -43,8 +43,8 @@ class Nip04Test {
     fun encryptSharedSecretDecryptNIP4Test() {
         val msg = "Hi"
 
-        val privateKey = Nip01.privKeyCreate()
-        val publicKey = Nip01.pubKeyCreate(privateKey)
+        val privateKey = Nip01Crypto.privKeyCreate()
+        val publicKey = Nip01Crypto.pubKeyCreate(privateKey)
 
         val encrypted = Nip04.encrypt(msg, privateKey, publicKey)
         val decrypted = Nip04.decrypt(encrypted, privateKey, publicKey)
