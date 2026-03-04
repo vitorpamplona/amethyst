@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,7 +33,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
@@ -97,13 +98,15 @@ fun ReactionsSettingsContent(accountViewModel: AccountViewModel) {
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableStateMapOf<Int, Float>() }
+    val isDragging = draggedItemIndex >= 0
+    val scrollState = remember { ScrollState(0) }
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = Size20dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState, enabled = !isDragging),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -270,14 +273,12 @@ private fun ReactionRowItemCard(
                 )
             }
 
-            Icon(
-                Icons.Default.DragHandle,
-                contentDescription = stringRes(R.string.reactions_settings_reorder),
+            Box(
                 modifier =
                     Modifier
-                        .size(32.dp)
+                        .size(48.dp)
                         .pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
+                            detectDragGestures(
                                 onDragStart = { onDragStart() },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
@@ -287,8 +288,15 @@ private fun ReactionRowItemCard(
                                 onDragCancel = { onDragCancel() },
                             )
                         },
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.DragHandle,
+                    contentDescription = stringRes(R.string.reactions_settings_reorder),
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
