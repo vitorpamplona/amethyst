@@ -18,15 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip05.namecoin
+package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -41,38 +42,14 @@ import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.MessageDigest
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.SocketFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
-
-/**
- * Result of an ElectrumX name_show query.
- *
- * Maps to the JSON fields returned by Namecoin Core / Electrum-NMC:
- *   { "name": "d/example", "value": "{...}", "txid": "abc...", "height": 12345, ... }
- */
-@Serializable
-data class NameShowResult(
-    val name: String,
-    val value: String,
-    val txid: String? = null,
-    val height: Int? = null,
-    val expiresIn: Int? = null,
-)
-
-/**
- * Represents a single ElectrumX server endpoint.
- */
-data class ElectrumxServer(
-    val host: String,
-    val port: Int,
-    val useSsl: Boolean = true,
-    /** If true, accept any certificate (self-signed, expired, etc.) */
-    val trustAllCerts: Boolean = false,
-)
 
 /**
  * Lightweight, query-only ElectrumX client for Namecoin name resolution.
@@ -95,11 +72,11 @@ data class ElectrumxServer(
  * val result = client.nameShow("d/example", server)
  * ```
  */
-class ElectrumxClient(
+class ElectrumXClient(
     private val connectTimeoutMs: Long = 10_000L,
     private val readTimeoutMs: Long = 15_000L,
     private val socketFactory: () -> SocketFactory = { SocketFactory.getDefault() },
-) {
+) : IElectrumXClient {
     private val json =
         Json {
             ignoreUnknownKeys = true
@@ -109,27 +86,6 @@ class ElectrumxClient(
     private val mutex = Mutex()
 
     companion object {
-        /** Well-known public Namecoin ElectrumX servers (clearnet). */
-        val DEFAULT_SERVERS =
-            listOf(
-                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("46.229.238.187", 57002, useSsl = true, trustAllCerts = true),
-            )
-
-        /** Tor-preferred server list: onion primary, clearnet fallback. */
-        val TOR_SERVERS =
-            listOf(
-                ElectrumxServer(
-                    "i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion",
-                    50002,
-                    useSsl = true,
-                    trustAllCerts = true,
-                ),
-                ElectrumxServer("electrumx.testls.space", 50002, useSsl = true, trustAllCerts = true),
-                ElectrumxServer("nmc2.bitcoins.sk", 57002, useSsl = true, trustAllCerts = true),
-            )
-
         private const val PROTOCOL_VERSION = "1.4"
 
         /**
@@ -162,7 +118,7 @@ class ElectrumxClient(
      */
     suspend fun nameShow(
         identifier: String,
-        server: ElectrumxServer = DEFAULT_SERVERS.first(),
+        server: ElectrumxServer = DEFAULT_ELECTRUMX_SERVERS.first(),
     ): NameShowResult? =
         withContext(Dispatchers.IO) {
             mutex.withLock {
@@ -180,11 +136,11 @@ class ElectrumxClient(
      * Try each server in order until one succeeds.
      *
      * @param identifier Full Namecoin name, e.g. "d/example"
-     * @param servers    Ordered server list to try; defaults to [DEFAULT_SERVERS]
+     * @param servers    Ordered server list to try; defaults to [DEFAULT_ELECTRUMX_SERVERS]
      */
-    suspend fun nameShowWithFallback(
+    override suspend fun nameShowWithFallback(
         identifier: String,
-        servers: List<ElectrumxServer> = DEFAULT_SERVERS,
+        servers: List<ElectrumxServer>,
     ): NameShowResult? {
         for (server in servers) {
             val result = nameShow(identifier, server)
@@ -329,7 +285,7 @@ class ElectrumxClient(
     private fun parseHistoryResponse(raw: String): List<Pair<String, Int>>? {
         val envelope = json.parseToJsonElement(raw).jsonObject
         val error = envelope["error"]
-        if (error != null && error !is kotlinx.serialization.json.JsonNull) return null
+        if (error != null && error !is JsonNull) return null
 
         val result = envelope["result"]?.jsonArray ?: return null
         return result.mapNotNull { entry ->
@@ -354,7 +310,7 @@ class ElectrumxClient(
     ): NameShowResult? {
         val envelope = json.parseToJsonElement(raw).jsonObject
         val error = envelope["error"]
-        if (error != null && error !is kotlinx.serialization.json.JsonNull) return null
+        if (error != null && error !is JsonNull) return null
 
         val result = envelope["result"]?.jsonObject ?: return null
         val vouts = result["vout"]?.jsonArray ?: return null
@@ -505,20 +461,20 @@ class ElectrumxClient(
             arrayOf<TrustManager>(
                 object : X509TrustManager {
                     override fun checkClientTrusted(
-                        chain: Array<java.security.cert.X509Certificate>,
+                        chain: Array<X509Certificate>,
                         authType: String,
                     ) {}
 
                     override fun checkServerTrusted(
-                        chain: Array<java.security.cert.X509Certificate>,
+                        chain: Array<X509Certificate>,
                         authType: String,
                     ) {}
 
-                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
                 },
             )
         val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+        sslContext.init(null, trustAllCerts, SecureRandom())
         return sslContext.socketFactory
     }
 
@@ -535,8 +491,8 @@ class ElectrumxClient(
                 put(
                     "params",
                     json.encodeToJsonElement(
-                        kotlinx.serialization.builtins.ListSerializer(
-                            kotlinx.serialization.json.JsonElement
+                        ListSerializer(
+                            JsonElement
                                 .serializer(),
                         ),
                         params.map {

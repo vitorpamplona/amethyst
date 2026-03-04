@@ -29,14 +29,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -85,7 +85,7 @@ class SearchBarViewModel(
             .filter { NamecoinNameResolver.isNamecoinIdentifier(it) }
             .map { term ->
                 try {
-                    val result = NamecoinNameService.getInstance().resolve(term)
+                    val result = Amethyst.instance.namecoinResolver.resolve(term)
                     if (result != null) {
                         LocalCache.getOrCreateUser(result.pubkey)
                     } else {

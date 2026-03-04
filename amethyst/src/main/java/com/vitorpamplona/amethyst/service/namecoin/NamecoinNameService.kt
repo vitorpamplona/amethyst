@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.namecoin
 
-import com.vitorpamplona.quartz.nip05.namecoin.ElectrumxClient
-import com.vitorpamplona.quartz.nip05.namecoin.ElectrumxServer
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinLookupCache
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNostrResult
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinLookupCache
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
  * into Amethyst's existing `ServiceManager` infrastructure.
  */
 class NamecoinNameService(
-    electrumxClient: ElectrumxClient = ElectrumxClient(),
+    electrumxClient: ElectrumXClient,
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -48,22 +48,6 @@ class NamecoinNameService(
 
     // Custom server list (user-configurable)
     private var customServers: List<ElectrumxServer> = emptyList()
-
-    companion object {
-        @Volatile
-        private var instance: NamecoinNameService? = null
-
-        fun getInstance(): NamecoinNameService =
-            instance ?: throw IllegalStateException(
-                "NamecoinNameService not initialized. Call init() first.",
-            )
-
-        fun init(electrumxClient: ElectrumxClient): NamecoinNameService =
-            synchronized(this) {
-                instance?.let { return it }
-                NamecoinNameService(electrumxClient).also { instance = it }
-            }
-    }
 
     // ── Public API ─────────────────────────────────────────────────────
 

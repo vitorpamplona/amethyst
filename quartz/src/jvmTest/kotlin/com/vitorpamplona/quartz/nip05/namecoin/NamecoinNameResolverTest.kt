@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip05.namecoin
 
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNostrResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -267,7 +269,11 @@ class NamecoinNameResolverTest {
                     } catch (_: Exception) {
                         emptyList()
                     }
-                return NamecoinNostrResult(pubkey = pubkey.lowercase(), relays = relays, namecoinName = namecoinName)
+                return NamecoinNostrResult(
+                    pubkey = pubkey.lowercase(),
+                    relays = relays,
+                    namecoinName = namecoinName,
+                )
             }
         }
         return null

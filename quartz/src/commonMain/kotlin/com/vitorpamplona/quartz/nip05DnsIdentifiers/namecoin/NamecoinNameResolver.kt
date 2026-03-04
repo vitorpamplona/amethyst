@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip05.namecoin
+package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
@@ -50,9 +50,9 @@ data class NamecoinNostrResult(
  * here instead of to the HTTP-based NIP-05 path.
  */
 class NamecoinNameResolver(
-    private val electrumxClient: ElectrumxClient = ElectrumxClient(),
+    private val electrumxClient: IElectrumXClient,
     private val lookupTimeoutMs: Long = 20_000L,
-    private val serverListProvider: () -> List<ElectrumxServer> = { ElectrumxClient.DEFAULT_SERVERS },
+    private val serverListProvider: () -> List<ElectrumxServer> = { DEFAULT_ELECTRUMX_SERVERS },
 ) {
     private val json =
         Json {

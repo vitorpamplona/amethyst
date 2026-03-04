@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.CancellationException
 
 data class Nip05KeyInfo(

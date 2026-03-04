@@ -68,6 +68,10 @@ import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -143,23 +147,20 @@ class AppModules(
     // Custom fetcher that considers tor settings and avoids forwarding.
     val nip05Fetcher = OkHttpNip05Fetcher(roleBasedHttpClientBuilder::okHttpClientForNip05)
     val namecoinElectrumxClient =
-        com.vitorpamplona.quartz.nip05.namecoin.ElectrumxClient(
+        ElectrumXClient(
             socketFactory = { roleBasedHttpClientBuilder.socketFactoryForNip05() },
         )
     val namecoinResolver =
-        com.vitorpamplona.quartz.nip05.namecoin.NamecoinNameResolver(
+        NamecoinNameResolver(
             electrumxClient = namecoinElectrumxClient,
             serverListProvider = {
                 if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
-                    com.vitorpamplona.quartz.nip05.namecoin.ElectrumxClient.TOR_SERVERS
+                    TOR_ELECTRUMX_SERVERS
                 } else {
-                    com.vitorpamplona.quartz.nip05.namecoin.ElectrumxClient.DEFAULT_SERVERS
+                    DEFAULT_ELECTRUMX_SERVERS
                 }
             },
         )
-    val namecoinNameService =
-        com.vitorpamplona.amethyst.service.namecoin.NamecoinNameService
-            .init(namecoinElectrumxClient)
     val nip05Client = Nip05Client(nip05Fetcher, namecoinResolver)
 
     // Application-wide block height request cache
