@@ -151,6 +151,7 @@ fun FeedScreen(
     account: AccountState.LoggedIn? = null,
     nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    initialFeedMode: FeedMode? = null,
     onCompose: () -> Unit = {},
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -170,7 +171,7 @@ fun FeedScreen(
         }
     val events by eventState.items.collectAsState()
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
-    var feedMode by remember { mutableStateOf(DesktopPreferences.feedMode) }
+    var feedMode by remember { mutableStateOf(initialFeedMode ?: DesktopPreferences.feedMode) }
     var followedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var zapsByEvent by remember { mutableStateOf<Map<String, List<ZapReceipt>>>(emptyMap()) }
     // Track reaction event IDs per target event to deduplicate

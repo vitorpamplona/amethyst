@@ -141,7 +141,8 @@ fun main() =
             )
         var showComposeDialog by remember { mutableStateOf(false) }
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
-        val deckState = remember { DeckState().also { it.load() } }
+        val deckScope = rememberCoroutineScope()
+        val deckState = remember { DeckState(deckScope).also { it.load() } }
         var showAddColumnDialog by remember { mutableStateOf(false) }
         var layoutMode by remember {
             mutableStateOf(
@@ -179,7 +180,13 @@ fun main() =
                             } else {
                                 KeyShortcut(Key.Comma, ctrl = true)
                             },
-                        onClick = { deckState.addColumn(DeckColumnType.Settings) },
+                        onClick = {
+                            if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                deckState.focusExistingColumn(DeckColumnType.Settings)
+                            } else {
+                                deckState.addColumn(DeckColumnType.Settings)
+                            }
+                        },
                     )
                     Separator()
                     Item(
@@ -305,7 +312,8 @@ fun main() =
                                 Key.Eight,
                                 Key.Nine,
                             )
-                        columnKeys.forEachIndexed { i, key ->
+                        val columnCount = deckState.columns.value.size
+                        columnKeys.take(columnCount).forEachIndexed { i, key ->
                             Item(
                                 "Column ${i + 1}",
                                 shortcut =
@@ -617,7 +625,13 @@ fun MainContent(
                 LayoutMode.DECK -> {
                     DeckSidebar(
                         onAddColumn = onShowAddColumnDialog,
-                        onOpenSettings = { deckState.addColumn(DeckColumnType.Settings) },
+                        onOpenSettings = {
+                            if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                deckState.focusExistingColumn(DeckColumnType.Settings)
+                            } else {
+                                deckState.addColumn(DeckColumnType.Settings)
+                            }
+                        },
                     )
 
                     VerticalDivider()

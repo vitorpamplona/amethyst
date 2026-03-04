@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
 import com.vitorpamplona.amethyst.desktop.ui.FeedScreen
 import com.vitorpamplona.amethyst.desktop.ui.NotificationsScreen
@@ -56,10 +57,11 @@ import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class ColumnNavigationState {
     private val _stack = MutableStateFlow<List<DesktopScreen>>(emptyList())
-    val stack = _stack
+    val stack: kotlinx.coroutines.flow.StateFlow<List<DesktopScreen>> = _stack.asStateFlow()
 
     fun push(screen: DesktopScreen) {
         _stack.value = _stack.value + screen
@@ -180,6 +182,7 @@ internal fun RootContent(
                 account = account,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                initialFeedMode = FeedMode.FOLLOWING,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
@@ -249,6 +252,7 @@ internal fun RootContent(
                 account = account,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                initialFeedMode = FeedMode.GLOBAL,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
@@ -320,6 +324,7 @@ internal fun RootContent(
                 localCache = localCache,
                 relayManager = relayManager,
                 subscriptionsCoordinator = subscriptionsCoordinator,
+                initialQuery = "#${columnType.tag}",
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,
             )
@@ -374,6 +379,12 @@ internal fun OverlayContent(
             )
         }
 
-        else -> {}
+        else -> {
+            androidx.compose.material3.Text(
+                "Unsupported screen type",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

@@ -21,15 +21,18 @@
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -70,7 +73,22 @@ fun DeckLayout(
         val availableWidthDp = with(density) { constraints.maxWidth.toDp().value }
         deckState.setAvailableWidth(availableWidthDp)
 
-        Row(modifier = Modifier.fillMaxSize()) {
+        // Auto-fit columns on first composition or when available width changes significantly
+        LaunchedEffect(availableWidthDp, columns.size) {
+            val dividers = (columns.size - 1) * DeckState.DIVIDER_WIDTH
+            val totalColumnWidth = columns.sumOf { it.width.toDouble() }.toFloat()
+            val diff = kotlin.math.abs(totalColumnWidth + dividers - availableWidthDp)
+            if (diff > 20f && columns.isNotEmpty()) {
+                deckState.fitColumnsToWidth(availableWidthDp)
+            }
+        }
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(rememberScrollState()),
+        ) {
             columns.forEachIndexed { index, column ->
                 if (index > 0) {
                     DraggableDivider(
@@ -108,7 +126,7 @@ private fun DraggableDivider(onDrag: (Float) -> Unit) {
     Box(
         modifier =
             Modifier
-                .width(4.dp)
+                .width(12.dp)
                 .fillMaxHeight()
                 .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
                 .pointerInput(Unit) {
@@ -117,6 +135,7 @@ private fun DraggableDivider(onDrag: (Float) -> Unit) {
                         onDrag(dragAmount.x / density)
                     }
                 },
+        contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
         VerticalDivider(
             color = MaterialTheme.colorScheme.outlineVariant,
