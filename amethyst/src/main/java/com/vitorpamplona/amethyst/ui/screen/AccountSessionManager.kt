@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
@@ -74,6 +75,18 @@ import kotlinx.coroutines.withContext
 import java.util.regex.Pattern
 
 val EMAIL_PATTERN: Pattern = Pattern.compile(".+@.+\\.[a-z]+")
+
+sealed class AccountState {
+    object Loading : AccountState()
+
+    object LoggedOff : AccountState()
+
+    @Stable
+    class LoggedIn(
+        val account: Account,
+        var route: Route? = null,
+    ) : AccountState()
+}
 
 @Stable
 class AccountSessionManager(
@@ -175,15 +188,6 @@ class AccountSessionManager(
         }
     }
 
-    private fun prepareLogoutOrSwitch() =
-        when (val state = _accountContent.value) {
-            is AccountState.LoggedIn -> {
-                state.currentViewModelStore.viewModelStore.clear()
-            }
-
-            else -> {}
-        }
-
     fun login(
         key: String,
         password: String,
@@ -256,9 +260,6 @@ class AccountSessionManager(
         onError: (String) -> Unit,
     ) {
         try {
-            if (_accountContent.value is AccountState.LoggedIn) {
-                prepareLogoutOrSwitch()
-            }
             loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -269,10 +270,6 @@ class AccountSessionManager(
 
     fun newKey(name: String? = null) {
         scope.launch(Dispatchers.IO) {
-            if (_accountContent.value is AccountState.LoggedIn) {
-                prepareLogoutOrSwitch()
-            }
-
             _accountContent.update { AccountState.Loading }
 
             val accountSettings = createNewAccount(name)
@@ -342,7 +339,6 @@ class AccountSessionManager(
         accountInfo: AccountInfo,
         route: Route? = null,
     ) {
-        prepareLogoutOrSwitch()
         localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(route)
     }
@@ -364,7 +360,6 @@ class AccountSessionManager(
         scope.launch(Dispatchers.IO) {
             if (accountInfo.npub == currentAccountNPub()) {
                 // log off and relogin with the 0 account
-                prepareLogoutOrSwitch()
                 localPreferences.deleteAccount(accountInfo)
                 accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
                 loginWithDefaultAccount()
