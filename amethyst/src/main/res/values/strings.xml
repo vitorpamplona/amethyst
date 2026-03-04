@@ -1234,7 +1234,7 @@
 
     <string name="change_reaction">Change Quick Reactions</string>
 
-    <string name="reactions_settings">Reactions Settings</string>
+    <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
     <string name="reactions_settings_enabled">Enabled</string>
     <string name="reactions_settings_show_counter">Show Count</string>
