@@ -25,6 +25,8 @@
 /commons/.idea/gradle.xml
 /commons/.idea/misc.xml
 /commons/.idea/workspace.xml
+/quartz/.idea/modules.xml
+/quartz/.idea/workspace.xml
 .DS_Store
 /build
 /captures
