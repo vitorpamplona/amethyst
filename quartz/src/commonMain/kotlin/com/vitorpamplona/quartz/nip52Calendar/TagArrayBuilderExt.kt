@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip52Calendar.tags.RSVPStatusTag
 
 // CalendarDateSlotEvent builder extensions
 
-fun TagArrayBuilder<CalendarDateSlotEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+fun TagArrayBuilder<CalendarDateSlotEvent>.titleDay(title: String) = addUnique(TitleTag.assemble(title))
 
 fun TagArrayBuilder<CalendarDateSlotEvent>.startDate(date: String) = addUnique(arrayOf("start", date))
 
@@ -54,7 +54,7 @@ fun TagArrayBuilder<CalendarDateSlotEvent>.participants(ps: List<PTag>) = addAll
 
 // CalendarTimeSlotEvent builder extensions
 
-fun TagArrayBuilder<CalendarTimeSlotEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
+fun TagArrayBuilder<CalendarTimeSlotEvent>.titleTime(title: String) = addUnique(TitleTag.assemble(title))
 
 fun TagArrayBuilder<CalendarTimeSlotEvent>.startTimestamp(timestamp: Long) = addUnique(arrayOf("start", timestamp.toString()))
 

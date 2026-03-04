@@ -86,7 +86,7 @@ class CalendarDateSlotEvent(
             initializer: TagArrayBuilder<CalendarDateSlotEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(dTag)
-            title(title)
+            titleDay(title)
             startDate(start)
             end?.let { endDate(it) }
             alt(ALT)

@@ -93,7 +93,7 @@ class CalendarTimeSlotEvent(
             initializer: TagArrayBuilder<CalendarTimeSlotEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(dTag)
-            title(title)
+            titleTime(title)
             startTimestamp(start)
             end?.let { endTimestamp(it) }
             startTzId?.let { startTzId(it) }
