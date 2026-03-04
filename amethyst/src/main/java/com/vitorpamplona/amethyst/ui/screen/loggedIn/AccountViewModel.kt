@@ -986,6 +986,13 @@ class AccountViewModel(
         onDone()
     }
 
+    fun reactionRowItemsFlow() = account.settings.syncedSettings.reactions.reactionRowItems
+
+    fun changeReactionRowItems(items: List<com.vitorpamplona.amethyst.model.ReactionRowItem>) =
+        launchSigner {
+            account.changeReactionRowItems(items)
+        }
+
     fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

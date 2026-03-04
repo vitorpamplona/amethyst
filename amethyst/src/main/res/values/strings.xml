@@ -1234,6 +1234,23 @@
 
     <string name="change_reaction">Change Quick Reactions</string>
 
+    <string name="reactions_settings">Reactions Settings</string>
+    <string name="reactions_settings_description">Configure which reaction buttons are shown, their order, and whether to display counters.</string>
+    <string name="reactions_settings_enabled">Enabled</string>
+    <string name="reactions_settings_show_counter">Show Count</string>
+    <string name="reactions_settings_move_up">Move up</string>
+    <string name="reactions_settings_move_down">Move down</string>
+    <string name="reactions_settings_reply">Reply</string>
+    <string name="reactions_settings_reply_description">Reply to this note</string>
+    <string name="reactions_settings_boost">Boost</string>
+    <string name="reactions_settings_boost_description">Repost or quote this note</string>
+    <string name="reactions_settings_like">Like</string>
+    <string name="reactions_settings_like_description">React to this note with an emoji</string>
+    <string name="reactions_settings_zap">Zap</string>
+    <string name="reactions_settings_zap_description">Send a lightning payment to the author</string>
+    <string name="reactions_settings_share">Share</string>
+    <string name="reactions_settings_share_description">Share this note externally</string>
+
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Expand relay list</string>

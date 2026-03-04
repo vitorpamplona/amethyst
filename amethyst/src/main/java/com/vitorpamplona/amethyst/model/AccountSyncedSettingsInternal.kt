@@ -39,6 +39,31 @@ val DefaultReactions =
 
 val DefaultZapAmounts = listOf(100L, 500L, 1000L)
 
+@Serializable
+enum class ReactionRowAction {
+    Reply,
+    Boost,
+    Like,
+    Zap,
+    Share,
+}
+
+@Serializable
+data class ReactionRowItem(
+    val action: ReactionRowAction,
+    val enabled: Boolean = true,
+    val showCounter: Boolean = true,
+)
+
+val DefaultReactionRowItems =
+    listOf(
+        ReactionRowItem(ReactionRowAction.Reply),
+        ReactionRowItem(ReactionRowAction.Boost),
+        ReactionRowItem(ReactionRowAction.Like),
+        ReactionRowItem(ReactionRowAction.Zap),
+        ReactionRowItem(ReactionRowAction.Share, showCounter = false),
+    )
+
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
     val codedList = mutableSetOf<String>()
@@ -59,6 +84,7 @@ class AccountSyncedSettingsInternal(
 @Serializable
 class AccountReactionPreferencesInternal(
     var reactionChoices: List<String> = DefaultReactions,
+    var reactionRowItems: List<ReactionRowItem> = DefaultReactionRowItems,
 )
 
 @Serializable
