@@ -24,7 +24,7 @@ kotlin {
         }
     }
 
-    android {
+    androidLibrary {
         namespace = "com.vitorpamplona.quartz"
         compileSdk =
             libs.versions.android.compileSdk
