@@ -2310,7 +2310,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event is LnZapRequestEvent ||
                 note.event is FileHeaderEvent ||
                 note.event is MetadataEvent ||
-                note.event is ContactListEvent
+                note.event is ContactListEvent ||
+                note.event is AppSpecificDataEvent
         )
 
     fun findNotesStartingWith(
