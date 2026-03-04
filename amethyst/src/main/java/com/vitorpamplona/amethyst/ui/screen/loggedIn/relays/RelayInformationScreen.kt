@@ -221,12 +221,12 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
-import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent

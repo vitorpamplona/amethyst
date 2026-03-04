@@ -56,6 +56,8 @@ class LiveChessGameChallengeEvent(
 
     fun opponentPubkey(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "p" }?.get(1)
 
+    fun gameId() = tags.firstOrNull { it.size >= 2 && it[0] == "d" }?.get(1)
+
     companion object {
         const val KIND = 30064
         const val ALT_DESCRIPTION = "Chess game challenge"
