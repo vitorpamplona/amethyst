@@ -25,6 +25,9 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
+import java.net.InetSocketAddress
+import java.net.Proxy
+import javax.net.SocketFactory
 
 class RoleBasedHttpClientBuilder(
     val okHttpClient: DualHttpClientManager,
@@ -141,4 +144,24 @@ class RoleBasedHttpClientBuilder(
     override fun okHttpClientForPreview(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForPreviewUrl(url))
 
     override fun okHttpClientForPushRegistration(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForTrustedRelays())
+
+    /**
+     * Returns a [SocketFactory] that routes through the user's Tor proxy
+     * when NIP-05 verification traffic should use Tor.
+     *
+     * Used by [ElectrumxClient] so that Namecoin lookups respect the
+     * same proxy/Tor settings as HTTP-based NIP-05 verification,
+     * preventing IP leaks through direct socket connections.
+     */
+    fun socketFactoryForNip05(): SocketFactory {
+        // ElectrumX servers are always external, so we use a dummy
+        // non-localhost, non-onion URL to query the Tor policy.
+        val useTor = shouldUseTorForNIP05("https://electrumx.example.com")
+        if (!useTor) return SocketFactory.getDefault()
+
+        val proxy = okHttpClient.getCurrentProxy() ?: return SocketFactory.getDefault()
+        val proxyAddr = proxy.address() as? InetSocketAddress ?: return SocketFactory.getDefault()
+
+        return ProxiedSocketFactory(Proxy(Proxy.Type.SOCKS, proxyAddr))
+    }
 }
