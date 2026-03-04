@@ -50,10 +50,14 @@ actual class DigestInstance actual constructor(
     private fun digestForAlgorithm(algorithmName: String) =
         when (algorithmName) {
             "SHA-256" -> SHA256
+
             "SHA-1" -> SHA1
+
             "ripemd160" -> RIPEMD160
-            //Adding this below as a reminder.
+
+            // Adding this below as a reminder.
             "keccak256" -> error("KECCAK-256 is not yet supported.")
+
             else -> error("This message digest is not supported.")
         }
 }
