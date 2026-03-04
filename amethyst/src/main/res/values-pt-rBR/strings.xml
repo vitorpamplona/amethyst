@@ -796,6 +796,7 @@
     <string name="mute_button">Som ligado. Clique para silenciar</string>
     <string name="skip_back">Voltar %d segundos</string>
     <string name="skip_forward">Avançar %d segundos</string>
+    <string name="picture_in_picture">Picture-in-Picture</string>
     <string name="search_button">Pesquise registros locais e remotos</string>
     <string name="nip05_verified">O endereço Nostr foi verificado</string>
     <string name="nip05_failed">Endereço Nostr falhou na verificação</string>
@@ -1315,6 +1316,7 @@
     <string name="remove_language">Remover %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
     <string name="kind_outbox_relays">Relays de Saída</string>
+    <string name="kind_apps">Aplicativos</string>
     <string name="kind_app_recommendations">Recomendações de Apps</string>
     <string name="kind_user_settings">Configurações do Usuário</string>
     <string name="kind_audio_header">Cabeçalho de Áudio</string>
@@ -1367,6 +1369,7 @@
     <string name="kind_blob_headers">Cabeçalhos Blob</string>
     <string name="kind_medical_data">Dados Médicos</string>
     <string name="kind_follow_packs">Pacotes de Seguir</string>
+    <string name="kind_reposts_16">Repostagens (16)</string>
     <string name="kind_geohash_follows">Seguindo Geohash</string>
     <string name="kind_gift_wraps">Embrulhos de presente</string>
     <string name="kind_git_issue">Issue do Git</string>
@@ -1384,20 +1387,26 @@
     <string name="kind_named_bookmarks">Favoritos nomeados</string>
     <string name="kind_live_chats">Chats ao vivo</string>
     <string name="kind_live_streams">Transmissões ao vivo</string>
+    <string name="kind_zaps">Zaps</string>
     <string name="kind_nwc_request">Solicitação NWC</string>
     <string name="kind_nwc_response">Resposta NWC</string>
     <string name="kind_private_zaps">Zaps privados</string>
     <string name="kind_zap_req">Solicitação de Zap</string>
+    <string name="kind_blogs">Blogs</string>
     <string name="kind_meeting_room">Sala de reunião</string>
     <string name="kind_room_presence">Presença na sala</string>
     <string name="kind_meeting_space">Espaço de reunião</string>
     <string name="kind_profile">Perfil</string>
     <string name="kind_mute_list">Lista de silenciados</string>
+    <string name="kind_nns">NNS</string>
+    <string name="kind_nip">CNPJ</string>
+    <string name="kind_nostr_connect">Nostr Connect</string>
     <string name="kind_dvm_status">Status do DVM</string>
     <string name="kind_dvm_content_req">Solicitação de conteúdo DVM</string>
     <string name="kind_dvm_content_resp">Resposta de conteúdo DVM</string>
     <string name="kind_dvm_user_req">Solicitação de usuário DVM</string>
     <string name="kind_dvm_user_resp">Resposta de usuário DVM</string>
+    <string name="kind_ots">OTS</string>
     <string name="kind_pay_to">Pagar para</string>
     <string name="kind_people_lists">Listas de pessoas</string>
     <string name="kind_pictures">Imagens</string>
@@ -1416,18 +1425,22 @@
     <string name="kind_relay_monitor">Anúncio de Monitor de Relay</string>
     <string name="kind_relay_set">Conjunto de relays</string>
     <string name="kind_reports">Denúncias</string>
+    <string name="kind_reposts">Repostagens</string>
     <string name="kind_user_delete">Excluir usuário</string>
     <string name="kind_seals">Selos</string>
     <string name="kind_search_relays">Relays de busca</string>
     <string name="kind_user_status">Status do usuário</string>
     <string name="kind_notes">Notas</string>
     <string name="kind_edits">Edições</string>
+    <string name="kind_torrents">Torrents</string>
     <string name="kind_torrent_comments">Comentários de torrent</string>
     <string name="kind_trusted_relays">Relays confiáveis</string>
     <string name="kind_trusted_providers">Provedores confiáveis</string>
     <string name="kind_video_repl">Vídeo (resposta)</string>
     <string name="kind_shorts_repl">Shorts (resposta)</string>
     <string name="kind_video">Vídeo</string>
+    <string name="kind_shorts">Shorts</string>
     <string name="kind_voice_msg">Mensagem de voz</string>
     <string name="kind_voice_reply">Resposta de voz</string>
+    <string name="kind_wiki">Wiki</string>
 </resources>
