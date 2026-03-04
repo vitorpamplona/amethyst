@@ -212,6 +212,7 @@ private fun InnerReactionRow(
     nav: INav,
 ) {
     val voiceRecordingState = remember(baseNote.idHex) { mutableStateOf(false) }
+    val reactionRowItems by accountViewModel.reactionRowItemsFlow().collectAsStateWithLifecycle()
 
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
@@ -222,38 +223,53 @@ private fun InnerReactionRow(
                 RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
             }
         },
-        two = {
-            ReplyReactionWithDialog(
-                baseNote,
-                MaterialTheme.colorScheme.placeholderText,
-                accountViewModel,
-                nav,
-                voiceRecordingState = voiceRecordingState,
-            )
-        },
-        three = {
-            val isDM = baseNote.event is ChatroomKeyable
-            if (!isDM) {
-                BoostWithDialog(
-                    baseNote,
-                    editState,
-                    MaterialTheme.colorScheme.placeholderText,
-                    accountViewModel,
-                    nav,
-                )
+        reactions = reactionRowItems,
+        renderReaction = { item ->
+            when (item.action) {
+                com.vitorpamplona.amethyst.model.ReactionRowAction.Reply ->
+                    ReplyReactionWithDialog(
+                        baseNote,
+                        MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel,
+                        nav,
+                        showCounter = item.showCounter,
+                        voiceRecordingState = voiceRecordingState,
+                    )
+                com.vitorpamplona.amethyst.model.ReactionRowAction.Boost -> {
+                    val isDM = baseNote.event is ChatroomKeyable
+                    if (!isDM) {
+                        BoostWithDialog(
+                            baseNote,
+                            editState,
+                            MaterialTheme.colorScheme.placeholderText,
+                            accountViewModel,
+                            nav,
+                            showCounter = item.showCounter,
+                        )
+                    }
+                }
+                com.vitorpamplona.amethyst.model.ReactionRowAction.Like ->
+                    LikeReaction(
+                        baseNote,
+                        MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel,
+                        nav,
+                        showCounter = item.showCounter,
+                    )
+                com.vitorpamplona.amethyst.model.ReactionRowAction.Zap ->
+                    ZapReaction(
+                        baseNote,
+                        MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel,
+                        nav = nav,
+                        showCounter = item.showCounter,
+                    )
+                com.vitorpamplona.amethyst.model.ReactionRowAction.Share ->
+                    ShareReaction(
+                        note = baseNote,
+                        grayTint = MaterialTheme.colorScheme.placeholderText,
+                    )
             }
-        },
-        four = {
-            LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-        },
-        five = {
-            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-        },
-        six = {
-            ShareReaction(
-                note = baseNote,
-                grayTint = MaterialTheme.colorScheme.placeholderText,
-            )
         },
     )
 }
@@ -301,12 +317,12 @@ private fun GenericInnerReactionRow(
     addPadding: Boolean,
     weightTwo: Float = 1f,
     one: @Composable () -> Unit,
-    two: @Composable () -> Unit,
-    three: @Composable () -> Unit,
-    four: @Composable () -> Unit,
-    five: @Composable () -> Unit,
-    six: @Composable () -> Unit,
+    reactions: ImmutableList<com.vitorpamplona.amethyst.model.ReactionRowItem>,
+    renderReaction: @Composable (com.vitorpamplona.amethyst.model.ReactionRowItem) -> Unit,
 ) {
+    val enabledReactions = remember(reactions) { reactions.filter { it.enabled } }
+    val lastIndex = enabledReactions.lastIndex
+
     Row(
         verticalAlignment = CenterVertically,
         horizontalArrangement = RowColSpacing,
@@ -321,15 +337,18 @@ private fun GenericInnerReactionRow(
             }
         }
 
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(weightTwo)) { two() }
-
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { three() }
-
-        Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { four() }
-
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { five() }
-
-        Row(verticalAlignment = CenterVertically, modifier = Modifier) { six() }
+        enabledReactions.forEachIndexed { index, item ->
+            val isLast = index == lastIndex
+            val itemWeight = if (item.action == com.vitorpamplona.amethyst.model.ReactionRowAction.Reply) weightTwo else 1f
+            val mod = if (isLast) Modifier else Modifier.weight(itemWeight)
+            Row(
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = RowColSpacing,
+                modifier = mod,
+            ) {
+                renderReaction(item)
+            }
+        }
     }
 }
 
@@ -548,11 +567,13 @@ private fun BoostWithDialog(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
+    showCounter: Boolean = true,
 ) {
     BoostReaction(
         baseNote,
         grayTint,
         accountViewModel,
+        showCounter = showCounter,
         onQuotePress = {
             nav.nav {
                 Route.NewShortNote(
@@ -597,6 +618,7 @@ private fun ReplyReactionWithDialog(
     grayTint: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
+    showCounter: Boolean = true,
     voiceRecordingState: MutableState<Boolean>? = null,
 ) {
     if (baseNote.event is BaseVoiceEvent) {
@@ -605,10 +627,11 @@ private fun ReplyReactionWithDialog(
             grayTint,
             accountViewModel,
             nav,
+            showCounter = showCounter,
             voiceRecordingState = voiceRecordingState,
         )
     } else {
-        ReplyReaction(baseNote, grayTint, accountViewModel) {
+        ReplyReaction(baseNote, grayTint, accountViewModel, showCounter = showCounter) {
             nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
         }
     }
@@ -800,6 +823,7 @@ fun BoostReaction(
     accountViewModel: AccountViewModel,
     iconSizeModifier: Modifier = Size19Modifier,
     iconSize: Dp = Size20dp,
+    showCounter: Boolean = true,
     onQuotePress: () -> Unit,
     onForkPress: () -> Unit,
 ) {
@@ -836,7 +860,9 @@ fun BoostReaction(
         }
     }
 
-    BoostText(baseNote, grayTint, accountViewModel)
+    if (showCounter) {
+        BoostText(baseNote, grayTint, accountViewModel)
+    }
 }
 
 @Composable
@@ -870,6 +896,7 @@ fun LikeReaction(
     iconSize: Dp = Size18dp,
     heartSizeModifier: Modifier = Size18Modifier,
     iconFontSize: TextUnit = Font14SP,
+    showCounter: Boolean = true,
 ) {
     var wantsToReact by remember { mutableStateOf(false) }
 
@@ -908,7 +935,9 @@ fun LikeReaction(
         }
     }
 
-    ObserveLikeText(baseNote, accountViewModel) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
+    if (showCounter) {
+        ObserveLikeText(baseNote, accountViewModel) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
+    }
 }
 
 @Composable
@@ -1027,6 +1056,7 @@ fun ZapReaction(
     iconSize: Dp = Size20dp,
     iconSizeModifier: Modifier = Size20Modifier,
     animationModifier: Modifier = Size14Modifier,
+    showCounter: Boolean = true,
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
@@ -1194,8 +1224,10 @@ fun ZapReaction(
         }
     }
 
-    ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
-        SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+    if (showCounter) {
+        ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
+            SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+        }
     }
 }
 

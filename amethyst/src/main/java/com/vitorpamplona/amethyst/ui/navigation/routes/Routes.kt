@@ -88,6 +88,8 @@ sealed class Route {
 
     @Serializable object UserSettings : Route()
 
+    @Serializable object ReactionsSettings : Route()
+
     @Serializable object Lists : Route()
 
     @Serializable data class MyPeopleListView(

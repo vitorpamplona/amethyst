@@ -33,7 +33,11 @@ import java.util.Locale
 class AccountSyncedSettings(
     internalSettings: AccountSyncedSettingsInternal,
 ) {
-    val reactions = AccountReactionPreferences(MutableStateFlow(internalSettings.reactions.reactionChoices.toImmutableList()))
+    val reactions =
+        AccountReactionPreferences(
+            MutableStateFlow(internalSettings.reactions.reactionChoices.toImmutableList()),
+            MutableStateFlow(internalSettings.reactions.reactionRowItems.toImmutableList()),
+        )
     val zaps =
         AccountZapPreferences(
             MutableStateFlow(internalSettings.zaps.zapAmountChoices.toImmutableList()),
@@ -54,7 +58,7 @@ class AccountSyncedSettings(
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
-            reactions = AccountReactionPreferencesInternal(reactions.reactionChoices.value),
+            reactions = AccountReactionPreferencesInternal(reactions.reactionChoices.value, reactions.reactionRowItems.value),
             zaps =
                 AccountZapPreferencesInternal(
                     zaps.zapAmountChoices.value,
@@ -78,6 +82,11 @@ class AccountSyncedSettings(
         val newReactionChoices = syncedSettingsInternal.reactions.reactionChoices.toImmutableList()
         if (!equalImmutableLists(reactions.reactionChoices.value, newReactionChoices)) {
             reactions.reactionChoices.tryEmit(newReactionChoices)
+        }
+
+        val newReactionRowItems = syncedSettingsInternal.reactions.reactionRowItems.toImmutableList()
+        if (!equalImmutableLists(reactions.reactionRowItems.value, newReactionRowItems)) {
+            reactions.reactionRowItems.tryEmit(newReactionRowItems)
         }
 
         val newZapChoices = syncedSettingsInternal.zaps.zapAmountChoices.toImmutableList()
@@ -120,6 +129,7 @@ class AccountSyncedSettings(
 @Stable
 class AccountReactionPreferences(
     var reactionChoices: MutableStateFlow<ImmutableList<String>>,
+    var reactionRowItems: MutableStateFlow<ImmutableList<ReactionRowItem>>,
 )
 
 @Stable

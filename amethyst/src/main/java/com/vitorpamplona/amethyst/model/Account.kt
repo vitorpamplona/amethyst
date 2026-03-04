@@ -468,6 +468,12 @@ class Account(
         }
     }
 
+    suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
+        if (settings.changeReactionRowItems(items)) {
+            sendNewAppSpecificData()
+        }
+    }
+
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

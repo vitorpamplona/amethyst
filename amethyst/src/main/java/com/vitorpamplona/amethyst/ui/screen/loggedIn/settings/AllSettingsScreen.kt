@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -152,6 +153,13 @@ fun AllSettingsScreen(
                 icon = Icons.Outlined.Settings,
                 tint = tint,
                 onClick = { nav.nav(Route.Settings) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.reactions_settings,
+                icon = Icons.Outlined.ThumbUp,
+                tint = tint,
+                onClick = { nav.nav(Route.ReactionsSettings) },
             )
         }
     }

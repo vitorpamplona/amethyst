@@ -235,6 +235,15 @@ class AccountSettings(
         return false
     }
 
+    fun changeReactionRowItems(newItems: List<ReactionRowItem>): Boolean {
+        if (syncedSettings.reactions.reactionRowItems.value != newItems) {
+            syncedSettings.reactions.reactionRowItems.tryEmit(newItems.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URINorm?): Boolean {
         if (zapPaymentRequest.value != newServer) {
             zapPaymentRequest.tryEmit(newServer)
