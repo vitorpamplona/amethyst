@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip64Chess
 
+import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
