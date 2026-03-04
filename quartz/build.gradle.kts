@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.serialization)
     alias(libs.plugins.vanniktech.mavenPublish)
-    id("io.github.frankois944.spmForKmp") version "1.4.8"
+    alias(libs.plugins.frankois944.spmForKmp)
 }
 
 kotlin {
@@ -65,7 +65,7 @@ kotlin {
     listOf(
         iosArm64(),
         iosX64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { target ->
         target.swiftPackageConfig(cinteropName = "swiftbridge") {
             minIos = "17"
@@ -77,12 +77,11 @@ kotlin {
                     products = {
                         add("RFC 3986")
                     },
-                    version = "0.1.0"
+                    version = "0.1.0",
                 )
             }
         }
     }
-
 
     iosX64 {
         binaries.framework {
@@ -101,7 +100,8 @@ kotlin {
             baseName = xcfName
         }
     }
-    //This makes sure that the resource file directory is visible for iOS tests.
+
+    // This makes sure that the resource file directory is visible for iOS tests.
     val rootDir = "${rootProject.rootDir.path}/quartz/src/iosTest/resources"
 
     tasks.withType<Test>().configureEach {
