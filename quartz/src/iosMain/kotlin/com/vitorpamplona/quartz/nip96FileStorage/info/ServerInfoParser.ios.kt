@@ -20,9 +20,29 @@
  */
 package com.vitorpamplona.quartz.nip96FileStorage.info
 
+import platform.Foundation.NSURL
+import platform.Foundation.NSURLComponents
+
 actual fun makeAbsoluteIfRelativeUrl(
     baseUrl: String,
     potentiallyRelativeUrl: String,
-): String {
-    TODO("Not yet implemented")
-}
+): String =
+    try {
+        val refUrl = NSURLComponents(potentiallyRelativeUrl)
+        if (refUrl.scheme != null) {
+            potentiallyRelativeUrl
+        } else {
+            val apiUrlComponents =
+                NSURLComponents(
+                    uRL =
+                        NSURL(
+                            string = potentiallyRelativeUrl,
+                            relativeToURL = NSURL(baseUrl, encodingInvalidCharacters = false),
+                        ),
+                    resolvingAgainstBaseURL = true,
+                )
+            apiUrlComponents.string ?: throw Exception("URL resolution failed.")
+        }
+    } catch (e: Exception) {
+        potentiallyRelativeUrl
+    }

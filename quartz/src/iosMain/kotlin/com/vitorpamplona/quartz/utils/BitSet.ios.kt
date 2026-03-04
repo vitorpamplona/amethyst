@@ -20,32 +20,32 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.quartz.utils.io.CustomBitSet
+
 actual class BitSet {
+    val nativeBitSet: CustomBitSet
+
     actual constructor(nBits: Int) {
-        TODO("Not yet implemented")
+        nativeBitSet = CustomBitSet(nBits)
+    }
+
+    constructor(bytes: ByteArray) {
+        nativeBitSet = CustomBitSet(bytes)
     }
 
     actual fun set(bitIndex: Int) {
-        TODO("Not yet implemented")
+        nativeBitSet.set(bitIndex, true)
     }
 
     actual fun clear(bitIndex: Int) {
-        TODO("Not yet implemented")
+        nativeBitSet.clear(bitIndex)
     }
 
-    actual fun get(bitIndex: Int): Boolean {
-        TODO("Not yet implemented")
-    }
+    actual fun get(bitIndex: Int): Boolean = nativeBitSet[bitIndex]
 
-    actual fun size(): Int {
-        TODO("Not yet implemented")
-    }
+    actual fun size(): Int = nativeBitSet.size()
 
-    actual fun toByteArray(): ByteArray {
-        TODO("Not yet implemented")
-    }
+    actual fun toByteArray(): ByteArray = nativeBitSet.toByteArray()
 }
 
-actual fun bitSetValueOf(bytes: ByteArray): BitSet {
-    TODO("Not yet implemented")
-}
+actual fun bitSetValueOf(bytes: ByteArray): BitSet = BitSet(bytes)

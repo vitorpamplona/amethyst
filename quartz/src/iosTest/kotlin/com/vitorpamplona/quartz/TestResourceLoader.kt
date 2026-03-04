@@ -20,37 +20,30 @@
  */
 package com.vitorpamplona.quartz
 
-import kotlinx.cinterop.BetaInteropApi
+import dev.whyoleg.cryptography.CryptographyProviderApi
+import dev.whyoleg.cryptography.providers.base.toByteArray
 import kotlinx.cinterop.ExperimentalForeignApi
-import platform.Foundation.NSBundle
+import kotlinx.cinterop.toKString
+import kotlinx.io.files.FileNotFoundException
+import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.stringWithContentsOfFile
-import platform.darwin.NSObject
-import platform.darwin.NSObjectMeta
+import platform.posix.getenv
 
 actual class TestResourceLoader {
-    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+    @OptIn(ExperimentalForeignApi::class)
     actual fun loadString(file: String): String {
-        // Split the filename and extension (e.g., "data.json" -> "data", "json")
-        val basename = file.substringBeforeLast(".")
-        val extension = file.substringAfterLast(".", "")
-
-        // Locate the file in the main application bundle
-        val path =
-            NSBundle.mainBundle.pathForResource(basename, ofType = extension)
-                ?: throw IllegalArgumentException("Resource not found: $file")
-
-        // Read the file content as a UTF-8 string
-        return NSString
-            .stringWithContentsOfFile(
-                path = path,
-                encoding = NSUTF8StringEncoding,
-                error = null,
-            ).toString()
+        val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()
+        val filePath = "$resourceDir/$file"
+        return NSString.stringWithContentsOfFile(filePath, encoding = NSUTF8StringEncoding, error = null) as String
     }
 
-    private class BundleMarker : NSObject() {
-        companion object : NSObjectMeta()
+    @OptIn(ExperimentalForeignApi::class, CryptographyProviderApi::class)
+    fun loadFileData(file: String): ByteArray {
+        val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()
+        val filePath = "$resourceDir/$file"
+        return NSData.dataWithContentsOfFile(filePath)?.toByteArray() ?: throw FileNotFoundException("Resource $file was not found.")
     }
 }

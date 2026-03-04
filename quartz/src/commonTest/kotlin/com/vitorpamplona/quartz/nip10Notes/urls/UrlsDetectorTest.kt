@@ -18,12 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip10Notes.urls
 
-import net.thauvin.erik.urlencoder.UrlEncoderUtil
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.utils.fastFindURLs
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
 
-actual object UrlEncoder {
-    actual fun encode(value: String): String = UrlEncoderUtil.encode(value)
+class UrlsDetectorTest {
+    private val testSentence = "I have a website at https://mysite.xyz and a blog at https://myblog.xyz"
 
-    actual fun decode(value: String): String = UrlEncoderUtil.decode(value)
+    @Test
+    fun detectUrlNumber() {
+        val detectedLinks = fastFindURLs(testSentence)
+        assertEquals(2, detectedLinks.size)
+    }
+
+    @Test
+    fun urlsAreCorrect() {
+        val detectedLinks = findURLs(testSentence)
+        assertContains(detectedLinks, "https://mysite.xyz")
+        assertContains(detectedLinks, "https://myblog.xyz")
+    }
 }

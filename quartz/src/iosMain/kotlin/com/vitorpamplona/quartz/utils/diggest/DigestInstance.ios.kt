@@ -20,22 +20,44 @@
  */
 package com.vitorpamplona.quartz.utils.diggest
 
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.DelicateCryptographyApi
+import dev.whyoleg.cryptography.algorithms.RIPEMD160
+import dev.whyoleg.cryptography.algorithms.SHA1
+import dev.whyoleg.cryptography.algorithms.SHA256
+
 actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
+    private val cryptoProvider = CryptographyProvider.Default
+
+    private val hasher = cryptoProvider.get(digestForAlgorithm(algorithm)).hasher()
+    private val hashFunction = hasher.createHashFunction()
+
     actual fun update(array: ByteArray) {
-        TODO("Not yet implemented")
+        hashFunction.update(array)
     }
 
     actual fun update(byte: Byte) {
-        TODO("Not yet implemented")
+        hashFunction.update(byteArrayOf(byte))
     }
 
-    actual fun digest(): ByteArray {
-        TODO("Not yet implemented")
-    }
+    actual fun digest(): ByteArray = hashFunction.hashToByteArray()
 
-    actual fun digest(input: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
+    actual fun digest(input: ByteArray): ByteArray = hasher.hashBlocking(input)
+
+    @OptIn(DelicateCryptographyApi::class)
+    private fun digestForAlgorithm(algorithmName: String) =
+        when (algorithmName) {
+            "SHA-256" -> SHA256
+
+            "SHA-1" -> SHA1
+
+            "ripemd160" -> RIPEMD160
+
+            // Adding this below as a reminder.
+            "keccak256" -> error("KECCAK-256 is not yet supported.")
+
+            else -> error("This message digest is not supported.")
+        }
 }

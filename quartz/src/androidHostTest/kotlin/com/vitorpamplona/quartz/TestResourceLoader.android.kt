@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.quartz
 
-actual class TestResourceLoader actual constructor() {
-    actual fun loadString(file: String): String {
-        TODO("Not yet implemented")
-    }
+actual class TestResourceLoader {
+    actual fun loadString(file: String): String =
+        this@TestResourceLoader
+            .javaClass.classLoader
+            ?.getResourceAsStream(file)
+            ?.bufferedReader()
+            ?.use { it.readText() } ?: throw IllegalArgumentException("Resource not found: $file")
 }

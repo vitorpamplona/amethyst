@@ -1,5 +1,6 @@
 [versions]
 accompanistAdaptive = "0.37.3"
+cachemapVersion = "0.2.4"
 composeMultiplatform = "1.10.0"
 activityCompose = "1.12.4"
 agp = "9.1.0"
@@ -17,6 +18,7 @@ composeBom = "2026.02.00"
 composeRuntimeAnnotation = "1.10.3"
 coreKtx = "1.17.0"
 datastore = "1.2.0"
+devWhyolegCryptography = "0.5.0"
 espressoCore = "3.7.0"
 firebaseBom = "34.9.0"
 fragmentKtx = "1.8.9"
@@ -41,6 +43,7 @@ markdown = "f92ef49c9d"
 media3 = "1.9.2"
 mockk = "1.14.9"
 kotlinx-coroutines-test = "1.10.2"
+netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.7"
 okhttp = "5.3.2"
 runner = "1.7.0"
@@ -111,11 +114,13 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 audiowaveform = { group = "com.github.lincollincol", name = "compose-audiowaveform", version.ref = "audiowaveform" }
+charlietap-cachemap = { module = "io.github.charlietap:cachemap", version.ref = "cachemapVersion" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
+dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
@@ -140,6 +145,7 @@ markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", n
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
+net-thauvin-erik-urlencoder-lib = { module = "net.thauvin.erik.urlencoder:urlencoder-lib", version.ref = "netUrlencoderLibVersion" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
 rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc3986" }

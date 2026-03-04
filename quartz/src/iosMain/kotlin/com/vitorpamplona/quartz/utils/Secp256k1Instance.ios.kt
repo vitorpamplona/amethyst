@@ -20,49 +20,40 @@
  */
 package com.vitorpamplona.quartz.utils
 
-actual object Secp256k1Instance {
-    actual fun compressedPubKeyFor(privKey: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
+import fr.acinq.secp256k1.Secp256k1
 
-    actual fun isPrivateKeyValid(il: ByteArray): Boolean {
-        TODO("Not yet implemented")
-    }
+actual object Secp256k1Instance {
+    private val h02 = Hex.decode("02")
+    private val secp256k1Ref = Secp256k1.get()
+
+    actual fun compressedPubKeyFor(privKey: ByteArray): ByteArray = secp256k1Ref.pubKeyCompress(secp256k1Ref.pubkeyCreate(privKey))
+
+    actual fun isPrivateKeyValid(il: ByteArray): Boolean = secp256k1Ref.secKeyVerify(il)
 
     actual fun signSchnorr(
         data: ByteArray,
         privKey: ByteArray,
         nonce: ByteArray?,
-    ): ByteArray {
-        TODO("Not yet implemented")
-    }
+    ): ByteArray = secp256k1Ref.signSchnorr(data, privKey, nonce)
 
     actual fun signSchnorr(
         data: ByteArray,
         privKey: ByteArray,
-    ): ByteArray {
-        TODO("Not yet implemented")
-    }
+    ): ByteArray = secp256k1Ref.signSchnorr(data, privKey, null)
 
     actual fun verifySchnorr(
         signature: ByteArray,
         hash: ByteArray,
         pubKey: ByteArray,
-    ): Boolean {
-        TODO("Not yet implemented")
-    }
+    ): Boolean = secp256k1Ref.verifySchnorr(signature, hash, pubKey)
 
     actual fun privateKeyAdd(
         first: ByteArray,
         second: ByteArray,
-    ): ByteArray {
-        TODO("Not yet implemented")
-    }
+    ): ByteArray = secp256k1Ref.privKeyTweakAdd(first, second)
 
     actual fun pubKeyTweakMulCompact(
         pubKey: ByteArray,
         privateKey: ByteArray,
-    ): ByteArray {
-        TODO("Not yet implemented")
-    }
+    ): ByteArray = secp256k1Ref.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
 }

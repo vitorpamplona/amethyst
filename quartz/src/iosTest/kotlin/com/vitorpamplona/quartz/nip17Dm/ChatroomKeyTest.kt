@@ -18,12 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip17Dm
 
-import net.thauvin.erik.urlencoder.UrlEncoderUtil
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.collections.immutable.persistentSetOf
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-actual object UrlEncoder {
-    actual fun encode(value: String): String = UrlEncoderUtil.encode(value)
+class ChatroomKeyTest {
+    @Test
+    fun testEquals() {
+        val k1 = ChatroomKey(persistentSetOf("Key1", "Key2"))
+        val k2 = ChatroomKey(persistentSetOf("Key1", "Key2"))
 
-    actual fun decode(value: String): String = UrlEncoderUtil.decode(value)
+        assertEquals(k1, k2)
+        assertEquals(k1.hashCode(), k2.hashCode())
+    }
 }

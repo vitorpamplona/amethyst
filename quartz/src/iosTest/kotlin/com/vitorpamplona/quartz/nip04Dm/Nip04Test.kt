@@ -18,12 +18,37 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip04Dm
 
-import net.thauvin.erik.urlencoder.UrlEncoderUtil
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-actual object UrlEncoder {
-    actual fun encode(value: String): String = UrlEncoderUtil.encode(value)
+class Nip04Test {
+    @Test
+    fun encryptDecryptNIP4Test() {
+        val msg = "Hi"
 
-    actual fun decode(value: String): String = UrlEncoderUtil.decode(value)
+        val privateKey = Nip01.privKeyCreate()
+        val publicKey = Nip01.pubKeyCreate(privateKey)
+
+        val encrypted = Nip04.encrypt(msg, privateKey, publicKey)
+        val decrypted = Nip04.decrypt(encrypted, privateKey, publicKey)
+
+        assertEquals(msg, decrypted)
+    }
+
+    @Test
+    fun encryptSharedSecretDecryptNIP4Test() {
+        val msg = "Hi"
+
+        val privateKey = Nip01.privKeyCreate()
+        val publicKey = Nip01.pubKeyCreate(privateKey)
+
+        val encrypted = Nip04.encrypt(msg, privateKey, publicKey)
+        val decrypted = Nip04.decrypt(encrypted, privateKey, publicKey)
+
+        assertEquals(msg, decrypted)
+    }
 }

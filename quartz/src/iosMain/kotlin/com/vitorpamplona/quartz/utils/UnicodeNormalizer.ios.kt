@@ -20,8 +20,13 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import platform.Foundation.NSString
+import platform.Foundation.precomposedStringWithCompatibilityMapping
+
 actual class UnicodeNormalizer {
     actual fun normalizeNFKC(input: String): String {
-        TODO("Not yet implemented")
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        val platformString = input as NSString
+        return platformString.precomposedStringWithCompatibilityMapping
     }
 }

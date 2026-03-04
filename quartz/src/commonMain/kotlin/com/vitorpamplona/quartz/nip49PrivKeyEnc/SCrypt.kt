@@ -76,8 +76,8 @@ object SCrypt {
     ): ByteArray {
         require(!(n < 2 || (n and (n - 1)) != 0)) { "N must be a power of 2 greater than 1" }
 
-        require(n <= Int.Companion.MAX_VALUE / 128 / r) { "Parameter N is too large" }
-        require(r <= Int.Companion.MAX_VALUE / 128 / p) { "Parameter r is too large" }
+        require(n <= Int.MAX_VALUE / 128 / r) { "Parameter N is too large" }
+        require(r <= Int.MAX_VALUE / 128 / p) { "Parameter r is too large" }
 
         val mac = MacInstance("HmacSHA256", passwd)
 

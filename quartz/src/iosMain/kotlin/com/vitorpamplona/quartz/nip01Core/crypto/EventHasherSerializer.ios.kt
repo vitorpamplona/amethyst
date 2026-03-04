@@ -21,17 +21,46 @@
 package com.vitorpamplona.quartz.nip01Core.crypto
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.buildJsonArray
 
 actual object EventHasherSerializer {
+    fun makeJsonObjectForId(
+        pubKey: HexKey,
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): JsonArray {
+        val arrayBuilder =
+            buildJsonArray {
+                add(0)
+                add(pubKey)
+                add(createdAt)
+                add(kind)
+                addJsonArray {
+                    tags.fastForEach { tag ->
+                        // add(JsonArray(content = tag.map { JsonPrimitive(it) }))
+                        addJsonArray { tag.fastForEach { add(it) } }
+                    }
+                }
+                add(content)
+            }
+        return arrayBuilder
+    }
+
     actual fun makeJsonForId(
         pubKey: HexKey,
         createdAt: Long,
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): String {
-        TODO("Not yet implemented")
-    }
+    ): String = makeJsonObjectForId(pubKey, createdAt, kind, tags, content).toString()
 
     actual fun fastMakeJsonForId(
         pubKey: HexKey,
@@ -40,7 +69,8 @@ actual object EventHasherSerializer {
         tags: Array<Array<String>>,
         content: String,
     ): ByteArray {
-        TODO("Not yet implemented")
+        // Also use makeJsonObjectForId(...) above. May change this if needed(for performance).
+        return makeJsonObjectForId(pubKey, createdAt, kind, tags, content).toString().encodeToByteArray()
     }
 
     actual fun makeJsonForIdHashAndCheck(
@@ -51,6 +81,8 @@ actual object EventHasherSerializer {
         tags: Array<Array<String>>,
         content: String,
     ): Boolean {
-        TODO("Not yet implemented")
+        // Also use makeJsonObjectForId(...) above. May change byteArray encode method if needed.
+        val eventIdHash = sha256(makeJsonObjectForId(pubKey, createdAt, kind, tags, content).toString().encodeToByteArray())
+        return Hex.isEqual(id, eventIdHash)
     }
 }

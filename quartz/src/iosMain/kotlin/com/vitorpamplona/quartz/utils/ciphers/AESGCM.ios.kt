@@ -20,23 +20,47 @@
  */
 package com.vitorpamplona.quartz.utils.ciphers
 
+import com.vitorpamplona.quartz.utils.Log
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.DelicateCryptographyApi
+import dev.whyoleg.cryptography.algorithms.AES
+
 actual class AESGCM actual constructor(
     actual val keyBytes: ByteArray,
     actual val nonce: ByteArray,
 ) : NostrCipher {
-    actual override fun name(): String {
-        TODO("Not yet implemented")
-    }
+    private val provider = CryptographyProvider.Default
+    private val aesGcm = provider.get(AES.GCM)
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
+    private val keyDecoder =
+        aesGcm
+            .keyDecoder()
+            .decodeFromByteArrayBlocking(AES.Key.Format.RAW, keyBytes)
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
+    private fun cipher() = keyDecoder.cipher()
 
-    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? {
-        TODO("Not yet implemented")
-    }
+    actual override fun name(): String = "aes-gcm"
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
+        with(cipher()) {
+            encryptWithIvBlocking(nonce, bytesToEncrypt)
+        }
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
+        with(cipher()) {
+            decryptWithIvBlocking(nonce, bytesToDecrypt)
+        }
+
+    @OptIn(DelicateCryptographyApi::class)
+    actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
+        try {
+            with(cipher()) {
+                decryptWithIvBlocking(nonce, bytesToDecrypt)
+            }
+        } catch (e: Exception) {
+            Log.w("AESGCM", "Failed to decrypt", e)
+            null
+        }
 }

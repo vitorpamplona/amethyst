@@ -20,12 +20,36 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSURLComponents
+import swiftbridge.Rfc3986UriBridge
+
+@OptIn(ExperimentalForeignApi::class)
 actual object Rfc3986 {
-    actual fun normalize(uri: String): String = TODO()
+    private val rfc3986UriBridge = Rfc3986UriBridge()
 
-    actual fun isValidUrl(url: String): Boolean = TODO()
+    actual fun normalize(uri: String): String =
+        rfc3986UriBridge
+            .normalizeUrlWithUrl(uri, null)
+            ?.let { if (it.last() == '/') it else "$it/" } ?: throw Exception("Could not normalize URI: $uri")
 
-    actual fun normalizeAndRemoveFragment(url: String): String = TODO()
+    actual fun isValidUrl(url: String): Boolean = rfc3986UriBridge.isUrlValidWithUrl(url)
 
-    actual fun host(url: String): String = TODO()
+    actual fun normalizeAndRemoveFragment(url: String): String =
+        NSURLComponents(url)
+            .toStringNoFragment()
+            .internIfPossible()
+
+    actual fun host(url: String): String = rfc3986UriBridge.hostFromUriWithUrl(url, null) ?: throw Exception("Could not retrieve host from URL.")
+}
+
+fun NSURLComponents.toStringNoFragment(): String {
+    val sb = StringBuilder()
+
+    if (scheme != null) sb.append(scheme).append(":")
+    if (host != null) sb.append("//").append(host.toString())
+    if (path != null) sb.append(path)
+    if (query != null) sb.append("?").append(query)
+
+    return sb.toString()
 }
