@@ -33,6 +33,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
+import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
@@ -137,7 +138,8 @@ class OkHttpFactory(
             networkClient = lazy { networkClient(url).asNetworkClient() },
             diskCache = lazy { imageLoader.diskCache },
             cacheStrategy = cacheStrategyLazy,
-            connectivityChecker = connectivityCheckerLazy.get(options.context),
+            connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+            concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
         )
     }
 
