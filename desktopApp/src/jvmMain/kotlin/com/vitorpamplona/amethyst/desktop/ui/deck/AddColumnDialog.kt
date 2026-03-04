@@ -56,6 +56,7 @@ private val COLUMN_OPTIONS =
         DeckColumnType.Bookmarks,
         DeckColumnType.GlobalFeed,
         DeckColumnType.MyProfile,
+        DeckColumnType.Chess,
     )
 
 @Composable

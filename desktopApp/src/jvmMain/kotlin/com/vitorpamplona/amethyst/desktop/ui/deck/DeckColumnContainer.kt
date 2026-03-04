@@ -276,6 +276,7 @@ internal fun RootContent(
                 relayManager = relayManager,
                 account = account,
                 onBack = {},
+                compactMode = true,
             )
         }
 
