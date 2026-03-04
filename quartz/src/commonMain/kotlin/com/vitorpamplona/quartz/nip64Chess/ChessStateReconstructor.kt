@@ -21,9 +21,7 @@
 package com.vitorpamplona.quartz.nip64Chess
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 
 /**
  * Deterministic chess state reconstruction from Jester protocol events.

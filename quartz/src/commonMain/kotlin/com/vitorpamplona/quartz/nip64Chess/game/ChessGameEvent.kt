@@ -55,11 +55,6 @@ class ChessGameEvent(
      */
     fun pgn(): String = content
 
-    /**
-     * Get alt text for non-supporting clients (NIP-31)
-     */
-    fun altText(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "alt" }?.get(1)
-
     companion object {
         const val KIND = 64
         const val ALT_DESCRIPTION = "Chess Game"
