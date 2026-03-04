@@ -689,6 +689,9 @@
     <string name="not_available_acronym">Nie dotyczy</string>
     <string name="relay_error_messages">Błędy i powiadomienia z tego transmitera</string>
     <string name="relay_no_active_subscriptions">Brak aktywnych subskrypcji dla tego transmitera</string>
+    <string name="relay_filter_since">od %1$s</string>
+    <string name="relay_filter_until">do %1$s</string>
+    <string name="relay_filter_limit">limit %1$d</string>
     <string name="message_length">Długość wiadomości</string>
     <string name="subscriptions">Subskrybcje</string>
     <string name="filters">Filtry</string>
@@ -785,6 +788,8 @@
     <string name="spamming_users">Spamerzy</string>
     <string name="muted_button">Wyciszone. Kliknij, aby włączyć dźwięk</string>
     <string name="mute_button">Dźwięk włączony. Kliknij, aby wyciszyć</string>
+    <string name="skip_back">Cofnij %d sekund</string>
+    <string name="skip_forward">Przewiń %d sekund</string>
     <string name="picture_in_picture">Obraz w Obrazie</string>
     <string name="search_button">Wyszukiwanie lokalne i zdalne</string>
     <string name="nip05_verified">Adres Nostr został zweryfikowany</string>
@@ -1297,9 +1302,13 @@
     <string name="chess_decline">Odrzuć</string>
     <string name="chess_new_game">Nowa gra</string>
     <string name="chess_game_not_found">Gra nie znaleziona</string>
+    <string name="badge_and_n_others"> i %1$d innych</string>
+    <string name="remove_language">Usuń %1$s</string>
     <!-- Kind display names for relay subscription filter chips -->
+    <string name="kind_outbox_relays">Transmitery wysyłające</string>
     <string name="kind_apps">Aplikacje</string>
     <string name="kind_user_settings">Ustawienia użytkownika</string>
+    <string name="kind_audio_header">Nagłówek audio</string>
     <string name="kind_audio_track">Ścieżka audio</string>
     <string name="kind_profile_badges">Odznaki profilowe</string>
     <string name="kind_blocked_relays">Zablokowane Transmitery</string>
@@ -1308,6 +1317,7 @@
     <string name="kind_bookmark_list">Lista zakładek</string>
     <string name="kind_calendar">Kalendarz</string>
     <string name="kind_favorite_relays">Ulubione Transmitery</string>
+    <string name="kind_channel_metadata">Metadane kanału</string>
     <string name="kind_dm_file">Plik DM</string>
     <string name="kind_dm_message">Wiadomość DM</string>
     <string name="kind_dm_relays">Transmitery DM</string>
