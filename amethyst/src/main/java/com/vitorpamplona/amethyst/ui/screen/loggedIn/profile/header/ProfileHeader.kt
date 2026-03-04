@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
@@ -82,6 +83,7 @@ import kotlinx.coroutines.launch
 fun ProfileHeader(
     baseUser: User,
     appRecommendations: UserAppRecommendationsFeedViewModel,
+    externalIdentities: UserExternalIdentitiesViewModel,
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
@@ -154,7 +156,7 @@ fun ProfileHeader(
                 }
             }
 
-            DrawAdditionalInfo(baseUser, appRecommendations, accountViewModel, nav)
+            DrawAdditionalInfo(baseUser, appRecommendations, externalIdentities, accountViewModel, nav)
 
             HorizontalDivider(modifier = Modifier.padding(top = 6.dp))
         }

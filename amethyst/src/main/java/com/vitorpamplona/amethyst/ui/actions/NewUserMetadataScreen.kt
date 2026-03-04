@@ -291,7 +291,7 @@ fun NewUserMetadataScreen(
 
                 // -- Social Proofs --
                 ExpandableSection(
-                    title = "Social proof",
+                    title = stringRes(R.string.social_proof),
                     expanded = socialExpanded,
                 ) {
                     OutlinedTextField(

@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -192,7 +193,7 @@ fun EditPostView(
                                             baseNote = it,
                                             modifier = MaterialTheme.colorScheme.replyModifier,
                                             isQuotedNote = true,
-                                            unPackReply = false,
+                                            unPackReply = ReplyRenderType.NONE,
                                             makeItShort = true,
                                             quotesLeft = 1,
                                             accountViewModel = accountViewModel,

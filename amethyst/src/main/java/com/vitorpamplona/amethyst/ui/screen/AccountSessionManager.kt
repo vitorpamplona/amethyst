@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.DefaultChannels
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
@@ -33,14 +31,17 @@ import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -63,9 +64,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,22 +76,40 @@ import java.util.regex.Pattern
 
 val EMAIL_PATTERN: Pattern = Pattern.compile(".+@.+\\.[a-z]+")
 
+sealed class AccountState {
+    object Loading : AccountState()
+
+    object LoggedOff : AccountState()
+
+    @Stable
+    class LoggedIn(
+        val account: Account,
+        var route: Route? = null,
+    ) : AccountState()
+}
+
 @Stable
-class AccountStateViewModel : ViewModel() {
+class AccountSessionManager(
+    val accountsCache: AccountCacheState,
+    val nip05Client: Nip05Client,
+    val client: INostrClient,
+    val localPreferences: LocalPreferences,
+    val scope: CoroutineScope,
+) {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
 
     fun loginWithDefaultAccountIfLoggedOff() {
         // pulls account from storage.
         if (_accountContent.value !is AccountState.LoggedIn) {
-            viewModelScope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 loginWithDefaultAccount()
             }
         }
     }
 
     private suspend fun loginWithDefaultAccount(route: Route? = null) {
-        val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage()
+        val accountSettings = localPreferences.loadAccountConfigFromEncryptedStorage()
 
         if (accountSettings != null) {
             startUI(accountSettings, route)
@@ -155,7 +173,7 @@ class AccountStateViewModel : ViewModel() {
                 )
             }
 
-        LocalPreferences.setDefaultAccount(accountSettings)
+        localPreferences.setDefaultAccount(accountSettings)
 
         startUI(accountSettings)
     }
@@ -164,20 +182,11 @@ class AccountStateViewModel : ViewModel() {
         accountSettings: AccountSettings,
         route: Route? = null,
     ) {
-        val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
+        val account = accountsCache.loadAccount(accountSettings)
         _accountContent.update {
             AccountState.LoggedIn(account, route)
         }
     }
-
-    private fun prepareLogoutOrSwitch() =
-        when (val state = _accountContent.value) {
-            is AccountState.LoggedIn -> {
-                state.currentViewModelStore.viewModelStore.clear()
-            }
-
-            else -> {}
-        }
 
     fun login(
         key: String,
@@ -187,7 +196,7 @@ class AccountStateViewModel : ViewModel() {
         packageName: String = "",
         onError: (String?) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             if (key.startsWith("ncryptsec")) {
                 val newKey =
                     try {
@@ -214,7 +223,7 @@ class AccountStateViewModel : ViewModel() {
                     onError("Could not parse nip05 address: $nip05")
                 } else {
                     try {
-                        val pubkeyInfo = Amethyst.instance.nip05Client.get(nip05)
+                        val pubkeyInfo = nip05Client.get(nip05)
                         if (pubkeyInfo == null) {
                             onError("User not found in the nip05 server: $nip05")
                         } else {
@@ -238,7 +247,7 @@ class AccountStateViewModel : ViewModel() {
         packageName: String = "",
         onError: (String) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             loginSync(key, transientAccount, loginWithExternalSigner, packageName, onError)
         }
     }
@@ -251,9 +260,6 @@ class AccountStateViewModel : ViewModel() {
         onError: (String) -> Unit,
     ) {
         try {
-            if (_accountContent.value is AccountState.LoggedIn) {
-                prepareLogoutOrSwitch()
-            }
             loginAndStartUI(key, transientAccount, loginWithExternalSigner, packageName)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -263,31 +269,26 @@ class AccountStateViewModel : ViewModel() {
     }
 
     fun newKey(name: String? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            if (_accountContent.value is AccountState.LoggedIn) {
-                prepareLogoutOrSwitch()
-            }
-
+        scope.launch(Dispatchers.IO) {
             _accountContent.update { AccountState.Loading }
 
             val accountSettings = createNewAccount(name)
 
-            LocalPreferences.setDefaultAccount(accountSettings)
+            localPreferences.setDefaultAccount(accountSettings)
 
             startUI(accountSettings)
 
-            @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) {
+            scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
 
                 val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
 
-                accountSettings.backupUserMetadata?.let { Amethyst.instance.client.send(it, toPost) }
-                accountSettings.backupContactList?.let { Amethyst.instance.client.send(it, toPost) }
-                accountSettings.backupNIP65RelayList?.let { Amethyst.instance.client.send(it, toPost) }
-                accountSettings.backupDMRelayList?.let { Amethyst.instance.client.send(it, toPost) }
-                accountSettings.backupSearchRelayList?.let { Amethyst.instance.client.send(it, toPost) }
-                accountSettings.backupIndexRelayList?.let { Amethyst.instance.client.send(it, toPost) }
+                accountSettings.backupUserMetadata?.let { client.send(it, toPost) }
+                accountSettings.backupContactList?.let { client.send(it, toPost) }
+                accountSettings.backupNIP65RelayList?.let { client.send(it, toPost) }
+                accountSettings.backupDMRelayList?.let { client.send(it, toPost) }
+                accountSettings.backupSearchRelayList?.let { client.send(it, toPost) }
+                accountSettings.backupIndexRelayList?.let { client.send(it, toPost) }
             }
         }
     }
@@ -315,7 +316,7 @@ class AccountStateViewModel : ViewModel() {
     }
 
     fun switchUser(accountInfo: AccountInfo) {
-        viewModelScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             switchUserSync(accountInfo)
         }
     }
@@ -324,8 +325,8 @@ class AccountStateViewModel : ViewModel() {
         npub: String,
         route: Route,
     ): Boolean {
-        if (npub != LocalPreferences.currentAccount()) {
-            val account = LocalPreferences.allSavedAccounts().firstOrNull { it.npub == npub }
+        if (npub != localPreferences.currentAccount()) {
+            val account = localPreferences.allSavedAccounts().firstOrNull { it.npub == npub }
             if (account != null) {
                 switchUserSync(account, route)
                 return true
@@ -338,8 +339,7 @@ class AccountStateViewModel : ViewModel() {
         accountInfo: AccountInfo,
         route: Route? = null,
     ) {
-        prepareLogoutOrSwitch()
-        LocalPreferences.switchToAccount(accountInfo)
+        localPreferences.switchToAccount(accountInfo)
         loginWithDefaultAccount(route)
     }
 
@@ -357,17 +357,16 @@ class AccountStateViewModel : ViewModel() {
         }
 
     fun logOff(accountInfo: AccountInfo) {
-        viewModelScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             if (accountInfo.npub == currentAccountNPub()) {
                 // log off and relogin with the 0 account
-                prepareLogoutOrSwitch()
-                LocalPreferences.deleteAccount(accountInfo)
-                Amethyst.instance.accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
+                localPreferences.deleteAccount(accountInfo)
+                accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
                 loginWithDefaultAccount()
             } else {
                 // delete without switching logins
-                LocalPreferences.deleteAccount(accountInfo)
-                Amethyst.instance.accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
+                localPreferences.deleteAccount(accountInfo)
+                accountsCache.removeAccount(accountInfo.npub.bechToBytes().toHexKey())
             }
         }
     }

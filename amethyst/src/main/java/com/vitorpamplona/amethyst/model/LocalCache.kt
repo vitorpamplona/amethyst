@@ -132,6 +132,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
@@ -147,6 +148,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -201,6 +203,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -227,7 +230,9 @@ interface ILocalCache {
     fun markAsSeen(
         eventId: String,
         relay: NormalizedRelayUrl,
-    ) {}
+    ) {
+        // Default no-op; implementations may override to track seen events per relay
+    }
 }
 
 object LocalCache : ILocalCache, ICacheProvider {
@@ -558,6 +563,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         return false
     }
+
+    fun consume(
+        event: ExternalIdentitiesEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: ContactListEvent,
@@ -1197,6 +1208,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     private fun consume(
         event: TrustedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: FavoriteRelayListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2054,6 +2071,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     fun consume(
         event: HighlightEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: CodeSnippetEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -3043,6 +3066,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is EmojiPackSelectionEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatEvent -> consume(event, relay, wasVerified)
                 is EphemeralChatListEvent -> consume(event, relay, wasVerified)
+                is ExternalIdentitiesEvent -> consume(event, relay, wasVerified)
                 is GenericRepostEvent -> consume(event, relay, wasVerified)
                 is FhirResourceEvent -> consume(event, relay, wasVerified)
                 is FileHeaderEvent -> consume(event, relay, wasVerified)
@@ -3059,6 +3083,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
                 is ChessGameEvent -> consume(event, relay, wasVerified)
+                is FavoriteRelayListEvent -> consume(event, relay, wasVerified)
                 is JesterEvent -> consume(event, relay, wasVerified)
                 is LiveChessGameChallengeEvent -> consume(event, relay, wasVerified)
                 is LiveChessGameAcceptEvent -> consume(event, relay, wasVerified)
@@ -3096,6 +3121,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
+                is CodeSnippetEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)
                 is PollEvent -> consume(event, relay, wasVerified)
                 is PollResponseEvent -> consume(event, relay, wasVerified)

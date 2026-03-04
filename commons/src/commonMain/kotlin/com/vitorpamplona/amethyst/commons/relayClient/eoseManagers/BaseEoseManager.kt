@@ -21,12 +21,10 @@
 package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
-import com.vitorpamplona.amethyst.commons.utils.isDebug
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 
 abstract class BaseEoseManager<T>(
@@ -34,17 +32,13 @@ abstract class BaseEoseManager<T>(
     val allKeys: () -> Set<T>,
     val sampleTime: Long = 500,
 ) : IEoseManager {
-    protected val logTag: String = this::class.simpleName ?: "BaseEoseManager"
-
     private val orchestrator = SubscriptionController(client)
 
     abstract fun updateSubscriptions(keys: Set<T>)
 
-    fun newSubscriptionId() = if (isDebug) logTag + newSubId() else newSubId()
-
     fun getSubscription(subId: String) = orchestrator.getSub(subId)
 
-    fun requestNewSubscription(listener: IRequestListener) = orchestrator.requestNewSubscription(newSubscriptionId(), listener)
+    fun requestNewSubscription(listener: IRequestListener) = orchestrator.requestNewSubscription(newSubId(), listener)
 
     fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
 
@@ -62,8 +56,5 @@ abstract class BaseEoseManager<T>(
 
     override fun destroy() {
         bundler.cancel()
-        if (isDebug) {
-            Log.d(logTag, "Destroy, Unsubscribe")
-        }
     }
 }

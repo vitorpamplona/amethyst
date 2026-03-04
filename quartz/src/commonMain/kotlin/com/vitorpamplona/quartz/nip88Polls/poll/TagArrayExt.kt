@@ -22,14 +22,10 @@ package com.vitorpamplona.quartz.nip88Polls.poll
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.EndsAtTag
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.EndsAtTag.Companion.parse
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag.Companion.parse
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollTypeTag
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollTypeTag.Companion.parse
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.RelayTag
-import com.vitorpamplona.quartz.nip88Polls.poll.tags.RelayTag.Companion.parse
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun TagArray.options() = mapNotNull(OptionTag::parse)

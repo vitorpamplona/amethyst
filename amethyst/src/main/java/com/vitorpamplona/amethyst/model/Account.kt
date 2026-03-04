@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.favoriteRelays.FavoriteRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -274,6 +276,9 @@ class Account(
 
     val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
     val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
+
+    val favoriteRelayListDecryptionCache = FavoriteRelayListDecryptionCache(signer)
+    val favoriteRelayList = FavoriteRelayListState(signer, cache, favoriteRelayListDecryptionCache, scope, settings)
 
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
@@ -795,12 +800,7 @@ class Account(
                         .dmInboxRelayList()
                         ?.relays()
                         ?.ifEmpty { null }
-                if (relayList != null) {
-                    client.send(event, relayList.toSet())
-                } else {
-                    val publicRelayList = computeRelayListForLinkedUser(receiver)
-                    client.send(event, publicRelayList)
-                }
+                return relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
             } else {
                 return emptySet()
             }
@@ -908,12 +908,15 @@ class Account(
                                 note.relays.associateWith { relay ->
                                     listOf(
                                         Filter(
+                                            kinds = listOf(host.kind),
+                                            tags = mapOf("p" to listOf(pubKey)),
                                             ids = listOf(host.id),
                                         ),
                                     )
                                 },
                         )?.let { downloadedEvent ->
-                            client.send(downloadedEvent, computeRelayListToBroadcast(downloadedEvent))
+                            val toRelays = computeRelayListToBroadcast(downloadedEvent)
+                            client.send(downloadedEvent, toRelays)
                         }
                 }
             } else {
@@ -1914,6 +1917,12 @@ class Account(
     suspend fun saveProxyRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(proxyRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
+
+    suspend fun saveFavoriteRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(favoriteRelayList.saveRelayList(trustedRelays))
+
+    suspend fun followFavoriteRelay(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.addRelay(url))
+
+    suspend fun unfollowFavoriteRelay(url: NormalizedRelayUrl) = sendMyPublicAndPrivateOutbox(favoriteRelayList.removeRelay(url))
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 

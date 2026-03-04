@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -40,6 +39,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -62,7 +63,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
@@ -92,6 +92,7 @@ fun ChessScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     onBack: () -> Unit = {},
+    compactMode: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     val viewModel =
@@ -276,6 +277,7 @@ fun ChessScreen(
                     },
                     onResign = { viewModel.resign(gameState.startEventId) },
                     isSpectatorOverride = isSpectating,
+                    compactMode = compactMode,
                 )
             }
         } else {
@@ -595,6 +597,7 @@ private fun DesktopChessGameLayout(
     onMoveMade: (from: String, to: String, san: String) -> Unit,
     onResign: () -> Unit,
     isSpectatorOverride: Boolean? = null,
+    compactMode: Boolean = false,
 ) {
     // Collect state flows to trigger recomposition on changes
     val currentPosition by gameState.currentPosition.collectAsState()
@@ -606,12 +609,13 @@ private fun DesktopChessGameLayout(
     val opponentPubkey = gameState.opponentPubkey
     val isSpectator = isSpectatorOverride ?: gameState.isSpectator
 
+    var showInfoPanel by remember { mutableStateOf(!compactMode) }
+
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().padding(16.dp),
     ) {
         // Calculate board size based on available space
-        // Leave room for the info panel (300dp + 24dp spacing)
-        val infoPanelWidth = 300.dp + 24.dp
+        val infoPanelWidth = if (showInfoPanel) 300.dp + 24.dp else 0.dp
         val availableWidth = maxWidth - infoPanelWidth
         val availableHeight = maxHeight
         // Board should fit within available space, maintaining square aspect ratio
@@ -619,11 +623,11 @@ private fun DesktopChessGameLayout(
 
         Row(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (showInfoPanel) 24.dp else 0.dp),
         ) {
-            // Left side: Chess board
+            // Left side: Chess board + toggle
             Box(
-                modifier = Modifier.fillMaxHeight(),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
                 InteractiveChessBoard(
@@ -635,188 +639,206 @@ private fun DesktopChessGameLayout(
                     positionVersion = moveHistory.size,
                     onMoveMade = onMoveMade,
                 )
+
+                // Toggle button anchored to top-end of board area
+                IconButton(
+                    onClick = { showInfoPanel = !showInfoPanel },
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
+                    Icon(
+                        if (showInfoPanel) {
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight
+                        } else {
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                        },
+                        contentDescription = if (showInfoPanel) "Hide info panel" else "Show info panel",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
-            // Right side: Game info, moves, controls
-            Column(
-                modifier =
-                    Modifier
-                        .width(300.dp)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                // Extract human-readable game name
-                val gameName =
-                    remember(startEventId) {
-                        ChessGameNameGenerator.extractDisplayName(startEventId)
-                    }
-
-                // Game info card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
+            // Right side: Game info, moves, controls (collapsible)
+            if (showInfoPanel) {
+                Column(
+                    modifier =
+                        Modifier
+                            .width(300.dp)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        // Show readable game name if available
-                        if (gameName != null) {
-                            Text(
-                                gameName,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        } else {
-                            Text(
-                                "Game Info",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
+                    // Extract human-readable game name
+                    val gameName =
+                        remember(startEventId) {
+                            ChessGameNameGenerator.extractDisplayName(startEventId)
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    // Game info card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            UserAvatar(
-                                userHex = opponentPubkey,
-                                pictureUrl = opponentPicture,
-                                size = 48.dp,
-                            )
-                            Column {
-                                if (isSpectator) {
-                                    Text(
-                                        "Spectating",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                    )
-                                } else {
-                                    Text(
-                                        "vs $opponentName",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                    Text(
-                                        "You play ${if (playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                            // Show readable game name if available
+                            if (gameName != null) {
+                                Text(
+                                    gameName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            } else {
+                                Text(
+                                    "Game Info",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                UserAvatar(
+                                    userHex = opponentPubkey,
+                                    pictureUrl = opponentPicture,
+                                    size = 48.dp,
+                                )
+                                Column {
+                                    if (isSpectator) {
+                                        Text(
+                                            "Spectating",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                        )
+                                    } else {
+                                        Text(
+                                            "vs $opponentName",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                        Text(
+                                            "You play ${if (playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Use currentPosition to derive turn (triggers recomposition on move)
+                            val currentTurn = currentPosition.activeColor
+
+                            if (isSpectator) {
+                                Text(
+                                    "${if (currentTurn == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}'s turn",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                val isYourTurn = currentTurn == playerColor
+                                Text(
+                                    if (isYourTurn) "Your turn" else "Opponent's turn",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isYourTurn) FontWeight.Bold else FontWeight.Normal,
+                                    color =
+                                        if (isYourTurn) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                )
+                            }
+                        }
+                    }
+
+                    // Move history card
+                    if (moveHistory.isNotEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    "Move History",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+
+                                // Format moves as numbered pairs
+                                val moveText =
+                                    moveHistory
+                                        .chunked(2)
+                                        .mapIndexed { index, pair ->
+                                            "${index + 1}. ${pair.joinToString(" ")}"
+                                        }.joinToString("\n")
+
+                                Text(
+                                    moveText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    // Game controls card (only for participants, not spectators)
+                    if (!isSpectator) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    "Actions",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+
+                                OutlinedButton(
+                                    onClick = onResign,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text("Resign")
                                 }
                             }
                         }
-
-                        // Use currentPosition to derive turn (triggers recomposition on move)
-                        val currentTurn = currentPosition.activeColor
-
-                        if (isSpectator) {
-                            Text(
-                                "${if (currentTurn == com.vitorpamplona.quartz.nip64Chess.Color.WHITE) "White" else "Black"}'s turn",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            val isYourTurn = currentTurn == playerColor
-                            Text(
-                                if (isYourTurn) "Your turn" else "Opponent's turn",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isYourTurn) FontWeight.Bold else FontWeight.Normal,
-                                color =
-                                    if (isYourTurn) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                            )
-                        }
-                    }
-                }
-
-                // Move history card
-                if (moveHistory.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                    } else {
+                        // Spectator info card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                                ),
                         ) {
-                            Text(
-                                "Move History",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-
-                            // Format moves as numbered pairs
-                            val moveText =
-                                moveHistory
-                                    .chunked(2)
-                                    .mapIndexed { index, pair ->
-                                        "${index + 1}. ${pair.joinToString(" ")}"
-                                    }.joinToString("\n")
-
-                            Text(
-                                moveText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                // Game controls card (only for participants, not spectators)
-                if (!isSpectator) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                "Actions",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-
-                            OutlinedButton(
-                                onClick = onResign,
-                                modifier = Modifier.fillMaxWidth(),
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Text("Resign")
+                                Icon(Icons.Default.Visibility, contentDescription = null)
+                                Text(
+                                    "Watching game - spectator mode",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                             }
                         }
                     }
-                } else {
-                    // Spectator info card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                            ),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(Icons.Default.Visibility, contentDescription = null)
-                            Text(
-                                "Watching game - spectator mode",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                }
 
-                // Game ID (small footer)
-                Text(
-                    "Game: ${startEventId.take(16)}...",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    // Game ID (small footer)
+                    Text(
+                        "Game: ${startEventId.take(16)}...",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

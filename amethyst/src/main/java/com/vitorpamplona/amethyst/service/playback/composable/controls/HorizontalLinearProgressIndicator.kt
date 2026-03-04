@@ -98,10 +98,10 @@ private fun HorizontalLinearProgressIndicator(
     onLayoutWidthChanged: (Int) -> Unit = {},
     onSeek: (Float) -> Unit,
     playedColor: Color = Color.White,
-    bufferedColor: Color = Color.LightGray,
-    unplayedColor: Color = Color.DarkGray,
+    bufferedColor: Color = Color.White.copy(alpha = 0.5f),
+    unplayedColor: Color = Color.White.copy(alpha = 0.3f),
     scrubberColor: Color = playedColor,
-    rectHeightDp: Dp = 3.dp,
+    rectHeightDp: Dp = 4.dp,
 ) {
     Canvas(
         Modifier
@@ -125,7 +125,7 @@ private fun HorizontalLinearProgressIndicator(
 
         drawCircle(
             color = scrubberColor,
-            radius = size.height * 1.5f,
+            radius = size.height * 2f,
             center = Offset(x = positionX, y = size.height / 2.0f),
         )
     }

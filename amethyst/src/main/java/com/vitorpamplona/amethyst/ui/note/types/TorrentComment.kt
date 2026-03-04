@@ -142,7 +142,7 @@ fun TorrentCommentPreview() {
                 false,
                 true,
                 3,
-                true,
+                ReplyRenderType.FULL,
                 remember { mutableStateOf(Color.Transparent) },
                 EmptyState,
                 accountViewModel = accountViewModel,
@@ -158,7 +158,7 @@ fun RenderTorrentComment(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
@@ -167,7 +167,7 @@ fun RenderTorrentComment(
     Column {
         val noteEvent = note.event
 
-        if (unPackReply) {
+        if (unPackReply == ReplyRenderType.FULL) {
             val torrentInfo =
                 remember(noteEvent) {
                     if (noteEvent is TorrentCommentEvent) {
@@ -193,7 +193,7 @@ fun RenderTorrentComment(
             makeItShort,
             canPreview,
             quotesLeft,
-            unPackReply = false,
+            unPackReply = ReplyRenderType.NONE,
             backgroundColor,
             editState,
             accountViewModel,

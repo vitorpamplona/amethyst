@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.FollowedTa
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.TabFollowedTags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualConversations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
@@ -169,6 +170,12 @@ fun PrepareViewModels(
             factory = UserAppRecommendationsFeedViewModel.Factory(baseUser),
         )
 
+    val externalIdentities: UserExternalIdentitiesViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserExternalIdentitiesViewModel",
+            factory = UserExternalIdentitiesViewModel.Factory(baseUser),
+        )
+
     val zapFeedViewModel: UserProfileZapsViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileZapsFeedViewModel",
@@ -233,6 +240,7 @@ fun PrepareViewModels(
         followsFeedViewModel,
         followersFeedViewModel,
         appRecommendations,
+        externalIdentities,
         zapFeedViewModel,
         bookmarksFeedViewModel,
         galleryFeedViewModel,
@@ -251,6 +259,7 @@ fun ProfileScreen(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     appRecommendations: UserAppRecommendationsFeedViewModel,
+    externalIdentities: UserExternalIdentitiesViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
@@ -277,6 +286,7 @@ fun ProfileScreen(
             repliesViewModel,
             mutualViewModel,
             appRecommendations,
+            externalIdentities,
             followsFeedViewModel,
             followersFeedViewModel,
             zapFeedViewModel,
@@ -370,6 +380,7 @@ private fun RenderScreen(
     repliesViewModel: UserProfileConversationsFeedViewModel,
     mutualViewModel: UserProfileMutualFeedViewModel,
     appRecommendations: UserAppRecommendationsFeedViewModel,
+    externalIdentities: UserExternalIdentitiesViewModel,
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
@@ -382,7 +393,7 @@ private fun RenderScreen(
     val pagerState = rememberPagerState { 11 }
 
     Column {
-        ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
+        ProfileHeader(baseUser, appRecommendations, externalIdentities, nav, accountViewModel)
         ScrollableTabRow(
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,

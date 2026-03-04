@@ -176,12 +176,17 @@ class RichTextParser {
             val isRTL = isArabic(paragraph)
 
             val wordList = paragraph.trimEnd().split(wordBoundaryRegex).filter { it.isNotEmpty() }
-            val segments = ArrayList<Segment>(wordList.size)
-            wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
-            }
 
-            paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
+            if (wordList.isEmpty()) {
+                paragraphSegments.add(ParagraphState(persistentListOf(RegularTextSegment("")), isRTL))
+            } else {
+                val segments = ArrayList<Segment>(wordList.size)
+                wordList.forEach { word ->
+                    segments.add(wordIdentifier(word, images, videos, urls, emojis, tags))
+                }
+
+                paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
+            }
         }
 
         val segmentsWithGalleries = GalleryParser().processParagraphs(paragraphSegments)

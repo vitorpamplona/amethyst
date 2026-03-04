@@ -20,13 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
-import com.vitorpamplona.amethyst.model.ALL_USER_FOLLOWS
-import com.vitorpamplona.amethyst.model.AROUND_ME
-import com.vitorpamplona.amethyst.model.CHESS
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.nip02FollowLists.Kind3FollowListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlow
@@ -53,7 +48,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
 class FeedTopNavFilterState(
-    val feedFilterListName: MutableStateFlow<String>,
+    val feedFilterListName: MutableStateFlow<TopFilter>,
     val kind3Follows: StateFlow<Kind3FollowListState.Kind3Follows>,
     val allFollows: StateFlow<MergedFollowListsState.AllFollows>,
     val locationFlow: StateFlow<LocationState.LocationResult>,
@@ -64,39 +59,84 @@ class FeedTopNavFilterState(
     val signer: NostrSigner,
     val scope: CoroutineScope,
 ) {
-    fun loadFlowsFor(listName: String): IFeedFlowsType =
+    fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
-            GLOBAL_FOLLOWS -> {
+            TopFilter.Global -> {
                 GlobalFeedFlow(followsRelays, proxyRelays)
             }
 
-            ALL_FOLLOWS -> {
+            TopFilter.AllFollows -> {
                 AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
             }
 
-            ALL_USER_FOLLOWS -> {
+            TopFilter.AllUserFollows -> {
                 AllUserFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
             }
 
-            KIND3_FOLLOWS -> {
+            TopFilter.DefaultFollows -> {
                 Kind3UserFollowsFeedFlow(kind3Follows, followsRelays, blockedRelays, proxyRelays)
             }
 
-            AROUND_ME -> {
+            TopFilter.AroundMe -> {
                 AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
             }
 
-            CHESS -> {
+            TopFilter.Chess -> {
                 ChessFeedFlow(followsRelays, proxyRelays)
             }
 
-            else -> {
-                val note = LocalCache.checkGetOrCreateAddressableNote(listName)
-                if (note != null) {
-                    NoteFeedFlow(note.flow().metadata.stateFlow, signer, followsRelays, blockedRelays, proxyRelays, caches)
-                } else {
-                    UnknownFeedFlow(listName)
-                }
+            is TopFilter.Community -> {
+                NoteFeedFlow(
+                    LocalCache
+                        .getOrCreateAddressableNote(listName.address)
+                        .flow()
+                        .metadata.stateFlow,
+                    signer,
+                    followsRelays,
+                    blockedRelays,
+                    proxyRelays,
+                    caches,
+                )
+            }
+
+            is TopFilter.PeopleList -> {
+                NoteFeedFlow(
+                    LocalCache
+                        .getOrCreateAddressableNote(listName.address)
+                        .flow()
+                        .metadata.stateFlow,
+                    signer,
+                    followsRelays,
+                    blockedRelays,
+                    proxyRelays,
+                    caches,
+                )
+            }
+
+            is TopFilter.MuteList -> {
+                NoteFeedFlow(
+                    LocalCache
+                        .getOrCreateAddressableNote(listName.address)
+                        .flow()
+                        .metadata.stateFlow,
+                    signer,
+                    followsRelays,
+                    blockedRelays,
+                    proxyRelays,
+                    caches,
+                )
+            }
+
+            is TopFilter.Geohash -> {
+                UnknownFeedFlow(listName)
+            }
+
+            is TopFilter.Hashtag -> {
+                UnknownFeedFlow(listName)
+            }
+
+            is TopFilter.Relay -> {
+                UnknownFeedFlow(listName)
             }
         }
 

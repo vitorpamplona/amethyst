@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
+import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
@@ -52,9 +55,11 @@ fun RenderTopButtonsPreview() {
                 mediaData = MediaItemData("http://test.mp4"),
                 controllerVisible = remember { mutableStateOf(true) },
                 startingMuteState = false,
-                onMuteClick = { },
-                onPictureInPictureClick = { },
-                onZoomClick = { },
+                isLive = false,
+                pipSupported = true,
+                onMuteClick = {},
+                onPictureInPictureClick = {},
+                onZoomClick = {},
                 modifier = Modifier,
                 accountViewModel = mockAccountViewModel(),
             )
@@ -71,20 +76,26 @@ fun RenderTopButtons(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current.getActivity()
+    val context = LocalContext.current
+    val isLive = isLiveStreaming(mediaData.videoUri)
+    val pipSupported =
+        remember {
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+        }
 
     RenderTopButtons(
         mediaData = mediaData,
         controllerVisible = controllerVisible,
         startingMuteState = controllerState.controller.volume < 0.001,
+        isLive = isLive,
+        pipSupported = pipSupported,
         onMuteClick = { mute ->
-            // makes the new setting the default for new creations.
             DEFAULT_MUTED_SETTING.value = mute
             controllerState.controller.volume = if (mute) 0f else 1f
         },
         onPictureInPictureClick = {
             controllerState.controller.pause()
-            PipVideoActivity.callIn(mediaData, controllerState.visibility.bounds, context)
+            PipVideoActivity.callIn(mediaData, controllerState.visibility.bounds, context.getActivity())
         },
         onZoomClick =
             onZoomClick?.let {
@@ -98,54 +109,31 @@ fun RenderTopButtons(
     )
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RenderTopButtons(
     mediaData: MediaItemData,
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
+    isLive: Boolean,
+    pipSupported: Boolean,
     onMuteClick: (Boolean) -> Unit,
     onPictureInPictureClick: () -> Unit,
     onZoomClick: (() -> Unit)?,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    Row(modifier) {
-        if (!isLiveStreaming(mediaData.videoUri)) {
-            AnimatedShareButton(controllerVisible) { popupExpanded, toggle ->
-                ShareMediaAction(
-                    popupExpanded = popupExpanded,
-                    videoUri = mediaData.videoUri,
-                    postNostrUri = mediaData.callbackUri,
-                    blurhash = null,
-                    dim = null,
-                    hash = null,
-                    mimeType = mediaData.mimeType,
-                    onDismiss = toggle,
-                    content = MediaUrlVideo(url = mediaData.videoUri, mimeType = mediaData.mimeType, artworkUri = mediaData.artworkUri, authorName = mediaData.authorName, description = mediaData.title, uri = mediaData.callbackUri),
-                    accountViewModel = accountViewModel,
-                )
-            }
-
-            AnimatedSaveButton(controllerVisible) { context ->
-                accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
-            }
-        } else {
-            AnimatedShareButton(controllerVisible) { popupExpanded, toggle ->
-                ShareMediaAction(
-                    popupExpanded = popupExpanded,
-                    videoUri = mediaData.videoUri,
-                    postNostrUri = mediaData.callbackUri,
-                    blurhash = null,
-                    dim = null,
-                    hash = null,
-                    mimeType = mediaData.mimeType,
-                    onDismiss = toggle,
-                    content = MediaUrlVideo(url = mediaData.videoUri, mimeType = mediaData.mimeType, artworkUri = mediaData.artworkUri, authorName = mediaData.authorName, description = mediaData.title, uri = mediaData.callbackUri),
-                    accountViewModel = accountViewModel,
-                )
-            }
+    val shareDialogVisible = remember { mutableStateOf(false) }
+    val saveAction =
+        rememberSaveMediaAction { context ->
+            accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
         }
 
+    LaunchedEffect(controllerVisible.value) {
+        if (!controllerVisible.value) shareDialogVisible.value = false
+    }
+
+    Row(modifier) {
         if (onZoomClick != null) {
             FullScreenButton(
                 controllerVisible = controllerVisible,
@@ -153,15 +141,45 @@ fun RenderTopButtons(
             )
         }
 
-        PictureInPictureButton(
-            controllerVisible = controllerVisible,
-            onClick = onPictureInPictureClick,
-        )
-
         MuteButton(
             controllerVisible = controllerVisible,
             startingMuteState = startingMuteState,
             toggle = onMuteClick,
         )
+
+        Box {
+            AnimatedOverflowMenuButton(
+                controllerVisible = controllerVisible,
+                showShare = true,
+                showSave = !isLive,
+                showPip = pipSupported,
+                onShareClick = { shareDialogVisible.value = true },
+                onSaveClick = saveAction,
+                onPipClick = onPictureInPictureClick,
+            )
+
+            if (shareDialogVisible.value) {
+                ShareMediaAction(
+                    popupExpanded = shareDialogVisible,
+                    videoUri = mediaData.videoUri,
+                    postNostrUri = mediaData.callbackUri,
+                    blurhash = null,
+                    dim = null,
+                    hash = null,
+                    mimeType = mediaData.mimeType,
+                    onDismiss = { shareDialogVisible.value = false },
+                    content =
+                        MediaUrlVideo(
+                            url = mediaData.videoUri,
+                            mimeType = mediaData.mimeType,
+                            artworkUri = mediaData.artworkUri,
+                            authorName = mediaData.authorName,
+                            description = mediaData.title,
+                            uri = mediaData.callbackUri,
+                        ),
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
     }
 }

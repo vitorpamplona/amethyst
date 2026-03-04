@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayFavoriteRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
@@ -158,6 +159,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -220,6 +222,7 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.FavoriteRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
@@ -348,7 +351,7 @@ fun RenderThreadFeed(
                     baseNote = item,
                     modifier = modifier,
                     isBoostedNote = false,
-                    unPackReply = false,
+                    unPackReply = ReplyRenderType.NONE,
                     quotesLeft = 3,
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
@@ -619,6 +622,8 @@ private fun FullBleedNoteCompose(
                     DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is TrustedRelayListEvent) {
                     DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is FavoriteRelayListEvent) {
+                    DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is IndexerRelayListEvent) {
                     DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BroadcastRelayListEvent) {
@@ -644,7 +649,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
                 } else if (noteEvent is DraftWrapEvent) {
-                    RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
+                    RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is PublicMessageEvent) {
@@ -655,7 +660,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         editState,
                         accountViewModel,
@@ -679,7 +684,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         accountViewModel,
                         nav,
@@ -739,7 +744,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         editState,
                         accountViewModel,
@@ -751,7 +756,7 @@ private fun FullBleedNoteCompose(
                         false,
                         canPreview,
                         quotesLeft = 3,
-                        unPackReply = false,
+                        unPackReply = ReplyRenderType.NONE,
                         backgroundColor,
                         editState,
                         accountViewModel,
@@ -1089,7 +1094,7 @@ private fun RenderWikiHeaderForThreadPreview() {
                     makeItShort = false,
                     canPreview = true,
                     quotesLeft = 3,
-                    unPackReply = false,
+                    unPackReply = ReplyRenderType.NONE,
                     backgroundColor = backgroundColor,
                     editState = editState,
                     accountViewModel = accountViewModel,

@@ -1,13 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older that API 31
-   See https://developer.android.com/about/versions/12/backup-restore
--->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Defense-in-depth: allowBackup="false" is set in AndroidManifest.xml.
+     These rules provide additional protection if backup is ever enabled. -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Exclude encrypted secrets (device-bound, can't decrypt on other devices) -->
+    <exclude domain="sharedpref" path="secret_keeper.xml" />
+    <exclude domain="sharedpref" path="." requireFlags="clientSideEncryption" />
+
+    <!-- Exclude all DataStore files (contains encrypted keys and account prefs) -->
+    <exclude domain="file" path="datastore" />
+
+    <!-- Exclude external storage (large, ephemeral) -->
+    <exclude domain="external" path="." />
 </full-backup-content>

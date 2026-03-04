@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -253,7 +254,7 @@ private fun NewPostScreenBody(
                             baseNote = it,
                             modifier = MaterialTheme.colorScheme.replyModifier,
                             isQuotedNote = true,
-                            unPackReply = false,
+                            unPackReply = ReplyRenderType.NONE,
                             makeItShort = true,
                             quotesLeft = 1,
                             accountViewModel = accountViewModel,

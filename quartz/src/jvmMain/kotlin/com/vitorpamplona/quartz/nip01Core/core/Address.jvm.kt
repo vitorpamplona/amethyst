@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 actual data class Address actual constructor(
     actual val kind: Kind,
     actual val pubKeyHex: HexKey,

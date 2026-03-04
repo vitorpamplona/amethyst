@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+
 /**
  * Global chess configuration shared across Android and Desktop.
  *
@@ -43,9 +45,9 @@ object ChessConfig {
      */
     val CHESS_RELAY_NAMES =
         listOf(
-            "relay.damus.io",
-            "nos.lol",
-            "relay.primal.net",
+            "relay.damus.io".normalizeRelayUrl(),
+            "nos.lol".normalizeRelayUrl(),
+            "relay.primal.net".normalizeRelayUrl(),
         )
 
     /**

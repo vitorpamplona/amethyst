@@ -97,15 +97,16 @@ object MediaSaverToDisk {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        val client = okHttpClient(url)
-        val request =
-            Request
-                .Builder()
-                .get()
-                .url(url)
-                .build()
-
         try {
+            val client = okHttpClient(url)
+
+            val request =
+                Request
+                    .Builder()
+                    .get()
+                    .url(url)
+                    .build()
+
             client.newCall(request).executeAsync().use { response ->
                 withContext(Dispatchers.IO) {
                     check(response.isSuccessful)

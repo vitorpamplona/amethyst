@@ -18,35 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.paymentTargets
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
-val paymentTargetsKinds =
-    listOf(
-        PaymentTargetsEvent.KIND,
-    )
+/**
+ * Filter assembler for chess events
+ */
+class ChessFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<ChessQueryState>() {
+    val group =
+        listOf(
+            ChessFeedFilterSubAssembler(client, ::allKeys),
+        )
 
-fun filterPaymentTargetsFromKey(
-    relay: NormalizedRelayUrl,
-    pubkey: HexKey?,
-    since: Long?,
-): List<RelayBasedFilter> {
-    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+    override fun invalidateKeys() = invalidateFilters()
 
-    return listOf(
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = paymentTargetsKinds,
-                    authors = listOf(pubkey),
-                    since = since,
-                ),
-        ),
-    )
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.destroy() }
 }

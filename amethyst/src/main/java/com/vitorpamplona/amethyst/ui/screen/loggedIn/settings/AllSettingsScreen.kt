@@ -27,7 +27,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Translate
@@ -37,21 +40,43 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+
+@Preview
+@Composable
+fun AllSettingsScreenPreview() {
+    ThemeComparisonColumn {
+        AllSettingsScreen(
+            mockAccountViewModel(),
+            EmptyNav(),
+        )
+    }
+}
 
 @Composable
-fun AllSettingsScreen(nav: INav) {
+fun AllSettingsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val tint = MaterialTheme.colorScheme.onBackground
 
     Scaffold(
@@ -60,6 +85,7 @@ fun AllSettingsScreen(nav: INav) {
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
+            SettingsSectionHeader(R.string.account_settings)
             SettingsNavigationRow(
                 title = R.string.relay_setup,
                 iconPainter = R.drawable.relays,
@@ -76,12 +102,43 @@ fun AllSettingsScreen(nav: INav) {
             )
             HorizontalDivider()
             SettingsNavigationRow(
+                title = R.string.reactions,
+                icon = Icons.Outlined.FavoriteBorder,
+                tint = tint,
+                onClick = { nav.nav(Route.UpdateReactionType) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.zaps,
+                icon = Icons.Outlined.Bolt,
+                tint = tint,
+                onClick = { nav.nav(Route.UpdateZapAmount()) },
+            )
+            HorizontalDivider()
+            SettingsNavigationRow(
                 title = R.string.security_filters,
                 icon = Icons.Outlined.Security,
                 tint = tint,
                 onClick = { nav.nav(Route.SecurityFilters) },
             )
             HorizontalDivider()
+            SettingsNavigationRow(
+                title = R.string.translations,
+                icon = Icons.Outlined.Translate,
+                tint = tint,
+                onClick = { nav.nav(Route.UserSettings) },
+            )
+            accountViewModel.account.settings.keyPair.privKey?.let {
+                HorizontalDivider()
+                SettingsNavigationRow(
+                    title = R.string.backup_keys,
+                    icon = Icons.Outlined.Key,
+                    tint = tint,
+                    onClick = { nav.nav(Route.AccountBackup) },
+                )
+            }
+            HorizontalDivider(thickness = 4.dp)
+            SettingsSectionHeader(R.string.app_settings)
             SettingsNavigationRow(
                 title = R.string.privacy_options,
                 iconPainter = R.drawable.ic_tor,
@@ -91,20 +148,24 @@ fun AllSettingsScreen(nav: INav) {
             )
             HorizontalDivider()
             SettingsNavigationRow(
-                title = R.string.preferences,
+                title = R.string.ui_preferences,
                 icon = Icons.Outlined.Settings,
                 tint = tint,
                 onClick = { nav.nav(Route.Settings) },
             )
-            HorizontalDivider()
-            SettingsNavigationRow(
-                title = R.string.user_preferences,
-                icon = Icons.Outlined.Translate,
-                tint = tint,
-                onClick = { nav.nav(Route.UserSettings) },
-            )
         }
     }
+}
+
+@Composable
+private fun SettingsSectionHeader(title: Int) {
+    Text(
+        text = stringRes(title),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp),
+    )
 }
 
 @Composable

@@ -43,7 +43,7 @@ fun RenderReaction(
             it,
             modifier = Modifier,
             isBoostedNote = true,
-            unPackReply = false,
+            unPackReply = ReplyRenderType.NONE,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
             accountViewModel = accountViewModel,

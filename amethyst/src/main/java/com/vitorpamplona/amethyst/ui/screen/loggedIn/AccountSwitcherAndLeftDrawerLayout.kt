@@ -40,14 +40,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import com.vitorpamplona.amethyst.ui.navigation.drawer.AccountSwitchBottomSheet
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerContent
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountSwitcherAndLeftDrawerLayout(
     accountViewModel: AccountViewModel,
-    accountStateViewModel: AccountStateViewModel,
+    accountSessionManager: AccountSessionManager,
     nav: INav,
     content: @Composable () -> Unit,
 ) {
@@ -106,7 +106,7 @@ fun AccountSwitcherAndLeftDrawerLayout(
         ) {
             AccountSwitchBottomSheet(
                 accountViewModel = accountViewModel,
-                accountStateViewModel = accountStateViewModel,
+                accountSessionManager = accountSessionManager,
             )
         }
     }

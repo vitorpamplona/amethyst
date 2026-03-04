@@ -57,7 +57,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,14 +77,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
@@ -98,70 +92,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.toImmutableList
-
-@Composable
-fun UpdateZapAmountDialog(
-    onClose: () -> Unit,
-    nip47uri: String? = null,
-    accountViewModel: AccountViewModel,
-) {
-    val postViewModel: UpdateZapAmountViewModel = viewModel()
-    postViewModel.init(accountViewModel)
-
-    LaunchedEffect(accountViewModel, postViewModel) {
-        postViewModel.load()
-    }
-    UpdateZapAmountDialog(postViewModel, onClose, nip47uri, accountViewModel)
-}
-
-@Composable
-fun UpdateZapAmountDialog(
-    postViewModel: UpdateZapAmountViewModel,
-    onClose: () -> Unit,
-    nip47uri: String? = null,
-    accountViewModel: AccountViewModel,
-) {
-    Dialog(
-        onDismissRequest = { onClose() },
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false,
-                decorFitsSystemWindows = false,
-            ),
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CloseButton(
-                        onPress = {
-                            postViewModel.cancel()
-                            onClose()
-                        },
-                    )
-
-                    SaveButton(
-                        onPost = {
-                            postViewModel.sendPost()
-                            onClose()
-                        },
-                        isActive = postViewModel.hasChanged(),
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                UpdateZapAmountContent(postViewModel, onClose, nip47uri, accountViewModel)
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

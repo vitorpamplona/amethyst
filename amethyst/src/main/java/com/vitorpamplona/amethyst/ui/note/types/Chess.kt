@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
 import com.vitorpamplona.amethyst.commons.chess.ChessGameViewer
 import com.vitorpamplona.amethyst.model.Note
@@ -50,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
@@ -178,7 +180,7 @@ fun RenderLiveChessChallenge(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     OutlinedButton(onClick = { /* TODO: Decline */ }) {
-                        Text("Decline")
+                        Text(stringRes(R.string.chess_decline))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -207,7 +209,7 @@ fun RenderLiveChessChallenge(
                             nav.nav(Route.ChessGame(gameId))
                         },
                     ) {
-                        Text("Accept")
+                        Text(stringRes(R.string.chess_accept))
                     }
                 }
             }

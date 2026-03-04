@@ -926,6 +926,10 @@ class AccountViewModel(
 
     fun unfollowHashtag(tag: String) = launchSigner { account.unfollowHashtag(tag) }
 
+    fun followFavoriteRelay(url: NormalizedRelayUrl) = launchSigner { account.followFavoriteRelay(url) }
+
+    fun unfollowFavoriteRelay(url: NormalizedRelayUrl) = launchSigner { account.unfollowFavoriteRelay(url) }
+
     fun showWord(word: String) = launchSigner { account.showWord(word) }
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }

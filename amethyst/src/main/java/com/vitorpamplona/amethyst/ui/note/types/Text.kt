@@ -42,21 +42,25 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
-import com.vitorpamplona.amethyst.ui.note.ReplyInformationChannel
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
+import com.vitorpamplona.amethyst.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
+
+enum class ReplyRenderType {
+    FULL,
+    LINE,
+    NONE,
+}
 
 @Composable
 fun RenderTextEvent(
@@ -64,7 +68,7 @@ fun RenderTextEvent(
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
-    unPackReply: Boolean,
+    unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
     editState: State<GenericLoadable<EditState>>,
     accountViewModel: AccountViewModel,
@@ -72,14 +76,14 @@ fun RenderTextEvent(
 ) {
     val noteEvent = note.event ?: return
 
-    val showReply by
-        remember(note) {
-            derivedStateOf {
-                noteEvent is BaseThreadedEvent && !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+    if (unPackReply != ReplyRenderType.NONE) {
+        val canShowReply by
+            remember(note) {
+                derivedStateOf {
+                    noteEvent is BaseThreadedEvent && !makeItShort && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                }
             }
-        }
 
-    if (showReply) {
         val replyingDirectlyTo =
             remember(note) {
                 if (noteEvent is BaseThreadedEvent) {
@@ -98,21 +102,24 @@ fun RenderTextEvent(
                     note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
                 }
             }
-        if (replyingDirectlyTo != null && unPackReply) {
-            ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
-            Spacer(modifier = StdVertSpacer)
-        }
-    } else if (!unPackReply && !makeItShort && noteEvent is BaseThreadedEvent && noteEvent.hasAnyTaggedUser()) {
-        val mentions =
-            remember(noteEvent) {
-                noteEvent.taggedUsers().map { it.pubKey }.toImmutableList()
+
+        if (replyingDirectlyTo != null && canShowReply) {
+            when (unPackReply) {
+                ReplyRenderType.FULL -> {
+                    ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+                    Spacer(modifier = StdVertSpacer)
+                }
+
+                ReplyRenderType.LINE -> {
+                    ReplyToLabel(
+                        replyingDirectlyTo = replyingDirectlyTo,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                    Spacer(modifier = HalfVertSpacer)
+                }
             }
-        ReplyInformationChannel(
-            replyTo = persistentListOf(note),
-            mentions = mentions,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        }
     }
 
     // Check if this is an audio-only event (content is just an audio URL with waveform IMeta)

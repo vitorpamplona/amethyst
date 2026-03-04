@@ -572,4 +572,5 @@
     <string name="zap_the_devs_description">আপনার অনুদান আমাদের পার্থক্য গড়তে সাহায্য করে। প্রতিটি ইঞ্চি গুরুত্বপূর্ণ!</string>
     <string name="donate_now">এখনই দান করুন</string>
     <string name="accessibility_scan_qr_code">QR কোড স্ক্যান করুন</string>
+    <!-- Kind display names for relay subscription filter chips -->
 </resources>

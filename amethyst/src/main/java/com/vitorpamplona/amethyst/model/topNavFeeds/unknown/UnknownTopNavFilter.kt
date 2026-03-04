@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -30,7 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable
 class UnknownTopNavFilter(
-    val feedName: String,
+    val feedName: TopFilter,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = false
 

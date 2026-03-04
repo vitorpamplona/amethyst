@@ -33,9 +33,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
 
 @Stable
 class PollResponsesCache : UserDependencies {

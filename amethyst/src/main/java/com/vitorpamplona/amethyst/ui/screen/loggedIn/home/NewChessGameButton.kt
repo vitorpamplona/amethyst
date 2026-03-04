@@ -30,11 +30,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.chess.NewChessGameDialog
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessViewModelNew
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Floating action button for creating new chess game challenges
@@ -57,7 +59,7 @@ fun NewChessGameButton(
     ) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "New Chess Game",
+            contentDescription = stringRes(R.string.new_chess_game),
         )
     }
 

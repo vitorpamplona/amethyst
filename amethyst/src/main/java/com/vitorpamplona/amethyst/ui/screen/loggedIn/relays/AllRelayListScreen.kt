@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedR
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.favorites.FavoriteRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.favorites.renderFavoriteItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
@@ -93,6 +95,7 @@ fun AllRelayListScreen(
     val broadcastViewModel: BroadcastRelayListViewModel = viewModel()
     val indexerViewModel: IndexerRelayListViewModel = viewModel()
     val proxyViewModel: ProxyRelayListViewModel = viewModel()
+    val favoriteViewModel: FavoriteRelayListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
@@ -105,6 +108,7 @@ fun AllRelayListScreen(
     broadcastViewModel.init(accountViewModel)
     indexerViewModel.init(accountViewModel)
     proxyViewModel.init(accountViewModel)
+    favoriteViewModel.init(accountViewModel)
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
@@ -118,6 +122,7 @@ fun AllRelayListScreen(
         broadcastViewModel.load()
         indexerViewModel.load()
         proxyViewModel.load()
+        favoriteViewModel.load()
     }
 
     MappedAllRelayListView(
@@ -132,6 +137,7 @@ fun AllRelayListScreen(
         broadcastViewModel,
         indexerViewModel,
         proxyViewModel,
+        favoriteViewModel,
         accountViewModel,
         nav,
     )
@@ -151,6 +157,7 @@ fun MappedAllRelayListView(
     broadcastViewModel: BroadcastRelayListViewModel,
     indexerViewModel: IndexerRelayListViewModel,
     proxyViewModel: ProxyRelayListViewModel,
+    favoriteViewModel: FavoriteRelayListViewModel,
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
@@ -166,6 +173,7 @@ fun MappedAllRelayListView(
     val broadcastRelays by broadcastViewModel.relays.collectAsStateWithLifecycle()
     val indexerRelays by indexerViewModel.relays.collectAsStateWithLifecycle()
     val proxyRelays by proxyViewModel.relays.collectAsStateWithLifecycle()
+    val favoriteFeedState by favoriteViewModel.relays.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -182,6 +190,7 @@ fun MappedAllRelayListView(
                     broadcastViewModel.clear()
                     indexerViewModel.clear()
                     proxyViewModel.clear()
+                    favoriteViewModel.clear()
                     newNav.popBack()
                 },
                 onPost = {
@@ -195,6 +204,7 @@ fun MappedAllRelayListView(
                     broadcastViewModel.create()
                     indexerViewModel.create()
                     proxyViewModel.create()
+                    favoriteViewModel.create()
                     newNav.popBack()
                 },
             )
@@ -309,6 +319,15 @@ fun MappedAllRelayListView(
                 )
             }
             renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    R.string.favorite_section,
+                    R.string.favorite_section_explainer,
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderFavoriteItems(favoriteFeedState, favoriteViewModel, accountViewModel, newNav)
 
             item {
                 SettingsCategory(

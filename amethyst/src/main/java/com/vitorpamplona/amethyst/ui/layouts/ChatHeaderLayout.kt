@@ -51,6 +51,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.utils.TimeUtils
 
+private const val PREVIEW_AUTHOR = "This is my author"
+private const val PREVIEW_MESSAGE = "This is a message from this person"
+
 @Composable
 @Preview
 fun ChannelNamePreview() {
@@ -65,11 +68,11 @@ fun ChannelNamePreview() {
                     )
                 },
                 firstRow = {
-                    Text("This is my author", Modifier.weight(1f))
+                    Text(PREVIEW_AUTHOR, Modifier.weight(1f))
                     TimeAgo(TimeUtils.now())
                 },
                 secondRow = {
-                    Text("This is a message from this person", Modifier.weight(1f))
+                    Text(PREVIEW_MESSAGE, Modifier.weight(1f))
                     Spacer(modifier = Height4dpModifier)
                     NewItemsBubble()
                 },
@@ -81,13 +84,13 @@ fun ChannelNamePreview() {
             ListItem(
                 headlineContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("This is my author", Modifier.weight(1f))
+                        Text(PREVIEW_AUTHOR, Modifier.weight(1f))
                         TimeAgo(TimeUtils.now())
                     }
                 },
                 supportingContent = {
                     Row {
-                        Text("This is a message from this person", Modifier.weight(1f))
+                        Text(PREVIEW_MESSAGE, Modifier.weight(1f))
                         NewItemsBubble()
                     }
                 },
@@ -106,13 +109,13 @@ fun ChannelNamePreview() {
             SlimListItem(
                 headlineContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("This is my author", Modifier.weight(1f))
+                        Text(PREVIEW_AUTHOR, Modifier.weight(1f))
                         TimeAgo(TimeUtils.now())
                     }
                 },
                 supportingContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("This is a message from this person", Modifier.weight(1f))
+                        Text(PREVIEW_MESSAGE, Modifier.weight(1f))
                         NewItemsBubble()
                     }
                 },

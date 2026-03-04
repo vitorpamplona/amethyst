@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -124,7 +125,7 @@ private fun VoiceReplyScreenBody(
                 baseNote = note,
                 modifier = MaterialTheme.colorScheme.replyModifier,
                 isQuotedNote = true,
-                unPackReply = false,
+                unPackReply = ReplyRenderType.NONE,
                 makeItShort = true,
                 quotesLeft = 1,
                 accountViewModel = accountViewModel,
