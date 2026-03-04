@@ -348,7 +348,7 @@ class RichTextParser {
 
         // Splits at spaces AND at ASCII/multibyte character boundaries
         // e.g. "ああexample.com" -> ["ああ", "example.com"]
-        private val wordBoundaryRegex = Regex("(?<=[\\u0000-\\u007F])(?=[\\u0080-\\uFFFF])|(?<=[\\u0080-\\uFFFF])(?=[\\u0000-\\u007F])| +")
+        val wordBoundaryRegex = Regex("(?<=[\\u0000-\\u007F])(?=[\\u0080-\\uFFFF])|(?<=[\\u0080-\\uFFFF])(?=[\\u0000-\\u007F])| +")
 
         val additionalUrlSchema =
             """^([A-Za-z0-9-_]+(\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\?[^#]*)?(#.*)?"""

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class RichTextParserMultibyteTest {
     @Test
@@ -55,6 +56,20 @@ class RichTextParserMultibyteTest {
         assertTrue(
             "user@example.com should not be in urlSet",
             !state.urlSet.contains("user@example.com"),
+        )
+    }
+
+    @Test
+    fun testFullTextWithMultibyteAndLatinAccents() {
+        // Multibyte characters around an email address should not produce URL/Link segments
+        val text =
+            "Vitor, você tem como colocar alguma forma de aviso se o link vai carregar uma imagem ou um vídeo? \uD83E\uDD7A"
+
+        val regex = Regex("(?<=[\\u0000-\\u00FF])(?=[\\u0100-\\uFFFF])|(?<=[\\u0100-\\uFFFF])(?=[\\u0000-\\u00FF])| +")
+
+        assertEquals(
+            "Vitor,-você-tem-como-colocar-alguma-forma-de-aviso-se-o-link-vai-carregar-uma-imagem-ou-um-vídeo?-\uD83E\uDD7A",
+            text.split(regex).joinToString("-"),
         )
     }
 
