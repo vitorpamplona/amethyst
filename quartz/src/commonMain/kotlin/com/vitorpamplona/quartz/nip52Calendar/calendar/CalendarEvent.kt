@@ -18,29 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip52Calendar
+package com.vitorpamplona.quartz.nip52Calendar.calendar
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip52Calendar.tags.FreeBusyTag
-import com.vitorpamplona.quartz.nip52Calendar.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @Immutable
-class CalendarRSVPEvent(
+class CalendarEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -48,40 +42,24 @@ class CalendarRSVPEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun status() = tags.firstNotNullOfOrNull(RSVPStatusTag::parse)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun statusValue() = tags.firstNotNullOfOrNull(RSVPStatusTag::parseValue)
-
-    fun freebusy() = tags.firstNotNullOfOrNull(FreeBusyTag::parse)
-
-    fun calendarEventAddress() = firstTaggedAddress()
-
-    fun calendarEventId() = firstTaggedEvent()
-
-    fun calendarEventAuthor() = tags.firstNotNullOfOrNull(PTag::parse)
+    fun calendarEventAddresses() = taggedAddresses()
 
     companion object {
-        const val KIND = 31925
-        const val ALT = "Calendar event's invitation response"
+        const val KIND = 31924
+        const val ALT = "Calendar"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
-            calendarEventAddress: ATag,
-            status: RSVPStatusTag.STATUS,
+            title: String,
             content: String = "",
-            calendarEventId: ETag? = null,
-            calendarEventAuthor: PTag? = null,
-            freebusy: FreeBusyTag.STATUS? = null,
             dTag: String = Uuid.random().toString(),
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<CalendarRSVPEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<CalendarEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(dTag)
-            aTag(calendarEventAddress)
-            status(status)
-            calendarEventId?.let { add(it.toTagArray()) }
-            calendarEventAuthor?.let { add(it.toTagArray()) }
-            freebusy?.let { freebusy(it) }
+            title(title)
             alt(ALT)
             initializer()
         }

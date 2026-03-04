@@ -18,30 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip52Calendar.tags
+package com.vitorpamplona.quartz.nip52Calendar.calendar
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 
-class FreeBusyTag {
-    companion object {
-        const val TAG_NAME = "fb"
+// CalendarEvent builder extensions
 
-        fun parse(tag: Array<String>): STATUS? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return STATUS.entries.firstOrNull { it.value == tag[1] }
-        }
-    }
-
-    enum class STATUS(
-        val value: String,
-    ) {
-        FREE("free"),
-        BUSY("busy"),
-        ;
-
-        fun toTagArray() = arrayOf(TAG_NAME, value)
-    }
-}
+fun TagArrayBuilder<CalendarEvent>.title(title: String) = addUnique(TitleTag.assemble(title))

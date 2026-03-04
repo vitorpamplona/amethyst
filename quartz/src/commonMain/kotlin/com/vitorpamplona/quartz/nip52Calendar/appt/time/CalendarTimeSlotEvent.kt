@@ -18,13 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip52Calendar
+package com.vitorpamplona.quartz.nip52Calendar.appt.time
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
@@ -35,13 +36,13 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip52Calendar.tags.LocationTag
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.LocationTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @Immutable
-class CalendarDateSlotEvent(
+class CalendarTimeSlotEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -49,46 +50,54 @@ class CalendarDateSlotEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag.Companion::parse)
 
-    fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
+    fun location() = tags.firstNotNullOfOrNull(LocationTag.Companion::parse)
 
-    fun locations() = tags.mapNotNull(LocationTag::parse)
+    fun locations() = tags.mapNotNull(LocationTag.Companion::parse)
 
-    fun start() = tags.firstTagValue("start")
+    fun start() = tags.firstTagValueAsLong("start")
 
-    fun end() = tags.firstTagValue("end")
+    fun end() = tags.firstTagValueAsLong("end")
 
-    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+    fun startTzId() = tags.firstTagValue("start_tzid")
 
-    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+    fun endTzId() = tags.firstTagValue("end_tzid")
 
-    fun geohash() = tags.firstNotNullOfOrNull(GeoHashTag::parse)
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag.Companion::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag.Companion::parse)
+
+    fun geohash() = tags.firstNotNullOfOrNull(GeoHashTag.Companion::parse)
 
     fun hashtags() = tags.hashtags()
 
-    fun participants() = tags.mapNotNull(PTag::parse)
+    fun participants() = tags.mapNotNull(PTag.Companion::parse)
 
     fun references() = tags.references()
 
     companion object {
-        const val KIND = 31922
-        const val ALT = "Full-day calendar event"
+        const val KIND = 31923
+        const val ALT = "Calendar time-slot event"
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
             title: String,
-            start: String,
+            start: Long,
             content: String = "",
-            end: String? = null,
-            dTag: String = Uuid.random().toString(),
+            end: Long? = null,
+            startTzId: String? = null,
+            endTzId: String? = null,
+            dTag: String = Uuid.Companion.random().toString(),
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<CalendarDateSlotEvent>.() -> Unit = {},
+            initializer: TagArrayBuilder<CalendarTimeSlotEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(dTag)
-            titleDay(title)
-            startDate(start)
-            end?.let { endDate(it) }
+            titleTime(title)
+            startTimestamp(start)
+            end?.let { endTimestamp(it) }
+            startTzId?.let { startTzId(it) }
+            endTzId?.let { endTzId(it) }
             alt(ALT)
             initializer()
         }

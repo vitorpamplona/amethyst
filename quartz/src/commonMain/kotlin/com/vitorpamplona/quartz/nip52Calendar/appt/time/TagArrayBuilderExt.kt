@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip52Calendar
+package com.vitorpamplona.quartz.nip52Calendar.appt.time
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
@@ -26,33 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
-import com.vitorpamplona.quartz.nip52Calendar.tags.FreeBusyTag
-import com.vitorpamplona.quartz.nip52Calendar.tags.LocationTag
-import com.vitorpamplona.quartz.nip52Calendar.tags.RSVPStatusTag
-
-// CalendarDateSlotEvent builder extensions
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.titleDay(title: String) = addUnique(TitleTag.assemble(title))
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.startDate(date: String) = addUnique(arrayOf("start", date))
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.endDate(date: String) = addUnique(arrayOf("end", date))
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.location(location: String) = add(LocationTag.assemble(location))
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.locations(locations: List<String>) = addAll(locations.map { LocationTag.assemble(it) })
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.summary(summary: String) = addUnique(SummaryTag.assemble(summary))
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.geohash(geohash: String) = addAll(GeoHashTag.assemble(geohash).toList())
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.participant(p: PTag) = add(p.toTagArray())
-
-fun TagArrayBuilder<CalendarDateSlotEvent>.participants(ps: List<PTag>) = addAll(ps.map { it.toTagArray() })
-
-// CalendarTimeSlotEvent builder extensions
+import com.vitorpamplona.quartz.nip52Calendar.appt.tags.LocationTag
 
 fun TagArrayBuilder<CalendarTimeSlotEvent>.titleTime(title: String) = addUnique(TitleTag.assemble(title))
 
@@ -77,13 +51,3 @@ fun TagArrayBuilder<CalendarTimeSlotEvent>.geohash(geohash: String) = addAll(Geo
 fun TagArrayBuilder<CalendarTimeSlotEvent>.participant(p: PTag) = add(p.toTagArray())
 
 fun TagArrayBuilder<CalendarTimeSlotEvent>.participants(ps: List<PTag>) = addAll(ps.map { it.toTagArray() })
-
-// CalendarEvent builder extensions
-
-fun TagArrayBuilder<CalendarEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
-
-// CalendarRSVPEvent builder extensions
-
-fun TagArrayBuilder<CalendarRSVPEvent>.status(status: RSVPStatusTag.STATUS) = addUnique(status.toTagArray())
-
-fun TagArrayBuilder<CalendarRSVPEvent>.freebusy(fb: FreeBusyTag.STATUS) = addUnique(fb.toTagArray())
