@@ -34,10 +34,10 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.JesterEvent
-import com.vitorpamplona.quartz.nip64Chess.JesterGameEvents
-import com.vitorpamplona.quartz.nip64Chess.JesterProtocol
-import com.vitorpamplona.quartz.nip64Chess.toJesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
+import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 
 /**
  * Android implementation of ChessEventPublisher using Jester protocol.

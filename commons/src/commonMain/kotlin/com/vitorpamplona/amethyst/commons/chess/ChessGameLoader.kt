@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.chess
 import com.vitorpamplona.quartz.nip64Chess.ChessEngine
 import com.vitorpamplona.quartz.nip64Chess.ChessStateReconstructor
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.ReconstructedGameState
 import com.vitorpamplona.quartz.nip64Chess.ReconstructionResult

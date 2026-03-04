@@ -30,11 +30,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.IRequestListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip64Chess.LiveChessDrawOfferEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameAcceptEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
-import com.vitorpamplona.quartz.nip64Chess.LiveChessMoveEvent
+import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
+import com.vitorpamplona.quartz.nip64Chess.accept.LiveChessGameAcceptEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
+import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
