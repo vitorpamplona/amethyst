@@ -60,8 +60,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
 private val HEX_64_REGEX = Regex("^[0-9a-fA-F]{64}$")
 
@@ -136,33 +134,14 @@ fun LoginCard(
 
                 IconButton(
                     onClick = {
-                        // Try clipboard first, then file picker
-                        val clipboardResult = decodeQrFromClipboard()
-                        if (clipboardResult != null) {
-                            keyInput = clipboardResult
-                            errorMessage = null
-                        } else {
-                            val chooser =
-                                JFileChooser().apply {
-                                    fileFilter =
-                                        FileNameExtensionFilter(
-                                            "Images",
-                                            "png",
-                                            "jpg",
-                                            "jpeg",
-                                            "gif",
-                                            "bmp",
-                                            "webp",
-                                        )
-                                    dialogTitle = "Select QR code image"
-                                }
-                            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-                                val decoded = decodeQrFromFile(chooser.selectedFile)
+                        scope.launch(Dispatchers.IO) {
+                            val decoded = scanQrFromWebcam()
+                            withContext(Dispatchers.Main) {
                                 if (decoded != null) {
                                     keyInput = decoded
                                     errorMessage = null
                                 } else {
-                                    errorMessage = "No QR code found in image"
+                                    errorMessage = "No QR code found"
                                 }
                             }
                         }

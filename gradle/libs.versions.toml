@@ -57,6 +57,7 @@ unifiedpush = "3.0.10"
 vico-charts = "2.4.3"
 zelory = "3.0.1"
 zoomable = "2.11.1"
+webcamCapture = "0.3.12"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
@@ -159,6 +160,7 @@ vico-charts-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", ver
 vico-charts-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico-charts" }
 zelory-image-compressor = { group = "id.zelory", name = "compressor", version.ref = "zelory" }
 zoomable = { group = "net.engawapg.lib", name = "zoomable", version.ref = "zoomable" }
+webcam-capture = { group = "com.github.sarxos", name = "webcam-capture", version.ref = "webcamCapture" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 zxing-javase = { group = "com.google.zxing", name = "javase", version.ref = "zxing" }
 zxing-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
