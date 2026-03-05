@@ -80,8 +80,9 @@ sealed class AccountState {
 }
 
 @Stable
-class AccountManager private constructor(
+class AccountManager internal constructor(
     private val secureStorage: SecureKeyStorage,
+    private val homeDir: File = File(System.getProperty("user.home")),
 ) {
     companion object {
         fun create(context: Any? = null): AccountManager {
@@ -89,13 +90,13 @@ class AccountManager private constructor(
             return AccountManager(storage)
         }
 
-        private const val HEARTBEAT_INTERVAL_MS = 60_000L
-        private const val MAX_CONSECUTIVE_FAILURES = 3
-        private const val BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
+        internal const val HEARTBEAT_INTERVAL_MS = 60_000L
+        internal const val MAX_CONSECUTIVE_FAILURES = 3
+        internal const val BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
     }
 
     private val amethystDir: File by lazy {
-        File(System.getProperty("user.home"), ".amethyst")
+        File(homeDir, ".amethyst")
     }
 
     private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
@@ -442,20 +443,6 @@ class AccountManager private constructor(
         }
     }
 
-    // --- Helpers ---
-
-    private fun stripBunkerSecret(uri: String): String {
-        val idx = uri.indexOf('?')
-        if (idx < 0) return uri
-        val base = uri.substring(0, idx)
-        val params =
-            uri
-                .substring(idx + 1)
-                .split("&")
-                .filter { !it.startsWith("secret=", ignoreCase = true) }
-        return if (params.isEmpty()) base else "$base?${params.joinToString("&")}"
-    }
-
     // --- File storage helpers ---
 
     private fun saveNwcUri(uri: String) {
@@ -492,4 +479,16 @@ class AccountManager private constructor(
     }
 
     private fun getBunkerFile(): File = File(amethystDir, "bunker_uri.txt")
+}
+
+internal fun stripBunkerSecret(uri: String): String {
+    val idx = uri.indexOf('?')
+    if (idx < 0) return uri
+    val base = uri.substring(0, idx)
+    val params =
+        uri
+            .substring(idx + 1)
+            .split("&")
+            .filter { !it.startsWith("secret=", ignoreCase = true) }
+    return if (params.isEmpty()) base else "$base?${params.joinToString("&")}"
 }
