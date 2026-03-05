@@ -147,6 +147,8 @@ fun main() =
         var replyToNote by remember { mutableStateOf<com.vitorpamplona.quartz.nip01Core.core.Event?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
+        val accountManager = remember { AccountManager.create() }
+        val accountState by accountManager.accountState.collectAsState()
         var showAddColumnDialog by remember { mutableStateOf(false) }
         var layoutMode by remember {
             mutableStateOf(
@@ -191,6 +193,16 @@ fun main() =
                                 deckState.addColumn(DeckColumnType.Settings)
                             }
                         },
+                    )
+                    Separator()
+                    Item(
+                        "Logout",
+                        onClick = {
+                            deckScope.launch {
+                                accountManager.logout()
+                            }
+                        },
+                        enabled = accountState is AccountState.LoggedIn,
                     )
                     Separator()
                     Item(
@@ -352,6 +364,7 @@ fun main() =
             App(
                 layoutMode = layoutMode,
                 deckState = deckState,
+                accountManager = accountManager,
                 showComposeDialog = showComposeDialog,
                 showAddColumnDialog = showAddColumnDialog,
                 onShowComposeDialog = { showComposeDialog = true },
@@ -374,6 +387,7 @@ fun main() =
 fun App(
     layoutMode: LayoutMode,
     deckState: DeckState,
+    accountManager: AccountManager,
     showComposeDialog: Boolean,
     showAddColumnDialog: Boolean,
     onShowComposeDialog: () -> Unit,
@@ -385,7 +399,6 @@ fun App(
 ) {
     val relayManager = remember { DesktopRelayConnectionManager() }
     val localCache = remember { DesktopLocalCache() }
-    val accountManager = remember { AccountManager.create() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
@@ -932,6 +945,36 @@ fun RelaySettingsScreen(
             OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
                 Text("Reset to Defaults")
             }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(24.dp))
+
+        // Account section
+        Text(
+            "Account",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            "Logged in as ${account.npub.take(16)}...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+
+        val logoutScope = rememberCoroutineScope()
+        OutlinedButton(
+            onClick = { logoutScope.launch { accountManager.logout() } },
+            colors =
+                ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+        ) {
+            Text("Logout")
         }
     }
 }
