@@ -106,6 +106,16 @@ fun LoginScreen(
                 } else {
                     null
                 },
+            onLoginNostrConnect =
+                if (relayClient != null) {
+                    { onUriGenerated ->
+                        accountManager.loginWithNostrConnect(relayClient, onUriGenerated).map {
+                            onLoginSuccess()
+                        }
+                    }
+                } else {
+                    null
+                },
         )
 
         val account = generatedAccount

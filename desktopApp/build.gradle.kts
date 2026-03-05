@@ -49,6 +49,9 @@ dependencies {
     // Collections
     implementation(libs.kotlinx.collections.immutable)
 
+    // QR code generation (ZXing core)
+    implementation(libs.zxing)
+
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

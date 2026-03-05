@@ -23,10 +23,15 @@ package com.vitorpamplona.amethyst.desktop.account
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.req
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -34,8 +39,13 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,7 +54,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import java.io.File
+import java.security.SecureRandom
 
 sealed class SignerType {
     data object Internal : SignerType()
@@ -93,6 +105,8 @@ class AccountManager internal constructor(
         internal const val HEARTBEAT_INTERVAL_MS = 60_000L
         internal const val MAX_CONSECUTIVE_FAILURES = 3
         internal const val BUNKER_EPHEMERAL_KEY_ALIAS = "bunker_ephemeral"
+        internal const val NOSTRCONNECT_TIMEOUT_MS = 120_000L
+        internal val NIP46_RELAYS = listOf("wss://relay.nsec.app")
     }
 
     private val amethystDir: File by lazy {
@@ -225,6 +239,148 @@ class AccountManager internal constructor(
         } catch (e: Exception) {
             Result.failure(Exception("Connection failed: ${e.message}"))
         }
+
+    // --- Nostrconnect login ---
+
+    suspend fun loginWithNostrConnect(
+        client: INostrClient,
+        onUriGenerated: (String) -> Unit,
+    ): Result<AccountState.LoggedIn> =
+        try {
+            val ephemeralKeyPair = KeyPair()
+            val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
+            val secret = generateNostrConnectSecret()
+            val ephemeralPubKey = ephemeralKeyPair.pubKey.toHexKey()
+
+            val relays = NIP46_RELAYS
+            val relayParams = relays.joinToString("&") { "relay=$it" }
+            val uri = "nostrconnect://$ephemeralPubKey?$relayParams&secret=$secret&name=Amethyst%20Desktop"
+            onUriGenerated(uri)
+
+            val normalizedRelays = relays.map { NormalizedRelayUrl(it) }.toSet()
+            val connectData = waitForConnectRequest(ephemeralSigner, ephemeralPubKey, normalizedRelays, secret, client)
+
+            sendAckResponse(ephemeralSigner, connectData, normalizedRelays, client)
+
+            val remoteSigner =
+                NostrSignerRemote(
+                    signer = ephemeralSigner,
+                    remotePubkey = connectData.signerPubkey,
+                    relays = normalizedRelays,
+                    client = client,
+                )
+            remoteSigner.openSubscription()
+
+            val syntheticBunkerUri = "bunker://${connectData.signerPubkey}?$relayParams"
+
+            val state =
+                AccountState.LoggedIn(
+                    signer = remoteSigner,
+                    pubKeyHex = connectData.userPubkey,
+                    npub = connectData.userPubkey.hexToByteArray().toNpub(),
+                    nsec = null,
+                    isReadOnly = false,
+                    signerType = SignerType.Remote(syntheticBunkerUri),
+                )
+            _accountState.value = state
+            _signerConnectionState.value = SignerConnectionState.Connected
+
+            saveBunkerAccount(
+                bunkerUri = syntheticBunkerUri,
+                ephemeralPrivKeyHex = ephemeralKeyPair.privKey!!.toHexKey(),
+                npub = state.npub,
+            )
+
+            Result.success(state)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Result.failure(Exception("Timed out waiting for signer. Ensure the signer app scanned the QR code."))
+        } catch (e: Exception) {
+            Result.failure(Exception("Connection failed: ${e.message}"))
+        }
+
+    private suspend fun waitForConnectRequest(
+        ephemeralSigner: NostrSignerInternal,
+        ephemeralPubKey: HexKey,
+        relays: Set<NormalizedRelayUrl>,
+        expectedSecret: String,
+        client: INostrClient,
+    ): ConnectRequestData {
+        val deferred = CompletableDeferred<NostrConnectEvent>()
+
+        val subscription =
+            client.req(
+                relays = relays.toList(),
+                filter =
+                    Filter(
+                        kinds = listOf(NostrConnectEvent.KIND),
+                        tags = mapOf("p" to listOf(ephemeralPubKey)),
+                    ),
+            ) { event ->
+                if (event is NostrConnectEvent && !deferred.isCompleted) {
+                    deferred.complete(event)
+                }
+            }
+
+        try {
+            val event =
+                withTimeout(NOSTRCONNECT_TIMEOUT_MS) {
+                    deferred.await()
+                }
+
+            val otherPubkey = event.talkingWith(ephemeralSigner.pubKey)
+            val decryptedJson = ephemeralSigner.decrypt(event.content, otherPubkey)
+            val message = OptimizedJsonMapper.fromJsonTo<BunkerRequest>(decryptedJson)
+
+            if (message.method != BunkerRequestConnect.METHOD_NAME) {
+                throw Exception("Expected 'connect' method, got '${message.method}'")
+            }
+
+            val userPubkey =
+                message.params.getOrNull(0)
+                    ?: throw Exception("Missing user pubkey in connect request")
+            val receivedSecret = message.params.getOrNull(1)
+
+            if (receivedSecret != expectedSecret) {
+                throw Exception("Secret mismatch in connect request")
+            }
+
+            return ConnectRequestData(
+                requestId = message.id,
+                signerPubkey = event.pubKey,
+                userPubkey = userPubkey,
+            )
+        } finally {
+            subscription.close()
+        }
+    }
+
+    private suspend fun sendAckResponse(
+        ephemeralSigner: NostrSignerInternal,
+        connectData: ConnectRequestData,
+        relays: Set<NormalizedRelayUrl>,
+        client: INostrClient,
+    ) {
+        val ackResponse = BunkerResponseAck(id = connectData.requestId)
+        val ackEvent =
+            NostrConnectEvent.create(
+                message = ackResponse,
+                remoteKey = connectData.signerPubkey,
+                signer = ephemeralSigner,
+            )
+        client.send(ackEvent, relays)
+    }
+
+    private fun generateNostrConnectSecret(): String {
+        val bytes = ByteArray(32)
+        SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private data class ConnectRequestData(
+        val requestId: String,
+        val signerPubkey: HexKey,
+        val userPubkey: HexKey,
+    )
 
     private suspend fun saveBunkerAccount(
         bunkerUri: String,
