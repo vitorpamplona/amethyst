@@ -20,13 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import org.junit.Assert
-import org.junit.Test
-import org.junit.runner.RunWith
+import kotlin.test.DefaultAsserter.assertTrue
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-@RunWith(AndroidJUnit4::class)
 class GalleryParserTest {
     @Test
     fun testMixedImageAndVideoRenderedIndividually() {
@@ -39,23 +38,23 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should have 3 paragraphs (text, image, video)
-        Assert.assertEquals(3, state.paragraphs.size)
+        assertEquals(3, state.paragraphs.size)
 
         // First paragraph is text
-        Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[0].words.size)
+        assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[0].words.size)
 
         // Second paragraph is image (rendered individually, not as gallery)
-        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[1].words.size)
-        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
-        Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[1].words[0].segmentText)
+        assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[1].words.size)
+        assertTrue(state.paragraphs[1].words[0] is ImageSegment)
+        assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[1].words[0].segmentText)
 
         // Third paragraph is video (rendered individually)
-        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[2].words.size)
-        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
-        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[2].words[0].segmentText)
+        assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[2].words.size)
+        assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[2].words[0].segmentText)
     }
 
     @Test
@@ -72,27 +71,27 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should have 6 paragraphs (text, image, video, text, image, video)
-        Assert.assertEquals(6, state.paragraphs.size)
+        assertEquals(6, state.paragraphs.size)
 
         // First set: text, image, video
-        Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[0].words.size)
-        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
-        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
-        Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[1].words[0].segmentText)
-        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
-        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
-        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[2].words[0].segmentText)
+        assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[0].words.size)
+        assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[1].words[0] is ImageSegment)
+        assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[1].words[0].segmentText)
+        assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[2].words[0].segmentText)
 
         // Second set: text, image, video
-        Assert.assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[3].words.size)
-        Assert.assertTrue(state.paragraphs[4] !is ImageGalleryParagraph)
-        Assert.assertTrue(state.paragraphs[4].words[0] is ImageSegment)
-        Assert.assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[4].words[0].segmentText)
-        Assert.assertTrue(state.paragraphs[5] !is ImageGalleryParagraph)
-        Assert.assertTrue(state.paragraphs[5].words[0] is VideoSegment)
-        Assert.assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[5].words[0].segmentText)
+        assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[3].words.size)
+        assertTrue(state.paragraphs[4] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[4].words[0] is ImageSegment)
+        assertEquals("https://image.tmdb.org/t/p/original/ekfIcBvqfqKbI6m227NFipBNh7O.jpg", state.paragraphs[4].words[0].segmentText)
+        assertTrue(state.paragraphs[5] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[5].words[0] is VideoSegment)
+        assertEquals("https://archive.org/download/cinema-horror-sci-fi/Renfield.2023.ia.mp4", state.paragraphs[5].words[0].segmentText)
     }
 
     @Test
@@ -106,13 +105,13 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should have 2 image segments (image + video URLs)
-        Assert.assertEquals(2, state.paragraphs.size)
+        assertEquals(2, state.paragraphs.size)
 
         // Should render as gallery (1 gallery with 2 images)
-        Assert.assertTrue("Should render 1 gallery", state.paragraphs[1] is ImageGalleryParagraph)
-        Assert.assertEquals("Gallery should contain 2 images", 2, state.paragraphs[1].words.size)
-        Assert.assertEquals("https://example.com/image1.jpg", state.paragraphs[1].words[0].segmentText)
-        Assert.assertEquals("https://example.com/image2.png", state.paragraphs[1].words[1].segmentText)
+        assertTrue("Should render 1 gallery", state.paragraphs[1] is ImageGalleryParagraph)
+        assertEquals(2, state.paragraphs[1].words.size, "Gallery should contain 2 images")
+        assertEquals("https://example.com/image1.jpg", state.paragraphs[1].words[0].segmentText)
+        assertEquals("https://example.com/image2.png", state.paragraphs[1].words[1].segmentText)
     }
 
     @Test
@@ -125,13 +124,13 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should have 2 image segments (image + video URLs)
-        Assert.assertEquals(2, state.paragraphs.size)
+        assertEquals(2, state.paragraphs.size)
 
         // Should render as gallery (1 gallery with 2 images)
-        Assert.assertTrue("Should render 1 gallery", state.paragraphs[1] is ImageGalleryParagraph)
-        Assert.assertEquals("Gallery should contain 2 images", 2, state.paragraphs[1].words.size)
-        Assert.assertEquals("https://example.com/image1.jpg", state.paragraphs[1].words[0].segmentText)
-        Assert.assertEquals("https://example.com/image2.png", state.paragraphs[1].words[1].segmentText)
+        assertTrue("Should render 1 gallery", state.paragraphs[1] is ImageGalleryParagraph)
+        assertEquals(2, state.paragraphs[1].words.size, "Gallery should contain 2 images")
+        assertEquals("https://example.com/image1.jpg", state.paragraphs[1].words[0].segmentText)
+        assertEquals("https://example.com/image2.png", state.paragraphs[1].words[1].segmentText)
     }
 
     @Test
@@ -142,9 +141,9 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should render individually (not as gallery)
-        Assert.assertTrue("Should render 1 individual image", state.paragraphs[1] !is ImageGalleryParagraph)
-        Assert.assertTrue("Should not render as gallery", state.paragraphs[0] !is ImageGalleryParagraph)
-        Assert.assertEquals("https://example.com/image.jpg", state.paragraphs[1].words[0].segmentText)
+        assertTrue("Should render 1 individual image", state.paragraphs[1] !is ImageGalleryParagraph)
+        assertTrue("Should not render as gallery", state.paragraphs[0] !is ImageGalleryParagraph)
+        assertEquals("https://example.com/image.jpg", state.paragraphs[1].words[0].segmentText)
     }
 
     @Test
@@ -154,10 +153,10 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should render individually (not as gallery)
-        Assert.assertEquals("I played The Typing of the Dead a lot when I was younger, and now I just found out that there's a new take on it: The Last Sentence. Tempted!", state.paragraphs[0].words[0].segmentText)
-        Assert.assertTrue("Should render as gallery", state.paragraphs[1] is ImageGalleryParagraph)
-        Assert.assertEquals("https://relay.dergigi.com/d6a3e33b101fe219ef251ac6261c10392c2af9918c3c252d4c202016b0b4ec83.jpg", state.paragraphs[1].words[0].segmentText)
-        Assert.assertEquals("https://relay.dergigi.com/d60c9c562912573f214c2b1958cc20bf8913cd718d2ed9e020621e3e3120634b.jpg", state.paragraphs[1].words[1].segmentText)
+        assertEquals("I played The Typing of the Dead a lot when I was younger, and now I just found out that there's a new take on it: The Last Sentence. Tempted!", state.paragraphs[0].words[0].segmentText)
+        assertTrue("Should render as gallery", state.paragraphs[1] is ImageGalleryParagraph)
+        assertEquals("https://relay.dergigi.com/d6a3e33b101fe219ef251ac6261c10392c2af9918c3c252d4c202016b0b4ec83.jpg", state.paragraphs[1].words[0].segmentText)
+        assertEquals("https://relay.dergigi.com/d60c9c562912573f214c2b1958cc20bf8913cd718d2ed9e020621e3e3120634b.jpg", state.paragraphs[1].words[1].segmentText)
     }
 
     @Test
@@ -171,23 +170,23 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should have 4 paragraphs (text, image, video, hashtags)
-        Assert.assertEquals(4, state.paragraphs.size)
+        assertEquals(4, state.paragraphs.size)
 
         // First paragraph is text
-        Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
 
         // Second paragraph is image (rendered individually, not as gallery)
-        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
-        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
-        Assert.assertEquals("https://image.tmdb.org/t/p/original/1r7iOhXSbbuUTORNEUOvCUkQ86K.jpg", state.paragraphs[1].words[0].segmentText)
+        assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[1].words[0] is ImageSegment)
+        assertEquals("https://image.tmdb.org/t/p/original/1r7iOhXSbbuUTORNEUOvCUkQ86K.jpg", state.paragraphs[1].words[0].segmentText)
 
         // Third paragraph is video (rendered individually)
-        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
-        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
-        Assert.assertEquals("https://archive.org/download/the-crow-1994_20231024/The%20Crow%201994.rar/The%20Crow%201994.1080p.BluRay.x264%20.%20NVEE%2FThe%20Crow%201994.1080p.BluRay.x264%20.%20NVEE.mp4", state.paragraphs[2].words[0].segmentText)
+        assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        assertEquals("https://archive.org/download/the-crow-1994_20231024/The%20Crow%201994.rar/The%20Crow%201994.1080p.BluRay.x264%20.%20NVEE%2FThe%20Crow%201994.1080p.BluRay.x264%20.%20NVEE.mp4", state.paragraphs[2].words[0].segmentText)
 
         // Fourth paragraph is hashtags
-        Assert.assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
     }
 
     @Test
@@ -201,25 +200,25 @@ class GalleryParserTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
 
         // Should have 4 paragraphs (text, image, video, hashtags)
-        Assert.assertEquals(4, state.paragraphs.size)
+        assertEquals(4, state.paragraphs.size)
 
         // First paragraph is text
-        Assert.assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
-        Assert.assertEquals("Desperado (1995)", state.paragraphs[0].words[0].segmentText)
+        assertTrue(state.paragraphs[0] !is ImageGalleryParagraph)
+        assertEquals("Desperado (1995)", state.paragraphs[0].words[0].segmentText)
 
         // Second paragraph is image (rendered individually, not as gallery)
-        Assert.assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[1].words.size)
-        Assert.assertTrue(state.paragraphs[1].words[0] is ImageSegment)
-        Assert.assertEquals("https://media.themoviedb.org/t/p/w440_and_h660_face/e3gwpBeXpvGZsxUya9zNym5QXrw.jpg", state.paragraphs[1].words[0].segmentText)
+        assertTrue(state.paragraphs[1] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[1].words.size)
+        assertTrue(state.paragraphs[1].words[0] is ImageSegment)
+        assertEquals("https://media.themoviedb.org/t/p/w440_and_h660_face/e3gwpBeXpvGZsxUya9zNym5QXrw.jpg", state.paragraphs[1].words[0].segmentText)
 
         // Third paragraph is video (rendered individually)
-        Assert.assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
-        Assert.assertEquals(1, state.paragraphs[2].words.size)
-        Assert.assertTrue(state.paragraphs[2].words[0] is VideoSegment)
-        Assert.assertEquals("https://archive.org/download/desperado.-1995.1080p.-blu-ray.x-264.-yify/Desperado.1995.1080p.BluRay.x264.YIFY.mp4", state.paragraphs[2].words[0].segmentText)
+        assertTrue(state.paragraphs[2] !is ImageGalleryParagraph)
+        assertEquals(1, state.paragraphs[2].words.size)
+        assertTrue(state.paragraphs[2].words[0] is VideoSegment)
+        assertEquals("https://archive.org/download/desperado.-1995.1080p.-blu-ray.x-264.-yify/Desperado.1995.1080p.BluRay.x264.YIFY.mp4", state.paragraphs[2].words[0].segmentText)
 
         // Fourth paragraph is hashtags
-        Assert.assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
+        assertTrue(state.paragraphs[3] !is ImageGalleryParagraph)
     }
 }

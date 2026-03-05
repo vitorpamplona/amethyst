@@ -20,14 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import junit.framework.TestCase.assertEquals
-import org.junit.Test
-import org.junit.runner.RunWith
+import junit.framework.TestCase
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-@RunWith(AndroidJUnit4::class)
 class RichTextParserTest {
     private val textToParse =
         """
@@ -689,7 +688,7 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText(textToParse, EmptyTagList, null)
-        assertEquals(
+        TestCase.assertEquals(
             "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, ⚡\uFE0Fsatscoinsv@getalby.com, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
             state.urlSet.joinToString(", "),
         )
@@ -4021,16 +4020,16 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
 
-        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
-        org.junit.Assert.assertTrue(state.imageList.isEmpty())
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
-        org.junit.Assert.assertEquals(651, state.paragraphs.size)
+        assertTrue(state.imagesForPager.isEmpty())
+        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
+        assertEquals(651, state.paragraphs.size)
     }
 
     @Test
@@ -4038,11 +4037,11 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText("Hi, how are you doing? ", EmptyTagList, null)
-        org.junit.Assert.assertTrue(state.urlSet.isEmpty())
-        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
-        org.junit.Assert.assertTrue(state.imageList.isEmpty())
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
-        org.junit.Assert.assertEquals(
+        assertTrue(state.urlSet.isEmpty())
+        assertTrue(state.imagesForPager.isEmpty())
+        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
+        assertEquals(
             "Hi, how are you doing?",
             state.paragraphs
                 .firstOrNull()
@@ -4056,11 +4055,11 @@ class RichTextParserTest {
     fun testShortNewLinesTextToParse() {
         val state =
             RichTextParser().parseText("\nHi, \nhow\n\n\n are you doing? \n", EmptyTagList, null)
-        org.junit.Assert.assertTrue(state.urlSet.isEmpty())
-        org.junit.Assert.assertTrue(state.imagesForPager.isEmpty())
-        org.junit.Assert.assertTrue(state.imageList.isEmpty())
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
-        org.junit.Assert.assertEquals(
+        assertTrue(state.urlSet.isEmpty())
+        assertTrue(state.imagesForPager.isEmpty())
+        assertTrue(state.imageList.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
+        assertEquals(
             "\nHi,\nhow\n\n\n are you doing?\n",
             state.paragraphs.joinToString("\n") { it.words.joinToString(" ") { it.segmentText } },
         )
@@ -4080,19 +4079,19 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText(text, EmptyTagList, null)
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "https://lnshort.it/live-stream-embeds/",
             state.urlSet.firstOrNull(),
         )
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
             state.imagesForPager.keys.firstOrNull(),
         )
-        org.junit.Assert.assertEquals(
+        assertEquals(
             "https://nostr.build/i/fd53fcf5ad950fbe45127e4bcee1b59e8301d41de6beee211f45e344db214e8a.jpg",
             state.imageList.firstOrNull()?.url,
         )
-        org.junit.Assert.assertTrue(state.customEmoji.isEmpty())
+        assertTrue(state.customEmoji.isEmpty())
 
         printStateForDebug(state)
 
@@ -4142,7 +4141,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4175,7 +4174,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4207,7 +4206,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4239,7 +4238,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4270,7 +4269,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
@@ -4308,7 +4307,7 @@ class RichTextParserTest {
             .map { it.words }
             .flatten()
             .forEachIndexed { index, seg ->
-                org.junit.Assert.assertEquals(
+                assertEquals(
                     expectedResult[index],
                     "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
                 )
