@@ -30,10 +30,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -56,6 +60,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 
 private val HEX_64_REGEX = Regex("^[0-9a-fA-F]{64}$")
 
@@ -113,14 +119,62 @@ fun LoginCard(
 
             Spacer(Modifier.height(16.dp))
 
-            KeyInputField(
-                value = keyInput,
-                onValueChange = {
-                    keyInput = it
-                    errorMessage = null
-                },
-                errorMessage = errorMessage,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                KeyInputField(
+                    value = keyInput,
+                    onValueChange = {
+                        keyInput = it
+                        errorMessage = null
+                    },
+                    errorMessage = errorMessage,
+                    modifier = Modifier.weight(1f),
+                )
+
+                IconButton(
+                    onClick = {
+                        // Try clipboard first, then file picker
+                        val clipboardResult = decodeQrFromClipboard()
+                        if (clipboardResult != null) {
+                            keyInput = clipboardResult
+                            errorMessage = null
+                        } else {
+                            val chooser =
+                                JFileChooser().apply {
+                                    fileFilter =
+                                        FileNameExtensionFilter(
+                                            "Images",
+                                            "png",
+                                            "jpg",
+                                            "jpeg",
+                                            "gif",
+                                            "bmp",
+                                            "webp",
+                                        )
+                                    dialogTitle = "Select QR code image"
+                                }
+                            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                                val decoded = decodeQrFromFile(chooser.selectedFile)
+                                if (decoded != null) {
+                                    keyInput = decoded
+                                    errorMessage = null
+                                } else {
+                                    errorMessage = "No QR code found in image"
+                                }
+                            }
+                        }
+                    },
+                ) {
+                    Icon(
+                        Icons.Default.QrCodeScanner,
+                        contentDescription = "Scan QR code",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(8.dp))
 

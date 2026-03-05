@@ -46,6 +46,10 @@ dependencies {
     // JSON
     implementation(libs.jackson.module.kotlin)
 
+    // QR code decoding from images
+    implementation(libs.zxing)
+    implementation(libs.zxing.javase)
+
     // Collections
     implementation(libs.kotlinx.collections.immutable)
 
