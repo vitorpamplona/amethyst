@@ -199,7 +199,7 @@ fun main() =
                         "Logout",
                         onClick = {
                             deckScope.launch {
-                                accountManager.logout()
+                                accountManager.logout(deleteKey = true)
                             }
                         },
                         enabled = accountState is AccountState.LoggedIn,
@@ -429,7 +429,7 @@ fun App(
                     }
                 if (connected == null) {
                     // No relays connected after 30s — fall back to login screen
-                    accountManager.logout()
+                    accountManager.logout(deleteKey = true)
                 } else {
                     val result = accountManager.loadSavedAccount(relayManager.client)
                     if (result.isSuccess) {
@@ -743,7 +743,7 @@ fun ProfileScreen(
         Spacer(Modifier.height(24.dp))
 
         OutlinedButton(
-            onClick = { scope.launch { accountManager.logout() } },
+            onClick = { scope.launch { accountManager.logout(deleteKey = true) } },
             colors =
                 androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                     contentColor = Color.Red,
@@ -951,7 +951,7 @@ fun RelaySettingsScreen(
 
         val logoutScope = rememberCoroutineScope()
         OutlinedButton(
-            onClick = { logoutScope.launch { accountManager.logout() } },
+            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
             colors =
                 ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error,
